@@ -102,6 +102,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
   <ItemGroup>
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -109,6 +110,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="StringUtil.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="ZoomScrollState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CopyDlls.cmd" />

@@ -15,7 +15,7 @@ int mainFunction(int argc, const wchar_t** argv)
 {
     if (argc > 1)
     {
-        std::unique_ptr<OIV> viewer = std::unique_ptr< OIV>(new OIV());
+        std::unique_ptr<OIV::OIV> viewer = std::unique_ptr< OIV::OIV>(new OIV::OIV());
         //std::wstring texturename = argv[1];
 
         std::string filePAth;
@@ -25,7 +25,7 @@ int mainFunction(int argc, const wchar_t** argv)
         
         viewer->SetTextureName(filePAth.c_str());
         viewer->Start();
-        std::cout << "Render Ended";
+        std::cout << "Program ended.";
     }
     else
     {
