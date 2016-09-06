@@ -1,4 +1,6 @@
 /.vs/OIV/v14
 /oiv.VC.db
 /oiv/Debug
+/oiv/Release
 /oiv/Intermidiate/
+/oiv/oiv.vcxproj.user
