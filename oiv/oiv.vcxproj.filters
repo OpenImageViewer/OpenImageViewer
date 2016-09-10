@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="oiv.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="ZoomScrollState.cpp" />
+    <ClCompile Include="oiv.IPictureViewer.cpp" />
+    <ClCompile Include="CommandProcessor.cpp" />
+    <ClCompile Include="API\functions.cpp">
+      <Filter>API</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="oiv.h" />
+    <ClInclude Include="ConsoleLogListener.h" />
+    <ClInclude Include="PreCompiled.h" />
+    <ClInclude Include="Utility.h" />
+    <ClInclude Include="ZoomScrollState.h" />
+    <ClInclude Include="API\defs.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="API\functions.h">
+      <Filter>API</Filter>
+    </ClInclude>
+    <ClInclude Include="APIImpl.h" />
+    <ClInclude Include="CommandProcessor.h" />
+    <ClInclude Include="Interfaces\IPictureRenderer.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="StringUtility.h" />
+    <ClInclude Include="OgreHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CopyDlls.cmd" />
+    <None Include="CopyResources.cmd" />
+    <None Include="Resources\scripts\quad.material" />
+    <None Include="settings.ini" />
+    <None Include="Resources\programs\quad_fp.hlsl" />
+    <None Include="Resources\programs\quad_vp.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="API">
+      <UniqueIdentifier>{4e86cca8-8a01-459a-8c81-b844b9778ed6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interfaces">
+      <UniqueIdentifier>{860b3c9c-c258-44ee-abee-e316fa1a1af9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

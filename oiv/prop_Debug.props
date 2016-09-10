@@ -12,7 +12,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OGRESDK)\boost\lib;$(OGRESDK)\lib\debug;$(OGREDEPEND)\lib\debug</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OgreMain_d.lib;OgreRTShaderSystem_d.lib;OgreOverlay_d.lib;OIS_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OgreMain_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
     <CustomBuildStep>

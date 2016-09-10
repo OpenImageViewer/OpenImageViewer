@@ -4,3 +4,9 @@
 /oiv/Release
 /oiv/Intermidiate/
 /oiv/oiv.vcxproj.user
+/OivTestDotNet/bin/
+/OivTestDotNet/obj/
+/oiv/Debug_App
+/oiv/Debug_Dll
+/oiv/Release_App
+/oiv/Release_Dll

@@ -4,87 +4,35 @@
 #include "oiv.h"
 #include "OgrePrerequisites.h"
 #include <set>
-#include "StringUtil.h"
+#include "StringUtility.h"
 #include "Utility.h"
 #include "OgreRectangle2D.h"
-
+#include "API\functions.h"
+#include "OgreHelper.h"
 
 namespace OIV
 {
-    OIV::~OIV()
-    {
-        if (fInputManager != NULL)
-        {
-            fInputManager->destroyInputObject(fKeyboard);
-            fInputManager->destroyInputObject(fMouse);
-            OIS::InputManager::destroyInputSystem(fInputManager);
-        }
-    }
+
 
     OIV::OIV() :
         fScrollState(this)
-        , fInputManager(NULL)
+        , fPass(NULL)
+        , fParent(NULL)
     {
 
         LoadSettings();
     }
 
+
+    OIV::~OIV()
+    {
+
+    }
     void OIV::InitAll()
     {
         this->SetupRenderer();
         this->CreateScene();
-        this->InitializeInput();
     }
-
-    void OIV::Start()
-    {
-        try
-        {
-            this->InitAll();
-            root->startRendering();
-        }
-
-        catch (Ogre::Exception e)
-        {
-            MessageBoxA(0, e.getFullDescription().c_str(), "System Message", MB_OK);
-        }
-
-        catch (...)
-        {
-            MessageBoxA(0, "Unknown error has occured", "System Message", MB_OK);
-        }
-    }
-
-
-    void OIV::InitializeInput()
-    {
-        OIS::ParamList pl;
-        size_t windowHnd = 0;
-        std::ostringstream windowHndStr;
-        Root::getSingleton().getRenderSystem()->getRenderTarget("MainWindow")->getCustomAttribute("WINDOW", &windowHnd);
-
-        windowHndStr << windowHnd;
-
-        pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
-        bool nograb = true;
-        if (nograb)
-        {
-            pl.insert(std::make_pair("x11_keyboard_grab", "false"));
-            pl.insert(std::make_pair("x11_mouse_grab", "false"));
-            pl.insert(std::make_pair("w32_mouse", "DISCL_FOREGROUND"));
-            pl.insert(std::make_pair("w32_mouse", "DISCL_NONEXCLUSIVE"));
-            pl.insert(std::make_pair("w32_keyboard", "DISCL_FOREGROUND"));
-            pl.insert(std::make_pair("w32_keyboard", "DISCL_NONEXCLUSIVE"));
-        }
-
-        fInputManager = OIS::InputManager::createInputSystem(pl);
-        fMouse = static_cast<OIS::Mouse*>(fInputManager->createInputObject(OIS::OISMouse, true));
-        fKeyboard = static_cast<OIS::Keyboard*>(fInputManager->createInputObject(OIS::OISKeyboard, true));
-        fKeyboard->setEventCallback(this);
-        fMouse->setEventCallback(this);
-    }
-
-
 
     void OIV::TryLoadPlugin(std::string pluginName)
     {
@@ -165,6 +113,11 @@ namespace OIV
         if (heightStr != BLANKSTRING)
             height = StringConverter::parseInt(heightStr);
 
+        if (fParent != NULL)
+            //externalWindowHandle
+            //parentWindowHandle
+            options["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)fParent);
+
 
         //options["alwaysWindowedMode"] = "true";
 
@@ -176,8 +129,6 @@ namespace OIV
             &options);                    // use defaults for all other values
 
         WindowEventUtilities::addWindowEventListener(window, this);
-
-        root->addFrameListener(this);
 
 
         fScene = root->createSceneManager(ST_GENERIC, "MySceneManager");
@@ -200,13 +151,6 @@ namespace OIV
             }
             return BLANKSTRING;
         }
-
-    }
-
-
-
-    void  OIV::Update(const FrameEvent &  evt)
-    {
 
     }
 
@@ -244,7 +188,7 @@ namespace OIV
 
     void OIV::NotifyDirty()
     {
-        UpdateGpuParams();
+        Refresh();
     }
 
     void OIV::UpdateGpuParams()
@@ -257,112 +201,27 @@ namespace OIV
     }
 
 
-    // 'Ogre::FrameListener' implementation
-    bool OIV::frameRenderingQueued(const FrameEvent& evt)
-    {
-        this->Update(evt);
-        /*if (!fSubpart.isNull())
-        fSubpart->RenderSubParts();*/
-        return true;
-    }
-    bool OIV::frameStarted(const FrameEvent& evt)
-    {
-        fKeyboard->capture();
-        fMouse->capture();
-        //fSubpart->RenderSubParts();
-        return true;
-    }
-    bool OIV::frameEnded(const FrameEvent &  evt)
-    {
-        return true;
-    }
 
     // 'Ogre::WindowEventListener' implementation 
     void OIV::windowClosed(RenderWindow *  rw)
     {
-        Root::getSingleton().queueEndRendering();
+        PostQuitMessage(0);
     }
 
-
-
+   
     void OIV::windowResized(RenderWindow* rw)
     {
-        fScrollState.RefreshOffset();
+        HandleWindowResize();
     }
 
-    //'OIS::KeyListner' Implemetation 
-    bool OIV::keyPressed(const OIS::KeyEvent &arg)
+    void OIV::HandleWindowResize()
     {
-        bool isAltDOwn = fKeyboard->isModifierDown(OIS::Keyboard::Alt);
-        switch (arg.key)
-        {
-        case OIS::KC_SPACE:
-            break;
-        case OIS::KC_UP:
-            break;
-        case OIS::KC_DOWN:
-            break;
-
-        case OIS::KC_ESCAPE:
-            ShutDown();
-            break;
-
-        case OIS::KC_X:
-            if (isAltDOwn)
-                ShutDown();
-            break;
-        case OIS::KC_F2:
-
-
-            break;
-
-        case OIS::KC_F1:
-
-            break;
-        case OIS::KC_C:
-
-            break;
-
-        }
-        return true;
-    }
-
-    bool OIV::keyReleased(const OIS::KeyEvent &arg)
-    {
-        return true;
-    }
-
-
-    bool OIV::mouseMoved(const OIS::MouseEvent & arg)
-    {
-        fScrollState.Zoom(-arg.state.Z.rel / 600.0);
-
-        if (arg.state.buttonDown(OIS::MouseButtonID::MB_Left))
-            
-            fScrollState.Pan(-Vector2(arg.state.X.rel, arg.state.Y.rel) * 0.002);
-        return false;
-    }
-
-    bool OIV::mousePressed(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
-    {
-        return false;
-    }
-
-    bool OIV::mouseReleased(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
-    {
-        return false;
+        if (IsImageLoaded())
+            fScrollState.RefreshOffset();
     }
 
     void OIV::CreateCameraAndViewport()
     {
-
-        /*Camera*  freeCamera = fScene->createCamera("FreeCamera");
-        freeCamera->setNearClipDistance(1);
-        freeCamera->setFarClipDistance(50000);
-        freeCamera->setAutoAspectRatio(true);
-        SceneNode *freeCamNode = fScene->getRootSceneNode()->createChildSceneNode("FreeCameraNode");
-        freeCamNode->setPosition(0,0,1400);
-        freeCamNode->attachObject(freeCamera);*/
 
         RenderTarget* window = Root::getSingleton().getRenderSystem()->getRenderTarget("MainWindow");
 
@@ -381,28 +240,7 @@ namespace OIV
         fViewPort->setBackgroundColour(ColourValue::ColourValue(grayLevel, grayLevel, grayLevel));
     }
 
-    bool OgreLoadImage(const Ogre::String& texture_name, const Ogre::String& texture_path)
-    {
-        bool image_loaded = false;
-        std::ifstream ifs(texture_path.c_str(), std::ios::binary | std::ios::in);
-        if (ifs.is_open())
-        {
-            Ogre::String tex_ext;
-            Ogre::String::size_type index_of_extension = texture_path.find_last_of('.');
-            if (index_of_extension != Ogre::String::npos)
-            {
-                tex_ext = texture_path.substr(index_of_extension + 1);
-                Ogre::DataStreamPtr data_stream(new Ogre::FileStreamDataStream(texture_path, &ifs, false));
-                Ogre::Image img;
-                img.load(data_stream, tex_ext);
-                Ogre::TextureManager::getSingleton().loadImage(texture_name,
-                    Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, img, Ogre::TEX_TYPE_2D, 0, 1.0f, true, PF_R8G8B8A8, false);
-                image_loaded = true;
-            }
-            ifs.close();
-        }
-        return image_loaded;
-    }
+    
 
 
     void OIV::CreateScene()
@@ -415,41 +253,22 @@ namespace OIV
         AxisAlignedBox bb;
         bb.setInfinite();
         rect->setBoundingBox(bb);
-        //rect->setUVs(Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(1, 0));
 
         MaterialPtr material = MaterialManager::getSingleton().getByName("OgreViewer/QuadMaterial");
         rect->setMaterial("OgreViewer/QuadMaterial");
-        Pass* pass = material->getTechnique(0)->getPass(0);
-        fFragmentParameters = pass->getFragmentProgramParameters();
-        pass->getTextureUnitState(0)->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
-        pass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
-
-        String textureName = fTextureName;
-        if (OgreLoadImage(textureName, textureName) == false)
-        {
-            exit(1);
-
-        }
-
-        fActiveTexture = Ogre::TextureManager::getSingleton().getByName(textureName);
+        fPass = material->getTechnique(0)->getPass(0);
+        fFragmentParameters = fPass->getFragmentProgramParameters();
+        fPass->getTextureUnitState(0)->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
+        //fPass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
+        fPass->getTextureUnitState(0)->setTextureFiltering(TFO_TRILINEAR);
 
 
-
-        /*img. load(textureName, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
-
-        TexturePtr texture = TextureManager::getSingleton().loadImage(textureName, ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, img);*/
-
-        pass->getTextureUnitState(0)->setTextureName(textureName);
         fScene->getRootSceneNode()->createChildSceneNode()->attachObject(rect);
 
         fScene->setAmbientLight(ColourValue(0.8f, 0.8f, 0.8f));
         fScene->setShadowTechnique(Ogre::ShadowTechnique::SHADOWTYPE_NONE);
 
         CreateCameraAndViewport();
-        // Refresh scroll state offset and scale after image load.
-        
-        fScrollState.RefreshScale();
-        fScrollState.RefreshOffset();
     }
 
     void OIV::LoadSettings()
@@ -482,4 +301,88 @@ namespace OIV
             mSettings[key] = value;
         }
     }
+
+   
 }
+
+////'OIS::KeyListner' implementation. 
+//bool OIV::keyPressed(const OIS::KeyEvent &arg)
+//{
+//    bool isAltDOwn = fKeyboard->isModifierDown(OIS::Keyboard::Alt);
+//    switch (arg.key)
+//    {
+//        
+//    case OIS::KC_ADD:
+
+//        fScrollState.Zoom(0.1);
+//        break;
+//    case OIS::KC_SUBTRACT:
+//        fScrollState.Zoom(-0.1);
+//        break;
+//    case OIS::KC_SPACE:
+//    {
+//        {
+//            CmdDataLoadFile loadFile;
+//            //loadFile.filePath = L"d:/1.png";
+//            loadFile.filePath = L"d:/PNG_transparency_demonstration_1.png";
+//            loadFile.FileNamelength = _tcslen(loadFile.filePath);
+//            OIV_Execute(CommandExecute::CE_LoadFile, sizeof(loadFile), &loadFile);
+//        };
+//            
+//            //LoadFile(L"d:/PNG_transparency_demonstration_1.png");
+//    }
+//        break;
+//    case OIS::KC_UP:
+//        break;
+//    case OIS::KC_DOWN:
+//        break;
+
+//    case OIS::KC_ESCAPE:
+//        ShutDown();
+//        break;
+
+//    case OIS::KC_X:
+//        if (isAltDOwn)
+//            ShutDown();
+//        break;
+//    case OIS::KC_F2:
+
+
+//        break;
+
+//    case OIS::KC_F1:
+
+//        break;
+//    case OIS::KC_C:
+
+//        break;
+
+//    }
+//    return true;
+//}
+
+//bool OIV::keyReleased(const OIS::KeyEvent &arg)
+//{
+//    return true;
+//}
+
+
+//bool OIV::mouseMoved(const OIS::MouseEvent & arg)
+//{
+//    fScrollState.Zoom(-arg.state.Z.rel / 600.0);
+
+//    if (arg.state.buttonDown(OIS::MouseButtonID::MB_Left))
+//        
+//        fScrollState.Pan(-Vector2(arg.state.X.rel, arg.state.Y.rel) * 0.002);
+//    return false;
+//}
+
+//bool OIV::mousePressed(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
+//{
+//    return false;
+//}
+
+//bool OIV::mouseReleased(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
+//{
+//    return false;
+//}

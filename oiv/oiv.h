@@ -7,23 +7,19 @@
 #include "OgreResourceGroupManager.h"
 #include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
+#include "Interfaces\IPictureRenderer.h"
 #include <string>
 
 namespace OIV
 {
     class OIV : public WindowEventListener
-        , public FrameListener
-        , public OIS::KeyListener
-        , public OIS::MouseListener
         , public ZoomScrollState::Listener
+        , public IPictureRenderer
     {
     private:
 
 
         SceneManager*		fScene;
-        OIS::InputManager*	fInputManager;
-        OIS::Keyboard*		fKeyboard;
-        OIS::Mouse*			fMouse;
         Camera*				fActiveCamera;
         String				fActiveCameraName;
         Viewport*			fViewPort;
@@ -31,9 +27,11 @@ namespace OIV
         map<String, String>::type mSettings;
         Ogre::Rectangle2D* rect;
         GpuProgramParametersSharedPtr  fFragmentParameters;
+        Ogre::Pass*         fPass;
+        HWND                fParent;
+        Ogre::Image         fImageOpened;
         
-
-        void InitializeInput();
+        
         void SetupRenderer();
         const String& GetSetting(const String& key, bool throwifNotFound = false);
         void InitAll();
@@ -59,17 +57,6 @@ namespace OIV
         virtual void NotifyDirty() override;
         //----------------------------------------------------
 
-
-
-        float Y1;
-        float Y2;
-
-        // 'Ogre::FrameListener' members decleration
-
-        bool frameRenderingQueued(const FrameEvent& evt) override;
-        bool frameStarted(const FrameEvent& evt) override;
-        bool frameEnded(const FrameEvent &  evt)  override;
-
         // 'Ogre::WindowEventListener' members decleration
         bool windowClosing(RenderWindow* rw) override
         {
@@ -79,7 +66,6 @@ namespace OIV
 
         void ShutDown()
         {
-            //fSubpart.setNull();
             Root::getSingleton().queueEndRendering();
         }
 
@@ -87,21 +73,17 @@ namespace OIV
 
         void windowResized(RenderWindow* rw)  override;
 
-        // 'OIS::KeyListner' members decleration
+        void HandleWindowResize();
 
-        virtual bool keyPressed(const OIS::KeyEvent &arg) override;
-        virtual bool keyReleased(const OIS::KeyEvent &arg) override;
 
-        
+        bool IsImageLoaded() const
+        {
+            return fActiveTexture.isNull() == false;
+        }
 
-        // 'OIS::MouseListener' members declaaration
-        virtual bool mouseMoved(const OIS::MouseEvent &arg) override;
-        virtual bool mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
-        virtual bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
 
     public:
         Root *root;
-        void Start();
         void SetTextureName(const char* textureName)
         {
             fTextureName = textureName;
@@ -113,5 +95,21 @@ namespace OIV
         void CreateCameraAndViewport();
         void CreateScene();
         void LoadSettings();
+
+        //-------------IPictureListener------------------
+        // 
+        //Commands
+        virtual double Zoom(double percentage) override;
+        virtual int LoadFile(OIVCHAR* filePath) override;
+        virtual int Init() override;
+        virtual int SetParent(HWND handle) override;
+        virtual int Refresh() override;
+
+        //Queries
+        virtual int GetFileInformation(QryFileInformation& information) override;
+
+
+
+        //----------------------------------------------------
     };
 }

@@ -2,9 +2,10 @@
 #include <windef.h>
 #include <windows.h>
 #include <Shlobj.h>
-#include "StringUtil.h"
+#include "StringUtility.h"
 #include <tchar.h>
-typedef std::basic_string<TCHAR> tstring;
+#include "API\defs.h"
+typedef std::basic_string<OIVCHAR> tstring;
 
 class Utility
 {
