@@ -24,28 +24,23 @@ namespace OIV
         String				fActiveCameraName;
         Viewport*			fViewPort;
         ZoomScrollState     fScrollState;
-        map<String, String>::type mSettings;
         Ogre::Rectangle2D* rect;
         GpuProgramParametersSharedPtr  fFragmentParameters;
         Ogre::Pass*         fPass;
         HWND                fParent;
         Ogre::Image         fImageOpened;
+        String              fTextureName;
+        Ogre::TexturePtr    fActiveTexture;
         
         
         void SetupRenderer();
-        const String& GetSetting(const String& key, bool throwifNotFound = false);
         void InitAll();
-        void Update(const FrameEvent &  evt);
-        
 
         Ogre::RenderWindow * GetWindow();
 
         void UpdateGpuParams();
 
-
-
-        String fTextureName;
-        Ogre::TexturePtr fActiveTexture;
+        
 
 
         //-------------Scroll state listener------------------

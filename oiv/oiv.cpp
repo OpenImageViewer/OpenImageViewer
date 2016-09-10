@@ -20,7 +20,6 @@ namespace OIV
         , fParent(NULL)
     {
 
-        LoadSettings();
     }
 
 
@@ -59,27 +58,26 @@ namespace OIV
 
 
 #ifdef _DEBUG
-        TryLoadPlugin("RenderSystem_Direct3D9_d");
+        //TryLoadPlugin("RenderSystem_Direct3D9_d");
         TryLoadPlugin("RenderSystem_Direct3D11_d");
-        TryLoadPlugin("RenderSystem_GLES2_d.dll");
-        TryLoadPlugin("RenderSystem_GL_d.dll");
+        //TryLoadPlugin("RenderSystem_GLES2_d.dll");
+        //TryLoadPlugin("RenderSystem_GL_d.dll");
 #else
-        TryLoadPlugin("RenderSystem_Direct3D9");
+        //TryLoadPlugin("RenderSystem_Direct3D9");
         TryLoadPlugin("RenderSystem_Direct3D11");
-        TryLoadPlugin("RenderSystem_GLES2.dll");
-        TryLoadPlugin("RenderSystem_GL.dll");
+        //TryLoadPlugin("RenderSystem_GLES2.dll");
+        //TryLoadPlugin("RenderSystem_GL.dll");
 #endif
 
 
         const RenderSystemList &rlist = root->getAvailableRenderers();
         RenderSystemList::const_iterator it = rlist.begin();
-        const String& renderer = GetSetting("RenderSystem", true);
         while (it != rlist.end())
         {
             RenderSystem *rSys = *(it++);
             String name = rSys->getName();
 
-            if (rSys->getName().find(renderer) != String::npos)
+            if (rSys->getName().find("Direct3D11") != String::npos)
             {
                 root->setRenderSystem(rSys);
                 break;
@@ -99,32 +97,16 @@ namespace OIV
         LogManager::getSingleton().getDefaultLog()->addListener(new GameLogListener());
 
         NameValuePairList options;
-        std::string vsync = GetSetting("vsync");
-        if (vsync != BLANKSTRING)
-            options["vsync"] = vsync;
-        int width = 1440;
-        int height = 900;
 
-        string widthStr = GetSetting("width");
-        if (widthStr != BLANKSTRING)
-            width = StringConverter::parseInt(widthStr);
-
-        string heightStr = GetSetting("height");
-        if (heightStr != BLANKSTRING)
-            height = StringConverter::parseInt(heightStr);
-
+        options["vsync"] = "true";
         if (fParent != NULL)
-            //externalWindowHandle
-            //parentWindowHandle
             options["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)fParent);
 
 
-        //options["alwaysWindowedMode"] = "true";
-
         RenderWindow *window = root->createRenderWindow(
             "MainWindow",			// window name
-            width,                   // window width, in pixels
-            height,                   // window height, in pixels
+            800,                   // window width, in pixels
+            600,                   // window height, in pixels
             false,                 // fullscreen or not
             &options);                    // use defaults for all other values
 
@@ -135,25 +117,6 @@ namespace OIV
 
         ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
     }
-
-
-    const String& OIV::GetSetting(const String& key, bool throwifNotFound)
-    {
-        map<String, String>::const_iterator it = mSettings.find(key);
-        if (it != mSettings.end())
-            return it->second;
-        else
-        {
-            if (throwifNotFound == true)
-            {
-                throw std::exception("setting key must exists");
-
-            }
-            return BLANKSTRING;
-        }
-
-    }
-
 
     Ogre::Vector2 OIV::GetMousePosition()
     {
@@ -166,9 +129,6 @@ namespace OIV
         ScreenToClient(hwnd, &p);
         return Vector2(p.x, p.y);
     }
-
-
-
 
     Ogre::Vector2 OIV::GetImageSize()
     {
@@ -270,39 +230,6 @@ namespace OIV
 
         CreateCameraAndViewport();
     }
-
-    void OIV::LoadSettings()
-    {
-        //tstring filePath = Utility::GetAppDataFolder() + "\\settings.ini";
-        std::string filePath = StringUtility::ToAString(Utility::GetExeFolder()) + "\\settings.ini";
-
-        std::ifstream t(filePath);
-        std::string str((std::istreambuf_iterator<char>(t)),
-            std::istreambuf_iterator<char>());
-
-        StringVector entries = StringUtil::split(str, "\n");
-        StringVector::const_iterator it_end = entries.end();
-
-
-
-        for (StringVector::const_iterator it = entries.begin(); it != it_end; it++)
-        {
-            const String& pair = *it;
-            if (pair.length() > 0 && pair[0] == ';')
-                continue;
-            StringVector pairSplitted = StringUtil::split(pair, "=");
-            if (pairSplitted.size() != 2)
-                continue;
-            String key = pairSplitted[0];
-            StringUtil::trim(key);
-            String value = pairSplitted[1];
-            StringUtil::trim(value);
-
-            mSettings[key] = value;
-        }
-    }
-
-   
 }
 
 ////'OIS::KeyListner' implementation. 
