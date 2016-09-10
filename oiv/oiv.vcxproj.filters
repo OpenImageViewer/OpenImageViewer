@@ -9,12 +9,12 @@
     <ClCompile Include="API\functions.cpp">
       <Filter>API</Filter>
     </ClCompile>
+    <ClCompile Include="TestApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
     <ClInclude Include="ConsoleLogListener.h" />
     <ClInclude Include="PreCompiled.h" />
-    <ClInclude Include="Utility.h" />
     <ClInclude Include="ZoomScrollState.h" />
     <ClInclude Include="API\defs.h">
       <Filter>API</Filter>
@@ -27,16 +27,33 @@
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="StringUtility.h" />
-    <ClInclude Include="OgreHelper.h" />
+    <ClInclude Include="OgreHelper.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="StringUtility.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="TestApp.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CopyDlls.cmd" />
-    <None Include="CopyResources.cmd" />
-    <None Include="Resources\scripts\quad.material" />
-    <None Include="settings.ini" />
-    <None Include="Resources\programs\quad_fp.hlsl" />
-    <None Include="Resources\programs\quad_vp.hlsl" />
+    <None Include="Resources\programs\quad_fp.hlsl">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="Resources\programs\quad_vp.hlsl">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="CopyResources.cmd">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="CopyDlls.cmd">
+      <Filter>Build</Filter>
+    </None>
+    <None Include="Resources\scripts\quad.material">
+      <Filter>Resources</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -44,6 +61,15 @@
     </Filter>
     <Filter Include="Interfaces">
       <UniqueIdentifier>{860b3c9c-c258-44ee-abee-e316fa1a1af9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{c507f19e-3171-4cc2-adee-a13a1c6e5bb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Build">
+      <UniqueIdentifier>{990da064-3a56-4a96-abd7-ad08e631e6a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Helpers">
+      <UniqueIdentifier>{9caa947b-b089-4664-81d1-f5cd43cc37c6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

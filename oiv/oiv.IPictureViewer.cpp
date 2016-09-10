@@ -1,3 +1,4 @@
+#include "PreCompiled.h"
 #include "oiv.h"
 #include "StringUtility.h"
 #include "OgreHelper.h"

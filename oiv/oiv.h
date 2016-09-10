@@ -1,14 +1,8 @@
 #pragma once
-
-#include "PreCompiled.h"
-#include <iostream>
-#include "OgreFrameListener.h"
-#include "OgreString.h"
-#include "OgreResourceGroupManager.h"
 #include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include <string>
+
 
 namespace OIV
 {

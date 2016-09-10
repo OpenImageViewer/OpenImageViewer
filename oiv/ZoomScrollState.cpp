@@ -1,3 +1,4 @@
+#include "PreCompiled.h"
 #include "ZoomScrollState.h"
 
 namespace OIV

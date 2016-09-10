@@ -1,4 +1,6 @@
+#include "..\PreCompiled.h"
 #include "functions.h"
+
 int __cdecl OIV_Execute(int command, size_t commandSize, void* commandData)
 {
     return OIV::Execute_impl((CommandExecute) command, commandSize, commandData);

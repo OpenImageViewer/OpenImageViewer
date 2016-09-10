@@ -194,6 +194,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="oiv.IPictureViewer.cpp" />
+    <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -207,6 +208,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="ConsoleLogListener.h" />
     <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="StringUtility.h" />
+    <ClInclude Include="TestApp.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="ZoomScrollState.h" />
   </ItemGroup>
@@ -217,7 +219,6 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
       <FileType>Document</FileType>
       <DeploymentContent>true</DeploymentContent>
     </None>
-    <None Include="settings.ini" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

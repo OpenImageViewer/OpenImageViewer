@@ -2,14 +2,7 @@
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "precompiled.h"
 #include "oiv.h"
-#include "OgrePrerequisites.h"
-#include <set>
-#include "StringUtility.h"
-#include "Utility.h"
 #include "OgreRectangle2D.h"
-#include "API\functions.h"
-#include "OgreHelper.h"
-
 namespace OIV
 {
 
@@ -19,7 +12,7 @@ namespace OIV
         , fPass(NULL)
         , fParent(NULL)
     {
-
+         
     }
 
 
