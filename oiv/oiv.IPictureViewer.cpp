@@ -47,6 +47,12 @@ namespace OIV
         return 0.0;
     }
 
+    int OIV::Pan(double x, double y)
+    {
+        fScrollState.Pan(Ogre::Vector2(x, y));
+        return 0.0;
+    }
+
     int OIV::Init()
     {
         InitAll();

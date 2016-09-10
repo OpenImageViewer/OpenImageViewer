@@ -7,46 +7,59 @@
 namespace OIV
 {
     //extern std::unique_ptr<OIV> gViewer;
-    
+
     IPictureRenderer* CommandProcessor::sPictureRenderer = NULL;
 
-   ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t commandSize, void* commandData)
+    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t commandSize, void* commandData)
     {
 
-       if (command != CE_Init && IsInitialized() == false)
-           return ResultCode::RC_NotInitialized;
+        if (command != CE_Init && IsInitialized() == false)
+            return ResultCode::RC_NotInitialized;
 
-       ResultCode result = ResultCode::RC_Success;
+        ResultCode result = ResultCode::RC_Success;
 
         switch (command)
         {
         case CE_Init:
-                if (sPictureRenderer == NULL)
+            if (sPictureRenderer == NULL)
+            {
+                sPictureRenderer = new OIV();
+
+                if (commandSize == sizeof(CmdDataInit))
                 {
-                     sPictureRenderer = new OIV();
+                    // TODO: add width and height.
+                    //sPictureRenderer->SetParentParamaters()
 
-                     if (commandSize == sizeof(CmdDataInit))
-                     {
-                         // TODO: add width and height.
-                         //sPictureRenderer->SetParentParamaters()
-                         
-                         CmdDataInit* dataZoom = reinterpret_cast<CmdDataInit*>(commandData);
-                         sPictureRenderer->SetParent((HWND)dataZoom->parentHandle);
-                         sPictureRenderer->Init();
-                         Log(_T("Render engine started."));
-                     }
-                     else
-                         result = RC_WrongDataSize;
-                    
+                    CmdDataInit* dataZoom = reinterpret_cast<CmdDataInit*>(commandData);
+                    sPictureRenderer->SetParent((HWND)dataZoom->parentHandle);
+                    sPictureRenderer->Init();
+                    Log(_T("Render engine started."));
                 }
+                else
+                    result = RC_WrongDataSize;
 
-                break;
+            }
+            else
+                result = ResultCode::RC_AlreadyInitialized;
+
+            break;
         case CE_Zoom:
             if (commandSize == sizeof(CmdDataZoom))
             {
                 CmdDataZoom* dataZoom = reinterpret_cast<CmdDataZoom*>(commandData);
-                if (sPictureRenderer != NULL)
-                    sPictureRenderer->Zoom(dataZoom->amount);
+                sPictureRenderer->Zoom(dataZoom->amount);
+
+            }
+            else
+            {
+                result = RC_WrongDataSize;
+            }
+            break;
+        case CE_Pan:
+            if (commandSize == sizeof(CmdDataPan))
+            {
+                CmdDataPan* dataPan = reinterpret_cast<CmdDataPan*>(commandData);
+                sPictureRenderer->Pan(dataPan->x, dataPan->y);
 
             }
             else
@@ -70,9 +83,7 @@ namespace OIV
 
                     _tcscpy_s(buffer, bufferLength + 1, dataLoadFile->filePath);
                     buffer[bufferLength] = '\0';
-
-                    if (sPictureRenderer != NULL)
-                        sPictureRenderer->LoadFile(buffer);
+                    sPictureRenderer->LoadFile(buffer);
 
                     delete[]buffer;
                 }
@@ -80,8 +91,8 @@ namespace OIV
                 {
                     result = RC_InvalidParameters;
                 }
-                
-                
+
+
             }
             else
             {
@@ -91,9 +102,7 @@ namespace OIV
             break;
 
         case CE_Refresh:
-
-            if (sPictureRenderer != NULL)
-                sPictureRenderer->Refresh();
+            sPictureRenderer->Refresh();
             break;
 
         }
@@ -127,9 +136,9 @@ namespace OIV
         }
         return result;
     }
-    
+
     void CommandProcessor::Log(OIVCHAR * message)
     {
-          Ogre::LogManager::getSingleton().logMessage(StringUtility::ToAString(message));
+        Ogre::LogManager::getSingleton().logMessage(StringUtility::ToAString(message));
     }
 }

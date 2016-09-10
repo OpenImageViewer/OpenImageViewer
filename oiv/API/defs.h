@@ -45,6 +45,7 @@ extern "C"
         , RC_FileNotSupported
         , RC_WrongDataSize
         , RC_NotInitialized
+        , RC_AlreadyInitialized
         , RC_UknownError = 0xFF
 
     };
@@ -55,6 +56,12 @@ extern "C"
     struct CmdDataZoom
     {
         double amount;
+    };
+
+    struct CmdDataPan
+    {
+        double x;
+        double y;
     };
 
     struct CmdDataLoadFile
