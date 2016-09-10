@@ -68,13 +68,20 @@ namespace OIV
         }
         break;
 
+        case WM_LBUTTONDOWN:
+            SetCapture(uMsg.hwnd);
+            break;
+
         case WM_LBUTTONUP:
         {
+            ReleaseCapture();
             lastX = -1;
         }
 
         case WM_MOUSEMOVE:
         {
+            if (GetCapture() == NULL)
+                return;
             int xPos = GET_X_LPARAM(uMsg.lParam);
             int yPos = GET_Y_LPARAM(uMsg.lParam);
 
@@ -87,16 +94,10 @@ namespace OIV
             {
                 if (lastX != -1)
                 {
-
-                    std::stringstream ss;
-
-                    ss << "\nx: " << deltax << " y: " << deltaY;
-                    OutputDebugStringA(ss.str().c_str());
-
                     CmdDataPan pan;
                     ////20% zoom in each step
-                    pan.x = -deltax / 130.0;
-                    pan.y = -deltaY / 130.0;
+                    pan.x = -deltax / 200.0;
+                    pan.y = -deltaY / 200.0;
                     if (OIV_Execute(CommandExecute::CE_Pan, sizeof(CmdDataPan), &pan) != ResultCode::RC_Success)
                         throw std::exception("Unable to Pan.");
                 }
