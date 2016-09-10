@@ -11,12 +11,17 @@ namespace OIV
     void ZoomScrollState::SetOffset(Ogre::Vector2 offset)
     {
         using namespace Ogre;
+        const Vector2 Max_Margin = Vector2(0.25, 0.25);
+        
         Vector2 uvScale = GetARFixedUVScale();
+
+        const Vector2 marginFactor = Vector2(Max_Margin.x * uvScale.x, Max_Margin.y * uvScale.y);
         // Image is larger then window
         if (uvScale.x < 1)
         {
-            Real maxOffset = 1 - uvScale.x;
-            fUVOffset.x = std::max(static_cast<Real>(0), std::min(maxOffset, offset.x));
+            
+            Real maxOffset = 1 - uvScale.x + marginFactor.x;
+            fUVOffset.x = std::max(static_cast<Real>(-marginFactor.x), std::min(maxOffset, offset.x));
         }
         else
         {
@@ -27,8 +32,8 @@ namespace OIV
 
         if (uvScale.y < 1)
         {
-            Real maxOffset = 1 - uvScale.y;
-            fUVOffset.y = std::max(static_cast<Real>(0), std::min(maxOffset, offset.y));
+            Real maxOffset = 1 - uvScale.y + marginFactor.y;
+            fUVOffset.y = std::max(static_cast<Real>(-marginFactor.y), std::min(maxOffset, offset.y));
         }
         else
         {
