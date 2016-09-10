@@ -11,8 +11,7 @@ namespace OIV
         static IPictureRenderer* sPictureRenderer;
 
     public:
-        static ResultCode ProcessCommand(CommandExecute command, size_t commandSize, void* commandData);
-        static ResultCode ProcessQuery(CommandQuery command, void* commandData, size_t commandSize, void* output_data, size_t output_size);
+        static ResultCode ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData);
         static void Log(OIVCHAR* message);
         static bool IsInitialized()
         {

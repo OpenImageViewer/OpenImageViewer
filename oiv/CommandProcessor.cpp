@@ -10,7 +10,7 @@ namespace OIV
 
     IPictureRenderer* CommandProcessor::sPictureRenderer = NULL;
 
-    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t commandSize, void* commandData)
+    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData)
     {
 
         if (command != CE_Init && IsInitialized() == false)
@@ -25,12 +25,12 @@ namespace OIV
             {
                 sPictureRenderer = new OIV();
 
-                if (commandSize == sizeof(CmdDataInit))
+                if (requestSize == sizeof(CmdDataInit))
                 {
                     // TODO: add width and height.
                     //sPictureRenderer->SetParentParamaters()
 
-                    CmdDataInit* dataZoom = reinterpret_cast<CmdDataInit*>(commandData);
+                    CmdDataInit* dataZoom = reinterpret_cast<CmdDataInit*>(requestData);
                     sPictureRenderer->SetParent((HWND)dataZoom->parentHandle);
                     sPictureRenderer->Init();
                     Log(_T("Render engine started."));
@@ -44,9 +44,9 @@ namespace OIV
 
             break;
         case CE_Zoom:
-            if (commandSize == sizeof(CmdDataZoom))
+            if (requestSize == sizeof(CmdDataZoom))
             {
-                CmdDataZoom* dataZoom = reinterpret_cast<CmdDataZoom*>(commandData);
+                CmdDataZoom* dataZoom = reinterpret_cast<CmdDataZoom*>(requestData);
                 sPictureRenderer->Zoom(dataZoom->amount);
 
             }
@@ -56,9 +56,9 @@ namespace OIV
             }
             break;
         case CE_Pan:
-            if (commandSize == sizeof(CmdDataPan))
+            if (requestSize == sizeof(CmdDataPan))
             {
-                CmdDataPan* dataPan = reinterpret_cast<CmdDataPan*>(commandData);
+                CmdDataPan* dataPan = reinterpret_cast<CmdDataPan*>(requestData);
                 sPictureRenderer->Pan(dataPan->x, dataPan->y);
 
             }
@@ -69,11 +69,11 @@ namespace OIV
             break;
 
         case CE_LoadFile:
-            if (commandSize == sizeof(CmdDataLoadFile))
+            if (requestSize == sizeof(CmdDataLoadFile))
             {
                 const size_t maxPath = 5000;
 
-                CmdDataLoadFile* dataLoadFile = reinterpret_cast<CmdDataLoadFile*>(commandData);
+                CmdDataLoadFile* dataLoadFile = reinterpret_cast<CmdDataLoadFile*>(requestData);
 
                 const size_t bufferLength = dataLoadFile->FileNamelength;
 
@@ -105,21 +105,9 @@ namespace OIV
             sPictureRenderer->Refresh();
             break;
 
-        }
+        case CE_GetFileInformation:
 
-        return result;
-    }
-    ResultCode CommandProcessor::ProcessQuery(CommandQuery query, void* commandData, size_t commandSize, void* output_data, size_t output_size)
-    {
-        if (IsInitialized() == false)
-            return ResultCode::RC_NotInitialized;
-
-        ResultCode result = ResultCode::RC_Success;
-        switch (query)
-        {
-        case CQ_GetFileInformation:
-
-            if (output_size == sizeof(QryFileInformation))
+            if (responseSize == sizeof(QryFileInformation))
             {
                 QryFileInformation fileInfo;
                 memset(&fileInfo, 0, sizeof(fileInfo));
@@ -128,15 +116,16 @@ namespace OIV
                     result = ResultCode::RC_WrongDataSize;
                 else
                 {
-                    QryFileInformation* data = reinterpret_cast<QryFileInformation*>(output_data);
-                    *reinterpret_cast<QryFileInformation*>(output_data) = fileInfo;
+                    QryFileInformation* data = reinterpret_cast<QryFileInformation*>(responseData);
+                    *reinterpret_cast<QryFileInformation*>(responseData) = fileInfo;
                 }
             }
             break;
         }
+
         return result;
     }
-
+   
     void CommandProcessor::Log(OIVCHAR * message)
     {
         Ogre::LogManager::getSingleton().logMessage(StringUtility::ToAString(message));

@@ -2,19 +2,28 @@
 #include "TestApp.h"
 namespace OIV
 {
+    template <class T,class U>
+    void TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
+    {
+        if (OIV_Execute(command, sizeof(T), request, sizeof(U), response)  != ResultCode::RC_Success)
+            throw std::exception("Api function failed");
+    }
+
     void TestApp::Run(std::wstring filePath)
     {
         CmdDataInit init;
         init.parentHandle = NULL;
 
-        if (OIV_Execute(CommandExecute::CE_Init, sizeof(CmdDataInit), &init) != ResultCode::RC_Success)
-            throw std::exception("Unable to initialize Image rendering engine.");
+        ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
         CmdDataLoadFile loadFile;
         loadFile.filePath = const_cast<OIVCHAR*>(filePath.c_str());
         loadFile.FileNamelength = _tcslen(loadFile.filePath);
-        if (OIV_Execute(CommandExecute::CE_LoadFile, sizeof(loadFile), &loadFile) != ResultCode::RC_Success)
-            throw std::exception("Unable to Load image.");
+
+        ExecuteCommand(CommandExecute::CE_LoadFile, &loadFile, &CmdNull());
+
+        QryFileInformation fileInfo;
+        ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);
 
 
         HWND hwndMain;
@@ -63,8 +72,8 @@ namespace OIV
             CmdDataZoom zoom;
             //20% zoom in each step
             zoom.amount = zDelta * 0.20;
-            if (OIV_Execute(CommandExecute::CE_Zoom, sizeof(CmdDataZoom), &zoom) != ResultCode::RC_Success)
-                throw std::exception("Unable to Zoom.");
+            ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
+            
         }
         break;
 
@@ -98,8 +107,7 @@ namespace OIV
                     ////20% zoom in each step
                     pan.x = -deltax / 200.0;
                     pan.y = -deltaY / 200.0;
-                    if (OIV_Execute(CommandExecute::CE_Pan, sizeof(CmdDataPan), &pan) != ResultCode::RC_Success)
-                        throw std::exception("Unable to Pan.");
+                    ExecuteCommand(CommandExecute::CE_Pan, &pan, &CmdNull());
                 }
 
                 lastX = xPos;

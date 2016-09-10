@@ -29,14 +29,10 @@ extern "C"
         , CE_Pan
         , CE_Filter
         , CE_Refresh
+        , CE_GetFileInformation
     };
 
-    enum CommandQuery
-    {
-          CQ_NoOperation
-        , CQ_GetFileInformation
-    };
-
+    
     enum ResultCode
     {
           RC_Success
@@ -52,6 +48,12 @@ extern "C"
 
 #pragma pack(push, 1) 
     //-------Command Structs-------------------------
+
+    struct CmdNull
+    {
+        
+    };
+
 
     struct CmdDataZoom
     {

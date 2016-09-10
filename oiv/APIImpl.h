@@ -3,15 +3,10 @@
 #include "CommandProcessor.h"
 namespace OIV
 {
-    inline ResultCode Execute_impl(CommandExecute command, size_t commandSize,void* commandData)
+    
+    inline ResultCode Execute_impl(int command, size_t requestSize, void* requestData, size_t responseSize, void* responseData)
     {
-        return CommandProcessor::ProcessCommand(command, commandSize, commandData);
-    }
-
-    inline ResultCode Query_impl(CommandQuery command, void* commandData, size_t commandSize, void* output_data, size_t output_size)
-    {
-        return CommandProcessor::ProcessQuery(command, commandData, commandSize, output_data, output_size);
+        return CommandProcessor::ProcessCommand(static_cast<CommandExecute>( command), requestSize, requestData, responseSize, responseData);
     }
 }
-void
 

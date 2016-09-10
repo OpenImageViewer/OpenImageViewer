@@ -15,9 +15,7 @@ namespace OivTestDotNet
     {
 
         [DllImport("oiv.dll",CallingConvention = CallingConvention.Cdecl)]
-        public static extern int OIV_Execute(int command, int commandSize, IntPtr commandData);
-        [DllImport("oiv.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int OIV_Query(int command, IntPtr commandData, int commandSize, IntPtr output_data, int output_size);
+        public static extern int OIV_Execute(int command, int requestSize, IntPtr request,int responseSize,IntPtr response);
 
         [StructLayout(LayoutKind.Sequential, Pack= 1)]
         struct CmdDataLoadFile
@@ -51,7 +49,57 @@ namespace OivTestDotNet
             public int hasTransparency;
         };
 
-        public MainForm()
+        struct NullStruct
+        {
+
+        };
+
+        NullStruct? nullStruct;
+
+
+        void ExecuteCommand<T,U>(int command,ref T? request, ref U? response) where T : struct where U : struct
+    {
+            IntPtr requestAddr = IntPtr.Zero;
+            IntPtr responseAddr = IntPtr.Zero;
+            GCHandle requestHandle = default(GCHandle);
+            GCHandle responseHandle = default(GCHandle);
+            int requestSize = 0;
+            int responseSize = 0;
+            byte[] responseByteArray = null;
+
+            if (request != null)
+            {
+                requestHandle = GCHandle.Alloc(request, GCHandleType.Pinned);
+                requestAddr = requestHandle.AddrOfPinnedObject();
+                requestSize = Marshal.SizeOf(request);
+            }
+
+            if (response != null)
+            {
+                responseSize = Marshal.SizeOf(response);
+                responseByteArray = new byte[responseSize];
+
+                responseHandle = GCHandle.Alloc(responseByteArray, GCHandleType.Pinned);
+                responseAddr = responseHandle.AddrOfPinnedObject();
+            }
+
+            if (OIV_Execute(command, requestSize, requestAddr, responseSize, responseAddr)  != 0)
+                throw new Exception("Api function failed");
+
+            if (requestHandle.IsAllocated)
+                requestHandle.Free();
+
+            if (responseHandle.IsAllocated)
+                responseHandle.Free();
+
+
+            if (responseSize > 0)
+            {
+                response = ByteArrayToStructure<U>(responseByteArray);
+            }
+    }
+
+    public MainForm()
         {
             InitializeComponent();
         }
@@ -65,17 +113,10 @@ namespace OivTestDotNet
         {
             // Init
             const int CE_Init = 1;
-
-            CmdDataInit init = new CmdDataInit();
-            init.parentHandle =  panel1.Handle;
-            
-            GCHandle handle = GCHandle.Alloc(init, GCHandleType.Pinned);
-
-            if (OIV_Execute(CE_Init, Marshal.SizeOf(init), handle.AddrOfPinnedObject()) != 0)
-                throw new Exception("Unable to initialize Image rendering engine.");
-
-            handle.Free();
-           
+            CmdDataInit init;
+            init.parentHandle = panel1.Handle;
+            CmdDataInit? initNullable = new CmdDataInit?(init);
+            ExecuteCommand(CE_Init, ref initNullable, ref nullStruct);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -90,21 +131,14 @@ namespace OivTestDotNet
             loadFile.filePath = handle.AddrOfPinnedObject();
             loadFile.FileNamelength = filePath.Length;
 
-            GCHandle structHandle = GCHandle.Alloc(loadFile, GCHandleType.Pinned);
-
-
-            if (OIV_Execute(CE_LoadImage, Marshal.SizeOf(loadFile), structHandle.AddrOfPinnedObject()) != 0)
-                throw new Exception("Unable to Load image.");
-
-            structHandle.Free();
-            handle.Free();
+            CmdDataLoadFile? loadFileNullable = new CmdDataLoadFile?(loadFile);
+            ExecuteCommand(CE_LoadImage, ref loadFileNullable, ref nullStruct);
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e)
         {
             const int CE_Refresh = 7;
-            if (OIV_Execute(CE_Refresh, 0, IntPtr.Zero) != 0)
-                throw new Exception("Error while trying to refresh image rendering engine.");
+            ExecuteCommand(CE_Refresh, ref nullStruct, ref nullStruct);
         }
 
         T ByteArrayToStructure<T>(byte[] bytes) where T : struct
@@ -117,25 +151,23 @@ namespace OivTestDotNet
 
         private void button3_Click(object sender, EventArgs e)
         {
-            int dataSize = Marshal.SizeOf<QryFileInformation>();
-            byte[] byteArray = new byte[dataSize];
-            GCHandle structHandle = GCHandle.Alloc(byteArray, GCHandleType.Pinned);
+            const int CE_GetFileInformation = 8;
+            QryFileInformation fileInfo = new QryFileInformation();
+            QryFileInformation? fileInfoNullable = new QryFileInformation?(fileInfo);
 
-            const int CQ_GetFileInformation = 1;
+            ExecuteCommand(CE_GetFileInformation, ref nullStruct, ref fileInfoNullable);
+            fileInfo = fileInfoNullable.Value;
 
-            if (OIV_Query(CQ_GetFileInformation, IntPtr.Zero, 0, structHandle.AddrOfPinnedObject(), dataSize) != 0)
-                throw new Exception("Could not get file information.");
 
-            //Marshal.PtrToStructure(ptr, output_fileInfo);
-            structHandle.Free();
-            QryFileInformation output_fileInfo = ByteArrayToStructure<QryFileInformation>(byteArray);
 
-            MessageBox.Show($"Width:{output_fileInfo.width}\n" +
-                            $"Height: { output_fileInfo.height}\n" +
-                            $"BitsPerPixel: { output_fileInfo.bitsPerPixel} \n" +
-                            $"ImageDataSize: { output_fileInfo.imageDataSize}\n" + 
-                            $"Transparency: { output_fileInfo.hasTransparency}\n"+ 
-                            $"NumberOfMipMaps: { output_fileInfo.numMipMaps}\n"
+
+
+            MessageBox.Show($"Width:{fileInfo.width}\n" +
+                            $"Height: { fileInfo.height}\n" +
+                            $"BitsPerPixel: { fileInfo.bitsPerPixel} \n" +
+                            $"ImageDataSize: { fileInfo.imageDataSize}\n" + 
+                            $"Transparency: { fileInfo.hasTransparency}\n"+ 
+                            $"NumberOfMipMaps: { fileInfo.numMipMaps}\n"
             );
 
         }
