@@ -54,15 +54,30 @@ namespace OIV
         Real textureAR = textureSize.x / textureSize.y;
         Real windowAR = windowSize.x / windowSize.y;
 
-        Real ARFix = textureAR / windowAR;
-        return Vector2(fUVScale.x / ARFix, fUVScale.y);
+
+        Vector2 fixedUVScale = fUVScale;
+        Real ARFix = textureAR / windowAR;;
+        if (ARFix < 1)
+            fixedUVScale.x /= ARFix;
+        else
+            fixedUVScale.y *= ARFix;
+
+        return fixedUVScale;
+    }
+
+    void ZoomScrollState::Refresh()
+    {
+        SupressDirty(true);
+        RefreshScale();
+        RefreshOffset();
+        SupressDirty(false);
+
     }
 
     void ZoomScrollState::RefreshScale()
     {
         SetScale(fUVScale);
     }
-
 
     void ZoomScrollState::RefreshOffset()
     {
@@ -75,7 +90,6 @@ namespace OIV
             fListener->NotifyDirty();
         else
             fDirtyQueued = true;
-
     }
 
     void ZoomScrollState::SupressDirty(bool surpress)

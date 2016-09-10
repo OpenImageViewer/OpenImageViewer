@@ -170,7 +170,7 @@ namespace OIV
     void OIV::HandleWindowResize()
     {
         if (IsImageLoaded())
-            fScrollState.RefreshOffset();
+            fScrollState.Refresh();
     }
 
     void OIV::CreateCameraAndViewport()

@@ -33,8 +33,7 @@ namespace OIV
             fTextureName = textureName;
             fActiveTexture = Ogre::TextureManager::getSingleton().getByName(fTextureName);
             fPass->getTextureUnitState(0)->setTextureName(textureName);
-            fScrollState.RefreshScale();
-            fScrollState.RefreshOffset();
+            fScrollState.Refresh();
             return 0;
             
         }

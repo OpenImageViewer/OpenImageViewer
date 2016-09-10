@@ -37,12 +37,16 @@ namespace OIV
         void TranslateOffset(Ogre::Vector2 offset);
         void SetOffset(Ogre::Vector2 offset);
         Ogre::Vector2 GetARFixedUVScale();
+        void Refresh();
         
+        
+
+    private: // methods
         void RefreshScale();
         void RefreshOffset();
-
-
     private:
+        
+
         Listener* fListener;
         Ogre::Vector2 fUVScale;
         Ogre::Vector2 fUVOffset;
