@@ -20,14 +20,19 @@ namespace OIV
             fListener = listener;
             fUVOffset = Ogre::Vector2::ZERO;
             fUVScale = Ogre::Vector2::UNIT_SCALE;
+            fSupressDirty = false;
+            fDirtyQueued = false;
         }
 
         void Zoom(Ogre::Real amount);
         void Pan(Ogre::Vector2 amont);
 
+        void NotifyDirty();
+
         Ogre::Vector2 GetOffset() { return fUVOffset; }
         Ogre::Vector2 GetScale() { return fUVScale; }
         void SetScale(Ogre::Vector2 scale);
+        void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);
         void SetOffset(Ogre::Vector2 offset);
@@ -41,5 +46,7 @@ namespace OIV
         Listener* fListener;
         Ogre::Vector2 fUVScale;
         Ogre::Vector2 fUVOffset;
+        bool fSupressDirty;
+        bool fDirtyQueued;
     };
 }

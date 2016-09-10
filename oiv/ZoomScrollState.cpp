@@ -1,4 +1,5 @@
 #include "ZoomScrollState.h"
+
 namespace OIV
 {
     void ZoomScrollState::TranslateOffset(Ogre::Vector2 offset)
@@ -33,13 +34,13 @@ namespace OIV
             //Keep in center
             fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
         }
-        fListener->NotifyDirty();
+        NotifyDirty();
     }
 
     void ZoomScrollState::SetScale(Ogre::Vector2 scale)
     {
         fUVScale = scale;
-        fListener->NotifyDirty();
+        NotifyDirty();
     }
 
     Ogre::Vector2 ZoomScrollState::GetARFixedUVScale()
@@ -67,20 +68,57 @@ namespace OIV
         SetOffset(fUVOffset);
     }
 
+    void ZoomScrollState::NotifyDirty()
+    {
+        if (fSupressDirty == false)
+            fListener->NotifyDirty();
+        else
+            fDirtyQueued = true;
+
+    }
+
+    void ZoomScrollState::SupressDirty(bool surpress)
+    {
+        if (surpress == true)
+        {
+            fSupressDirty = true;
+        }
+        else
+        {
+            fSupressDirty = false;
+            if (fDirtyQueued)
+            {
+                NotifyDirty();
+                fDirtyQueued = false;
+            }
+        }
+    }
 
     void ZoomScrollState::Zoom(Ogre::Real amount)
     {
-        using namespace Ogre;
-
         if (amount == 0)
             return;
 
+        SupressDirty(true);
+        using namespace Ogre;
+
         Vector2 mousePos = fListener->GetMousePosition();
         Vector2 windowSize = fListener->GetWindowSize();
-
         Vector2 screenOffset = (mousePos / windowSize);
 
-        Vector2 uvNewScale = GetScale() + amount * GetScale().x;
+
+        Real currentZoom = 1 / GetScale().x;
+        
+        Real targetZoom;
+
+        if (amount > 0)
+            targetZoom = currentZoom * (1 + amount);
+        else
+        if (amount < 0)
+            targetZoom = currentZoom *( 1.0 - std::min(-amount,0.95f));
+
+        Vector2 uvNewScale = Vector2::UNIT_SCALE /  targetZoom;
+
         Vector2 oldScale = GetScale();
         SetScale(uvNewScale);
 
@@ -89,6 +127,7 @@ namespace OIV
         //zoom relative to mouse position
         Vector2 offsetChange = totalOffset * screenOffset;
         TranslateOffset(offsetChange);
+        SupressDirty(false);
     }
 
     void ZoomScrollState::Pan(Ogre::Vector2 amount)
