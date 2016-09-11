@@ -139,10 +139,11 @@ namespace OIV
 
         Vector2 uvNewScale = Vector2::UNIT_SCALE /  targetZoom;
 
-        Vector2 oldScale = GetScale();
+        Vector2 oldScaleFixed = GetARFixedUVScale();
         SetScale(uvNewScale);
+        Vector2 newScaleFixed = GetARFixedUVScale();
 
-        Vector2 totalOffset = (oldScale - uvNewScale);
+        Vector2 totalOffset = (oldScaleFixed - newScaleFixed);
 
         //zoom relative to mouse position
         Vector2 offsetChange = totalOffset * screenOffset;
