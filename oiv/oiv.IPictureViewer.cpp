@@ -67,13 +67,17 @@ namespace OIV
     }
     int OIV::Refresh()
     {
-        //HandleWindowResize();
-        UpdateGpuParams();
-        Ogre::Root::getSingleton().renderOneFrame();
+        if (fIsRefresing == false)
+        {
+            fIsRefresing = true;
+            HandleWindowResize();
+            UpdateGpuParams();
+            Ogre::Root::getSingleton().renderOneFrame();
+            fIsRefresing = false;
+        }
 
         return 0;
     }
-
 
     int OIV::GetFileInformation(QryFileInformation& information)
     {

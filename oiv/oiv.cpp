@@ -9,6 +9,7 @@ namespace OIV
 
     OIV::OIV() :
         fScrollState(this)
+        , fIsRefresing(false)
         , fPass(NULL)
         , fParent(NULL)
     {

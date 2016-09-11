@@ -25,6 +25,7 @@ namespace OIV
         Ogre::Image         fImageOpened;
         String              fTextureName;
         Ogre::TexturePtr    fActiveTexture;
+        bool                fIsRefresing;
         
         
         void SetupRenderer();
