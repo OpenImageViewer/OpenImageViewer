@@ -1,45 +1,19 @@
 #include "PreCompiled.h"
 #include "oiv.h"
 #include "StringUtility.h"
-#include "OgreHelper.h"
 namespace OIV
 {
     // IPictureViewr implementation
     int OIV::LoadFile(OIVCHAR* filePath)
     {
-        using namespace Ogre;
-        std::string textureName = StringUtility::ToAString(filePath);
-        
-        bool isLoaded = false;
-
-        TexturePtr texture = Ogre::TextureManager::getSingleton().getByName(textureName);
-
-        isLoaded |= texture.isNull() == false;
-
-
-        if (isLoaded == false)
+        std::string path = StringUtility::ToAString(filePath);
+        if (fImageDescriptor.OpenFile(path))
         {
-            Image image;
-
-            if (OgreHelper::OgreOpenImage(textureName, image))
-            {
-                OgreHelper::OgreLoadImageToTexture(image, textureName);
-                this->fImageOpened = image;
-                isLoaded = true;
-            }
-        }
-
-        if (isLoaded == true)
-        {
-            fTextureName = textureName;
-            fActiveTexture = Ogre::TextureManager::getSingleton().getByName(fTextureName);
-            fPass->getTextureUnitState(0)->setTextureName(textureName);
+            fPass->getTextureUnitState(0)->setTextureName(path);
             fScrollState.Refresh();
-            return 0;
-            
+            return true;
         }
-        return 1;
-
+        return false;
     }
 
     double OIV::Zoom(double percentage)
@@ -84,13 +58,14 @@ namespace OIV
     {
         if (IsImageLoaded())
         {
-            information.bitsPerPixel = fImageOpened.getBPP();
-            information.height = fImageOpened.getHeight();
-            information.width = fImageOpened.getWidth();
-            information.numMipMaps = fImageOpened.getNumMipmaps();
-            information.rowPitchInBytes = fImageOpened.getRowSpan();
-            information.hasTransparency = fImageOpened.getHasAlpha();
-            information.imageDataSize = fImageOpened.getSize();
+            const ImageDescriptor::Properties& props = fImageDescriptor.GetImageProperties();
+            information.bitsPerPixel = props.bitsPerPixel;
+            information.height = props.height;
+            information.width = props.width;
+            information.numMipMaps = 0;
+            information.rowPitchInBytes = props.rowPitch;
+            information.hasTransparency = 1;
+            information.imageDataSize = 0;
             information.numChannels = 0;
             return 0;
         }

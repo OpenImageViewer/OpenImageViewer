@@ -27,9 +27,6 @@
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="OgreHelper.h">
-      <Filter>Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="StringUtility.h">
       <Filter>Helpers</Filter>
     </ClInclude>
@@ -37,6 +34,7 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="TestApp.h" />
+    <ClInclude Include="ImageDescriptor.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

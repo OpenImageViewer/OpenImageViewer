@@ -128,7 +128,7 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetImageSize()
     {
-        return Ogre::Vector2(fActiveTexture->getWidth(), fActiveTexture->getHeight());
+        return Ogre::Vector2(fImageDescriptor.GetImageProperties().width, fImageDescriptor.GetImageProperties().height);
     }
 
     Ogre::RenderWindow* OIV::GetWindow()

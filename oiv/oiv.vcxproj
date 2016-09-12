@@ -202,8 +202,8 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="CommandProcessor.h" />
+    <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
-    <ClInclude Include="OgreHelper.h" />
     <ClInclude Include="oiv.h" />
     <ClInclude Include="ConsoleLogListener.h" />
     <ClInclude Include="PreCompiled.h" />

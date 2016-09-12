@@ -2,6 +2,7 @@
 #include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
+#include "ImageDescriptor.h"
 
 
 namespace OIV
@@ -22,10 +23,8 @@ namespace OIV
         Ogre::GpuProgramParametersSharedPtr  fFragmentParameters;
         Ogre::Pass*         fPass;
         HWND                fParent;
-        Ogre::Image         fImageOpened;
-        Ogre::String              fTextureName;
-        Ogre::TexturePtr    fActiveTexture;
         bool                fIsRefresing;
+        ImageDescriptor fImageDescriptor;
         
         
         void SetupRenderer();
@@ -68,16 +67,12 @@ namespace OIV
 
         bool IsImageLoaded() const
         {
-            return fActiveTexture.isNull() == false;
+            return fImageDescriptor.IsFileOpened();
         }
 
 
     public:
         Ogre::Root *root;
-        void SetTextureName(const char* textureName)
-        {
-            fTextureName = textureName;
-        }
         ~OIV();
         OIV();
         void TryLoadPlugin(std::string pluginName);
