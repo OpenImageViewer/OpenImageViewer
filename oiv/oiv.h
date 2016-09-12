@@ -6,24 +6,24 @@
 
 namespace OIV
 {
-    class OIV : public WindowEventListener
+    class OIV : public Ogre::WindowEventListener
         , public ZoomScrollState::Listener
         , public IPictureRenderer
     {
     private:
 
 
-        SceneManager*		fScene;
-        Camera*				fActiveCamera;
-        String				fActiveCameraName;
-        Viewport*			fViewPort;
+        Ogre::SceneManager*		fScene;
+        Ogre::Camera*				fActiveCamera;
+        Ogre::String				fActiveCameraName;
+        Ogre::Viewport*			fViewPort;
         ZoomScrollState     fScrollState;
         Ogre::Rectangle2D* rect;
-        GpuProgramParametersSharedPtr  fFragmentParameters;
+        Ogre::GpuProgramParametersSharedPtr  fFragmentParameters;
         Ogre::Pass*         fPass;
         HWND                fParent;
         Ogre::Image         fImageOpened;
-        String              fTextureName;
+        Ogre::String              fTextureName;
         Ogre::TexturePtr    fActiveTexture;
         bool                fIsRefresing;
         
@@ -48,20 +48,20 @@ namespace OIV
         //----------------------------------------------------
 
         // 'Ogre::WindowEventListener' members decleration
-        bool windowClosing(RenderWindow* rw) override
+        bool windowClosing(Ogre::RenderWindow* rw) override
         {
             ShutDown();
-            return WindowEventListener::windowClosing(rw);
+            return Ogre::WindowEventListener::windowClosing(rw);
         }
 
         void ShutDown()
         {
-            Root::getSingleton().queueEndRendering();
+            Ogre::Root::getSingleton().queueEndRendering();
         }
 
-        void windowClosed(RenderWindow *  rw)  override;
+        void windowClosed(Ogre::RenderWindow *  rw)  override;
 
-        void windowResized(RenderWindow* rw)  override;
+        void windowResized(Ogre::RenderWindow* rw)  override;
 
         void HandleWindowResize();
 
@@ -73,7 +73,7 @@ namespace OIV
 
 
     public:
-        Root *root;
+        Ogre::Root *root;
         void SetTextureName(const char* textureName)
         {
             fTextureName = textureName;

@@ -7,6 +7,7 @@ namespace OIV
     // IPictureViewr implementation
     int OIV::LoadFile(OIVCHAR* filePath)
     {
+        using namespace Ogre;
         std::string textureName = StringUtility::ToAString(filePath);
         
         bool isLoaded = false;

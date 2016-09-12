@@ -42,6 +42,7 @@ namespace OIV
     void OIV::SetupRenderer()
     {
         using namespace std;
+        using namespace Ogre;
 
 #ifdef _DEBUG
         root = new Root();
@@ -63,7 +64,7 @@ namespace OIV
         //TryLoadPlugin("RenderSystem_GL.dll");
 #endif
 
-
+        using namespace Ogre;
         const RenderSystemList &rlist = root->getAvailableRenderers();
         RenderSystemList::const_iterator it = rlist.begin();
         while (it != rlist.end())
@@ -114,6 +115,7 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetMousePosition()
     {
+        using namespace Ogre;
         RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
         Ogre::StringStream ss;
         POINT p;
@@ -126,16 +128,18 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetImageSize()
     {
-        return Vector2(fActiveTexture->getWidth(), fActiveTexture->getHeight());
+        return Ogre::Vector2(fActiveTexture->getWidth(), fActiveTexture->getHeight());
     }
 
     Ogre::RenderWindow* OIV::GetWindow()
     {
+        using namespace Ogre;
         return dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
     }
 
     Ogre::Vector2 OIV::GetWindowSize()
     {
+        using namespace Ogre;
         RenderWindow* wnd = GetWindow();
         return Vector2(wnd->getWidth(), wnd->getHeight());
     }
@@ -147,6 +151,7 @@ namespace OIV
 
     void OIV::UpdateGpuParams()
     {
+        using namespace Ogre;
         Vector2 uvScaleFixed = fScrollState.GetARFixedUVScale();
         Vector2 uvOffset = fScrollState.GetOffset();
 
@@ -157,13 +162,13 @@ namespace OIV
 
 
     // 'Ogre::WindowEventListener' implementation 
-    void OIV::windowClosed(RenderWindow *  rw)
+    void OIV::windowClosed(Ogre::RenderWindow *  rw)
     {
         PostQuitMessage(0);
     }
 
    
-    void OIV::windowResized(RenderWindow* rw)
+    void OIV::windowResized(Ogre::RenderWindow* rw)
     {
         HandleWindowResize();
     }
@@ -176,7 +181,7 @@ namespace OIV
 
     void OIV::CreateCameraAndViewport()
     {
-
+        using namespace Ogre;
         RenderTarget* window = Root::getSingleton().getRenderSystem()->getRenderTarget("MainWindow");
 
         this->fActiveCameraName = "MainCamera";
