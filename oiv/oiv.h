@@ -2,7 +2,8 @@
 #include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include "ImageDescriptor.h"
+#include "ImageFreeImage.h"
+#include "Quad.h"
 
 
 namespace OIV
@@ -19,12 +20,13 @@ namespace OIV
         Ogre::String				fActiveCameraName;
         Ogre::Viewport*			fViewPort;
         ZoomScrollState     fScrollState;
-        Ogre::Rectangle2D* rect;
+        Quad * rect;
         Ogre::GpuProgramParametersSharedPtr  fFragmentParameters;
         Ogre::Pass*         fPass;
         HWND                fParent;
         bool                fIsRefresing;
-        ImageDescriptor fImageDescriptor;
+        Image* fImage;
+        Image* fImage32Bit;
         
         
         void SetupRenderer();
@@ -67,7 +69,7 @@ namespace OIV
 
         bool IsImageLoaded() const
         {
-            return fImageDescriptor.IsFileOpened();
+            return fImage->IsOpened();
         }
 
 

@@ -22,29 +22,36 @@ namespace OIV
             fUVScale = Ogre::Vector2::UNIT_SCALE;
             fSupressDirty = false;
             fDirtyQueued = false;
+            fInverted = false;
         }
 
+        // commands
         void Zoom(Ogre::Real amount);
         void Pan(Ogre::Vector2 amont);
-
-        void NotifyDirty();
-
+        void Refresh();
+        
+        
+        // queries
         Ogre::Vector2 GetOffset() { return fUVOffset; }
         Ogre::Vector2 GetScale() { return fUVScale; }
+        Ogre::Vector2 GetARFixedUVScale();
+
+        void SetInvertedVCoordinate(bool inverted);
+
+    private: // methods
+        void RefreshScale();
+        void RefreshOffset();
+        void NotifyDirty();
+
+        
         void SetScale(Ogre::Vector2 scale);
         void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);
         void SetOffset(Ogre::Vector2 offset);
-        Ogre::Vector2 GetARFixedUVScale();
-        void Refresh();
-        
-        
 
-    private: // methods
-        void RefreshScale();
-        void RefreshOffset();
-    private:
+        
+    private: //member fields
         
 
         Listener* fListener;
@@ -52,5 +59,6 @@ namespace OIV
         Ogre::Vector2 fUVOffset;
         bool fSupressDirty;
         bool fDirtyQueued;
+        bool fInverted;
     };
 }

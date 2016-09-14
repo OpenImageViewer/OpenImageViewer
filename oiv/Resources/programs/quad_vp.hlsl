@@ -2,8 +2,7 @@
 
 struct ShaderIn
 {
-	float3 pos : POSITION;
-	float2 uv : TEXCOORD;
+	float2 pos : POSITION;
 };
 
 struct ShaderOut
@@ -15,6 +14,6 @@ struct ShaderOut
 
 void main(in ShaderIn input, out ShaderOut output)
 {
-    output.pos = float4(input.pos.xy,0,1);// mul(worldViewProj, input.pos);
-	output.uv = input.uv;
+    output.pos = float4(input.pos,0,1);
+    output.uv = float2(input.pos * 0.5 + 0.5);
 }

@@ -10,6 +10,7 @@
       <Filter>API</Filter>
     </ClCompile>
     <ClCompile Include="TestApp.cpp" />
+    <ClCompile Include="Quad.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -34,7 +35,13 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="TestApp.h" />
-    <ClInclude Include="ImageDescriptor.h" />
+    <ClInclude Include="Quad.h" />
+    <ClInclude Include="ImageAbstract.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageFreeImage.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
@@ -68,6 +75,9 @@
     </Filter>
     <Filter Include="Helpers">
       <UniqueIdentifier>{9caa947b-b089-4664-81d1-f5cd43cc37c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ImageSource">
+      <UniqueIdentifier>{26af1a7f-4024-44a9-a4f1-8dd397a53aed}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

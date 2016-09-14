@@ -172,7 +172,6 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -194,6 +193,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="oiv.IPictureViewer.cpp" />
+    <ClCompile Include="Quad.cpp" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
@@ -202,11 +202,13 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="CommandProcessor.h" />
-    <ClInclude Include="ImageDescriptor.h" />
+    <ClInclude Include="ImageAbstract.h" />
+    <ClInclude Include="ImageFreeImage.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
     <ClInclude Include="oiv.h" />
     <ClInclude Include="ConsoleLogListener.h" />
     <ClInclude Include="PreCompiled.h" />
+    <ClInclude Include="Quad.h" />
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="Utility.h" />

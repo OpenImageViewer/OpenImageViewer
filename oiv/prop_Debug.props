@@ -12,7 +12,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OGRESDK)\boost\lib;$(OGRESDK)\lib\debug;$(OGREDEPEND)\lib\debug</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OgreMain_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OGRESDK)\lib\debug\OgreMainStatic_d.lib;$(OGRESDK)\lib\debug\RenderSystem_Direct3D11Static_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
     </Link>
     <CustomBuildStep>

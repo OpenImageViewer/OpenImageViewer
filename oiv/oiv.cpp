@@ -2,7 +2,10 @@
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "precompiled.h"
 #include "oiv.h"
-#include "OgreRectangle2D.h"
+#include "quad.h"
+#ifdef _MSC_VER
+#include <RenderSystems\Direct3D11\include\OgreD3D11Plugin.h>
+#endif
 namespace OIV
 {
 
@@ -12,8 +15,9 @@ namespace OIV
         , fIsRefresing(false)
         , fPass(NULL)
         , fParent(NULL)
+        , fImage32Bit(NULL)
     {
-         
+        fImage = new ImageFreeImage();
     }
 
 
@@ -51,7 +55,7 @@ namespace OIV
         root = new Root(BLANKSTRING, BLANKSTRING, BLANKSTRING);
 #endif
 
-
+#ifndef OGRE_STATIC_LIB
 #ifdef _DEBUG
         //TryLoadPlugin("RenderSystem_Direct3D9_d");
         TryLoadPlugin("RenderSystem_Direct3D11_d");
@@ -63,6 +67,12 @@ namespace OIV
         //TryLoadPlugin("RenderSystem_GLES2.dll");
         //TryLoadPlugin("RenderSystem_GL.dll");
 #endif
+#else
+        D3D11Plugin* plugin = new D3D11Plugin();
+        plugin->install();
+
+#endif
+        
 
         using namespace Ogre;
         const RenderSystemList &rlist = root->getAvailableRenderers();
@@ -100,8 +110,8 @@ namespace OIV
 
         RenderWindow *window = root->createRenderWindow(
             "MainWindow",			// window name
-            800,                   // window width, in pixels
-            600,                   // window height, in pixels
+            1280,                   // window width, in pixels
+            800,                   // window height, in pixels
             false,                 // fullscreen or not
             &options);                    // use defaults for all other values
 
@@ -111,6 +121,9 @@ namespace OIV
         fScene = root->createSceneManager(ST_GENERIC, "MySceneManager");
 
         ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
+
+        // If Direct3D11 then invert Y.
+        fScrollState.SetInvertedVCoordinate(true);
     }
 
     Ogre::Vector2 OIV::GetMousePosition()
@@ -128,7 +141,7 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetImageSize()
     {
-        return Ogre::Vector2(fImageDescriptor.GetImageProperties().width, fImageDescriptor.GetImageProperties().height);
+        return Ogre::Vector2(fImage->GetWidth(), fImage->GetHeight());
     }
 
     Ogre::RenderWindow* OIV::GetWindow()
@@ -206,7 +219,7 @@ namespace OIV
     {
         using namespace Ogre;
 
-        rect = new Ogre::Rectangle2D(true);
+        rect = new Quad(true);
 
         rect->setCorners(-1, 1, 1, -1);
         AxisAlignedBox bb;
@@ -220,6 +233,7 @@ namespace OIV
         fPass->getTextureUnitState(0)->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
         //fPass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
         fPass->getTextureUnitState(0)->setTextureFiltering(TFO_TRILINEAR);
+        fPass->setCullingMode(CULL_NONE);
 
 
         fScene->getRootSceneNode()->createChildSceneNode()->attachObject(rect);

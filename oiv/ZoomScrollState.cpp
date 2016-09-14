@@ -125,6 +125,11 @@ namespace OIV
         Vector2 mousePos = fListener->GetMousePosition();
         Vector2 windowSize = fListener->GetWindowSize();
         Vector2 screenOffset = (mousePos / windowSize);
+        if (fInverted)
+        {
+            assert(screenOffset.y <= 1.0);
+            screenOffset.y = 1 - screenOffset.y;
+        }
 
 
         Real currentZoom = 1 / GetScale().x;
@@ -151,10 +156,16 @@ namespace OIV
         SupressDirty(false);
     }
 
+    void ZoomScrollState::SetInvertedVCoordinate(bool inverted)
+    {
+        fInverted = inverted;
+    }
+
     void ZoomScrollState::Pan(Ogre::Vector2 amount)
     {
-        //TODO: pan accordding to X and Y
+        //TODO: pan according to X and Y
         Ogre::Vector2 panFactor = amount * GetScale().x;
+        panFactor.y *= fInverted ? -1 : 1;
         TranslateOffset(panFactor);
     }
 }
