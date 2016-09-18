@@ -93,6 +93,7 @@ namespace OIV
         virtual int Init() override;
         virtual int SetParent(HWND handle) override;
         virtual int Refresh() override;
+        virtual Image* GetImage() override;
         
 
         //Queries

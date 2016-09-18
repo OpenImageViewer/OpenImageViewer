@@ -1,6 +1,7 @@
 #pragma once
 #include "../API/defs.h"
 #include <Windows.h>
+#include "../ImageAbstract.h"
 namespace OIV
 {
     class IPictureRenderer
@@ -14,5 +15,7 @@ namespace OIV
         virtual int Refresh() = 0;
 
         virtual int GetFileInformation(QryFileInformation& information) = 0;
+
+        virtual Image* GetImage() = 0;
     };
 }

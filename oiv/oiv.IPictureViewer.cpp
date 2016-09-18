@@ -100,12 +100,16 @@ namespace OIV
         return 0;
     }
 
+    Image* OIV::GetImage() 
+    {
+        return fImage;
+    }
+
     int OIV::GetFileInformation(QryFileInformation& information)
     {
         if (IsImageLoaded())
         {
-         
-            
+                    
             information.bitsPerPixel = fImage->GetBitsPerTexel();
             information.height = fImage->GetHeight();
             information.width = fImage->GetWidth();
@@ -114,6 +118,7 @@ namespace OIV
             information.hasTransparency = 1;
             information.imageDataSize = 0;
             information.numChannels = 0;
+
             return 0;
         }
         else

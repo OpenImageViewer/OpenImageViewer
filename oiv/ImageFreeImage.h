@@ -48,7 +48,7 @@ namespace OIV
                 fSourceFileName = std::string();
             }
         }
-        virtual bool Load(std::string filePath) override
+        virtual bool LoadImpl(std::string filePath) override
         {
             if (IsOpened())
                 Unload();

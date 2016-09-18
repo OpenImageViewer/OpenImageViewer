@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include <limits>
 #include <algorithm>
+#include <iomanip>
 namespace OIV
 {
     
@@ -21,23 +22,24 @@ namespace OIV
 
     bool TestApp::LoadFile(std::wstring filePath)
     {
-        CmdDataLoadFile loadFile;
-        loadFile.filePath = const_cast<OIVCHAR*>(filePath.c_str());
-        loadFile.FileNamelength = _tcslen(loadFile.filePath);
-        bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadFile, &CmdNull()) == true;
+        CmdResponseLoad loadResponse;
+        CmdDataLoadFile loadRequest;
+        loadRequest.filePath = const_cast<OIVCHAR*>(filePath.c_str());
+        loadRequest.FileNamelength = _tcslen(loadRequest.filePath);
+        bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadRequest, &loadResponse) == true;
 
         if (success)
         {
             using namespace Ogre;
             RenderWindow* rw =  dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
 
-            QryFileInformation fileInfo;
-            ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);
-            
+            /*QryFileInformation fileInfo;
+            ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/
 
             std::wstringstream ss;
             
-            ss << filePath <<L" | " << fileInfo.width << L" X " << fileInfo.height << L" X " << fileInfo.bitsPerPixel << L" BPP";
+            ss << filePath <<L" | " << loadResponse.width << L" X " << loadResponse.height << L" X " 
+                << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
             HWND handle = NULL;
             rw->getCustomAttribute("WINDOW", &handle);
             SetWindowTextW(handle, ss.str().c_str());

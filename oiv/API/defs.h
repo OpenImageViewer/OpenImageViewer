@@ -60,6 +60,14 @@ extern "C"
         double amount;
     };
 
+    struct CmdResponseLoad
+    {
+        double loadTime;
+        int width;
+        int height;
+        int bpp;
+    };
+
     struct CmdDataPan
     {
         double x;

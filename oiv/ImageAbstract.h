@@ -3,6 +3,7 @@
 //#define FREEIMAGE_LITTLEENDIAN
 #include "OgreCommon.h"
 #include "libs/FreeImage.h"
+#include <chrono>
 namespace OIV
 {
     enum ImageType
@@ -14,8 +15,8 @@ namespace OIV
 
     class Image
     {
-
     public:
+        
         //Base abstract methods
         virtual size_t GetWidth() = 0;
         virtual size_t GetHeight() = 0;
@@ -23,6 +24,7 @@ namespace OIV
         virtual size_t GetBitsPerTexel() = 0;
         virtual unsigned char* GetBuffer() = 0;
         virtual ImageType GetImageType() = 0;
+        
 
         // Query methods
         size_t GetRowPitchInTexels() { return GetRowPitchInBytes() / GetBytesPerTexel(); }
@@ -40,9 +42,30 @@ namespace OIV
 
         virtual Image* ConverToRGBA() = 0;
         virtual void Unload() {}
-        virtual bool Load(std::string filePath) = 0;
+        bool Load(std::string filePath)
+        {
+            auto start = std::chrono::high_resolution_clock::now();
+            bool success = LoadImpl(filePath);
+            auto end = std::chrono::high_resolution_clock::now();
+            fLoadTime = (end - start).count() / (long double)((1000 * 1000));
+            return success;
+
+        }
+            virtual bool LoadImpl(std::string filePath) = 0;
+            
         virtual bool IsOpened() = 0;
 
+        Image() : fLoadTime(0)
+        {}
+        
         virtual ~Image() {}
+
+
+        double GetLoadTime()
+        {
+            return fLoadTime;
+        }
+    private:
+         double fLoadTime;
     };
 }

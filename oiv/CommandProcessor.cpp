@@ -94,6 +94,16 @@ namespace OIV
                     result = RC_InvalidParameters;
                 }
 
+                //Optional response
+                if (responseSize == sizeof(CmdResponseLoad))
+                {
+                    CmdResponseLoad* loadResponse = reinterpret_cast<CmdResponseLoad*>(responseData);
+                    Image* image = sPictureRenderer->GetImage();
+                    loadResponse->width = image->GetWidth();
+                    loadResponse->height = image->GetHeight();
+                    loadResponse->bpp = image->GetBitsPerTexel();
+                    loadResponse->loadTime = image->GetLoadTime();
+                }
 
             }
             else
