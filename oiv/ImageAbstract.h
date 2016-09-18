@@ -30,6 +30,7 @@ namespace OIV
         size_t GetSlicePitchInTexels() { return GetRowPitchInTexels() * GetHeight(); }
         size_t GetTotalPixels() { return GetWidth() * GetHeight(); }
         unsigned short GetBytesPerTexel() { return GetBitsPerTexel() / 8; }
+        bool NeedConvertionToBYTERGBA() { return GetImageType() != IT_BITMAP || GetBitsPerTexel() != 32; }
 
 
         size_t GetNumberOfSubImages() { throw std::exception("Not implemented"); }
@@ -42,9 +43,6 @@ namespace OIV
         virtual bool Load(std::string filePath) = 0;
         virtual bool IsOpened() = 0;
 
-        virtual ~Image()
-        {
-            Unload();
-        }
+        virtual ~Image() {}
     };
 }
