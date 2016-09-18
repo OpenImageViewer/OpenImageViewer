@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <windef.h>
 #include <windows.h>
@@ -6,6 +7,8 @@
 #include <tchar.h>
 #include "API\defs.h"
 typedef std::basic_string<OIVCHAR> tstring;
+typedef std::list<tstring> ListFiles;
+typedef ListFiles::const_iterator ListFilesIterator;
 
 class Utility
 {
@@ -80,8 +83,9 @@ public:
 			// a file 
 			return false;
 	}
+    
 
-	static void find_files(tstring wrkdir, std::list<tstring> &lstFileData)
+	static void find_files(tstring wrkdir, ListFiles &lstFileData, bool recursive = false)
 	{
 		
 		tstring wrkdirtemp = wrkdir;
@@ -100,7 +104,7 @@ public:
 
 		do
 		{
-			if( file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+			if(recursive && file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 			{
 				if ((_tcscmp(file_data.cFileName, TEXT(".")) != 0) &&
 					(_tcscmp(file_data.cFileName, TEXT("..")) != 0))
