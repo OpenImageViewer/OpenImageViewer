@@ -149,8 +149,8 @@ namespace OIV
 
         while ((isLoaded = LoadFile(*currentPos)) == false);
 
-
-        fCurrentListPosition = currentPos;
+        if (isLoaded)
+            fCurrentListPosition = currentPos;
     }
 
     void TestApp::HandleMessages(const MSG & uMsg)
