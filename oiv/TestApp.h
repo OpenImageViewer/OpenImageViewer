@@ -15,8 +15,9 @@ namespace OIV
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private:
-        ListFilesIterator fCurrentListPosition;
+        
         ListFiles fListFiles;
+        ListFilesIterator fCurrentListPosition;
         bool LoadFile(std::wstring filePath);
         void LoadFileInFolder(std::wstring filePath);
     };
