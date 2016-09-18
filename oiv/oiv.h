@@ -27,6 +27,7 @@ namespace OIV
         bool                fIsRefresing;
         Image* fImage;
         Image* fImage32Bit;
+        std::string fCurrentOpenedFile;
         
         
         void SetupRenderer();

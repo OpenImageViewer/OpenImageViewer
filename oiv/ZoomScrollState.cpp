@@ -114,6 +114,15 @@ namespace OIV
         }
     }
 
+    void ZoomScrollState::Reset(bool refresh /*= false*/)
+    {
+        fUVOffset = Ogre::Vector2::ZERO;
+        fUVScale = Ogre::Vector2::UNIT_SCALE;
+
+        if (refresh)
+            Refresh();
+    }
+
     void ZoomScrollState::Zoom(Ogre::Real amount)
     {
         if (amount == 0)

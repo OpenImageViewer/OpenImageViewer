@@ -26,6 +26,7 @@ namespace OIV
         }
 
         // commands
+        void Reset(bool refresh = false);
         void Zoom(Ogre::Real amount);
         void Pan(Ogre::Vector2 amont);
         void Refresh();

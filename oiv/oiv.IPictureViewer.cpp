@@ -8,17 +8,36 @@ namespace OIV
     {
         using namespace Ogre;
         std::string path = StringUtility::ToAString(filePath);
+
+        //refactor out to unload
+        if (fImage->IsOpened())
+        {
+            TextureManager::getSingleton().remove(fCurrentOpenedFile);
+        }
+
+        
+        if (fImage != fImage32Bit)
+        {
+            if (fImage32Bit != NULL)
+                fImage32Bit->Unload();
+            delete fImage32Bit;
+
+            fImage32Bit = NULL;
+        }
+
+        
+            
+
         if (fImage->Load(path))
         {
-
-            
-            fImage32Bit = fImage->ConverToRGBA();
+            fCurrentOpenedFile = path;
+            fImage32Bit = fImage->NeedConvertionToBYTERGBA() ? fImage->ConverToRGBA() : fImage;
 
             int width = fImage32Bit->GetWidth();
             int height = fImage32Bit->GetHeight();
 
                 TexturePtr tex = TextureManager::getSingleton().createManual(
-                    path
+                    fCurrentOpenedFile
                     , ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
                     , TEX_TYPE_2D
                     , width// width
@@ -37,7 +56,7 @@ namespace OIV
 
 
             fPass->getTextureUnitState(0)->setTextureName(path);
-            fScrollState.Refresh();
+            fScrollState.Reset(true);
             return true;
         }
         return false;
@@ -86,15 +105,15 @@ namespace OIV
         if (IsImageLoaded())
         {
          
-            //todo : complete implementation
-            /*information.bitsPerPixel = props.bitsPerPixel;
-            information.height = props.height;
-            information.width = props.width;
+            
+            information.bitsPerPixel = fImage->GetBitsPerTexel();
+            information.height = fImage->GetHeight();
+            information.width = fImage->GetWidth();
             information.numMipMaps = 0;
-            information.rowPitchInBytes = props.rowPitch;
+            information.rowPitchInBytes = fImage->GetRowPitchInBytes();
             information.hasTransparency = 1;
             information.imageDataSize = 0;
-            information.numChannels = 0;*/
+            information.numChannels = 0;
             return 0;
         }
         else
