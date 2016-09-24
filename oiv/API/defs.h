@@ -106,6 +106,6 @@ extern "C"
         int hasTransparency;
     };
 
-#pragma pack(push, 0) 
+#pragma pack(pop) 
 
 }
