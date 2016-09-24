@@ -2,7 +2,6 @@
 #include "TestApp.h"
 #include "Utility.h"
 #include <limits>
-#include <algorithm>
 #include <iomanip>
 namespace OIV
 {
@@ -17,7 +16,17 @@ namespace OIV
 
     TestApp::TestApp()
     {
-     
+        fLastWindowPlacement = { 0 };
+        fIsSlideShowActive = false;
+    }
+
+    HWND TestApp::GetWindowHandle()
+    {
+        using namespace Ogre;
+        RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
+        HWND handle = NULL;
+        rw->getCustomAttribute("WINDOW", &handle);
+        return handle;
     }
 
     bool TestApp::LoadFile(std::wstring filePath)
@@ -31,8 +40,6 @@ namespace OIV
         if (success)
         {
             using namespace Ogre;
-            RenderWindow* rw =  dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
-
             /*QryFileInformation fileInfo;
             ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/
 
@@ -40,8 +47,8 @@ namespace OIV
             
             ss << filePath <<L" | " << loadResponse.width << L" X " << loadResponse.height << L" X " 
                 << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
-            HWND handle = NULL;
-            rw->getCustomAttribute("WINDOW", &handle);
+            HWND handle = GetWindowHandle();
+            
             SetWindowTextW(handle, ss.str().c_str());
         }
 
@@ -50,16 +57,34 @@ namespace OIV
 
     void TestApp::LoadFileInFolder(std::wstring filePath)
     {
+        
+        std::wstring workingFolder;
         int idx = filePath.find_last_of(L"\\");
+
         if (idx > -1)
         {
-            std::wstring  folder = filePath.substr(0, idx);
+            workingFolder = filePath.substr(0, idx);
+        }
+        else
+        {
+            TCHAR path[MAX_PATH];
+            if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
+            {
+                workingFolder = path;
+                filePath = workingFolder + L"\\" + filePath;
+            }
 
-            Utility::find_files(folder, fListFiles);
+        }
+
+        if (workingFolder.empty() == false)
+        {
+            Utility::find_files(workingFolder, fListFiles);
             fCurrentListPosition = std::find(fListFiles.begin(), fListFiles.end(), filePath);
         }
         else
+        {
             fCurrentListPosition = fListFiles.end();
+        }
 
     }
 
@@ -78,11 +103,9 @@ namespace OIV
         LoadFileInFolder(filePath);
 
 
-        HWND hwndMain;
-        HWND hwndDlgModeless = NULL;
+        
         MSG msg;
         BOOL bRet;
-        HACCEL haccel;
         while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
         {
             if (bRet == -1)
@@ -91,15 +114,9 @@ namespace OIV
             }
             else
             {
-                if (hwndDlgModeless == (HWND)NULL ||
-                    !IsDialogMessage(hwndDlgModeless, &msg) &&
-                    !TranslateAccelerator(hwndMain, haccel,
-                        &msg))
-                {
                     TranslateMessage(&msg);
                     DispatchMessage(&msg);
                     HandleMessages(msg);
-                }
             }
         }
 
@@ -154,6 +171,65 @@ namespace OIV
         if (isLoaded)
             fCurrentListPosition = currentPos;
     }
+    
+    void TestApp::ToggleFullScreen()
+    {
+        HWND hwnd = GetWindowHandle();
+
+        DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
+        if (dwStyle & WS_OVERLAPPEDWINDOW) {
+            MONITORINFO mi = { sizeof(mi) };
+            if (GetWindowPlacement(hwnd, &fLastWindowPlacement) &&
+                GetMonitorInfo(MonitorFromWindow(hwnd,
+                    MONITOR_DEFAULTTOPRIMARY), &mi)) {
+                SetWindowLong(hwnd, GWL_STYLE,
+                    dwStyle & ~WS_OVERLAPPEDWINDOW);
+                SetWindowPos(hwnd, HWND_TOP,
+                    mi.rcMonitor.left, mi.rcMonitor.top,
+                    mi.rcMonitor.right - mi.rcMonitor.left,
+                    mi.rcMonitor.bottom - mi.rcMonitor.top,
+                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+            }
+        }
+        else {
+            SetWindowLong(hwnd, GWL_STYLE,
+                dwStyle | WS_OVERLAPPEDWINDOW);
+            SetWindowPlacement(hwnd, &fLastWindowPlacement);
+            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+    }
+
+    void TestApp::ToggleBorders()
+    {
+        HWND hwnd = GetWindowHandle();
+
+        DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
+        if (dwStyle & WS_OVERLAPPEDWINDOW)
+        {
+            SetWindowLong(hwnd, GWL_STYLE,
+                dwStyle & ~WS_OVERLAPPEDWINDOW);
+        }
+        else
+        {
+            SetWindowLong(hwnd, GWL_STYLE,
+                dwStyle | WS_OVERLAPPEDWINDOW);
+
+        }
+    }
+
+    void TestApp::ToggleSlideShow()
+    {
+        HWND hwnd = GetWindowHandle();
+        
+        if (fIsSlideShowActive == false)
+            SetTimer(hwnd, cTimerID, 3000, NULL);
+        else
+            KillTimer(hwnd, cTimerID);
+        fIsSlideShowActive = !fIsSlideShowActive;
+        
+    }
 
     void TestApp::HandleMessages(const MSG & uMsg)
     {
@@ -161,11 +237,23 @@ namespace OIV
         static int lastY = -1; //= std::numeric_limits<int>::min();
         switch (uMsg.message)
         {
+        
+
+        case WM_TIMER:
+            {
+            if (uMsg.wParam == cTimerID)
+                JumpFiles(1);
+            }
+            break;
+
         case WM_KEYDOWN:
             switch (uMsg.wParam)
             {
             case VK_ESCAPE:
                 PostQuitMessage(0);
+                break;
+            case 'F':
+                ToggleFullScreen();
                 break;
             case VK_DOWN:
             case VK_RIGHT:
@@ -182,6 +270,12 @@ namespace OIV
                 break;
             case VK_END:
                 JumpFiles(std::numeric_limits<int>::max());
+                break;
+            case VK_SPACE:
+                ToggleSlideShow();
+                break;
+            case 'B':
+                ToggleBorders();
                 break;
 
             }
