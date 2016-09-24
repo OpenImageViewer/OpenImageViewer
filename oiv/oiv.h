@@ -4,6 +4,7 @@
 #include "Interfaces\IPictureRenderer.h"
 #include "ImageFreeImage.h"
 #include "Quad.h"
+#include "ImageLoader.h"
 
 
 namespace OIV
@@ -25,20 +26,17 @@ namespace OIV
         Ogre::Pass*         fPass;
         HWND                fParent;
         bool                fIsRefresing;
-        Image* fImage;
-        Image* fImage32Bit;
         std::string fCurrentOpenedFile;
-        
-        
+        ImageLoader fImageLoader;
+        typedef std::unique_ptr<Image> ImageUniquePtr;
+        ImageUniquePtr fOpenedImage;
+
         void SetupRenderer();
         void InitAll();
 
         Ogre::RenderWindow * GetWindow();
 
         void UpdateGpuParams();
-
-        
-
 
         //-------------Scroll state listener------------------
 
@@ -70,7 +68,7 @@ namespace OIV
 
         bool IsImageLoaded() const
         {
-            return fImage->IsOpened();
+            return fOpenedImage.get();
         }
 
 

@@ -9,32 +9,23 @@ namespace OIV
         using namespace Ogre;
         std::string path = StringUtility::ToAString(filePath);
 
+        ImageUniquePtr image = ImageUniquePtr(fImageLoader.LoadImage(path));
+
+
         //refactor out to unload
-        if (fImage->IsOpened())
+        if (fOpenedImage.get())
         {
             TextureManager::getSingleton().remove(fCurrentOpenedFile);
         }
 
-        
-        if (fImage != fImage32Bit)
+
+        if (image.get())
         {
-            if (fImage32Bit != NULL)
-                fImage32Bit->Unload();
-            delete fImage32Bit;
-
-            fImage32Bit = NULL;
-        }
-
-        
-            
-
-        if (fImage->Load(path))
-        {
+            fOpenedImage.swap(image);
             fCurrentOpenedFile = path;
-            fImage32Bit = fImage->NeedConvertionToBYTERGBA() ? fImage->ConverToRGBA() : fImage;
 
-            int width = fImage32Bit->GetWidth();
-            int height = fImage32Bit->GetHeight();
+            int width = fOpenedImage->GetWidth();
+            int height = fOpenedImage->GetHeight();
 
                 TexturePtr tex = TextureManager::getSingleton().createManual(
                     fCurrentOpenedFile
@@ -47,16 +38,37 @@ namespace OIV
                     , Ogre::PF_R8G8B8A8); // pixel format
 
 
-           PixelBox src((uint32)width, (uint32)height, 1, PF_A8R8G8B8, fImage32Bit->GetBuffer());
-           src.rowPitch = fImage32Bit->GetRowPitchInTexels();
-           src.slicePitch = fImage32Bit->GetSlicePitchInTexels();
-           Ogre::Image::Box dest(0, 0, width, height);
-           HardwarePixelBufferSharedPtr buf = tex->getBuffer();
-           buf->blitFromMemory(src, dest);
+                PixelFormat format = PF_UNKNOWN; 
 
 
-            fPass->getTextureUnitState(0)->setTextureName(path);
-            fScrollState.Reset(true);
+            switch (fOpenedImage->GetFormat())
+            {
+            case IF_BGR:
+                format = PF_B8G8R8;
+                break;
+            case  IF_RGBA:
+                format = PF_A8B8G8R8;
+                    break;
+            case  IF_RGB:
+                format = PF_B8G8R8;
+                break;
+
+            }
+
+            if (format != PF_UNKNOWN)
+            {
+
+                PixelBox src((uint32)width, (uint32)height, 1, format, const_cast<void*> (fOpenedImage->GetBuffer()));
+                src.rowPitch = fOpenedImage->GetRowPitchInTexels();
+                src.slicePitch = fOpenedImage->GetSlicePitchInTexels();
+                Ogre::Image::Box dest(0, 0, width, height);
+                HardwarePixelBufferSharedPtr buf = tex->getBuffer();
+                buf->blitFromMemory(src, dest);
+
+
+                fPass->getTextureUnitState(0)->setTextureName(path);
+                fScrollState.Reset(true);
+            }
             return true;
         }
         return false;
@@ -100,9 +112,9 @@ namespace OIV
         return 0;
     }
 
-    Image* OIV::GetImage() 
+     Image* OIV::GetImage() 
     {
-        return fImage;
+        return fOpenedImage.get();
     }
 
     int OIV::GetFileInformation(QryFileInformation& information)
@@ -110,11 +122,11 @@ namespace OIV
         if (IsImageLoaded())
         {
                     
-            information.bitsPerPixel = fImage->GetBitsPerTexel();
-            information.height = fImage->GetHeight();
-            information.width = fImage->GetWidth();
+            information.bitsPerPixel = fOpenedImage->GetBitsPerTexel();
+            information.height = fOpenedImage->GetHeight();
+            information.width = fOpenedImage->GetWidth();
             information.numMipMaps = 0;
-            information.rowPitchInBytes = fImage->GetRowPitchInBytes();
+            information.rowPitchInBytes = fOpenedImage->GetRowPitchInBytes();
             information.hasTransparency = 1;
             information.imageDataSize = 0;
             information.numChannels = 0;

@@ -95,7 +95,7 @@ namespace OIV
                 }
 
                 //Optional response
-                if (responseSize == sizeof(CmdResponseLoad))
+                if (result == RC_Success &&  responseSize == sizeof(CmdResponseLoad))
                 {
                     CmdResponseLoad* loadResponse = reinterpret_cast<CmdResponseLoad*>(responseData);
                     Image* image = sPictureRenderer->GetImage();

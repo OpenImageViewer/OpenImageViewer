@@ -190,11 +190,14 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
   <ItemGroup>
     <ClCompile Include="API\functions.cpp" />
     <ClCompile Include="CommandProcessor.cpp" />
+    <ClCompile Include="ImageAbstract.cpp" />
+    <ClCompile Include="ImageProperties.cpp" />
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="oiv.IPictureViewer.cpp" />
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="TestApp.cpp" />
+    <ClCompile Include="Utility.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -204,6 +207,11 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="ImageAbstract.h" />
     <ClInclude Include="ImageFreeImage.h" />
+    <ClInclude Include="PluginJpeg.h" />
+    <ClInclude Include="ImageLoader.h" />
+    <ClInclude Include="ImagePlugin.h" />
+    <ClInclude Include="PluginPng.h" />
+    <ClInclude Include="ImageProperties.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
     <ClInclude Include="oiv.h" />
     <ClInclude Include="ConsoleLogListener.h" />

@@ -3,6 +3,8 @@
 #include "precompiled.h"
 #include "oiv.h"
 #include "quad.h"
+#include "PluginJpeg.h"
+#include "PluginPng.h"
 #ifdef _MSC_VER
 #include <RenderSystems\Direct3D11\include\OgreD3D11Plugin.h>
 #endif
@@ -15,9 +17,9 @@ namespace OIV
         , fIsRefresing(false)
         , fPass(NULL)
         , fParent(NULL)
-        , fImage32Bit(NULL)
     {
-        fImage = new ImageFreeImage();
+        fImageLoader.InstallPlugin(new PluginJpeg());
+        fImageLoader.InstallPlugin(new PluginPng());
     }
 
 
@@ -115,6 +117,9 @@ namespace OIV
             false,                 // fullscreen or not
             &options);                    // use defaults for all other values
 
+        window->setDeactivateOnFocusChange(false);
+        
+
         WindowEventUtilities::addWindowEventListener(window, this);
 
 
@@ -123,7 +128,7 @@ namespace OIV
         ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
 
         // If Direct3D11 then invert Y.
-        fScrollState.SetInvertedVCoordinate(true);
+        //fScrollState.SetInvertedVCoordinate(true);
     }
 
     Ogre::Vector2 OIV::GetMousePosition()
@@ -141,7 +146,7 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetImageSize()
     {
-        return Ogre::Vector2(fImage->GetWidth(), fImage->GetHeight());
+        return Ogre::Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight());
     }
 
     Ogre::RenderWindow* OIV::GetWindow()
@@ -244,85 +249,3 @@ namespace OIV
         CreateCameraAndViewport();
     }
 }
-
-////'OIS::KeyListner' implementation. 
-//bool OIV::keyPressed(const OIS::KeyEvent &arg)
-//{
-//    bool isAltDOwn = fKeyboard->isModifierDown(OIS::Keyboard::Alt);
-//    switch (arg.key)
-//    {
-//        
-//    case OIS::KC_ADD:
-
-//        fScrollState.Zoom(0.1);
-//        break;
-//    case OIS::KC_SUBTRACT:
-//        fScrollState.Zoom(-0.1);
-//        break;
-//    case OIS::KC_SPACE:
-//    {
-//        {
-//            CmdDataLoadFile loadFile;
-//            //loadFile.filePath = L"d:/1.png";
-//            loadFile.filePath = L"d:/PNG_transparency_demonstration_1.png";
-//            loadFile.FileNamelength = _tcslen(loadFile.filePath);
-//            OIV_Execute(CommandExecute::CE_LoadFile, sizeof(loadFile), &loadFile);
-//        };
-//            
-//            //LoadFile(L"d:/PNG_transparency_demonstration_1.png");
-//    }
-//        break;
-//    case OIS::KC_UP:
-//        break;
-//    case OIS::KC_DOWN:
-//        break;
-
-//    case OIS::KC_ESCAPE:
-//        ShutDown();
-//        break;
-
-//    case OIS::KC_X:
-//        if (isAltDOwn)
-//            ShutDown();
-//        break;
-//    case OIS::KC_F2:
-
-
-//        break;
-
-//    case OIS::KC_F1:
-
-//        break;
-//    case OIS::KC_C:
-
-//        break;
-
-//    }
-//    return true;
-//}
-
-//bool OIV::keyReleased(const OIS::KeyEvent &arg)
-//{
-//    return true;
-//}
-
-
-//bool OIV::mouseMoved(const OIS::MouseEvent & arg)
-//{
-//    fScrollState.Zoom(-arg.state.Z.rel / 600.0);
-
-//    if (arg.state.buttonDown(OIS::MouseButtonID::MB_Left))
-//        
-//        fScrollState.Pan(-Vector2(arg.state.X.rel, arg.state.Y.rel) * 0.002);
-//    return false;
-//}
-
-//bool OIV::mousePressed(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
-//{
-//    return false;
-//}
-
-//bool OIV::mouseReleased(const OIS::MouseEvent & arg, OIS::MouseButtonID id)
-//{
-//    return false;
-//}

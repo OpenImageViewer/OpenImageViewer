@@ -11,6 +11,15 @@
     </ClCompile>
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="Quad.cpp" />
+    <ClCompile Include="Utility.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageProperties.cpp">
+      <Filter>ImageSource</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageAbstract.cpp">
+      <Filter>ImageSource</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -40,6 +49,21 @@
       <Filter>ImageSource</Filter>
     </ClInclude>
     <ClInclude Include="ImageFreeImage.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageProperties.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageLoader.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="ImagePlugin.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginJpeg.h">
+      <Filter>ImageSource</Filter>
+    </ClInclude>
+    <ClInclude Include="PluginPng.h">
       <Filter>ImageSource</Filter>
     </ClInclude>
   </ItemGroup>

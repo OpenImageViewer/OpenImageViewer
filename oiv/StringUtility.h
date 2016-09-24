@@ -10,27 +10,15 @@ public:
     static std::string ToAString(const wchar_t* str)
     {
         
-        int maxStrSize = wcslen(str) * 2 + 2;
-        char* pBuff = new char[maxStrSize];
-        wcstombs(pBuff, str, maxStrSize);
+        size_t strLength = wcslen(str) + 1;
+
+
+        char* pBuff = new char[strLength];
+        size_t converted;
+        wcstombs_s(&converted, pBuff, strLength, str, strLength * 2);
         std::string retData = pBuff;
         delete[] pBuff;
         return retData;
-
-
-        /*static int ind = 0;
-        static std::vector<std::string> cache(20);
-        if (str == NULL)
-        {
-            return NULL;
-        }
-        else
-        {
-            ind = (ind + 1) % 20;
-            cache[ind] = ToAString(std::wstring(str));
-            return cache[ind].c_str();
-        }*/
-
     }
     static std::string ToAString(const std::string& str)
     {

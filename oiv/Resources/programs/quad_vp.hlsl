@@ -16,4 +16,5 @@ void main(in ShaderIn input, out ShaderOut output)
 {
     output.pos = float4(input.pos,0,1);
     output.uv = float2(input.pos * 0.5 + 0.5);
+    output.uv.y = 1.0 - output.uv.y;
 }
