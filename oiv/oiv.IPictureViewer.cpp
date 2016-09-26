@@ -4,12 +4,12 @@
 namespace OIV
 {
     // IPictureViewr implementation
-    int OIV::LoadFile(OIVCHAR* filePath)
+    int OIV::LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension)
     {
         using namespace Ogre;
         std::string path = StringUtility::ToAString(filePath);
 
-        ImageUniquePtr image = ImageUniquePtr(fImageLoader.LoadImage(path));
+        ImageUniquePtr image = ImageUniquePtr(fImageLoader.LoadImage(path,onlyRegisteredExtension));
 
 
         //refactor out to unload

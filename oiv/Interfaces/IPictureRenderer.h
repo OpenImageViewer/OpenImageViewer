@@ -9,7 +9,7 @@ namespace OIV
     public:
         virtual double Zoom(double percentage) = 0;
         virtual int Pan(double x, double y) = 0;
-        virtual int LoadFile(OIVCHAR* filePath) = 0;
+        virtual int LoadFile(OIVCHAR* filePath, bool onlyRegisteredExtension) = 0;
         virtual int Init() = 0;
         virtual int SetParent(HWND handle) = 0;
         virtual int Refresh() = 0;

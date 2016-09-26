@@ -86,7 +86,7 @@ namespace OIV
         //Commands
         virtual double Zoom(double percentage) override;
         virtual int Pan(double x, double y) override;
-        virtual int LoadFile(OIVCHAR* filePath) override;
+        virtual int LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension) override;
         virtual int Init() override;
         virtual int SetParent(HWND handle) override;
         virtual int Refresh() override;

@@ -7,9 +7,10 @@ namespace OIV
     {
     public:
 
-        virtual char* GetHint() override
+        PluginProperties& GetPluginProperties() override
         {
-            return "png";
+            static PluginProperties pluginProperties = { "PNG plugin codec","png" };
+            return pluginProperties;
         }
 
         //Base abstract methods

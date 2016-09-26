@@ -78,6 +78,7 @@ extern "C"
     {
         size_t FileNamelength;
         OIVCHAR* filePath;
+        bool onlyRegisteredExtension;
     };
 
     struct CmdDataInit

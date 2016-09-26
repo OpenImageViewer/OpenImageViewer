@@ -29,12 +29,14 @@ namespace OIV
         return handle;
     }
 
-    bool TestApp::LoadFile(std::wstring filePath)
+    bool TestApp::LoadFile(std::wstring filePath,bool onlyRegisteredExtension)
     {
         CmdResponseLoad loadResponse;
         CmdDataLoadFile loadRequest;
         loadRequest.filePath = const_cast<OIVCHAR*>(filePath.c_str());
         loadRequest.FileNamelength = _tcslen(loadRequest.filePath);
+        loadRequest.onlyRegisteredExtension = onlyRegisteredExtension;
+
         bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadRequest, &loadResponse) == true;
 
         if (success)
@@ -96,7 +98,7 @@ namespace OIV
 
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
         
-        LoadFile(filePath);
+        LoadFile(filePath, false);
 
         
 
@@ -166,7 +168,7 @@ namespace OIV
                 break;
         }
 
-        while ((isLoaded = LoadFile(*currentPos)) == false);
+        while ((isLoaded = LoadFile(*currentPos, true)) == false);
 
         if (isLoaded)
             fCurrentListPosition = currentPos;

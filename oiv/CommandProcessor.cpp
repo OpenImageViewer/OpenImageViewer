@@ -84,7 +84,7 @@ namespace OIV
                     _tcscpy_s(buffer, bufferLength + 1, dataLoadFile->filePath);
                     buffer[bufferLength] = '\0';
 
-                    if (sPictureRenderer->LoadFile(buffer) == false)
+                    if (sPictureRenderer->LoadFile(buffer,dataLoadFile->onlyRegisteredExtension) == false)
                         result = RC_UknownError;
 
                     delete[]buffer;

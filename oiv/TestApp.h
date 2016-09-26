@@ -24,7 +24,7 @@ namespace OIV
         WINDOWPLACEMENT fLastWindowPlacement;
         ListFiles fListFiles;
         ListFilesIterator fCurrentListPosition;
-        bool LoadFile(std::wstring filePath);
+        bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
         void LoadFileInFolder(std::wstring filePath);
     };
 }

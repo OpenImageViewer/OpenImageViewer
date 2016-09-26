@@ -2,52 +2,60 @@
 #include "ImagePlugin.h"
 #include <vector>
 #include <chrono>
+#include "StringUtility.h"
+
 namespace OIV
 {
     class ImageLoader
     {
-        typedef std::vector<ImagePlugin*> PluginsList;
-        PluginsList fPlugins;
+        typedef std::vector<ImagePlugin*> ListPlugin;
+        typedef std::map<std::string, ListPlugin> MapStringListPlugin;
+        MapStringListPlugin fMapPlugins;
+        ListPlugin fListPlugins;
 
+        ImagePlugin* GetFirstlugin(const std::string& hint)
+        {
+            using namespace std;
+            ImagePlugin* result = nullptr;
+            auto it = fMapPlugins.find(hint);
+            if (it != fMapPlugins.end())
+            {
+                ListPlugin& pluginsList = it->second;
+                result = *pluginsList.begin();
+            }
+
+            return result;
+        }
     public:
         void InstallPlugin(ImagePlugin* plugin)
         {
-            fPlugins.push_back(plugin);
+            fListPlugins.push_back(plugin);
+            ListString tokens = StringUtility::split(StringUtility::ToLower(plugin->GetPluginProperties().supportedExtentions) , ';');
+
+            for (auto token : tokens)
+            {
+                auto it = fMapPlugins.find(token);
+                if (it == fMapPlugins.end())
+                    it = fMapPlugins.insert(make_pair(token, ListPlugin())).first;
+
+                ListPlugin& pluginsList = it->second;
+                pluginsList.push_back(plugin);
+            }
         }
     
-        Image* LoadImage(std::string fileName)
+        Image* LoadImage(std::string fileName, bool onlyRegisteredExtension = true)
         {
-            Image* loadedImage = NULL;
             using namespace std;
-            std::transform(fileName.begin(), fileName.end(), fileName.begin(), ::tolower);
-            int pos = fileName.find_last_of(".");
-            string extension;
-            ImagePlugin* choosenPlugin = nullptr;
-            if (pos != string::npos)
-                extension = fileName.substr(pos + 1, fileName.length() - pos - 1);
-            if (extension.empty() == false)
-            {
 
-                for (auto plugin : fPlugins) 
-                {
-                    string hint = plugin->GetHint();
-                    std::transform(hint.begin(), hint.end(), hint.begin(), ::tolower);
+            Image* loadedImage = nullptr;
+            
+            ImagePlugin* choosenPlugin = GetFirstlugin(StringUtility::GetFileExtension(StringUtility::ToLower(fileName)));
 
-                        
-                    if (hint.find(extension) != string::npos)
-                    {
-                        choosenPlugin = plugin;
-                        break;
-                    }
-                    
-                }
-             
-            }
-
+            double loadTime;
+            ImageProperies props;
             if (choosenPlugin != nullptr)
             {
-                double loadTime;
-                ImageProperies props;
+                
                 auto start = std::chrono::high_resolution_clock::now();
                 if (choosenPlugin->LoadImage(fileName, props))
                 {
@@ -56,6 +64,22 @@ namespace OIV
                         throw std::exception("Image properties are not completely initialized");
                     loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
                     loadedImage = new Image(props, loadTime);
+                }
+            }
+            else if (onlyRegisteredExtension == false)
+            {
+                // Iterate all plugins till load succeeds.
+                for (auto plugin : fListPlugins)
+                {
+                    auto start = std::chrono::high_resolution_clock::now();
+                    if (plugin->LoadImage(fileName, props))
+                    {
+                        auto end = std::chrono::high_resolution_clock::now();
+                        if ((props.IsInitialized() == false))
+                            throw std::exception("Image properties are not completely initialized");
+                        loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
+                        loadedImage = new Image(props, loadTime);
+                    }
                 }
             }
 
