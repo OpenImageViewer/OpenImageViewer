@@ -41,16 +41,27 @@ namespace OIV
                 PixelFormat format = PF_UNKNOWN; 
 
 
-            switch (fOpenedImage->GetFormat())
+            switch (fOpenedImage->GetImageType())
             {
-            case IF_BGR:
-                format = PF_B8G8R8;
+            case  IT_BYTE_RGB:
+                format = PF_R8G8B8;
                 break;
-            case  IF_RGBA:
+            case IT_BYTE_BGRA:
+                format = PF_B8G8R8A8;
+                break;
+            case  IT_BYTE_RGBA:
                 format = PF_A8B8G8R8;
                     break;
-            case  IF_RGB:
+            case IT_BYTE_BGR:
                 format = PF_B8G8R8;
+                break;
+            case IT_BYTE_ARGB:
+                format = PF_A8R8G8B8;
+                break;
+            case IT_BYTE_ABGR:
+                format = PF_A8B8G8R8;
+            case IT_BYTE_8BIT:
+                format = PF_L8;
                 break;
 
             }

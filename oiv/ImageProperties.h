@@ -3,19 +3,18 @@ namespace OIV
 {
     enum ImageType
     {
-        IT_UNKNOWN
-        , IT_BITMAP
+          IT_UNKNOWN
+        , IT_BYTE_RGBA
+        , IT_BYTE_BGR
+        , IT_BYTE_BGRA
+        , IT_BYTE_RGB
+        , IT_BYTE_ARGB
+        , IT_BYTE_ABGR
         , IT_FLOAT
+        , IT_BYTE_8BIT
     };
 
-    enum ImageFormat
-    {
-        IF_UNKNOWN,
-        IF_RGBA,
-        IF_BGR,
-        IF_RGB
-
-    };
+    
     class ImageProperies
     {
     public:
@@ -29,7 +28,6 @@ namespace OIV
         size_t BitsPerTexel;
         ImageType Type;
         size_t NumSubImages;
-        ImageFormat Format;
         void* ImageBuffer;
     };
 }

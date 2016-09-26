@@ -206,7 +206,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="ImageAbstract.h" />
-    <ClInclude Include="ImageFreeImage.h" />
+    <ClInclude Include="PluginFreeImage.h" />
     <ClInclude Include="PluginJpeg.h" />
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="ImagePlugin.h" />

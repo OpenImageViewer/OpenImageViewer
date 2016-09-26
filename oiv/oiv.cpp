@@ -5,6 +5,7 @@
 #include "quad.h"
 #include "PluginJpeg.h"
 #include "PluginPng.h"
+#include "PluginFreeImage.h"
 #ifdef _MSC_VER
 #include <RenderSystems\Direct3D11\include\OgreD3D11Plugin.h>
 #endif
@@ -20,6 +21,7 @@ namespace OIV
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
         fImageLoader.InstallPlugin(new PluginPng());
+        fImageLoader.InstallPlugin(new PluginFreeImage());
     }
 
 

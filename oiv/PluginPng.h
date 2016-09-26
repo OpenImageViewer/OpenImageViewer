@@ -32,12 +32,11 @@ namespace OIV
                 out_properties.RowPitchInBytes = PNG_IMAGE_ROW_STRIDE(image);
                 out_properties.Width = image.width;
                 out_properties.Height = image.height;
-                out_properties.Type = IT_BITMAP;
 
                 if (image.format == PNG_FORMAT_RGBA)
-                    out_properties.Format = IF_RGBA;
+                    out_properties.Type = IT_BYTE_RGBA;
                 if (image.format == PNG_FORMAT_RGB)
-                    out_properties.Format = IF_RGB;
+                    out_properties.Type = IT_BYTE_BGR;
                 out_properties.NumSubImages = 0;
 
                 //read buffer

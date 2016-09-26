@@ -134,13 +134,11 @@ namespace OIV
                     {
                         out_properties.ImageBuffer = (void*)buffer;
                         out_properties.BitsPerTexel = bytesPerPixel * 8;
-                        out_properties.Format = IF_BGR;
+                        out_properties.Type = IT_BYTE_BGR;
                         out_properties.Width = width;
                         out_properties.Height = height;
                         out_properties.RowPitchInBytes = bytesPerPixel * width;
                         out_properties.NumSubImages = 0;
-                        out_properties.Type = IT_BITMAP;
-
 
                         success = true;
                     }

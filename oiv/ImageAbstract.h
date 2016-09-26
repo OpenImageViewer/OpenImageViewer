@@ -24,7 +24,6 @@ namespace OIV
         size_t GetHeight() const { return fProperies.Height; }
         size_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
         size_t GetBitsPerTexel() const { return fProperies.BitsPerTexel; }
-        ImageFormat GetFormat() const { return fProperies.Format; }
         
         size_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
         size_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
@@ -32,6 +31,7 @@ namespace OIV
         size_t GetTotalPixels() const { return GetWidth() * GetHeight(); }
         size_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
         size_t GetNumberOfUniqueColors() const { throw std::exception("Not implemented"); }
+        ImageType GetImageType() const { return fProperies.Type; }
     private:
          double fLoadTime;
     };

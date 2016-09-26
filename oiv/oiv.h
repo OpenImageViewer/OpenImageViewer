@@ -2,7 +2,6 @@
 #include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include "ImageFreeImage.h"
 #include "Quad.h"
 #include "ImageLoader.h"
 

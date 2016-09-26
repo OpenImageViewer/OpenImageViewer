@@ -19,6 +19,7 @@ namespace OIV
         {
             Image* loadedImage = NULL;
             using namespace std;
+            std::transform(fileName.begin(), fileName.end(), fileName.begin(), ::tolower);
             int pos = fileName.find_last_of(".");
             string extension;
             ImagePlugin* choosenPlugin = nullptr;
@@ -29,7 +30,11 @@ namespace OIV
 
                 for (auto plugin : fPlugins) 
                 {
-                    if (string(plugin->GetHint()).find(extension) != string::npos)
+                    string hint = plugin->GetHint();
+                    std::transform(hint.begin(), hint.end(), hint.begin(), ::tolower);
+
+                        
+                    if (hint.find(extension) != string::npos)
                     {
                         choosenPlugin = plugin;
                         break;
