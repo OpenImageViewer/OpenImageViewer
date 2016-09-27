@@ -17,5 +17,6 @@ namespace OIV
         virtual int GetFileInformation(QryFileInformation& information) = 0;
 
         virtual Image* GetImage() = 0;
+        virtual int SetFilterLevel(int filter_level) = 0;
     };
 }

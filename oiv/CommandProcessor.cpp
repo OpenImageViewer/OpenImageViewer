@@ -117,6 +117,25 @@ namespace OIV
             sPictureRenderer->Refresh();
             break;
 
+        case CE_FilterLevel:
+            if (requestSize == sizeof(CmdRequestFilter))
+            {
+                CmdRequestFilter* data = reinterpret_cast<CmdRequestFilter*>(requestData);
+                
+                if (sPictureRenderer->SetFilterLevel(data->filterLevel) != 0)
+                {
+                    result = RC_UknownError;
+                }
+                    
+                
+            }
+            else
+            {
+                result = ResultCode::RC_WrongDataSize;
+            }
+            break;
+            
+
         case CE_GetFileInformation:
 
             if (responseSize == sizeof(QryFileInformation))

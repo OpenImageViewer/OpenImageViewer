@@ -27,7 +27,7 @@ extern "C"
         , CE_LoadFile
         , CE_Zoom
         , CE_Pan
-        , CE_Filter
+        , CE_FilterLevel
         , CE_Refresh
         , CE_GetFileInformation
     };
@@ -42,6 +42,7 @@ extern "C"
         , RC_WrongDataSize
         , RC_NotInitialized
         , RC_AlreadyInitialized
+        , RC_WrongParameters
         , RC_UknownError = 0xFF
 
     };
@@ -53,6 +54,13 @@ extern "C"
     {
         
     };
+
+
+    struct CmdRequestFilter
+    {
+        int filterLevel;
+    };
+    
 
 
     struct CmdDataZoom

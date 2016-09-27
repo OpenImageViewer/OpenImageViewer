@@ -18,6 +18,7 @@ namespace OIV
     {
         fLastWindowPlacement = { 0 };
         fIsSlideShowActive = false;
+        fFilterlevel = 0;
     }
 
     HWND TestApp::GetWindowHandle()
@@ -99,6 +100,7 @@ namespace OIV
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
         
         LoadFile(filePath, false);
+        SetFilterLevel(1);
 
         
 
@@ -233,6 +235,15 @@ namespace OIV
         
     }
 
+    void TestApp::SetFilterLevel(int filterLevel)
+    {
+        CmdRequestFilter filter;
+
+        filter.filterLevel = filterLevel;
+        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()))
+            fFilterlevel = filterLevel;
+    }
+
     void TestApp::HandleMessages(const MSG & uMsg)
     {
         static int lastX = -1;// = std::numeric_limits<int>::min();
@@ -278,6 +289,12 @@ namespace OIV
                 break;
             case 'B':
                 ToggleBorders();
+                break;
+            case VK_OEM_PERIOD:
+                SetFilterLevel(fFilterlevel + 1);
+                break;
+            case VK_OEM_COMMA:
+                SetFilterLevel(fFilterlevel - 1);
                 break;
 
             }

@@ -49,6 +49,7 @@ namespace OIV
         void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);
+        void Center();
         void SetOffset(Ogre::Vector2 offset);
 
         

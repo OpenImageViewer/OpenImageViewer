@@ -29,6 +29,7 @@ namespace OIV
         ImageLoader fImageLoader;
         typedef std::unique_ptr<Image> ImageUniquePtr;
         ImageUniquePtr fOpenedImage;
+        int fFilterLevel;
 
         void SetupRenderer();
         void InitAll();
@@ -78,12 +79,29 @@ namespace OIV
         void TryLoadPlugin(std::string pluginName);
 
         void CreateCameraAndViewport();
+        void ApplyFilter()
+        {
+            using namespace Ogre;
+            switch (fFilterLevel)
+            {
+            case 0:
+                fPass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
+                break;
+            case 1:
+                fPass->getTextureUnitState(0)->setTextureFiltering(TFO_BILINEAR);
+                break;
+            }
+            
+
+        
+        }
         void CreateScene();
         void LoadSettings();
 
+
+#pragma region IPictureListener
         //-------------IPictureListener------------------
         // 
-        //Commands
         virtual double Zoom(double percentage) override;
         virtual int Pan(double x, double y) override;
         virtual int LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension) override;
@@ -91,11 +109,9 @@ namespace OIV
         virtual int SetParent(HWND handle) override;
         virtual int Refresh() override;
         virtual Image* GetImage() override;
-        
-
-        //Queries
+        virtual int SetFilterLevel(int filter_level) override;
         virtual int GetFileInformation(QryFileInformation& information) override;
-
+#pragma endregion
 
 
         //----------------------------------------------------

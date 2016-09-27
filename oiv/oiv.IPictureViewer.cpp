@@ -128,6 +128,20 @@ namespace OIV
         return fOpenedImage.get();
     }
 
+    int OIV::SetFilterLevel(int filter_level)
+    {
+        int desiredFilterLevel = filter_level;
+        if (desiredFilterLevel >=0 && desiredFilterLevel <= 1)
+        {
+            fFilterLevel = desiredFilterLevel;
+            ApplyFilter();
+            Refresh();
+            return RC_Success;
+        }
+
+        return RC_WrongParameters;
+    }
+
     int OIV::GetFileInformation(QryFileInformation& information)
     {
         if (IsImageLoaded())

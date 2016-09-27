@@ -8,37 +8,86 @@ namespace OIV
         SetOffset(fUVOffset + offset);
     }
 
+
+    void ZoomScrollState::Center()
+    {
+        using namespace Ogre;
+        Vector2 uvscale = GetARFixedUVScale();
+        fUVOffset = -(uvscale - 1.0) / 2;
+    }
+    
+
     void ZoomScrollState::SetOffset(Ogre::Vector2 offset)
     {
         using namespace Ogre;
-        const Vector2 Max_Margin = Vector2(0.25, 0.25);
+        Vector2 Max_Margin = Vector2(0.25, 0.25);
+        const bool KeepSmallerImagesInCenter = false;
         
         Vector2 uvScale = GetARFixedUVScale();
 
         const Vector2 marginFactor = Vector2(Max_Margin.x * uvScale.x, Max_Margin.y * uvScale.y);
-        // Image is larger then window
+        // Image is visually larger then window
         if (uvScale.x < 1)
         {
             
-            Real maxOffset = 1 - uvScale.x + marginFactor.x;
-            fUVOffset.x = std::max(static_cast<Real>(-marginFactor.x), std::min(maxOffset, offset.x));
+            double maxOffset = 1.0 - uvScale.x + marginFactor.x;
+            fUVOffset.x = std::max(static_cast<double>(-marginFactor.x), std::min(maxOffset, (double)offset.x));
         }
         else
         {
+            Max_Margin = Vector2(0.1, 0.1);
             // Image is smaller then window
-            //Keep in center
-            fUVOffset.x = -(uvScale.x - 1) / 2;// offset.x;
+            if (KeepSmallerImagesInCenter)
+            {
+                //Keep in center
+                fUVOffset.x = -(uvScale.x - 1) / 2;// offset.x;
+            }
+            else
+            {
+                double marginFactor = Max_Margin.x * uvScale.x;
+                double maxOffset = -marginFactor;
+                double minOffset = -uvScale.x + 1.0 + marginFactor;
+                if (minOffset < maxOffset)
+                {
+                    fUVOffset.x = std::min(std::max((double)offset.x, minOffset), maxOffset);
+                }
+                else
+                {
+                    //No room for margin - Keep in center
+                    fUVOffset.x = -(uvScale.x - 1) / 2;// offset.x;
+                }
+            }
         }
 
         if (uvScale.y < 1)
         {
-            Real maxOffset = 1 - uvScale.y + marginFactor.y;
-            fUVOffset.y = std::max(static_cast<Real>(-marginFactor.y), std::min(maxOffset, offset.y));
+            double maxOffset = 1.0 - uvScale.y + marginFactor.y;
+            fUVOffset.y = std::max(static_cast<double>(-marginFactor.y), std::min(maxOffset, (double)offset.y));
         }
         else
         {
-            //Keep in center
-            fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
+
+            Max_Margin = Vector2(0.05, 0.05);
+            if (KeepSmallerImagesInCenter)
+            {
+                //Keep in center
+                fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
+            }
+            else
+            {
+                double marginFactor = Max_Margin.y * uvScale.y;
+                double maxOffset = -marginFactor;
+                double minOffset = -uvScale.y + 1.0 + marginFactor;
+                if (minOffset < maxOffset)
+                {
+                    fUVOffset.y = std::min(std::max((double)offset.y, minOffset), maxOffset);
+                }
+                else
+                {
+                    //No room for margin - Keep in center
+                    fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
+                }
+            }
         }
         NotifyDirty();
     }
@@ -119,6 +168,8 @@ namespace OIV
         fUVOffset = Ogre::Vector2::ZERO;
         fUVScale = Ogre::Vector2::UNIT_SCALE;
 
+        Center();
+
         if (refresh)
             Refresh();
     }
@@ -172,8 +223,7 @@ namespace OIV
 
     void ZoomScrollState::Pan(Ogre::Vector2 amount)
     {
-        //TODO: pan according to X and Y
-        Ogre::Vector2 panFactor = amount * GetScale().x;
+        Ogre::Vector2 panFactor = amount * GetARFixedUVScale();
         panFactor.y *= fInverted ? -1 : 1;
         TranslateOffset(panFactor);
     }

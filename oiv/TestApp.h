@@ -14,11 +14,13 @@ namespace OIV
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
+        void SetFilterLevel(int filterLevel);
         void HandleMessages(const MSG& uMsg);
         template<class T, class U>
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private:
+        int fFilterlevel;
         bool fIsSlideShowActive;
         static const int cTimerID = 1500;
         WINDOWPLACEMENT fLastWindowPlacement;

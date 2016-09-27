@@ -18,6 +18,7 @@ namespace OIV
         , fIsRefresing(false)
         , fPass(NULL)
         , fParent(NULL)
+        , fFilterLevel(2)
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
         fImageLoader.InstallPlugin(new PluginPng());
@@ -238,8 +239,8 @@ namespace OIV
         fPass = material->getTechnique(0)->getPass(0);
         fFragmentParameters = fPass->getFragmentProgramParameters();
         fPass->getTextureUnitState(0)->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
-        //fPass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
-        fPass->getTextureUnitState(0)->setTextureFiltering(TFO_TRILINEAR);
+        ApplyFilter();
+        
         fPass->setCullingMode(CULL_NONE);
 
 
