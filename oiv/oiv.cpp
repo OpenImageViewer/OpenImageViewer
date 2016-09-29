@@ -149,7 +149,8 @@ namespace OIV
 
     Ogre::Vector2 OIV::GetImageSize()
     {
-        return Ogre::Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight());
+        return fOpenedImage.get() ? Ogre::Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight())
+            : Ogre::Vector2::ZERO;
     }
 
     Ogre::RenderWindow* OIV::GetWindow()
