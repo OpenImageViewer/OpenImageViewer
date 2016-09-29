@@ -198,6 +198,7 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClCompile Include="Quad.cpp" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="win32\MonitorInfo.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -220,6 +221,8 @@ call CopyResources $(ProjectDir) $(OutDir)</Command>
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="win32\MonitorInfo.h" />
+    <ClInclude Include="win32\Win32Window.h" />
     <ClInclude Include="ZoomScrollState.h" />
   </ItemGroup>
   <ItemGroup>

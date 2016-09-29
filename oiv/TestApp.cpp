@@ -3,6 +3,8 @@
 #include "Utility.h"
 #include <limits>
 #include <iomanip>
+#include "win32/Win32Window.h"
+
 namespace OIV
 {
     
@@ -16,9 +18,9 @@ namespace OIV
 
     TestApp::TestApp()
     {
-        fLastWindowPlacement = { 0 };
         fIsSlideShowActive = false;
         fFilterlevel = 0;
+        new OIV::MonitorInfo();
     }
 
     HWND TestApp::GetWindowHandle()
@@ -90,20 +92,19 @@ namespace OIV
         }
 
     }
-
     void TestApp::Run(std::wstring filePath)
     {
         using namespace std;
+        using namespace std::placeholders;
+        HINSTANCE moduleHanle = GetModuleHandle(NULL);
+        window.Create(moduleHanle, SW_SHOW);
+        window.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
         CmdDataInit init;
-        init.parentHandle = NULL;
-
+        init.parentHandle = reinterpret_cast<size_t>(window.GetHandle());
+         
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
-        
         LoadFile(filePath, false);
         SetFilterLevel(1);
-
-        
-
         LoadFileInFolder(filePath);
 
 
@@ -120,7 +121,6 @@ namespace OIV
             {
                     TranslateMessage(&msg);
                     DispatchMessage(&msg);
-                    HandleMessages(msg);
             }
         }
 
@@ -166,8 +166,6 @@ namespace OIV
             
             if (currentPos == fListFiles.end() && sign == 1)
                 break;
-            if (currentPos == fListFiles.begin() && sign == -1)
-                break;
         }
 
         while ((isLoaded = LoadFile(*currentPos, true)) == false);
@@ -180,29 +178,7 @@ namespace OIV
     {
         HWND hwnd = GetWindowHandle();
 
-        DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
-        if (dwStyle & WS_OVERLAPPEDWINDOW) {
-            MONITORINFO mi = { sizeof(mi) };
-            if (GetWindowPlacement(hwnd, &fLastWindowPlacement) &&
-                GetMonitorInfo(MonitorFromWindow(hwnd,
-                    MONITOR_DEFAULTTOPRIMARY), &mi)) {
-                SetWindowLong(hwnd, GWL_STYLE,
-                    dwStyle & ~WS_OVERLAPPEDWINDOW);
-                SetWindowPos(hwnd, HWND_TOP,
-                    mi.rcMonitor.left, mi.rcMonitor.top,
-                    mi.rcMonitor.right - mi.rcMonitor.left,
-                    mi.rcMonitor.bottom - mi.rcMonitor.top,
-                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-            }
-        }
-        else {
-            SetWindowLong(hwnd, GWL_STYLE,
-                dwStyle | WS_OVERLAPPEDWINDOW);
-            SetWindowPlacement(hwnd, &fLastWindowPlacement);
-            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-        }
+     
     }
 
     void TestApp::ToggleBorders()
@@ -244,14 +220,66 @@ namespace OIV
             fFilterlevel = filterLevel;
     }
 
-    void TestApp::HandleMessages(const MSG & uMsg)
+    void TestApp::handleKeyInput(const Win32WIndow::Win32Event& evnt)
     {
+        bool IsAlt = GetKeyState(VK_MENU) & (USHORT)0x8000;
+        bool IsControl = GetKeyState(VK_CONTROL) & (USHORT)0x8000;
+        bool IsShift = GetKeyState(VK_SHIFT) & (USHORT)0x8000;
+
+        switch (evnt.message.wParam)
+        {
+        case VK_ESCAPE:
+            PostQuitMessage(0);
+            break;
+        case 'F':
+            evnt.window->ToggleFullScreen(IsAlt ? true : false);
+            break;
+        case VK_DOWN:
+        case VK_RIGHT:
+        case VK_NEXT:
+            JumpFiles(1);
+            break;
+        case VK_UP:
+        case VK_LEFT:
+        case VK_PRIOR:
+            JumpFiles(-1);
+            break;
+        case VK_HOME:
+            JumpFiles(std::numeric_limits<int>::min());
+            break;
+        case VK_END:
+            JumpFiles(std::numeric_limits<int>::max());
+            break;
+        case VK_SPACE:
+            ToggleSlideShow();
+            break;
+        case 'B':
+            ToggleBorders();
+            break;
+        case VK_OEM_PERIOD:
+            SetFilterLevel(fFilterlevel + 1);
+            break;
+        case VK_OEM_COMMA:
+            SetFilterLevel(fFilterlevel - 1);
+            break;
+
+        }
+    }
+
+    bool TestApp::HandleMessages(const Win32WIndow::Win32Event& evnt)
+    {
+        const MSG& uMsg = evnt.message;
         static int lastX = -1;// = std::numeric_limits<int>::min();
         static int lastY = -1; //= std::numeric_limits<int>::min();
         switch (uMsg.message)
         {
-        
-
+        case WM_WINDOWPOSCHANGED:
+            ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
+            break;
+            case WM_SIZE:
+            ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
+            break;
+            
         case WM_TIMER:
             {
             if (uMsg.wParam == cTimerID)
@@ -260,46 +288,10 @@ namespace OIV
             break;
 
         case WM_KEYDOWN:
-            switch (uMsg.wParam)
-            {
-            case VK_ESCAPE:
-                PostQuitMessage(0);
-                break;
-            case 'F':
-                ToggleFullScreen();
-                break;
-            case VK_DOWN:
-            case VK_RIGHT:
-            case VK_NEXT:
-                JumpFiles(1);
-                break;
-            case VK_UP:
-            case VK_LEFT:
-            case VK_PRIOR:
-                JumpFiles(-1);
-                break;
-            case VK_HOME:
-                JumpFiles(std::numeric_limits<int>::min());
-                break;
-            case VK_END:
-                JumpFiles(std::numeric_limits<int>::max());
-                break;
-            case VK_SPACE:
-                ToggleSlideShow();
-                break;
-            case 'B':
-                ToggleBorders();
-                break;
-            case VK_OEM_PERIOD:
-                SetFilterLevel(fFilterlevel + 1);
-                break;
-            case VK_OEM_COMMA:
-                SetFilterLevel(fFilterlevel - 1);
-                break;
-
-            }
-                
+            case WM_SYSKEYDOWN:
+            handleKeyInput(evnt);
             break;
+
         case WM_MOUSEWHEEL:
         {
             int zDelta = GET_WHEEL_DELTA_WPARAM(uMsg.wParam) / WHEEL_DELTA;
@@ -324,8 +316,8 @@ namespace OIV
 
         case WM_MOUSEMOVE:
         {
-            if (GetCapture() == NULL)
-                return;
+            if (GetCapture() == nullptr)
+                return false;
             int xPos = GET_X_LPARAM(uMsg.lParam);
             int yPos = GET_Y_LPARAM(uMsg.lParam);
 
@@ -342,7 +334,7 @@ namespace OIV
                     ////20% zoom in each step
                     pan.x = -deltax / 200.0;
                     pan.y = -deltaY / 200.0;
-                    ExecuteCommand(CommandExecute::CE_Pan, &pan, &CmdNull());
+                    ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
                 }
 
                 lastX = xPos;
@@ -355,5 +347,6 @@ namespace OIV
 
         break;
         }
+        return true;
     }
 }
