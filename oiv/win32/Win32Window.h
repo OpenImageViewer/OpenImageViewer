@@ -235,7 +235,6 @@ public:
         fHandleWindow = hWnd;
         fHandleStatusBar = DoCreateStatusBar(hWnd, 12, hInstance, 3);
 
-        SetWindowRedraw(fHandleWindow, false);
         ResizeStatusBar();
         ShowWindow(hWnd,
             nCmdShow);
