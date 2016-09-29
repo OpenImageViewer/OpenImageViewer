@@ -19,6 +19,7 @@ namespace OIV
         , fPass(NULL)
         , fParent(NULL)
         , fFilterLevel(2)
+
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
         fImageLoader.InstallPlugin(new PluginPng());

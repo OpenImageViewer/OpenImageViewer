@@ -27,6 +27,7 @@ namespace OIV
         bool                fIsRefresing;
         std::string fCurrentOpenedFile;
         ImageLoader fImageLoader;
+        int fKeyboardPanSpeed;
         typedef std::unique_ptr<Image> ImageUniquePtr;
         ImageUniquePtr fOpenedImage;
         int fFilterLevel;

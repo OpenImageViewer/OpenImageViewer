@@ -4,7 +4,7 @@
 #include <list>
 typedef std::basic_string<OIVCHAR> tstring;
 typedef std::list<tstring> ListFiles;
-typedef ListFiles::const_iterator ListFilesIterator;
+typedef ListFiles::iterator ListFilesIterator;
 
 class Utility
 {

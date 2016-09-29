@@ -4,6 +4,7 @@
 #include <limits>
 #include <iomanip>
 #include "win32/Win32Window.h"
+#include <windowsx.h>
 
 namespace OIV
 {
@@ -16,20 +17,42 @@ namespace OIV
             
     }
 
-    TestApp::TestApp()
+    TestApp::TestApp() :
+        fKeyboardPanSpeed(100)
+        ,fKeyboardZoomSpeed(0.1)
+        , fIsSlideShowActive(false)
+        , fFilterlevel(0)
     {
-        fIsSlideShowActive = false;
-        fFilterlevel = 0;
-        new OIV::MonitorInfo();
+        
+        new MonitorInfo();
+    }
+
+    TestApp::~TestApp()
+    {
+        fCurrentListPosition = ListFilesIterator();
+        delete MonitorInfo::getSingletonPtr();
     }
 
     HWND TestApp::GetWindowHandle()
     {
+        return fWindow.GetHandle();
         using namespace Ogre;
         RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
         HWND handle = NULL;
         rw->getCustomAttribute("WINDOW", &handle);
         return handle;
+    }
+
+    void TestApp::UpdateFileInfo(const CmdResponseLoad& loadResponse)
+    {
+
+        std::wstringstream ss;
+        
+        ss << loadResponse.width << L" X " << loadResponse.height << L" X " 
+            << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
+        fWindow.SetStatusBarText(ss.str(), 0, 0);
+        //HWND handle = GetWindowHandle();
+
     }
 
     bool TestApp::LoadFile(std::wstring filePath,bool onlyRegisteredExtension)
@@ -45,16 +68,18 @@ namespace OIV
         if (success)
         {
             using namespace Ogre;
+            
             /*QryFileInformation fileInfo;
             ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/
 
             std::wstringstream ss;
             
-            ss << filePath <<L" | " << loadResponse.width << L" X " << loadResponse.height << L" X " 
-                << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
+            ss << filePath << L" - OpenImageViewer";
             HWND handle = GetWindowHandle();
-            
             SetWindowTextW(handle, ss.str().c_str());
+            UpdateFileInddex();
+            UpdateFileInfo(loadResponse);
+            
         }
 
         return success;
@@ -97,15 +122,16 @@ namespace OIV
         using namespace std;
         using namespace std::placeholders;
         HINSTANCE moduleHanle = GetModuleHandle(NULL);
-        window.Create(moduleHanle, SW_SHOW);
-        window.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
+        fWindow.Create(moduleHanle, SW_SHOW);
+        fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
         CmdDataInit init;
-        init.parentHandle = reinterpret_cast<size_t>(window.GetHandle());
+        init.parentHandle = reinterpret_cast<size_t>(fWindow.GetHandle());
          
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
         LoadFile(filePath, false);
         SetFilterLevel(1);
         LoadFileInFolder(filePath);
+        UpdateFileInddex();
 
 
         
@@ -128,18 +154,29 @@ namespace OIV
         std::cout << "Program ended.";
     }
 
+    void TestApp::UpdateFileInddex()
+    {
+        if (fListFiles.empty())
+            return;
+        int pos = std::distance(fListFiles.begin(), fCurrentListPosition) + 1;
+
+        std::wstringstream ss;
+        ss << L"File " << pos << L"/" << fListFiles.size();
+
+        fWindow.SetStatusBarText(ss.str(), 1, 0);
+    }
+
     void TestApp::JumpFiles(int step)
     {
         if (fListFiles.empty())
             return;
-        
-        //std::list<tstring>::const_iterator
+
         ListFilesIterator currentPos = fCurrentListPosition;
 
         int sign;
         if (step == std::numeric_limits<int>::max())
         {
-            
+
             currentPos = fListFiles.end(); // const_cast<ListFilesIterator&>(fListFiles.end());
             sign = -1;
         }
@@ -161,9 +198,9 @@ namespace OIV
                 break;
             if (currentPos == fListFiles.begin() && sign == -1)
                 break;
-            
+
             currentPos = std::next(currentPos, sign);
-            
+
             if (currentPos == fListFiles.end() && sign == 1)
                 break;
         }
@@ -172,6 +209,10 @@ namespace OIV
 
         if (isLoaded)
             fCurrentListPosition = currentPos;
+
+
+        UpdateFileInddex();
+
     }
     
     void TestApp::ToggleFullScreen()
@@ -262,8 +303,48 @@ namespace OIV
         case VK_OEM_COMMA:
             SetFilterLevel(fFilterlevel - 1);
             break;
+        case VK_NUMPAD8:
+            Pan(0, -fKeyboardPanSpeed);
+            break;
+        case VK_NUMPAD2:
+            Pan(0, fKeyboardPanSpeed);
+            break;
+        case VK_NUMPAD4:
+            Pan(-fKeyboardPanSpeed,0);
+            break;
+        case VK_NUMPAD6:
+            Pan(fKeyboardPanSpeed, 0);
+            break;
+        case VK_ADD:
+            Zoom(fKeyboardZoomSpeed);
+            break;
+        case VK_SUBTRACT:
+            Zoom(-fKeyboardZoomSpeed);
+            break;
+        case VK_NUMPAD5:
+            // TODO: center
+            break;
+        case VK_MULTIPLY:
+            //TODO: center and reset zoom
+            break;
 
         }
+    }
+
+    void TestApp::Pan(int horizontalPIxels, int verticalPixels )
+    {
+        CmdDataPan pan;
+        pan.x = horizontalPIxels;
+        pan.y = verticalPixels;
+        ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
+    }
+
+    void TestApp::Zoom(double precentage)
+    {
+        CmdDataZoom zoom;
+        zoom.amount = precentage;
+        ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
+
     }
 
     bool TestApp::HandleMessages(const Win32WIndow::Win32Event& evnt)
@@ -294,13 +375,10 @@ namespace OIV
 
         case WM_MOUSEWHEEL:
         {
-            int zDelta = GET_WHEEL_DELTA_WPARAM(uMsg.wParam) / WHEEL_DELTA;
-
-            CmdDataZoom zoom;
-            //20% zoom in each step
-            zoom.amount = zDelta * 0.20;
-            ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
             
+            int zDelta = (GET_WHEEL_DELTA_WPARAM(uMsg.wParam) / WHEEL_DELTA);
+            //20% percent zoom in each wheel step
+            Zoom(zDelta * 0.2);
         }
         break;
 
@@ -330,21 +408,13 @@ namespace OIV
             {
                 if (lastX != -1)
                 {
-                    CmdDataPan pan;
-                    ////20% zoom in each step
-                    pan.x = -deltax / 200.0;
-                    pan.y = -deltaY / 200.0;
-                    ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
+                    Pan(-deltax, -deltaY);
                 }
 
                 lastX = xPos;
                 lastY = yPos;
             }
         }
-
-
-
-
         break;
         }
         return true;

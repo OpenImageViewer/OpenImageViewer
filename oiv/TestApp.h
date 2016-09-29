@@ -1,5 +1,4 @@
 #pragma once
-#include <windowsx.h>
 #include "win32/Win32Window.h"
 
 namespace OIV
@@ -8,9 +7,10 @@ namespace OIV
     {
     public:
         TestApp();
+        ~TestApp();
         HWND GetWindowHandle();
         void Run(std::wstring filePath);
-
+        void UpdateFileInddex();
         void JumpFiles(int step);
 
         void ToggleFullScreen();
@@ -18,18 +18,23 @@ namespace OIV
         void ToggleSlideShow();
         void SetFilterLevel(int filterLevel);
         void handleKeyInput(const Win32WIndow::Win32Event& evnt);
+        void Pan(int horizontalPIxels, int verticalPixels);
+        void Zoom(double precentage);
         bool HandleMessages(const Win32WIndow::Win32Event& evnt);
         template<class T, class U>
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private:
-        Win32WIndow window;
+        Win32WIndow fWindow;
         int fFilterlevel;
         bool fIsSlideShowActive;
-        static const int cTimerID = 1500;
+        int fKeyboardPanSpeed;
+        double fKeyboardZoomSpeed;
 
-        ListFiles fListFiles;
+        static const int cTimerID = 1500;
         ListFilesIterator fCurrentListPosition;
+        ListFiles fListFiles;
+        void UpdateFileInfo(const CmdResponseLoad& load_response);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
         void LoadFileInFolder(std::wstring filePath);
     };

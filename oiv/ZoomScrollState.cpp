@@ -223,7 +223,7 @@ namespace OIV
 
     void ZoomScrollState::Pan(Ogre::Vector2 amount)
     {
-        Ogre::Vector2 panFactor = amount * GetARFixedUVScale();
+        Ogre::Vector2 panFactor = amount * GetARFixedUVScale() / fListener->GetWindowSize();
         panFactor.y *= fInverted ? -1 : 1;
         TranslateOffset(panFactor);
     }
