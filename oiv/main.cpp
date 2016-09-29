@@ -12,9 +12,10 @@ int mainFunction(int argc, const wchar_t** argv)
     if (argc > 1)
     {
         std::wstring filePath;
-
-        for (int i = 1; i < argc; i++)
-            filePath += argv[i];
+        filePath = argv[1];
+        for (int i = 2; i < argc; i++)
+            filePath += std::wstring(L" ") + argv[i];
+        
 
         OIV::TestApp testApp;
         testApp.Run(filePath);
