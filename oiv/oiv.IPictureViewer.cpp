@@ -163,5 +163,13 @@ namespace OIV
             return 1;
         }
     }
+
+    int OIV::GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY)
+    {
+        Ogre::Vector2 texelPos = this->fScrollState.ClientPosToTexel( Ogre::Vector2(mouseX, mouseY));
+        texelX = texelPos.x;
+        texelY = texelPos.y;
+        return RC_Success;
+    }
     
 }

@@ -92,10 +92,28 @@ namespace OIV
         NotifyDirty();
     }
 
+
+    Ogre::Vector2 ZoomScrollState::GetScreenSpaceOrigin()
+    {
+        return GetOffset() / GetARFixedUVScale() * fListener->GetWindowSize();
+    }
+
+    Ogre::Vector2 ZoomScrollState::ClientPosToTexel(Ogre::Vector2 pos)
+    {
+        using namespace  Ogre;
+        Vector2 texel = (pos + GetScreenSpaceOrigin()) / fListener->GetWindowSize() * fListener->GetImageSize() * GetARFixedUVScale();
+        return texel;
+    }
+
     void ZoomScrollState::SetScale(Ogre::Vector2 scale)
     {
         fUVScale = scale;
         NotifyDirty();
+    }
+
+    Ogre::Vector2 ZoomScrollState::GetCanvasSize()
+    {
+        return fListener->GetImageSize() * GetARFixedUVScale();
     }
 
     Ogre::Vector2 ZoomScrollState::GetARFixedUVScale()

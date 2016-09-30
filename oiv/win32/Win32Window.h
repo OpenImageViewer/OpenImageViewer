@@ -166,6 +166,15 @@ public:
         return hwndStatus;
     }
 
+    POINT GetMousePosition()
+    {
+        using namespace Ogre;
+        POINT p;
+        GetCursorPos(&p);
+        ScreenToClient(fHandleWindow, &p);
+        return p;
+    }
+
     void SetStatusBarText(std::wstring message, int part, int type)
     {
         if (fHandleStatusBar != NULL)

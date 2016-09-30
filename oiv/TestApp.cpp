@@ -18,8 +18,8 @@ namespace OIV
     }
 
     TestApp::TestApp() :
-        fKeyboardPanSpeed(100)
-        ,fKeyboardZoomSpeed(0.1)
+          fKeyboardPanSpeed(100)
+        , fKeyboardZoomSpeed(0.1)
         , fIsSlideShowActive(false)
         , fFilterlevel(0)
     {
@@ -263,12 +263,13 @@ namespace OIV
 
     void TestApp::handleKeyInput(const Win32WIndow::Win32Event& evnt)
     {
-        bool IsAlt = GetKeyState(VK_MENU) & (USHORT)0x8000;
-        bool IsControl = GetKeyState(VK_CONTROL) & (USHORT)0x8000;
-        bool IsShift = GetKeyState(VK_SHIFT) & (USHORT)0x8000;
+        bool IsAlt = (GetKeyState(VK_MENU) & (USHORT)0x8000) != 0;
+        bool IsControl = (GetKeyState(VK_CONTROL) & (USHORT)0x8000) != 0;
+        bool IsShift = (GetKeyState(VK_SHIFT) & (USHORT)0x8000) != 0;
 
         switch (evnt.message.wParam)
         {
+        case 'Q':
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;
@@ -347,6 +348,24 @@ namespace OIV
 
     }
 
+    void TestApp::UpdateTexelPos()
+    {
+        POINT p = fWindow.GetMousePosition();
+        CmdRequestTexelAtMousePos request;
+        CmdResponseTexelAtMousePos response;
+        request.x = p.x;
+        request.y = p.y;
+        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response))
+        {
+            std::wstringstream ss;
+            ss << _T("Texel: ") 
+               << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.x
+               << _T(" X ") 
+               << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.y;
+            fWindow.SetStatusBarText(ss.str(), 2, 0);
+        }
+    }
+
     bool TestApp::HandleMessages(const Win32WIndow::Win32Event& evnt)
     {
         const MSG& uMsg = evnt.message;
@@ -387,13 +406,13 @@ namespace OIV
             break;
 
         case WM_LBUTTONUP:
-        {
             ReleaseCapture();
             lastX = -1;
-        }
+            break;
 
         case WM_MOUSEMOVE:
         {
+            UpdateTexelPos();
             if (GetCapture() == nullptr)
                 return false;
             int xPos = GET_X_LPARAM(uMsg.lParam);

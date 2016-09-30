@@ -36,6 +36,7 @@ namespace OIV
         Ogre::Vector2 GetOffset() { return fUVOffset; }
         Ogre::Vector2 GetScale() { return fUVScale; }
         Ogre::Vector2 GetARFixedUVScale();
+        Ogre::Vector2 ClientPosToTexel(Ogre::Vector2 pos);
 
         void SetInvertedVCoordinate(bool inverted);
 
@@ -46,13 +47,14 @@ namespace OIV
 
         
         void SetScale(Ogre::Vector2 scale);
+        Ogre::Vector2 GetCanvasSize();
         void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);
         void Center();
         void SetOffset(Ogre::Vector2 offset);
+        Ogre::Vector2 GetScreenSpaceOrigin();
 
-        
     private: //member fields
         
 

@@ -30,6 +30,7 @@ extern "C"
         , CE_FilterLevel
         , CE_Refresh
         , CE_GetFileInformation
+        , CE_TexelAtMousePos
     };
 
     
@@ -55,6 +56,17 @@ extern "C"
         
     };
 
+    struct CmdRequestTexelAtMousePos
+    {
+        int x;
+        int y;
+    };
+    
+    struct CmdResponseTexelAtMousePos
+    {
+        double x;
+        double y;
+    };
 
     struct CmdRequestFilter
     {

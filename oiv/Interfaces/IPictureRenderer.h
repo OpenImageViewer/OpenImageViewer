@@ -18,5 +18,6 @@ namespace OIV
 
         virtual Image* GetImage() = 0;
         virtual int SetFilterLevel(int filter_level) = 0;
+        virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) = 0;
     };
 }

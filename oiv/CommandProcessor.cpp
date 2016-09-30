@@ -152,6 +152,22 @@ namespace OIV
                 }
             }
             break;
+        case CE_TexelAtMousePos:
+            if (requestSize == sizeof(CmdRequestTexelAtMousePos) && responseSize == sizeof(CmdResponseTexelAtMousePos))
+            {
+                CmdRequestTexelAtMousePos* request = reinterpret_cast<CmdRequestTexelAtMousePos*>(requestData);
+                CmdResponseTexelAtMousePos* response = reinterpret_cast<CmdResponseTexelAtMousePos*>(responseData);
+
+                if (sPictureRenderer->GetTexelAtMousePos(request->x,request->y, response->x, response->y) != 0)
+                {
+                    result = RC_UknownError;
+                }
+            }
+            else
+            {
+                result = ResultCode::RC_WrongDataSize;
+            }
+            break;
         }
 
         return result;

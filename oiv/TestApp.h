@@ -20,6 +20,7 @@ namespace OIV
         void handleKeyInput(const Win32WIndow::Win32Event& evnt);
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage);
+        void UpdateTexelPos();
         bool HandleMessages(const Win32WIndow::Win32Event& evnt);
         template<class T, class U>
         bool ExecuteCommand(CommandExecute command, T * request, U * response);

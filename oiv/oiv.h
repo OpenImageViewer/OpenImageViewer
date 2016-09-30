@@ -112,6 +112,7 @@ namespace OIV
         virtual Image* GetImage() override;
         virtual int SetFilterLevel(int filter_level) override;
         virtual int GetFileInformation(QryFileInformation& information) override;
+        virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
 #pragma endregion
 
 
