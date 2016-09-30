@@ -22,6 +22,7 @@ namespace OIV
         , fKeyboardZoomSpeed(0.1)
         , fIsSlideShowActive(false)
         , fFilterlevel(0)
+        , fIsGridEnabled(false)
     {
         
         new MonitorInfo();
@@ -261,6 +262,18 @@ namespace OIV
             fFilterlevel = filterLevel;
     }
 
+    void TestApp::ToggleGrid()
+    {
+        CmdRequestTexelGrid grid;
+        fIsGridEnabled = !fIsGridEnabled;
+        grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
+        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()))
+        {
+            
+        }
+        
+    }
+
     void TestApp::handleKeyInput(const Win32WIndow::Win32Event& evnt)
     {
         bool IsAlt = (GetKeyState(VK_MENU) & (USHORT)0x8000) != 0;
@@ -326,6 +339,12 @@ namespace OIV
             // TODO: center
             break;
         case VK_MULTIPLY:
+            //TODO: center and reset zoom
+            break;
+        case VK_DIVIDE:
+            break;
+        case 'G':
+            ToggleGrid();
             //TODO: center and reset zoom
             break;
 

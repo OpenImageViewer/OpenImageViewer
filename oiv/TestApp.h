@@ -17,6 +17,7 @@ namespace OIV
         void ToggleBorders();
         void ToggleSlideShow();
         void SetFilterLevel(int filterLevel);
+        void ToggleGrid();
         void handleKeyInput(const Win32WIndow::Win32Event& evnt);
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage);
@@ -31,6 +32,7 @@ namespace OIV
         bool fIsSlideShowActive;
         int fKeyboardPanSpeed;
         double fKeyboardZoomSpeed;
+        double fIsGridEnabled;
 
         static const int cTimerID = 1500;
         ListFilesIterator fCurrentListPosition;

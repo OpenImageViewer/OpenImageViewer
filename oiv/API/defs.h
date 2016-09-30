@@ -31,6 +31,7 @@ extern "C"
         , CE_Refresh
         , CE_GetFileInformation
         , CE_TexelAtMousePos
+        , CE_TexelGrid
     };
 
     
@@ -54,6 +55,11 @@ extern "C"
     struct CmdNull
     {
         
+    };
+
+    struct CmdRequestTexelGrid
+    {
+        double gridSize;
     };
 
     struct CmdRequestTexelAtMousePos

@@ -43,7 +43,7 @@ int CALLBACK WinMain(
 #endif
 
 
-int main(int argc, const wchar_t** argv)
+int _tmain(int argc, const TCHAR** argv)
 {
     mainFunction(argc, argv);
 }

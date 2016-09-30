@@ -156,7 +156,7 @@ namespace OIV
             information.imageDataSize = 0;
             information.numChannels = 0;
 
-            return 0;
+            return RC_Success;
         }
         else
         {
@@ -169,6 +169,13 @@ namespace OIV
         Ogre::Vector2 texelPos = this->fScrollState.ClientPosToTexel( Ogre::Vector2(mouseX, mouseY));
         texelX = texelPos.x;
         texelY = texelPos.y;
+        return RC_Success;
+    }
+
+    int OIV::SetTexelGrid(double gridSize)
+    {
+        fShowGrid = gridSize > 0.0;
+        Refresh();
         return RC_Success;
     }
     

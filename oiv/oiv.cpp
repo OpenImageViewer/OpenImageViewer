@@ -19,6 +19,7 @@ namespace OIV
         , fPass(NULL)
         , fParent(NULL)
         , fFilterLevel(2)
+        , fShowGrid(false)
 
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
@@ -180,6 +181,9 @@ namespace OIV
 
         fFragmentParameters->setNamedConstant("uvScale", uvScaleFixed);
         fFragmentParameters->setNamedConstant("uvOffset", uvOffset);
+        fFragmentParameters->setNamedConstant("uImageSize", GetImageSize());
+        fFragmentParameters->setNamedConstant("uViewportSize", GetWindowSize());
+        fFragmentParameters->setNamedConstant("uShowGrid", fShowGrid == true ? 1 : 0);
     }
 
 

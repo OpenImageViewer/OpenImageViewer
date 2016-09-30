@@ -168,6 +168,21 @@ namespace OIV
                 result = ResultCode::RC_WrongDataSize;
             }
             break;
+        case CE_TexelGrid:
+            if (requestSize == sizeof(CmdRequestTexelGrid))
+            {
+                CmdRequestTexelGrid* request = reinterpret_cast<CmdRequestTexelGrid*>(requestData);
+
+                if (sPictureRenderer->SetTexelGrid(request->gridSize) != 0)
+                {
+                    result = RC_UknownError;
+                }
+            }
+            else
+            {
+                result = ResultCode::RC_WrongDataSize;
+            }
+            break;
         }
 
         return result;
