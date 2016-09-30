@@ -69,7 +69,7 @@ namespace OIV
 
         bool IsImageLoaded() const
         {
-            return fOpenedImage.get();
+            return fOpenedImage.get() != nullptr;
         }
 
 

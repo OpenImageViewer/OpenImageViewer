@@ -13,21 +13,22 @@ namespace OIV
         static tjhandle ftjHandle;
 
     public:
-     PluginProperties& GetPluginProperties() override
-    {
+        PluginProperties& GetPluginProperties() override
+        {
             static PluginProperties pluginProperties = { "Jpeg plugin codec","jpg;jpeg" };
             return pluginProperties;
-    }
+        }
 
         virtual bool LoadImage(std::string filePath, ImageProperies& out_properties) override
         {
             bool success = false;
-            
+
             std::ifstream file(filePath, std::ifstream::ate | std::ifstream::binary);
 
             if (file.is_open())
             {
-                size_t fileSize = file.tellg();
+                std::streamoff offset = file.tellg();
+                unsigned int fileSize = static_cast<unsigned int>(offset);
                 file.seekg(0, std::ios::beg);
 
                 unsigned char* byteArray = new unsigned char[fileSize];
@@ -44,7 +45,7 @@ namespace OIV
 
                     if (tjDecompress2(ftjHandle, byteArray, fileSize, buffer, width, width * bytesPerPixel, height, TJPF_RGB, 0) != -1)
                     {
-                        out_properties.ImageBuffer = (void*)buffer;
+                        out_properties.ImageBuffer = static_cast<void*>(buffer);
                         out_properties.BitsPerTexel = bytesPerPixel * 8;
                         out_properties.Type = IT_BYTE_BGR;
                         out_properties.Width = width;
@@ -57,9 +58,7 @@ namespace OIV
                 }
                 delete[]byteArray;
             }
-            
             return success;
-
         }
     };
     tjhandle PluginJpeg::ftjHandle = tjInitDecompress();
