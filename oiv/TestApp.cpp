@@ -102,6 +102,9 @@ namespace OIV
             if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
             {
                 workingFolder = path;
+                if (workingFolder.at(workingFolder.length() - 1) == '\\')
+                    workingFolder.erase(workingFolder.length() - 1, 1);
+
                 filePath = workingFolder + L"\\" + filePath;
             }
 
