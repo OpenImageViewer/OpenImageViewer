@@ -23,9 +23,16 @@ struct ShaderOut
 	float4 texelOut : SV_Target;
 };
 
-float4 GetChecker(float4 color1, float4 color2, float2 uv)
+float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
 {
+
     float2 checkerSize = float2(0.03, 0.03);
+	//Fix aspect ratio
+	if (viewportSize.x > viewportSize.y)
+		checkerSize.y *= viewportSize.x / viewportSize.y;
+	else
+		checkerSize.x *= viewportSize.y / viewportSize.x;
+
     float2 checkerPos = uv / checkerSize;
     int2 checkerPosInt = int2(checkerPos);
     checkerPosInt = checkerPosInt % 2;
@@ -80,15 +87,15 @@ void DrawPixelGrid(
 		}
 } 
 
-void FillBackGround(float2 uv,float2 screenUV, inout float4 texel)
+void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
 {
 	if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-        texel = GetChecker(black, darkBlue, screenUV);
+            texel = GetChecker(black, darkBlue, screenUV, viewportSize);
 }
-void DrawImage(float2 uv, float2 screenUV, inout float4 texel)
+void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texel)
 {
     float4 sampledTexel = texture_1.Sample(textureState_1, uv);
-    float4 checkerColor = GetChecker(white, gray25, screenUV);
+    float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }
 void main(in ShaderIn input, out ShaderOut output)
@@ -97,10 +104,10 @@ void main(in ShaderIn input, out ShaderOut output)
     float2 uv = input.uv * uvScale + uvOffset;
 
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-		FillBackGround(uv, input.uv, texel);
+		FillBackGround(uv, input.uv, uViewportSize, texel);
 	else
 	{
-		DrawImage(uv, input.uv, texel);
+		DrawImage(uv, input.uv, uViewportSize, texel);
 		if (uShowGrid == 1)
         	        DrawPixelGrid(uImageSize,uViewportSize,input.uv,uvScale,uvOffset,texel);
 	}
