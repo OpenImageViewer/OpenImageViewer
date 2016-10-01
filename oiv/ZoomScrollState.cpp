@@ -56,11 +56,44 @@ namespace OIV
         return offset;
     }
 
+    Ogre::Vector2 ZoomScrollState::FixAR(Ogre::Vector2 val, bool increase)
+    {
+        using namespace Ogre;
+
+        Vector2 windowSize = fListener->GetWindowSize();
+        Vector2 result;
+        double ar = windowSize.x / windowSize.y;
+        result = val;
+
+        if (ar < 1)
+        {
+            if (increase)
+                result.x /= ar;
+            else
+                result.y *= ar;
+        }
+
+        else if (ar > 1)
+        {
+            if (increase)
+                result.y *= ar;
+            else
+                result.x /= ar;
+        }
+        return result;
+    }
+
     void ZoomScrollState::SetOffset(Ogre::Vector2 offset)
     {
-        Ogre::Vector2 uvScale = GetARFixedUVScale();
-        fUVOffset.x = ResolveOffset(offset.x, uvScale.x, fMarginLarge.x , fMarginSmall.x);
-        fUVOffset.y = ResolveOffset(offset.y, uvScale.y, fMarginLarge.y, fMarginSmall.y);
+        using namespace Ogre;
+        Vector2 uvScale = GetARFixedUVScale();
+
+        Vector2 marginLarge = FixAR(fMarginLarge, false);
+        Vector2 marginSmall = FixAR(fMarginSmall, false);
+        
+        
+        fUVOffset.x = ResolveOffset(offset.x, uvScale.x, marginLarge.x, marginSmall.x);
+        fUVOffset.y = ResolveOffset(offset.y, uvScale.y, marginLarge.y, marginSmall.y);
         NotifyDirty();
     }
 

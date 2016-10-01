@@ -58,6 +58,7 @@ namespace OIV
         void TranslateOffset(Ogre::Vector2 offset);
         void Center();
         double ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const;
+        Ogre::Vector2 FixAR(Ogre::Vector2 val, bool increase);
         void SetOffset(Ogre::Vector2 offset);
         Ogre::Vector2 GetScreenSpaceOrigin();
 
