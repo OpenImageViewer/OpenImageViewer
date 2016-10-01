@@ -88,9 +88,12 @@ extern "C"
     
 
 
+
     struct CmdDataZoom
     {
         double amount;
+        int zoomX;
+        int zoomY;
     };
 
     struct CmdResponseLoad

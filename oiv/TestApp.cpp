@@ -330,10 +330,10 @@ namespace OIV
             Pan(fKeyboardPanSpeed, 0);
             break;
         case VK_ADD:
-            Zoom(fKeyboardZoomSpeed);
+            Zoom(fKeyboardZoomSpeed, -1, -1);
             break;
         case VK_SUBTRACT:
-            Zoom(-fKeyboardZoomSpeed);
+            Zoom(-fKeyboardZoomSpeed, -1, -1);
             break;
         case VK_NUMPAD5:
             // TODO: center
@@ -359,14 +359,11 @@ namespace OIV
         ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
     }
 
-    void TestApp::Zoom(double precentage)
+    void TestApp::Zoom(double precentage, int zoomX , int zoomY )
     {
-        CmdDataZoom zoom;
-        zoom.amount = precentage;
+        CmdDataZoom zoom{ precentage,zoomX, zoomY };
         ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
-
         UpdateCanvasSize();
-
     }
 
     void TestApp::UpdateCanvasSize()
@@ -413,7 +410,6 @@ namespace OIV
         case WM_WINDOWPOSCHANGED:
         case WM_SIZE:
             ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
-            ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
             UpdateCanvasSize();
             break;
             
@@ -425,16 +421,16 @@ namespace OIV
             break;
 
         case WM_KEYDOWN:
-            case WM_SYSKEYDOWN:
+        case WM_SYSKEYDOWN:
             handleKeyInput(evnt);
             break;
 
         case WM_MOUSEWHEEL:
         {
-            
             int zDelta = (GET_WHEEL_DELTA_WPARAM(uMsg.wParam) / WHEEL_DELTA);
             //20% percent zoom in each wheel step
-            Zoom(zDelta * 0.2);
+            POINT mousePos = fWindow.GetMousePosition();
+            Zoom(zDelta * 0.2, mousePos.x, mousePos.y);
         }
         break;
 

@@ -32,7 +32,7 @@ namespace OIV
 
         // commands
         void Reset(bool refresh = false);
-        void Zoom(Ogre::Real amount);
+        void Zoom(Ogre::Real amount,int x,int y);
         void Pan(Ogre::Vector2 amont);
         void Refresh();
 

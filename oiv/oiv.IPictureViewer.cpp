@@ -38,7 +38,7 @@ namespace OIV
                     , Ogre::PF_R8G8B8A8); // pixel format
 
 
-                PixelFormat format = PF_UNKNOWN; 
+            PixelFormat format =  PF_UNKNOWN; 
 
 
             switch (fOpenedImage->GetImageType())
@@ -63,13 +63,15 @@ namespace OIV
             case IT_BYTE_8BIT:
                 format = PF_L8;
                 break;
+            default:
+                format = PF_UNKNOWN;
 
             }
 
             if (format != PF_UNKNOWN)
             {
 
-                PixelBox src((uint32)width, (uint32)height, 1, format, const_cast<void*> (fOpenedImage->GetBuffer()));
+                PixelBox src(static_cast<uint32>(width), static_cast<uint32>(height), 1, format, const_cast<void*> (fOpenedImage->GetBuffer()));
                 src.rowPitch = fOpenedImage->GetRowPitchInTexels();
                 src.slicePitch = fOpenedImage->GetSlicePitchInTexels();
                 Ogre::Image::Box dest(0, 0, width, height);
@@ -85,9 +87,9 @@ namespace OIV
         return false;
     }
 
-    double OIV::Zoom(double percentage)
+    double OIV::Zoom(double percentage,int x, int y)
     {
-        fScrollState.Zoom(percentage);
+        fScrollState.Zoom(percentage,x ,y);
         return 0.0;
     }
 

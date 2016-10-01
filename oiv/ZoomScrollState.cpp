@@ -197,7 +197,7 @@ namespace OIV
             Refresh();
     }
 
-    void ZoomScrollState::Zoom(Ogre::Real amount)
+    void ZoomScrollState::Zoom(Ogre::Real amount, int x, int y)
     {
         if (amount == 0)
             return;
@@ -205,13 +205,18 @@ namespace OIV
         SupressDirty(true);
         using namespace Ogre;
 
-        Vector2 mousePos = fListener->GetMousePosition();
+        Vector2 zoomPoint;
         Vector2 windowSize = fListener->GetWindowSize();
-        Vector2 screenOffset = (mousePos / windowSize);
+
+        
+        zoomPoint.x = x >= 0 ? (static_cast<double>(x) / windowSize.x) : 0.5;
+        zoomPoint.y = y >= 0 ? (static_cast<double>(y) / windowSize.y) : 0.5;
+
+        
         if (fInverted)
         {
-            assert(screenOffset.y <= 1.0);
-            screenOffset.y = 1 - screenOffset.y;
+            assert(zoomPoint.y <= 1.0);
+            zoomPoint.y = 1 - zoomPoint.y;
         }
 
 
@@ -233,8 +238,8 @@ namespace OIV
 
         Vector2 totalOffset = (oldScaleFixed - newScaleFixed);
 
-        //zoom relative to mouse position
-        Vector2 offsetChange = totalOffset * screenOffset;
+        //zoom around the zoom point
+        Vector2 offsetChange = totalOffset * zoomPoint;
         TranslateOffset(offsetChange);
         SupressDirty(false);
     }

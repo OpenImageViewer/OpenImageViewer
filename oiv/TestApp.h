@@ -20,7 +20,7 @@ namespace OIV
         void ToggleGrid();
         void handleKeyInput(const Win32WIndow::Win32Event& evnt);
         void Pan(int horizontalPIxels, int verticalPixels);
-        void Zoom(double precentage);
+        void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
         bool HandleMessages(const Win32WIndow::Win32Event& evnt);

@@ -47,7 +47,7 @@ namespace OIV
             if (requestSize == sizeof(CmdDataZoom))
             {
                 CmdDataZoom* dataZoom = reinterpret_cast<CmdDataZoom*>(requestData);
-                sPictureRenderer->Zoom(dataZoom->amount);
+                sPictureRenderer->Zoom(dataZoom->amount, dataZoom->zoomX, dataZoom->zoomY);
 
             }
             else

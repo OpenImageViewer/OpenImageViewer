@@ -7,7 +7,7 @@ namespace OIV
     class IPictureRenderer
     {
     public:
-        virtual double Zoom(double percentage) = 0;
+        virtual double Zoom(double percentage,int x, int y) = 0;
         virtual int Pan(double x, double y) = 0;
         virtual int LoadFile(OIVCHAR* filePath, bool onlyRegisteredExtension) = 0;
         virtual int Init() = 0;

@@ -27,7 +27,6 @@ namespace OIV
         bool                fIsRefresing;
         std::string fCurrentOpenedFile;
         ImageLoader fImageLoader;
-        int fKeyboardPanSpeed;
         bool fShowGrid;
         typedef std::unique_ptr<Image> ImageUniquePtr;
         ImageUniquePtr fOpenedImage;
@@ -104,7 +103,7 @@ namespace OIV
 #pragma region IPictureListener
         //-------------IPictureListener------------------
         // 
-        virtual double Zoom(double percentage) override;
+        virtual double Zoom(double percentage,int x,int y) override;
         virtual int Pan(double x, double y) override;
         virtual int LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension) override;
         virtual int Init() override;
