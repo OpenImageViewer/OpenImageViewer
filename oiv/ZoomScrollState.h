@@ -37,6 +37,7 @@ namespace OIV
         Ogre::Vector2 GetScale() { return fUVScale; }
         Ogre::Vector2 GetARFixedUVScale();
         Ogre::Vector2 ClientPosToTexel(Ogre::Vector2 pos);
+        Ogre::Vector2 GetCanvasSize();
 
         void SetInvertedVCoordinate(bool inverted);
 
@@ -47,7 +48,6 @@ namespace OIV
 
         
         void SetScale(Ogre::Vector2 scale);
-        Ogre::Vector2 GetCanvasSize();
         void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);

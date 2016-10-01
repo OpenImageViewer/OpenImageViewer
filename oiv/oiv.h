@@ -115,6 +115,7 @@ namespace OIV
         virtual int GetFileInformation(QryFileInformation& information) override;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
         virtual int SetTexelGrid(double gridSize) override;
+        virtual int GetCanvasSize(double &x, double &y) override;
 #pragma endregion
 
 

@@ -21,6 +21,7 @@ namespace OIV
         void handleKeyInput(const Win32WIndow::Win32Event& evnt);
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage);
+        void UpdateCanvasSize();
         void UpdateTexelPos();
         bool HandleMessages(const Win32WIndow::Win32Event& evnt);
         template<class T, class U>

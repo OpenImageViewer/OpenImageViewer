@@ -365,6 +365,24 @@ namespace OIV
         zoom.amount = precentage;
         ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
 
+        UpdateCanvasSize();
+
+    }
+
+    void TestApp::UpdateCanvasSize()
+    {
+        CmdGetCanvasSizeResponse response;
+        
+        if (ExecuteCommand(CMD_GetCanvasSize, &CmdNull(), &response))
+        {
+
+            std::wstringstream ss;
+            ss << _T("Canvas: ")
+                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.width
+                << _T(" X ")
+                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.height;
+            fWindow.SetStatusBarText(ss.str(), 3, 0);
+        }
     }
 
     void TestApp::UpdateTexelPos()
@@ -393,10 +411,10 @@ namespace OIV
         switch (uMsg.message)
         {
         case WM_WINDOWPOSCHANGED:
+        case WM_SIZE:
             ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
-            break;
-            case WM_SIZE:
             ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
+            UpdateCanvasSize();
             break;
             
         case WM_TIMER:

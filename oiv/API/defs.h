@@ -32,6 +32,7 @@ extern "C"
         , CE_GetFileInformation
         , CE_TexelAtMousePos
         , CE_TexelGrid
+        , CMD_GetCanvasSize
     };
 
     
@@ -55,6 +56,12 @@ extern "C"
     struct CmdNull
     {
         
+    };
+
+    struct CmdGetCanvasSizeResponse
+    {
+        double width;
+        double height;
     };
 
     struct CmdRequestTexelGrid

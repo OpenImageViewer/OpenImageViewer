@@ -178,5 +178,13 @@ namespace OIV
         Refresh();
         return RC_Success;
     }
+
+    int OIV::GetCanvasSize(double &x, double &y)
+    {
+        Ogre::Vector2 canvasSize = fScrollState.GetCanvasSize();
+        x = canvasSize.x;
+        y = canvasSize.y;
+        return RC_Success;
+    }
     
 }

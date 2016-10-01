@@ -33,7 +33,7 @@ public:
     Win32WIndow() : 
       fHandleWindow(nullptr)
     , fHandleStatusBar(nullptr)
-    , fStatusWindowParts(3)
+    , fStatusWindowParts(4)
     , fIsFullScreen(false)
     , fLastWindowPlacement ({ 0 })
     {
