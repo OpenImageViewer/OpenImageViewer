@@ -17,78 +17,50 @@ namespace OIV
     }
     
 
+    double ZoomScrollState::ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const
+    {
+        double offset;
+        if (scale < 1)
+        {
+            // Image is larger than window
+            double marginFactor = marginLarge * scale;
+            double maxOffset = 1.0 - scale + marginFactor;
+            offset = std::max(static_cast<double>(-marginFactor), std::min(maxOffset, desiredOffset));
+        }
+        else
+        {
+
+            // Image is smaller then window
+            if (fLockSmallImagesToCenter)
+            {
+                //Keep in center
+                offset = -(scale - 1) / 2;
+            }
+            else
+            {
+                double marginFactor = marginSmall * scale;
+                double maxOffset = -marginFactor;
+                double minOffset = -scale + 1.0 + marginFactor;
+                if (minOffset < maxOffset)
+                {
+                    offset = std::min(std::max(desiredOffset, minOffset), maxOffset);
+                }
+                else
+                {
+                    //No room for margin - Keep in center
+                    offset = -(scale - 1) / 2;
+                }
+            }
+        }
+
+        return offset;
+    }
+
     void ZoomScrollState::SetOffset(Ogre::Vector2 offset)
     {
-        using namespace Ogre;
-        Vector2 Max_Margin = Vector2(0.25, 0.25);
-        const bool KeepSmallerImagesInCenter = false;
-        
-        Vector2 uvScale = GetARFixedUVScale();
-
-        const Vector2 marginFactor = Vector2(Max_Margin.x * uvScale.x, Max_Margin.y * uvScale.y);
-        // Image is visually larger then window
-        if (uvScale.x < 1)
-        {
-            
-            double maxOffset = 1.0 - uvScale.x + marginFactor.x;
-            fUVOffset.x = std::max(static_cast<double>(-marginFactor.x), std::min(maxOffset, (double)offset.x));
-        }
-        else
-        {
-            Max_Margin = Vector2(0.1, 0.1);
-            // Image is smaller then window
-            if (KeepSmallerImagesInCenter)
-            {
-                //Keep in center
-                fUVOffset.x = -(uvScale.x - 1) / 2;// offset.x;
-            }
-            else
-            {
-                double marginFactor = Max_Margin.x * uvScale.x;
-                double maxOffset = -marginFactor;
-                double minOffset = -uvScale.x + 1.0 + marginFactor;
-                if (minOffset < maxOffset)
-                {
-                    fUVOffset.x = std::min(std::max((double)offset.x, minOffset), maxOffset);
-                }
-                else
-                {
-                    //No room for margin - Keep in center
-                    fUVOffset.x = -(uvScale.x - 1) / 2;// offset.x;
-                }
-            }
-        }
-
-        if (uvScale.y < 1)
-        {
-            double maxOffset = 1.0 - uvScale.y + marginFactor.y;
-            fUVOffset.y = std::max(static_cast<double>(-marginFactor.y), std::min(maxOffset, (double)offset.y));
-        }
-        else
-        {
-
-            Max_Margin = Vector2(0.05, 0.05);
-            if (KeepSmallerImagesInCenter)
-            {
-                //Keep in center
-                fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
-            }
-            else
-            {
-                double marginFactor = Max_Margin.y * uvScale.y;
-                double maxOffset = -marginFactor;
-                double minOffset = -uvScale.y + 1.0 + marginFactor;
-                if (minOffset < maxOffset)
-                {
-                    fUVOffset.y = std::min(std::max((double)offset.y, minOffset), maxOffset);
-                }
-                else
-                {
-                    //No room for margin - Keep in center
-                    fUVOffset.y = -(uvScale.y - 1) / 2;// offset.x;
-                }
-            }
-        }
+        Ogre::Vector2 uvScale = GetARFixedUVScale();
+        fUVOffset.x = ResolveOffset(offset.x, uvScale.x, fMarginLarge.x , fMarginSmall.x);
+        fUVOffset.y = ResolveOffset(offset.y, uvScale.y, fMarginLarge.y, fMarginSmall.y);
         NotifyDirty();
     }
 

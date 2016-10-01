@@ -15,14 +15,19 @@ namespace OIV
             virtual void NotifyDirty() = 0;
         };
 
-        ZoomScrollState(Listener* listener)
+        ZoomScrollState(Listener* listener) :
+            fLockSmallImagesToCenter(false)
+            , fListener(listener)
+            , fUVOffset(Ogre::Vector2::ZERO)
+            , fUVScale(Ogre::Vector2::UNIT_SCALE)
+            , fSupressDirty(false)
+            , fDirtyQueued(false)
+            , fInverted(false)
+            , fMarginLarge(0.25, 0.25)
+            , fMarginSmall(0.1, 0.1)
         {
-            fListener = listener;
-            fUVOffset = Ogre::Vector2::ZERO;
-            fUVScale = Ogre::Vector2::UNIT_SCALE;
-            fSupressDirty = false;
-            fDirtyQueued = false;
-            fInverted = false;
+
+
         }
 
         // commands
@@ -30,8 +35,8 @@ namespace OIV
         void Zoom(Ogre::Real amount);
         void Pan(Ogre::Vector2 amont);
         void Refresh();
-        
-        
+
+
         // queries
         Ogre::Vector2 GetOffset() { return fUVOffset; }
         Ogre::Vector2 GetScale() { return fUVScale; }
@@ -46,23 +51,27 @@ namespace OIV
         void RefreshOffset();
         void NotifyDirty();
 
-        
+
         void SetScale(Ogre::Vector2 scale);
         void SupressDirty(bool surpress);
 
         void TranslateOffset(Ogre::Vector2 offset);
         void Center();
+        double ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const;
         void SetOffset(Ogre::Vector2 offset);
         Ogre::Vector2 GetScreenSpaceOrigin();
 
     private: //member fields
-        
-
         Listener* fListener;
         Ogre::Vector2 fUVScale;
         Ogre::Vector2 fUVOffset;
         bool fSupressDirty;
         bool fDirtyQueued;
         bool fInverted;
+        bool fLockSmallImagesToCenter;
+
+        Ogre::Vector2 fMarginLarge;
+        Ogre::Vector2 fMarginSmall;
+
     };
 }
