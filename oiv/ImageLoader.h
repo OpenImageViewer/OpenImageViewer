@@ -60,10 +60,11 @@ namespace OIV
                 if (choosenPlugin->LoadImage(fileName, props))
                 {
                     auto end = std::chrono::high_resolution_clock::now();
-                    if ((props.IsInitialized() == false))
-                        throw std::exception("Image properties are not completely initialized");
-                    loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
-                    loadedImage = new Image(props, loadTime);
+                    if ((props.IsInitialized() == true))
+                    {
+                        loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
+                        loadedImage = new Image(props, loadTime);
+                    }
                 }
             }
             else if (onlyRegisteredExtension == false)
