@@ -23,6 +23,7 @@ namespace OIV
         , fIsSlideShowActive(false)
         , fFilterlevel(0)
         , fIsGridEnabled(false)
+        , fCurrentFileIndex(-1)
     {
         
         new MonitorInfo();
@@ -30,30 +31,21 @@ namespace OIV
 
     TestApp::~TestApp()
     {
-        fCurrentListPosition = ListFilesIterator();
         delete MonitorInfo::getSingletonPtr();
     }
 
     HWND TestApp::GetWindowHandle()
     {
         return fWindow.GetHandle();
-        using namespace Ogre;
-        RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
-        HWND handle = NULL;
-        rw->getCustomAttribute("WINDOW", &handle);
-        return handle;
     }
 
     void TestApp::UpdateFileInfo(const CmdResponseLoad& loadResponse)
     {
-
         std::wstringstream ss;
         
         ss << loadResponse.width << L" X " << loadResponse.height << L" X " 
             << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
         fWindow.SetStatusBarText(ss.str(), 0, 0);
-        //HWND handle = GetWindowHandle();
-
     }
 
     bool TestApp::LoadFile(std::wstring filePath,bool onlyRegisteredExtension)
@@ -113,13 +105,10 @@ namespace OIV
         if (workingFolder.empty() == false)
         {
             Utility::find_files(workingFolder, fListFiles);
-            fCurrentListPosition = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            if (it != fListFiles.end())
+                fCurrentFileIndex = std::distance(fListFiles.begin(), it);
         }
-        else
-        {
-            fCurrentListPosition = fListFiles.end();
-        }
-
     }
     void TestApp::Run(std::wstring filePath)
     {
@@ -162,10 +151,9 @@ namespace OIV
     {
         if (fListFiles.empty())
             return;
-        int pos = std::distance(fListFiles.begin(), fCurrentListPosition) + 1;
 
         std::wstringstream ss;
-        ss << L"File " << pos << L"/" << fListFiles.size();
+        ss << L"File " << (fCurrentFileIndex == -1 ? 0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
 
         fWindow.SetStatusBarText(ss.str(), 1, 0);
     }
@@ -175,44 +163,48 @@ namespace OIV
         if (fListFiles.empty())
             return;
 
-        ListFilesIterator currentPos = fCurrentListPosition;
+        int totalFiles = fListFiles.size();
+
+        int fileIndex = fCurrentFileIndex ;
+
 
         int sign;
         if (step == std::numeric_limits<int>::max())
         {
-
-            currentPos = fListFiles.end(); // const_cast<ListFilesIterator&>(fListFiles.end());
+            // Last
+            fileIndex = fListFiles.size();
             sign = -1;
         }
         else if (step == std::numeric_limits<int>::min())
         {
-            currentPos = fListFiles.begin();
+            // first
+            fileIndex = -1;
             sign = 1;
         }
         else
         {
-            //currentPos = std::next(currentPos, step);
             sign = step > 0 ? 1 : -1;
         }
 
         bool isLoaded = false;
+        ListFilesIterator it;
+
         do
         {
-            if (currentPos == fListFiles.end() && sign == 1)
+            fileIndex += sign;
+            
+            if (fileIndex < 0 || fileIndex >= totalFiles || fileIndex == fCurrentFileIndex)
                 break;
-            if (currentPos == fListFiles.begin() && sign == -1)
-                break;
-
-            currentPos = std::next(currentPos, sign);
-
-            if (currentPos == fListFiles.end() && sign == 1)
-                break;
+            
+            it = fListFiles.begin();
+            std::advance(it, fileIndex);
         }
+        
+        while ((isLoaded = LoadFile(*it, true)) == false);
 
-        while ((isLoaded = LoadFile(*currentPos, true)) == false);
 
         if (isLoaded)
-            fCurrentListPosition = currentPos;
+            fCurrentFileIndex = fileIndex;
 
 
         UpdateFileInddex();

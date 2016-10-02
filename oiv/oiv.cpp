@@ -178,6 +178,9 @@ namespace OIV
         using namespace Ogre;
         Vector2 uvScaleFixed = fScrollState.GetARFixedUVScale();
         Vector2 uvOffset = fScrollState.GetOffset();
+        if (fOpenedImage.get() == nullptr)
+            uvScaleFixed = Vector2(1000000, 100000);
+        
 
         fFragmentParameters->setNamedConstant("uvScale", uvScaleFixed);
         fFragmentParameters->setNamedConstant("uvOffset", uvOffset);

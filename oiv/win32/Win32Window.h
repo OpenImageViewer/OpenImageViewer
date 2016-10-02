@@ -38,13 +38,8 @@ public:
     , fLastWindowPlacement ({ 0 })
     {
       
-    
 
     }
-
-
-     
-
 
 
     void ToggleFullScreen(bool multiMonitor = false)

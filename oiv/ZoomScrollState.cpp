@@ -127,6 +127,8 @@ namespace OIV
         
         Vector2 windowSize = fListener->GetWindowSize();
         Vector2 textureSize = fListener->GetImageSize();
+        if (textureSize == Vector2::ZERO)
+            return fUVScale;
 
         Real textureAR = textureSize.x / textureSize.y;
         Real windowAR = windowSize.x / windowSize.y;

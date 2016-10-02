@@ -36,7 +36,7 @@ namespace OIV
         double fIsGridEnabled;
 
         static const int cTimerID = 1500;
-        ListFilesIterator fCurrentListPosition;
+        int fCurrentFileIndex;
         ListFiles fListFiles;
         void UpdateFileInfo(const CmdResponseLoad& load_response);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
