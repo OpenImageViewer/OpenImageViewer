@@ -8,7 +8,7 @@ namespace OIV
     public:
         TestApp();
         ~TestApp();
-        HWND GetWindowHandle();
+        HWND GetWindowHandle() const;
         void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
@@ -18,17 +18,23 @@ namespace OIV
         void ToggleSlideShow();
         void SetFilterLevel(int filterLevel);
         void ToggleGrid();
-        void handleKeyInput(const Win32WIndow::Win32Event& evnt);
+        
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
-        bool HandleMessages(const Win32WIndow::Win32Event& evnt);
+        
+#pragma region Win32 event handling
+        void handleKeyInput(const Win32::EventWinMessage* evnt);
+        bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
+        bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
+        bool HandleMessages(const Win32::Event* evnt);
+#pragma endregion Win32 event handling
         template<class T, class U>
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private:
-        Win32WIndow fWindow;
+        Win32::Win32WIndow fWindow;
         int fFilterlevel;
         bool fIsSlideShowActive;
         int fKeyboardPanSpeed;

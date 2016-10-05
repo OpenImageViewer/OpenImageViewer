@@ -5,10 +5,10 @@
 #include <iomanip>
 #include "win32/Win32Window.h"
 #include <windowsx.h>
+#include "win32/MonitorInfo.h"
 
 namespace OIV
 {
-    
     template <class T,class U>
     bool TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
     {
@@ -34,7 +34,7 @@ namespace OIV
         delete MonitorInfo::getSingletonPtr();
     }
 
-    HWND TestApp::GetWindowHandle()
+    HWND TestApp::GetWindowHandle() const
     {
         return fWindow.GetHandle();
     }
@@ -80,7 +80,9 @@ namespace OIV
 
     void TestApp::LoadFileInFolder(std::wstring filePath)
     {
-        
+        fListFiles.clear();
+        fCurrentFileIndex = -1;
+
         std::wstring workingFolder;
         int idx = filePath.find_last_of(L"\\");
 
@@ -108,6 +110,8 @@ namespace OIV
             ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
+
+            UpdateFileInddex();
         }
     }
     void TestApp::Run(std::wstring filePath)
@@ -124,7 +128,7 @@ namespace OIV
         LoadFile(filePath, false);
         SetFilterLevel(1);
         LoadFileInFolder(filePath);
-        UpdateFileInddex();
+        
 
 
         
@@ -269,20 +273,20 @@ namespace OIV
         
     }
 
-    void TestApp::handleKeyInput(const Win32WIndow::Win32Event& evnt)
+    void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
         bool IsAlt = (GetKeyState(VK_MENU) & (USHORT)0x8000) != 0;
         bool IsControl = (GetKeyState(VK_CONTROL) & (USHORT)0x8000) != 0;
         bool IsShift = (GetKeyState(VK_SHIFT) & (USHORT)0x8000) != 0;
 
-        switch (evnt.message.wParam)
+        switch (evnt->message.wParam)
         {
         case 'Q':
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;
         case 'F':
-            evnt.window->ToggleFullScreen(IsAlt ? true : false);
+            evnt->window->ToggleFullScreen(IsAlt ? true : false);
             break;
         case VK_DOWN:
         case VK_RIGHT:
@@ -340,7 +344,6 @@ namespace OIV
             break;
         case 'G':
             ToggleGrid();
-            //TODO: center and reset zoom
             break;
 
         }
@@ -395,11 +398,11 @@ namespace OIV
         }
     }
 
-    bool TestApp::HandleMessages(const Win32WIndow::Win32Event& evnt)
+    bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
-        const MSG& uMsg = evnt.message;
-        static int lastX = -1;// = std::numeric_limits<int>::min();
-        static int lastY = -1; //= std::numeric_limits<int>::min();
+        const MSG& uMsg = evnt->message;
+        static int lastX = -1;
+        static int lastY = -1;
         switch (uMsg.message)
         {
         case WM_WINDOWPOSCHANGED:
@@ -407,13 +410,13 @@ namespace OIV
             ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
             UpdateCanvasSize();
             break;
-            
+
         case WM_TIMER:
-            {
+        {
             if (uMsg.wParam == cTimerID)
                 JumpFiles(1);
-            }
-            break;
+        }
+        break;
 
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -465,5 +468,32 @@ namespace OIV
         break;
         }
         return true;
+    }
+
+    bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
+    {
+        if (LoadFile(event_ddrag_drop_file->fileName, false))
+        {
+            LoadFileInFolder(event_ddrag_drop_file->fileName);
+        }
+        return true;
+        
+    }
+
+    bool TestApp::HandleMessages(const Win32::Event* evnt1)
+    {
+
+        const Win32::EventWinMessage* evnt = dynamic_cast<const Win32::EventWinMessage*>(evnt1);
+
+        if (evnt != nullptr)
+            return HandleWinMessageEvent(evnt);
+
+        const Win32::EventDdragDropFile* dragDropEvent = dynamic_cast<const Win32::EventDdragDropFile*>(evnt1);
+
+        if (dragDropEvent != nullptr)
+            return HandleFileDragDropEvent(dragDropEvent);
+
+        return false;
+
     }
 }

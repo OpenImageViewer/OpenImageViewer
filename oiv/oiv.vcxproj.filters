@@ -23,6 +23,12 @@
     <ClCompile Include="win32\MonitorInfo.cpp">
       <Filter>Win32</Filter>
     </ClCompile>
+    <ClCompile Include="Win32\Win32Window.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
+    <ClCompile Include="win32\DragAndDrop.cpp">
+      <Filter>Win32</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -68,11 +74,18 @@
     <ClInclude Include="PluginFreeImage.h">
       <Filter>ImageSource</Filter>
     </ClInclude>
+    <ClInclude Include="TestApp.h" />
+    <ClInclude Include="win32\MonitorInfo.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
     <ClInclude Include="win32\Win32Window.h">
       <Filter>Win32</Filter>
     </ClInclude>
-    <ClInclude Include="TestApp.h" />
-    <ClInclude Include="win32\MonitorInfo.h">
+    <ClInclude Include="Logger.h" />
+    <ClInclude Include="Win32\DragAndDrop.h">
+      <Filter>Win32</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\Event.h">
       <Filter>Win32</Filter>
     </ClInclude>
   </ItemGroup>
