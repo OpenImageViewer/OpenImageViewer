@@ -8,8 +8,8 @@
 
 namespace OIV
 {
-    class OIV : public Ogre::WindowEventListener
-        , public ZoomScrollState::Listener
+    class OIV  :
+          public ZoomScrollState::Listener
         , public IPictureRenderer
     {
     private:
@@ -31,39 +31,23 @@ namespace OIV
         typedef std::unique_ptr<Image> ImageUniquePtr;
         ImageUniquePtr fOpenedImage;
         int fFilterLevel;
+        int fClientWidth;
+        int fClientHeight;
 
         void SetupRenderer();
         void InitAll();
 
-        Ogre::RenderWindow * GetWindow();
 
         void UpdateGpuParams();
 
         //-------------Scroll state listener------------------
 
-        virtual Ogre::Vector2 GetMousePosition() override;
-        virtual Ogre::Vector2 GetWindowSize() override;
+        virtual Ogre::Vector2 GetClientSize() override;
         virtual Ogre::Vector2 GetImageSize() override;
-
         virtual void NotifyDirty() override;
         //----------------------------------------------------
 
-        // 'Ogre::WindowEventListener' members decleration
-        bool windowClosing(Ogre::RenderWindow* rw) override
-        {
-            ShutDown();
-            return Ogre::WindowEventListener::windowClosing(rw);
-        }
-
-        void ShutDown()
-        {
-            Ogre::Root::getSingleton().queueEndRendering();
-        }
-
-        void windowClosed(Ogre::RenderWindow *  rw)  override;
-
-        void windowResized(Ogre::RenderWindow* rw)  override;
-
+     
         void HandleWindowResize();
 
 
@@ -114,7 +98,8 @@ namespace OIV
         virtual int GetFileInformation(QryFileInformation& information) override;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
         virtual int SetTexelGrid(double gridSize) override;
-        virtual int GetCanvasSize(double &x, double &y) override;
+        virtual int GetNumTexelsInCanvas(double &x, double &y) override;
+        virtual int SetClientSize(uint16_t width, uint16_t height) override;
 #pragma endregion
 
 

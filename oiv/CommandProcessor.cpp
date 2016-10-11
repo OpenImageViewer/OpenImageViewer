@@ -183,11 +183,28 @@ namespace OIV
                 result = ResultCode::RC_WrongDataSize;
             }
             break;
-        case CMD_GetCanvasSize:
-            if (responseSize == sizeof(CmdResponseTexelAtMousePos))
+        case CMD_GetNumTexelsInCanvas:
+            if (responseSize == sizeof(CmdGetNumTexelsInCanvasResponse))
             {
-                CmdResponseTexelAtMousePos* response = reinterpret_cast<CmdResponseTexelAtMousePos*>(responseData);
-                if (sPictureRenderer->GetCanvasSize(response->x, response->y))
+                CmdGetNumTexelsInCanvasResponse* response = reinterpret_cast<CmdGetNumTexelsInCanvasResponse*>(responseData);
+                if (sPictureRenderer->GetNumTexelsInCanvas(response->width, response->height))
+                {
+                    result = RC_UknownError;
+                }
+            }
+            else
+            {
+                result = ResultCode::RC_WrongDataSize;
+            }
+
+            break;
+            
+             case CMD_SetClientSize:
+            
+            if (requestSize == sizeof(CmdSetClientSizeRequest))
+            {
+                CmdSetClientSizeRequest* request = reinterpret_cast<CmdSetClientSizeRequest*>(requestData);
+                if (sPictureRenderer->SetClientSize(request->width, request->height))
                 {
                     result = RC_UknownError;
                 }

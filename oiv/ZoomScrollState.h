@@ -9,8 +9,7 @@ namespace OIV
         class Listener
         {
         public:
-            virtual Ogre::Vector2 GetMousePosition() = 0;
-            virtual Ogre::Vector2 GetWindowSize() = 0;
+            virtual Ogre::Vector2 GetClientSize() = 0;
             virtual Ogre::Vector2 GetImageSize() = 0;
             virtual void NotifyDirty() = 0;
         };
@@ -42,7 +41,7 @@ namespace OIV
         Ogre::Vector2 GetScale() { return fUVScale; }
         Ogre::Vector2 GetARFixedUVScale();
         Ogre::Vector2 ClientPosToTexel(Ogre::Vector2 pos);
-        Ogre::Vector2 GetCanvasSize();
+        Ogre::Vector2 GetNumTexelsInCanvas();
 
         void SetInvertedVCoordinate(bool inverted);
 

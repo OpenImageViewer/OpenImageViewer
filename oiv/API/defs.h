@@ -1,6 +1,7 @@
 
 #pragma once
 #include <cwchar>
+#include <stdint.h>
 
 #ifdef OIV_NO_CLIENT_BUILD
     #define OIV_EXPOSE_FUNCTION __declspec(dllexport)
@@ -32,7 +33,8 @@ extern "C"
         , CE_GetFileInformation
         , CE_TexelAtMousePos
         , CE_TexelGrid
-        , CMD_GetCanvasSize
+        , CMD_SetClientSize
+        , CMD_GetNumTexelsInCanvas
     };
 
     
@@ -58,7 +60,13 @@ extern "C"
         
     };
 
-    struct CmdGetCanvasSizeResponse
+    struct CmdSetClientSizeRequest
+    {
+        uint16_t width;
+        uint16_t height;
+    };
+
+    struct CmdGetNumTexelsInCanvasResponse
     {
         double width;
         double height;
@@ -85,9 +93,6 @@ extern "C"
     {
         int filterLevel;
     };
-    
-
-
 
     struct CmdDataZoom
     {

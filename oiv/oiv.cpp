@@ -16,10 +16,12 @@ namespace OIV
     OIV::OIV() :
         fScrollState(this)
         , fIsRefresing(false)
-        , fPass(NULL)
-        , fParent(NULL)
+        , fPass(nullptr)
+        , fParent(nullptr)
         , fFilterLevel(2)
         , fShowGrid(false)
+        , fClientWidth(-1)
+        , fClientHeight(-1)
 
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
@@ -125,7 +127,7 @@ namespace OIV
         window->setDeactivateOnFocusChange(false);
         
 
-        WindowEventUtilities::addWindowEventListener(window, this);
+        //WindowEventUtilities::addWindowEventListener(window, this);
 
 
         fScene = root->createSceneManager(ST_GENERIC, "MySceneManager");
@@ -136,7 +138,7 @@ namespace OIV
         //fScrollState.SetInvertedVCoordinate(true);
     }
 
-    Ogre::Vector2 OIV::GetMousePosition()
+  /*  Ogre::Vector2 OIV::GetMousePosition()
     {
         using namespace Ogre;
         RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
@@ -147,31 +149,29 @@ namespace OIV
         rw->getCustomAttribute("WINDOW", &hwnd);
         ScreenToClient(hwnd, &p);
         return Vector2(p.x, p.y);
-    }
+    }*/
 
+    #pragma region ZoomScrollStateListener
     Ogre::Vector2 OIV::GetImageSize()
     {
         return fOpenedImage.get() ? Ogre::Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight())
             : Ogre::Vector2::ZERO;
     }
 
-    Ogre::RenderWindow* OIV::GetWindow()
+    Ogre::Vector2 OIV::GetClientSize()
     {
         using namespace Ogre;
-        return dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
+        return Vector2(fClientWidth, fClientHeight);
     }
-
-    Ogre::Vector2 OIV::GetWindowSize()
-    {
-        using namespace Ogre;
-        RenderWindow* wnd = GetWindow();
-        return Vector2(wnd->getWidth(), wnd->getHeight());
-    }
-
+    
     void OIV::NotifyDirty()
     {
         Refresh();
     }
+    #pragma endregion 
+    
+
+
 
     void OIV::UpdateGpuParams()
     {
@@ -185,14 +185,14 @@ namespace OIV
         fFragmentParameters->setNamedConstant("uvScale", uvScaleFixed);
         fFragmentParameters->setNamedConstant("uvOffset", uvOffset);
         fFragmentParameters->setNamedConstant("uImageSize", GetImageSize());
-        fFragmentParameters->setNamedConstant("uViewportSize", GetWindowSize());
+        fFragmentParameters->setNamedConstant("uViewportSize", GetClientSize());
         fFragmentParameters->setNamedConstant("uShowGrid", fShowGrid == true ? 1 : 0);
     }
 
 
 
     // 'Ogre::WindowEventListener' implementation 
-    void OIV::windowClosed(Ogre::RenderWindow *  rw)
+ /*   void OIV::windowClosed(Ogre::RenderWindow *  rw)
     {
         PostQuitMessage(0);
     }
@@ -201,7 +201,7 @@ namespace OIV
     void OIV::windowResized(Ogre::RenderWindow* rw)
     {
         HandleWindowResize();
-    }
+    }*/
 
     void OIV::HandleWindowResize()
     {

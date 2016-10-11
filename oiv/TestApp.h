@@ -23,7 +23,7 @@ namespace OIV
         void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
-        
+        void UpdateWindowSize();
 #pragma region Win32 event handling
         void handleKeyInput(const Win32::EventWinMessage* evnt);
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);

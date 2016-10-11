@@ -88,6 +88,7 @@
     <ClInclude Include="win32\Event.h">
       <Filter>Win32</Filter>
     </ClInclude>
+    <ClInclude Include="FullScreenState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

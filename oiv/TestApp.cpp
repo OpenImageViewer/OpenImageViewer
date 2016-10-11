@@ -121,10 +121,12 @@ namespace OIV
         HINSTANCE moduleHanle = GetModuleHandle(NULL);
         fWindow.Create(moduleHanle, SW_SHOW);
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
+        
         CmdDataInit init;
-        init.parentHandle = reinterpret_cast<size_t>(fWindow.GetHandle());
+        init.parentHandle = reinterpret_cast<size_t>(fWindow.GetHandleClient());
          
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
+        UpdateWindowSize();
         LoadFile(filePath, false);
         SetFilterLevel(1);
         LoadFileInFolder(filePath);
@@ -218,26 +220,13 @@ namespace OIV
     void TestApp::ToggleFullScreen()
     {
         HWND hwnd = GetWindowHandle();
-
-     
     }
 
     void TestApp::ToggleBorders()
     {
-        HWND hwnd = GetWindowHandle();
-
-        DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
-        if (dwStyle & WS_OVERLAPPEDWINDOW)
-        {
-            SetWindowLong(hwnd, GWL_STYLE,
-                dwStyle & ~WS_OVERLAPPEDWINDOW);
-        }
-        else
-        {
-            SetWindowLong(hwnd, GWL_STYLE,
-                dwStyle | WS_OVERLAPPEDWINDOW);
-
-        }
+        static bool showBorders = true;
+        showBorders = !showBorders;
+        fWindow.ShowBorders(showBorders);
     }
 
     void TestApp::ToggleSlideShow()
@@ -366,9 +355,9 @@ namespace OIV
 
     void TestApp::UpdateCanvasSize()
     {
-        CmdGetCanvasSizeResponse response;
+        CmdGetNumTexelsInCanvasResponse response;
         
-        if (ExecuteCommand(CMD_GetCanvasSize, &CmdNull(), &response))
+        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response))
         {
 
             std::wstringstream ss;
@@ -398,6 +387,17 @@ namespace OIV
         }
     }
 
+    void TestApp::UpdateWindowSize()
+    {
+        SIZE size = fWindow.GetClientSize();
+
+            
+        ExecuteCommand(CMD_SetClientSize, 
+                       &CmdSetClientSizeRequest{static_cast<uint16_t>(size.cx), 
+                           static_cast<uint16_t>(size.cy) }, &CmdNull());
+        UpdateCanvasSize();
+    }
+
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         const MSG& uMsg = evnt->message;
@@ -407,8 +407,7 @@ namespace OIV
         {
         case WM_WINDOWPOSCHANGED:
         case WM_SIZE:
-            ExecuteCommand(CE_Refresh, &CmdNull(), &CmdNull());
-            UpdateCanvasSize();
+            UpdateWindowSize();
             break;
 
         case WM_TIMER:

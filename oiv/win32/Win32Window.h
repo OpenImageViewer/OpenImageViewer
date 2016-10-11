@@ -5,6 +5,7 @@
 #include <vector>
 #include <functional>
 #include "DragAndDrop.h"
+#include "../FullScreenState.h"
 
 
 // Global variables
@@ -20,17 +21,27 @@ namespace OIV
 
         public:
             Win32WIndow();
-
+            void UpdateWindowStyles();
+            void SetWindowed();
+            void UpdateWindowPos();
+            void SavePlacement();
+            void RestorePlacement();
+            void RefreshWindow();
+            void SetFullScreen(bool multiMonitor);
             void ToggleFullScreen(bool multiMonitor = false);
 
             HWND GetHandle() const;
+            HWND GetHandleClient() const;
 
             void AddEventListener(EventCallback callback);
 
             void DestroyResources();
-
+            SIZE GetClientSize() const;
+            void HandleResize();
+            void ShowStatusBar(bool show);
+            void ShowBorders(bool show_borders);
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-
+            
             HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE
                 hinst, int cParts);
 
@@ -47,12 +58,19 @@ namespace OIV
             void RaiseEvent(const Event& evnt);
 
         private:
+            
+            DWORD fWindowStyles;
+            DWORD fWindowStylesClient;
             HWND fHandleWindow;
+            HWND fHandleClient;
             HWND fHandleStatusBar;
             int fStatusWindowParts;
-            bool fIsFullScreen;
+            OIV::FullSceenState fFullSceenState;
             WINDOWPLACEMENT fLastWindowPlacement;
+            
             DragAndDropTarget* fDragAndDrop;
+            bool fShowStatusBar;
+            bool fShowBorders;
         public:
             EventCallbackCollection fListeners;
         };

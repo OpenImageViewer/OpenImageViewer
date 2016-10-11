@@ -8,60 +8,117 @@ namespace OIV
     namespace Win32
     {
         Win32WIndow::Win32WIndow() :
-            fHandleWindow(nullptr)
+              fHandleWindow(nullptr)
+            , fHandleClient(nullptr)
             , fHandleStatusBar(nullptr)
             , fStatusWindowParts(4)
-            , fIsFullScreen(false)
+            , fFullSceenState(FSS_Windowed)
             , fLastWindowPlacement({ 0 })
             , fDragAndDrop(nullptr)
+            , fWindowStyles(0)
+            , fWindowStylesClient(0)
         {
 
         }
 
+
+        void Win32WIndow::UpdateWindowStyles()
+        {
+            HWND hwnd = fHandleWindow;
+            SetWindowLong(hwnd, GWL_STYLE,fWindowStyles);
+            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+        }
+
+        void Win32WIndow::SetWindowed()
+        {
+            fWindowStyles |= WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
+            UpdateWindowStyles();
+            RestorePlacement();
+            fFullSceenState = FSS_Windowed;
+        }
+
+
+
+        void Win32WIndow::SavePlacement()
+        {
+            GetWindowPlacement(fHandleWindow, &fLastWindowPlacement);
+        }
+
+
+        void Win32WIndow::RestorePlacement()
+        {
+            SetWindowPlacement(fHandleWindow, &fLastWindowPlacement);
+        }
+
+        void Win32WIndow::RefreshWindow()
+        {
+            HandleResize();
+        }
+
+        void Win32WIndow::SetFullScreen(bool multiMonitor)
+        {
+            HWND hwnd = fHandleWindow;
+            fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW & ~WS_CLIPCHILDREN;
+            UpdateWindowStyles();
+            MONITORINFO mi = { sizeof(mi) };
+            GetMonitorInfo(MonitorFromWindow(fHandleWindow, MONITOR_DEFAULTTOPRIMARY), &mi);
+            RECT rect = mi.rcMonitor;
+
+            if (multiMonitor)
+            {
+                rect = OIV::MonitorInfo::getSingleton().getBoundingMonitorArea();
+                fFullSceenState = FSS_MultiScreen;
+            }
+            else
+                fFullSceenState = FSS_SingleScreen;
+
+            SavePlacement();
+            
+            SetWindowPos(hwnd, HWND_TOP,
+                rect.left, rect.top,
+                rect.right - rect.left,
+                rect.bottom - rect.top,
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+
+            fShowStatusBar = fFullSceenState == FSS_Windowed;
+            RefreshWindow();
+        }
 
         void Win32WIndow::ToggleFullScreen(bool multiMonitor)
         {
             HWND hwnd = fHandleWindow;
             DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
 
-            if (fIsFullScreen == false)
+
+            switch (fFullSceenState)
             {
-                MONITORINFO mi = { sizeof(mi) };
-                if (GetWindowPlacement(hwnd, &fLastWindowPlacement) &&
-                    GetMonitorInfo(MonitorFromWindow(hwnd,
-                        MONITOR_DEFAULTTOPRIMARY), &mi))
-                {
-                    RECT rect = mi.rcMonitor;
-                    if (multiMonitor)
-                        rect = OIV::MonitorInfo::getSingleton().getBoundingMonitorArea();
-
-                    SetWindowLong(hwnd, GWL_STYLE,
-                        dwStyle & ~WS_OVERLAPPEDWINDOW & ~WS_CLIPCHILDREN);
-                    SetWindowPos(hwnd, HWND_TOP,
-                        rect.left, rect.top,
-                        rect.right - rect.left,
-                        rect.bottom - rect.top,
-                        SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-                }
+            case FSS_Windowed:
+                SetFullScreen(multiMonitor);
+                break;
+            case FSS_SingleScreen:
+                if (multiMonitor == true)
+                    SetFullScreen(multiMonitor);
+                else
+                    SetWindowed();
+                break;
+            case FSS_MultiScreen:
+                SetWindowed();
+                break;
             }
-
-            else
-            {
-                SetWindowLong(hwnd, GWL_STYLE,
-                    dwStyle | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
-                SetWindowPlacement(hwnd, &fLastWindowPlacement);
-                SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-            }
-
-            fIsFullScreen = !fIsFullScreen;
-            ShowWindow(fHandleStatusBar, fIsFullScreen ? SW_HIDE : SW_SHOW);
+            
+            ShowWindow(fHandleStatusBar, fFullSceenState == FSS_Windowed ? SW_SHOW : SW_HIDE);
         }
 
         HWND Win32WIndow::GetHandle() const
         {
             return fHandleWindow;
+        }
+
+        HWND Win32WIndow::GetHandleClient() const
+        {   
+            return fHandleClient;
         }
 
         void Win32WIndow::AddEventListener(EventCallback callback)
@@ -82,15 +139,28 @@ namespace OIV
             bool defaultProc = false;
             switch (message)
             {
+            case WM_CREATE:
+            {
+                CREATESTRUCT* s = (CREATESTRUCT*)lParam;
+                if (SetProp(hWnd, _T("windowClass"), s->lpCreateParams)  == 0)
+                    std::exception("Unable to set window property");
+            }
             case WM_ERASEBKGND:
                 break;
             case WM_SIZE:
-                window->ResizeStatusBar();
+                if (window->GetHandle() == hWnd)
+                    window->HandleResize();
+                else
+                    defaultProc = true;
                 break;
             case WM_DESTROY:
-                window->DestroyResources();
-
-                PostQuitMessage(0);
+                if (window->GetHandle() == hWnd)
+                {
+                    window->DestroyResources();
+                    PostQuitMessage(0);
+                }
+                else
+                    defaultProc = true;
                 break;
             default:
                 defaultProc = true;
@@ -127,7 +197,7 @@ namespace OIV
                 STATUSCLASSNAME, // name of status bar class
                 (PCTSTR)NULL, // no text when first created
                 SBARS_SIZEGRIP | // includes a sizing grip
-                WS_CHILD | WS_VISIBLE, // creates a visible child window
+                WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, // creates a visible child window
                 0, 0, 0, 0, // ignores size and position
                 hwndParent, // handle to parent window
                 (HMENU)idStatus, // child window identifier
@@ -144,7 +214,7 @@ namespace OIV
         {
             POINT clientMousePos;
             GetCursorPos(&clientMousePos);
-            ScreenToClient(fHandleWindow, &clientMousePos);
+            ScreenToClient(fHandleClient, &clientMousePos);
             return clientMousePos;
         }
 
@@ -185,11 +255,13 @@ namespace OIV
 
                 return 1;
             }
+            fWindowStyles = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
 
-            HWND hWnd = CreateWindow(
+
+            fHandleWindow = CreateWindow(
                 szWindowClass,
                 szTitle,
-                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                fWindowStyles,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 1200,
@@ -197,10 +269,13 @@ namespace OIV
                 NULL,
                 NULL,
                 hInstance,
-                NULL
+                this
             );
 
-            if (!hWnd)
+
+            fWindowStyles |= WS_VISIBLE;
+
+            if (!fHandleWindow)
             {
                 MessageBox(NULL,
                     _T("Call to CreateWindow failed!"),
@@ -209,20 +284,38 @@ namespace OIV
 
                 return 1;
             }
-            if (SetProp(hWnd, _T("windowClass"), this) == 0)
-                std::exception("Unable to set window property");
-
-            fHandleWindow = hWnd;
-            fHandleStatusBar = DoCreateStatusBar(hWnd, 12, hInstance, 3);
+         
+            
+            fHandleStatusBar = DoCreateStatusBar(fHandleWindow,  12, hInstance, 3);
 
             ResizeStatusBar();
-            ShowWindow(hWnd,
+
+            fWindowStylesClient = WS_CHILD;
+
+            fHandleClient = CreateWindow(
+                szWindowClass,
+                szTitle,
+                fWindowStylesClient,
+                0,
+                0,
+                1200,
+                800,
+                fHandleWindow,
+                NULL,
+                hInstance,
+                this
+            );
+
+       
+
+            ShowWindow(fHandleClient, SW_SHOW);
+
+            ShowWindow(fHandleWindow,
                 nCmdShow);
-            UpdateWindow(hWnd);
+            UpdateWindow(fHandleWindow);
 
             fDragAndDrop = new DragAndDropTarget(*this);
-
-
+            
             SetStatusBarText(_T("pixel: "), 0, SBT_NOBORDERS);
             SetStatusBarText(_T("File: "), 1, 0);
 
@@ -269,6 +362,74 @@ namespace OIV
         {
             for (auto callback : fListeners)
                 bool result = callback(&evnt);
+        }
+
+        SIZE Win32WIndow::GetClientSize() const
+        {
+            RECT rect;
+            GetClientRect(fHandleWindow, &rect);
+            SIZE clientSize;
+            clientSize.cx = rect.right - rect.left;
+            clientSize.cy = rect.bottom - rect.top;
+            if (IsWindowVisible(fHandleStatusBar))
+            {
+                GetWindowRect(fHandleStatusBar, &rect);
+                clientSize.cy -= rect.bottom - rect.top;
+            }
+            return clientSize;
+        }
+
+        void Win32WIndow::HandleResize()
+        {
+            UpdateWindowStyles();
+
+            RECT rect;
+            GetClientRect(fHandleWindow, &rect);
+            SIZE clientSize;
+            clientSize.cx = rect.right - rect.left;
+            clientSize.cy = rect.bottom - rect.top;
+
+
+            if (fShowStatusBar)
+            {
+                RECT statusBarRect;
+                ShowWindow(fHandleStatusBar,  SW_SHOW);
+                GetWindowRect(fHandleStatusBar, &statusBarRect);
+                clientSize.cy -= statusBarRect.bottom - statusBarRect.top;
+                ResizeStatusBar();
+            }
+            else
+            {
+                ShowWindow(fHandleStatusBar, SW_HIDE);
+            }
+
+            SetWindowPos(fHandleClient, NULL, 0, 0, clientSize.cx, clientSize.cy,0);
+        }
+
+        void Win32WIndow::ShowStatusBar(bool show)
+        {
+            fShowStatusBar = show;
+            HandleResize();
+        }
+
+        void Win32WIndow::ShowBorders(bool show_borders)
+        {
+            HWND hwnd = fHandleWindow;
+            fShowBorders = show_borders;
+
+            DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
+            //if (dwStyle & WS_OVERLAPPEDWINDOW)
+            if (show_borders == false)
+            {
+                fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW;
+            }
+            else
+            {
+                fWindowStyles = fWindowStyles | WS_OVERLAPPEDWINDOW;
+            }
+
+            fShowStatusBar = show_borders;
+            RefreshWindow();
         }
     }
 }

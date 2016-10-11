@@ -20,6 +20,7 @@ namespace OIV
         virtual int SetFilterLevel(int filter_level) = 0;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) = 0;
         virtual int SetTexelGrid(double gridSize) = 0;
-        virtual int GetCanvasSize(double &x, double &y) = 0;
+        virtual int GetNumTexelsInCanvas(double &x, double &y) = 0;
+        virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
     };
 }

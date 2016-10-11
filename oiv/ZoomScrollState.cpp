@@ -60,7 +60,7 @@ namespace OIV
     {
         using namespace Ogre;
 
-        Vector2 windowSize = fListener->GetWindowSize();
+        Vector2 windowSize = fListener->GetClientSize();
         Vector2 result;
         double ar = windowSize.x / windowSize.y;
         result = val;
@@ -100,13 +100,13 @@ namespace OIV
 
     Ogre::Vector2 ZoomScrollState::GetScreenSpaceOrigin()
     {
-        return GetOffset() / GetARFixedUVScale() * fListener->GetWindowSize();
+        return GetOffset() / GetARFixedUVScale() * fListener->GetClientSize();
     }
 
     Ogre::Vector2 ZoomScrollState::ClientPosToTexel(Ogre::Vector2 pos)
     {
         using namespace  Ogre;
-        Vector2 texel = (pos + GetScreenSpaceOrigin()) / fListener->GetWindowSize() * fListener->GetImageSize() * GetARFixedUVScale();
+        Vector2 texel = (pos + GetScreenSpaceOrigin()) / fListener->GetClientSize() * fListener->GetImageSize() * GetARFixedUVScale();
         return texel;
     }
 
@@ -116,7 +116,7 @@ namespace OIV
         NotifyDirty();
     }
 
-    Ogre::Vector2 ZoomScrollState::GetCanvasSize()
+    Ogre::Vector2 ZoomScrollState::GetNumTexelsInCanvas()
     {
         return fListener->GetImageSize() * GetARFixedUVScale();
     }
@@ -125,7 +125,7 @@ namespace OIV
     {
         using namespace Ogre;
         
-        Vector2 windowSize = fListener->GetWindowSize();
+        Vector2 windowSize = fListener->GetClientSize();
         Vector2 textureSize = fListener->GetImageSize();
         if (textureSize == Vector2::ZERO)
             return fUVScale;
@@ -208,7 +208,7 @@ namespace OIV
         using namespace Ogre;
 
         Vector2 zoomPoint;
-        Vector2 windowSize = fListener->GetWindowSize();
+        Vector2 windowSize = fListener->GetClientSize();
 
         
         zoomPoint.x = x >= 0 ? (static_cast<double>(x) / windowSize.x) : 0.5;
@@ -253,7 +253,7 @@ namespace OIV
 
     void ZoomScrollState::Pan(Ogre::Vector2 amount)
     {
-        Ogre::Vector2 panFactor = amount * GetARFixedUVScale() / fListener->GetWindowSize();
+        Ogre::Vector2 panFactor = amount * GetARFixedUVScale() / fListener->GetClientSize();
         panFactor.y *= fInverted ? -1 : 1;
         TranslateOffset(panFactor);
     }

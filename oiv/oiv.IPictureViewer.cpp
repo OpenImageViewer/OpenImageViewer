@@ -181,12 +181,20 @@ namespace OIV
         return RC_Success;
     }
 
-    int OIV::GetCanvasSize(double &x, double &y)
+    int OIV::GetNumTexelsInCanvas(double &x, double &y)
     {
-        Ogre::Vector2 canvasSize = fScrollState.GetCanvasSize();
+        Ogre::Vector2 canvasSize = fScrollState.GetNumTexelsInCanvas();
         x = canvasSize.x;
         y = canvasSize.y;
         return RC_Success;
+    }
+
+    int OIV::SetClientSize(uint16_t width, uint16_t height)
+    {
+        fClientWidth = width;
+        fClientHeight = height;
+        Refresh();
+        return 0;
     }
     
 }
