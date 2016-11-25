@@ -41,5 +41,5 @@ int CALLBACK WinMain(
 
 int _tmain(int argc, const TCHAR** argv)
 {
-    mainFunction(argc, argv);
+    return mainFunction(argc, argv);
 }
