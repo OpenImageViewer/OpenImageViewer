@@ -1,8 +1,12 @@
 #include "MonitorInfo.h"
-template<> OIV::MonitorInfo* Ogre::Singleton<OIV::MonitorInfo>::msSingleton = 0;
 namespace OIV
 {
-#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+    MonitorInfo MonitorInfo::sInstance;
+
+    MonitorInfo& MonitorInfo::GetSingleton()
+    {
+        return sInstance;
+    }
 
     //---------------------------------------------------------------------
     MonitorInfo::MonitorInfo()
@@ -79,5 +83,4 @@ namespace OIV
         }
         return rect;
     }
-#endif
 }

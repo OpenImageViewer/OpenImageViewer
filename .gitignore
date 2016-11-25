@@ -6,7 +6,13 @@
 /oiv/oiv.vcxproj.user
 /OivTestDotNet/bin/
 /OivTestDotNet/obj/
-/oiv/Debug_App
-/oiv/Debug_Dll
-/oiv/Release_App
-/oiv/Release_Dll
+/Debug
+/Release
+/OIVUtil/Debug
+/OIVUtil/Release
+/OIViewer/Release
+/OIViewer/Debug
+/OIVUtil/OIVUtil.vcxproj.user
+/OIViewer/OIViewer.vcxproj.user
+/OIViewer/x64/Release
+/OIViewer/x64/Debug

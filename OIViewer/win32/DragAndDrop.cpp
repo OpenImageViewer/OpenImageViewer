@@ -1,6 +1,6 @@
 #include "DragAndDrop.h"
 #include "Win32Window.h"
-#include "../Logger.h"
+#include "Logger.h"
 
 namespace OIV
 {

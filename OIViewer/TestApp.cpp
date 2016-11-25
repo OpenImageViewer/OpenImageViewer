@@ -1,11 +1,16 @@
-#include "PreCompiled.h"
+#define NOMINMAX
 #include "TestApp.h"
 #include "Utility.h"
 #include <limits>
 #include <iomanip>
 #include "win32/Win32Window.h"
 #include <windowsx.h>
+#include <tchar.h>
 #include "win32/MonitorInfo.h"
+#include <sstream>
+#include <iostream>
+#include <API\functions.h>
+
 
 namespace OIV
 {
@@ -31,7 +36,6 @@ namespace OIV
 
     TestApp::~TestApp()
     {
-        delete MonitorInfo::getSingletonPtr();
     }
 
     HWND TestApp::GetWindowHandle() const
@@ -60,8 +64,6 @@ namespace OIV
 
         if (success)
         {
-            using namespace Ogre;
-            
             /*QryFileInformation fileInfo;
             ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/
 

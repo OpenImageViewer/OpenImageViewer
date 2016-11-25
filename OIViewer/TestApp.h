@@ -1,5 +1,7 @@
 #pragma once
 #include "win32/Win32Window.h"
+#include "API/defs.h"
+#include <Utility.h>
 
 namespace OIV
 {

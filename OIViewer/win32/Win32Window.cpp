@@ -1,6 +1,6 @@
 #include "Win32Window.h"
 #include "MonitorInfo.h"
-#include "../Logger.h"
+#include "Logger.h"
 #include <tchar.h>
 
 namespace OIV
@@ -68,7 +68,7 @@ namespace OIV
 
             if (multiMonitor)
             {
-                rect = OIV::MonitorInfo::getSingleton().getBoundingMonitorArea();
+                rect = OIV::MonitorInfo::GetSingleton().getBoundingMonitorArea();
                 fFullSceenState = FSS_MultiScreen;
             }
             else

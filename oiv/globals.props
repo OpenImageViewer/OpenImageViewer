@@ -6,13 +6,10 @@
     <OGRESOURCE>d:\DevelopmentExternal\Ogre\Source\Ogre-Default</OGRESOURCE>
     <OGREDEPEND>d:\DevelopmentExternal\Ogre\Depends\DependsVC14</OGREDEPEND>
   </PropertyGroup>
-  <PropertyGroup>
-    <OutDir>$(ProjectDir)\$(Configuration)\</OutDir>
-    <IntDir>Intermidiate\$(Configuration)\</IntDir>
-  </PropertyGroup>
+  <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(OGRESDK)\include\;$(OGREDEPEND)\include\OIS;$(OGRESOURCE)\OgreMain\Include;$(OGRESOURCE)\Components\Overlay\Include;$(OGRESOURCE)\Components\RTShaderSystem\Include;$(OGRESOURCE);C:\libjpeg-turbo\include;D:\DevelopmentExternal\libpng-code;d:\Development\OpenImageViewer\oiv\Libs</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OGRESDK)\include\;$(OGREDEPEND)\include\OIS;$(OGRESOURCE)\OgreMain\Include;$(OGRESOURCE)\Components\Overlay\Include;$(OGRESOURCE)\Components\RTShaderSystem\Include;$(OGRESOURCE);C:\libjpeg-turbo\include;D:\DevelopmentExternal\libpng-code;d:\Development\OpenImageViewer\oiv\Libs;..\oivutil</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>

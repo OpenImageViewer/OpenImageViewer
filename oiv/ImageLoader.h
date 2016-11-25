@@ -2,7 +2,8 @@
 #include "ImagePlugin.h"
 #include <vector>
 #include <chrono>
-#include "StringUtility.h"
+#include <Utility.h>
+#include <StringUtility.h>
 
 namespace OIV
 {

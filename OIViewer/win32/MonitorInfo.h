@@ -1,11 +1,16 @@
 #pragma once
-#include "OgreSingleton.h"
 #include <windows.h>
+#include <map>
+#include <vector>
 namespace OIV
 {
-    class MonitorInfo : public Ogre::Singleton<MonitorInfo>
+    class MonitorInfo 
     {
+    private:
+        static MonitorInfo sInstance;
     public:
+        static MonitorInfo& GetSingleton();
+
         MonitorInfo();
         void Refresh();
 

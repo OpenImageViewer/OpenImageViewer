@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="oiv.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
     <ClCompile Include="oiv.IPictureViewer.cpp" />
     <ClCompile Include="CommandProcessor.cpp" />
@@ -10,24 +9,11 @@
       <Filter>API</Filter>
     </ClCompile>
     <ClCompile Include="Quad.cpp" />
-    <ClCompile Include="Utility.cpp">
-      <Filter>Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="ImageProperties.cpp">
       <Filter>ImageSource</Filter>
     </ClCompile>
     <ClCompile Include="ImageAbstract.cpp">
       <Filter>ImageSource</Filter>
-    </ClCompile>
-    <ClCompile Include="TestApp.cpp" />
-    <ClCompile Include="win32\MonitorInfo.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="Win32\Win32Window.cpp">
-      <Filter>Win32</Filter>
-    </ClCompile>
-    <ClCompile Include="win32\DragAndDrop.cpp">
-      <Filter>Win32</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -45,12 +31,6 @@
     <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="StringUtility.h">
-      <Filter>Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="Utility.h">
-      <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="Quad.h" />
     <ClInclude Include="ImageAbstract.h">
@@ -74,21 +54,7 @@
     <ClInclude Include="PluginFreeImage.h">
       <Filter>ImageSource</Filter>
     </ClInclude>
-    <ClInclude Include="TestApp.h" />
-    <ClInclude Include="win32\MonitorInfo.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="win32\Win32Window.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
     <ClInclude Include="Logger.h" />
-    <ClInclude Include="Win32\DragAndDrop.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="win32\Event.h">
-      <Filter>Win32</Filter>
-    </ClInclude>
-    <ClInclude Include="FullScreenState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
