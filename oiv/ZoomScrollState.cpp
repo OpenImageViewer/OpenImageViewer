@@ -230,7 +230,7 @@ namespace OIV
             targetZoom = currentZoom * (1 + amount);
         else
         if (amount < 0)
-            targetZoom = currentZoom *( 1.0 - std::min(-amount,0.95f));
+            targetZoom = currentZoom *( 1.0 - std::min(-amount,0.95));
 
         Vector2 uvNewScale = Vector2::UNIT_SCALE /  targetZoom;
 
