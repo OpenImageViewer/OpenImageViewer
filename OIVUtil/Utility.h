@@ -21,8 +21,6 @@ public:
 
     static void find_files(tstring wrkdir, ListFiles &lstFileData, bool recursive = false);
     
-    void GetFileSize(char* fileName);
+    static size_t GetFileSize(const wchar_t* fileName);
     
-    static void* GetFileMapping(const char * fileName);
-
 };

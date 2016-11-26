@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include "ImagePlugin.h"
 #include <turbojpeg.h>
 #include <jpeglib.h>
@@ -19,44 +18,31 @@ namespace OIV
             return pluginProperties;
         }
 
-        virtual bool LoadImage(std::string filePath, ImageProperies& out_properties) override
+        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) override
         {
             bool success = false;
+        
+            int width = 0;
+            int height = 0;
 
-            std::ifstream file(filePath, std::ifstream::ate | std::ifstream::binary);
-
-            if (file.is_open())
+            int bytesPerPixel = 3;
+            int subsamp;
+            if (tjDecompressHeader2(ftjHandle,static_cast<unsigned char*>( buffer), size, &width, &height, &subsamp) != -1)
             {
-                std::streamoff offset = file.tellg();
-                unsigned int fileSize = static_cast<unsigned int>(offset);
-                file.seekg(0, std::ios::beg);
+                unsigned char* bufferDecompressed = new unsigned char[width * height * bytesPerPixel];
 
-                unsigned char* byteArray = new unsigned char[fileSize];
-                file.read((char*)byteArray, fileSize);
-
-                int width = 0;
-                int height = 0;
-
-                int bytesPerPixel = 3;
-                int subsamp;
-                if (tjDecompressHeader2(ftjHandle, byteArray, fileSize, &width, &height, &subsamp) != -1)
+                if (tjDecompress2(ftjHandle, static_cast<unsigned char*>(buffer), size, bufferDecompressed, width, width * bytesPerPixel, height, TJPF_RGB, 0) != -1)
                 {
-                    unsigned char* buffer = new unsigned char[width * height * bytesPerPixel];
+                    out_properties.ImageBuffer = static_cast<void*>(bufferDecompressed);
+                    out_properties.BitsPerTexel = bytesPerPixel * 8;
+                    out_properties.Type = IT_BYTE_BGR;
+                    out_properties.Width = width;
+                    out_properties.Height = height;
+                    out_properties.RowPitchInBytes = bytesPerPixel * width;
+                    out_properties.NumSubImages = 0;
 
-                    if (tjDecompress2(ftjHandle, byteArray, fileSize, buffer, width, width * bytesPerPixel, height, TJPF_RGB, 0) != -1)
-                    {
-                        out_properties.ImageBuffer = static_cast<void*>(buffer);
-                        out_properties.BitsPerTexel = bytesPerPixel * 8;
-                        out_properties.Type = IT_BYTE_BGR;
-                        out_properties.Width = width;
-                        out_properties.Height = height;
-                        out_properties.RowPitchInBytes = bytesPerPixel * width;
-                        out_properties.NumSubImages = 0;
-
-                        success = true;
-                    }
+                    success = true;
                 }
-                delete[]byteArray;
             }
             return success;
         }

@@ -150,6 +150,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FileMapping.h" />
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>

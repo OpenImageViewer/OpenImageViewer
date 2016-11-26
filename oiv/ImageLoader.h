@@ -44,13 +44,13 @@ namespace OIV
             }
         }
     
-        Image* LoadImage(std::string fileName, bool onlyRegisteredExtension = true)
+        Image* LoadImage(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension = true)
         {
             using namespace std;
 
             Image* loadedImage = nullptr;
             
-            ImagePlugin* choosenPlugin = GetFirstlugin(StringUtility::GetFileExtension(StringUtility::ToLower(fileName)));
+            ImagePlugin* choosenPlugin = GetFirstlugin(StringUtility::ToLower(extension));
 
             double loadTime;
             ImageProperies props;
@@ -58,7 +58,7 @@ namespace OIV
             {
                 
                 auto start = std::chrono::high_resolution_clock::now();
-                if (choosenPlugin->LoadImage(fileName, props))
+                if (choosenPlugin->LoadImage(buffer,size, props))
                 {
                     auto end = std::chrono::high_resolution_clock::now();
                     if ((props.IsInitialized() == true))
@@ -74,7 +74,7 @@ namespace OIV
                 for (auto plugin : fListPlugins)
                 {
                     auto start = std::chrono::high_resolution_clock::now();
-                    if (plugin->LoadImage(fileName, props))
+                    if (plugin->LoadImage(buffer, size, props))
                     {
                         auto end = std::chrono::high_resolution_clock::now();
                         if ((props.IsInitialized() == false))

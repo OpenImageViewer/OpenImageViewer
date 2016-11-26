@@ -11,7 +11,7 @@ namespace OIV
     class ImagePlugin
     {
     public:
-        virtual bool LoadImage(std::string filePath, ImageProperies& out_properties) = 0;
+        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) = 0;
         virtual PluginProperties& GetPluginProperties() = 0;
     };
 }

@@ -12,7 +12,7 @@ namespace OIV
     public:
         Image(const ImageProperies& propeerties,double loadTime);
         virtual ~Image() { if (fProperies.ImageBuffer != NULL) delete[]fProperies.ImageBuffer;}
-        bool Load(std::string filePath);
+        bool Load(void* buffer, size_t size);
         void Unload();
         double GetLoadTime() const;
 

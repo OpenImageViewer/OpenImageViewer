@@ -1,6 +1,8 @@
 #define NOMINMAX
 #include "TestApp.h"
 #include "Utility.h"
+#include "FileMapping.h"
+#include "StringUtility.h"
 #include <limits>
 #include <iomanip>
 #include "win32/Win32Window.h"
@@ -56,8 +58,15 @@ namespace OIV
     {
         CmdResponseLoad loadResponse;
         CmdDataLoadFile loadRequest;
-        loadRequest.filePath = const_cast<OIVCHAR*>(filePath.c_str());
-        loadRequest.FileNamelength = _tcslen(loadRequest.filePath);
+        FileMapping fileMapping(filePath);
+        
+        void* buffer = fileMapping.GetBuffer();
+        size_t size = fileMapping.GetSize();
+
+        loadRequest.buffer = buffer;
+        loadRequest.length = size;
+        std::string fileExtension = StringUtility::ToAString(StringUtility::GetFileExtension(filePath));
+        strcpy_s(loadRequest.extension, CmdDataLoadFile::EXTENSION_SIZE, fileExtension.c_str());
         loadRequest.onlyRegisteredExtension = onlyRegisteredExtension;
 
         bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadRequest, &loadResponse) == true;

@@ -14,10 +14,10 @@ namespace OIV
         }
 
         //Base abstract methods
-        virtual bool LoadImage(std::string filePath, ImageProperies& out_properties) override
+        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) override
         {
             using namespace std;
-            const char* file_name = filePath.c_str();
+            
             bool success = false;
 
             png_image image; /* The control structure used by libpng */
@@ -25,7 +25,7 @@ namespace OIV
             /* Initialize the 'png_image' structure. */
             memset(&image, 0, (sizeof image));
             image.version = PNG_IMAGE_VERSION;
-            if (png_image_begin_read_from_file(&image, file_name) != 0)
+            if (png_image_begin_read_from_memory(&image, buffer,size) != 0)
             {
                 
                 //Assign image properties

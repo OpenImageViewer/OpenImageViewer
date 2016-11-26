@@ -4,6 +4,7 @@
 #include "Interfaces\IPictureRenderer.h"
 #include "Quad.h"
 #include "ImageLoader.h"
+#define TEXTURE_NAME "OpenedTexture"
 
 
 namespace OIV
@@ -89,7 +90,7 @@ namespace OIV
         // 
         virtual double Zoom(double percentage,int x,int y) override;
         virtual int Pan(double x, double y) override;
-        virtual int LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension) override;
+        virtual int LoadFile(void* buffer, size_t size, char* extension , bool onlyRegisteredExtension) override;
         virtual int Init() override;
         virtual int SetParent(HWND handle) override;
         virtual int Refresh() override;

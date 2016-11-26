@@ -59,6 +59,17 @@ public:
         return extension;
     }
 
+    static std::wstring GetFileExtension(const std::wstring& str)
+    {
+        using namespace std;
+        wstring extension;
+        int pos = str.find_last_of(L".");
+        if (pos != std::wstring::npos)
+            extension = str.substr(pos + 1, str.length() - pos - 1);
+
+        return extension;
+    }
+
     static std::string ToLower(const std::string& str)
     {
         using namespace std;

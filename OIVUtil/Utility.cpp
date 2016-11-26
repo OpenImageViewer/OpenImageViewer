@@ -116,11 +116,10 @@ void Utility::find_files(tstring wrkdir, ListFiles &lstFileData, bool recursive 
     FindClose(hFile);
 }
 
-void Utility::GetFileSize(char* fileName)
+size_t Utility::GetFileSize(const wchar_t* filePath)
 {
-    /*
     WIN32_FILE_ATTRIBUTE_DATA fad;
-    if (!GetFileAttributesExA(filePath.c_str(), GetFileExInfoStandard, &fad))
+    if (!GetFileAttributesExW(filePath, GetFileExInfoStandard, &fad))
     {
     //errir
     }
@@ -128,26 +127,6 @@ void Utility::GetFileSize(char* fileName)
     size.HighPart = fad.nFileSizeHigh;
     size.LowPart = fad.nFileSizeLow;
     size_t fileSize = size.QuadPart;
-    *            */
+    return fileSize;
 }
 
-void* Utility::GetFileMapping(const char* fileName)
-{
-
-    HANDLE handleMMF;
-    HANDLE hFile;
-    void *buffer = NULL;
-
-    hFile = CreateFileA(fileName, GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (hFile)
-    {
-        handleMMF = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-        if (handleMMF != NULL)
-            buffer = MapViewOfFile(handleMMF, FILE_MAP_READ, 0, 0, 0);
-    }
-
-    return buffer;
-}

@@ -117,8 +117,10 @@ extern "C"
 
     struct CmdDataLoadFile
     {
-        size_t FileNamelength;
-        OIVCHAR* filePath;
+        static const int EXTENSION_SIZE = 16;
+        size_t length;
+        void* buffer;
+        char extension[EXTENSION_SIZE];
         bool onlyRegisteredExtension;
     };
 

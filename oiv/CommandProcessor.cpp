@@ -71,23 +71,15 @@ namespace OIV
         case CE_LoadFile:
             if (requestSize == sizeof(CmdDataLoadFile))
             {
-                const size_t maxPath = 5000;
-
                 CmdDataLoadFile* dataLoadFile = reinterpret_cast<CmdDataLoadFile*>(requestData);
 
-                const size_t bufferLength = dataLoadFile->FileNamelength;
-
-                if (bufferLength <= maxPath)
+                if (dataLoadFile->buffer != NULL && dataLoadFile->length > 0)
                 {
-                    OIVCHAR* buffer = new OIVCHAR[bufferLength + 1];
-
-                    _tcscpy_s(buffer, bufferLength + 1, dataLoadFile->filePath);
-                    buffer[bufferLength] = '\0';
-
-                    if (sPictureRenderer->LoadFile(buffer,dataLoadFile->onlyRegisteredExtension) == false)
+                    if (sPictureRenderer->LoadFile(dataLoadFile->buffer
+                        , dataLoadFile->length
+                        , dataLoadFile->extension
+                        , dataLoadFile->onlyRegisteredExtension) == false)
                         result = RC_UknownError;
-
-                    delete[]buffer;
                 }
                 else
                 {

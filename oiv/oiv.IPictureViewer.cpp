@@ -4,31 +4,25 @@
 namespace OIV
 {
     // IPictureViewr implementation
-    int OIV::LoadFile(OIVCHAR* filePath,bool onlyRegisteredExtension)
+    int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
     {
         using namespace Ogre;
-        std::string path = StringUtility::ToAString(filePath);
 
-        ImageUniquePtr image = ImageUniquePtr(fImageLoader.LoadImage(path,onlyRegisteredExtension));
+        ImageUniquePtr image = ImageUniquePtr(fImageLoader.LoadImage(buffer,size, extension,onlyRegisteredExtension));
 
-
-        //refactor out to unload
         if (fOpenedImage.get())
-        {
-            TextureManager::getSingleton().remove(fCurrentOpenedFile);
-        }
-
+            TextureManager::getSingleton().remove(TEXTURE_NAME);
 
         if (image.get())
         {
             fOpenedImage.swap(image);
-            fCurrentOpenedFile = path;
+            
 
             int width = fOpenedImage->GetWidth();
             int height = fOpenedImage->GetHeight();
 
                 TexturePtr tex = TextureManager::getSingleton().createManual(
-                    fCurrentOpenedFile
+                    TEXTURE_NAME
                     , ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME
                     , TEX_TYPE_2D
                     , width// width
@@ -79,7 +73,7 @@ namespace OIV
                 buf->blitFromMemory(src, dest);
 
 
-                fPass->getTextureUnitState(0)->setTextureName(path);
+                fPass->getTextureUnitState(0)->setTextureName(TEXTURE_NAME);
                 fScrollState.Reset(true);
             }
             return true;

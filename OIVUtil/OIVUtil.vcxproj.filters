@@ -3,6 +3,7 @@
   <ItemGroup>
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="FileMapping.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility.cpp" />
