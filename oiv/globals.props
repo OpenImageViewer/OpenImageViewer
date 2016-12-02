@@ -9,7 +9,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(OGRESDK)\include\;$(OGREDEPEND)\include\OIS;$(OGRESOURCE)\OgreMain\Include;$(OGRESOURCE)\Components\Overlay\Include;$(OGRESOURCE)\Components\RTShaderSystem\Include;$(OGRESOURCE);C:\libjpeg-turbo\include;D:\DevelopmentExternal\libpng-code;d:\Development\OpenImageViewer\oiv\Libs;..\oivutil</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\libjpeg-turbo\include;D:\DevelopmentExternal\libpng-code;d:\Development\OpenImageViewer\oiv\Libs;..\oivutil;.</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>

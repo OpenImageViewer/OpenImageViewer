@@ -1,10 +1,9 @@
 #pragma once
-#include "ConsoleLogListener.h"
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include "Quad.h"
 #include "ImageLoader.h"
-#define TEXTURE_NAME "OpenedTexture"
+#include "interfaces/IRenderer.h"
+#include "ViewParameters.h"
 
 
 namespace OIV
@@ -14,74 +13,37 @@ namespace OIV
         , public IPictureRenderer
     {
     private:
-
-
-        Ogre::SceneManager*		fScene;
-        Ogre::Camera*				fActiveCamera;
-        Ogre::String				fActiveCameraName;
-        Ogre::Viewport*			fViewPort;
         ZoomScrollState     fScrollState;
-        Quad * rect;
-        Ogre::GpuProgramParametersSharedPtr  fFragmentParameters;
-        Ogre::Pass*         fPass;
-        HWND                fParent;
+        size_t                fParent;
         bool                fIsRefresing;
         std::string fCurrentOpenedFile;
         ImageLoader fImageLoader;
         bool fShowGrid;
-        typedef std::unique_ptr<Image> ImageUniquePtr;
-        ImageUniquePtr fOpenedImage;
+        
+        
+        ImageSharedPtr fOpenedImage;
         int fFilterLevel;
         int fClientWidth;
         int fClientHeight;
 
-        void SetupRenderer();
-        void InitAll();
-
-
         void UpdateGpuParams();
 
-        //-------------Scroll state listener------------------
-
-        virtual Ogre::Vector2 GetClientSize() override;
-        virtual Ogre::Vector2 GetImageSize() override;
+        
+#pragma region  //-------------Scroll state listener------------------
+        virtual Vector2 GetClientSize() override;
+        virtual Vector2 GetImageSize() override;
         virtual void NotifyDirty() override;
-        //----------------------------------------------------
+#pragma endregion        //----------------------------------------------------
 
      
         void HandleWindowResize();
 
 
-        bool IsImageLoaded() const
-        {
-            return fOpenedImage.get() != nullptr;
-        }
+        bool IsImageLoaded() const;
 
 
     public:
-        Ogre::Root *root;
-        ~OIV();
         OIV();
-        void TryLoadPlugin(std::string pluginName);
-
-        void CreateCameraAndViewport();
-        void ApplyFilter()
-        {
-            using namespace Ogre;
-            switch (fFilterLevel)
-            {
-            case 0:
-                fPass->getTextureUnitState(0)->setTextureFiltering(TFO_NONE);
-                break;
-            case 1:
-                fPass->getTextureUnitState(0)->setTextureFiltering(TFO_BILINEAR);
-                break;
-            }
-            
-
-        
-        }
-        void CreateScene();
         void LoadSettings();
 
 
@@ -92,7 +54,7 @@ namespace OIV
         virtual int Pan(double x, double y) override;
         virtual int LoadFile(void* buffer, size_t size, char* extension , bool onlyRegisteredExtension) override;
         virtual int Init() override;
-        virtual int SetParent(HWND handle) override;
+        virtual int SetParent(size_t handle) override;
         virtual int Refresh() override;
         virtual Image* GetImage() override;
         virtual int SetFilterLevel(int filter_level) override;
@@ -101,9 +63,11 @@ namespace OIV
         virtual int SetTexelGrid(double gridSize) override;
         virtual int GetNumTexelsInCanvas(double &x, double &y) override;
         virtual int SetClientSize(uint16_t width, uint16_t height) override;
-#pragma endregion
+#pragma endregion         //----------------------------------------------------
 
+    private:
+        IRendererSharedPtr fRenderer;
+        ViewParameters fViewParams;
 
-        //----------------------------------------------------
     };
 }

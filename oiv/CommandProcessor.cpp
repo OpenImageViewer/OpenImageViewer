@@ -1,7 +1,7 @@
 #include "PreCompiled.h"
 #include "CommandProcessor.h"
 #include "oiv.h"
-
+#include "Logger.h"
 
 
 namespace OIV
@@ -30,8 +30,8 @@ namespace OIV
                     // TODO: add width and height.
                     //sPictureRenderer->SetParentParamaters()
 
-                    CmdDataInit* dataZoom = reinterpret_cast<CmdDataInit*>(requestData);
-                    sPictureRenderer->SetParent((HWND)dataZoom->parentHandle);
+                    CmdDataInit* dataInit = reinterpret_cast<CmdDataInit*>(requestData);
+                    sPictureRenderer->SetParent(static_cast<size_t>(dataInit->parentHandle));
                     sPictureRenderer->Init();
                     Log(_T("Render engine started."));
                 }
@@ -214,6 +214,6 @@ namespace OIV
    
     void CommandProcessor::Log(OIVCHAR * message)
     {
-        Ogre::LogManager::getSingleton().logMessage(StringUtility::ToAString(message));
+        Logger::Log(StringUtility::ToAString(message).c_str());
     }
 }

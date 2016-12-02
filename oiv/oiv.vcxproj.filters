@@ -3,22 +3,21 @@
   <ItemGroup>
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
-    <ClCompile Include="oiv.IPictureViewer.cpp" />
     <ClCompile Include="CommandProcessor.cpp" />
     <ClCompile Include="API\functions.cpp">
       <Filter>API</Filter>
     </ClCompile>
-    <ClCompile Include="Quad.cpp" />
     <ClCompile Include="ImageProperties.cpp">
       <Filter>ImageSource</Filter>
     </ClCompile>
     <ClCompile Include="ImageAbstract.cpp">
       <Filter>ImageSource</Filter>
     </ClCompile>
+    <ClCompile Include="External\easyexif\exif.cpp" />
+    <ClCompile Include="Vector2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
-    <ClInclude Include="ConsoleLogListener.h" />
     <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="ZoomScrollState.h" />
     <ClInclude Include="API\defs.h">
@@ -32,7 +31,6 @@
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="Quad.h" />
     <ClInclude Include="ImageAbstract.h">
       <Filter>ImageSource</Filter>
     </ClInclude>
@@ -55,6 +53,12 @@
       <Filter>ImageSource</Filter>
     </ClInclude>
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="ViewParameters.h" />
+    <ClInclude Include="Vector2.h" />
+    <ClInclude Include="Interfaces\IRenderer.h">
+      <Filter>Interfaces</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

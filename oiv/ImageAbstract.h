@@ -1,5 +1,6 @@
 #pragma once
 #include "ImageProperties.h"
+#include <memory>
 #include <string>
 namespace OIV
 {
@@ -36,5 +37,6 @@ namespace OIV
          double fLoadTime;
     };
 
+    typedef std::shared_ptr<Image> ImageSharedPtr;
  
 }

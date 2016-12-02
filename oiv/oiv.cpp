@@ -2,22 +2,19 @@
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "precompiled.h"
 #include "oiv.h"
-#include "quad.h"
 #include "PluginJpeg.h"
 #include "PluginPng.h"
 #include "PluginFreeImage.h"
-#ifdef _MSC_VER
-#include <RenderSystems\Direct3D11\include\OgreD3D11Plugin.h>
-#endif
+#include "External\easyexif\exif.h"
+#include "Interfaces\IRenderer.h"
+
+#include "../OIVOgreRenderer/OgreRendererFactory.h"
 namespace OIV
 {
-
-
     OIV::OIV() :
-        fScrollState(this)
+          fScrollState(this)
         , fIsRefresing(false)
-        , fPass(nullptr)
-        , fParent(nullptr)
+        , fParent(0)
         , fFilterLevel(2)
         , fShowGrid(false)
         , fClientWidth(-1)
@@ -27,140 +24,21 @@ namespace OIV
         fImageLoader.InstallPlugin(new PluginJpeg());
         fImageLoader.InstallPlugin(new PluginPng());
         fImageLoader.InstallPlugin(new PluginFreeImage());
-    }
-
-
-    OIV::~OIV()
-    {
 
     }
-    void OIV::InitAll()
-    {
-        this->SetupRenderer();
-        this->CreateScene();
-    }
 
-    void OIV::TryLoadPlugin(std::string pluginName)
-    {
-        try
-        {
-            root->loadPlugin(pluginName.c_str());
-        }
-        catch (...)
-        {
+    
 
-        }
-    }
-
-    void OIV::SetupRenderer()
-    {
-        using namespace std;
-        using namespace Ogre;
-
-#ifdef _DEBUG
-        root = new Root();
-#else
-        // No log file
-        root = new Root(BLANKSTRING, BLANKSTRING, BLANKSTRING);
-#endif
-
-#ifndef OGRE_STATIC_LIB
-#ifdef _DEBUG
-        //TryLoadPlugin("RenderSystem_Direct3D9_d");
-        TryLoadPlugin("RenderSystem_Direct3D11_d");
-        //TryLoadPlugin("RenderSystem_GLES2_d.dll");
-        //TryLoadPlugin("RenderSystem_GL_d.dll");
-#else
-        //TryLoadPlugin("RenderSystem_Direct3D9");
-        TryLoadPlugin("RenderSystem_Direct3D11");
-        //TryLoadPlugin("RenderSystem_GLES2.dll");
-        //TryLoadPlugin("RenderSystem_GL.dll");
-#endif
-#else
-        D3D11Plugin* plugin = new D3D11Plugin();
-        plugin->install();
-
-#endif
-        
-
-        using namespace Ogre;
-        const RenderSystemList &rlist = root->getAvailableRenderers();
-        RenderSystemList::const_iterator it = rlist.begin();
-        while (it != rlist.end())
-        {
-            RenderSystem *rSys = *(it++);
-            String name = rSys->getName();
-
-            if (rSys->getName().find("Direct3D11") != String::npos)
-            {
-                root->setRenderSystem(rSys);
-                break;
-            }
-        }
-
-        root->initialise(false);
-
-
-        ResourceGroupManager& rgm = ResourceGroupManager::getSingleton();
-        std::string exeFolder = StringUtility::ToAString(Utility::GetExeFolder());
-        rgm.addResourceLocation(exeFolder + String("\\Resources\\programs"), "FileSystem");
-        rgm.addResourceLocation(exeFolder + String("\\Resources\\scripts"), "FileSystem");
-
-
-        //Log for console output    
-        LogManager::getSingleton().getDefaultLog()->addListener(new GameLogListener());
-
-        NameValuePairList options;
-
-        options["vsync"] = "true";
-        if (fParent != NULL)
-            options["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)fParent);
-
-
-        RenderWindow *window = root->createRenderWindow(
-            "MainWindow",			// window name
-            1280,                   // window width, in pixels
-            800,                   // window height, in pixels
-            false,                 // fullscreen or not
-            &options);                    // use defaults for all other values
-
-        window->setDeactivateOnFocusChange(false);
-        
-
-        //WindowEventUtilities::addWindowEventListener(window, this);
-
-
-        fScene = root->createSceneManager(ST_GENERIC, "MySceneManager");
-
-        ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
-
-        // If Direct3D11 then invert Y.
-        //fScrollState.SetInvertedVCoordinate(true);
-    }
-
-  /*  Ogre::Vector2 OIV::GetMousePosition()
-    {
-        using namespace Ogre;
-        RenderWindow* rw = dynamic_cast<RenderWindow*>(Root::getSingleton().getRenderTarget("MainWindow"));
-        Ogre::StringStream ss;
-        POINT p;
-        GetCursorPos(&p);
-        HWND hwnd;
-        rw->getCustomAttribute("WINDOW", &hwnd);
-        ScreenToClient(hwnd, &p);
-        return Vector2(p.x, p.y);
-    }*/
 
     #pragma region ZoomScrollStateListener
-    Ogre::Vector2 OIV::GetImageSize()
+    Vector2 OIV::GetImageSize()
     {
-        return fOpenedImage.get() ? Ogre::Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight())
-            : Ogre::Vector2::ZERO;
+        return fOpenedImage.get() ? Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight())
+            : Vector2::ZERO;
     }
 
-    Ogre::Vector2 OIV::GetClientSize()
+    Vector2 OIV::GetClientSize()
     {
-        using namespace Ogre;
         return Vector2(fClientWidth, fClientHeight);
     }
     
@@ -169,39 +47,24 @@ namespace OIV
         Refresh();
     }
     #pragma endregion 
-    
 
-
+   
 
     void OIV::UpdateGpuParams()
     {
-        using namespace Ogre;
         Vector2 uvScaleFixed = fScrollState.GetARFixedUVScale();
         Vector2 uvOffset = fScrollState.GetOffset();
         if (fOpenedImage.get() == nullptr)
             uvScaleFixed = Vector2(1000000, 100000);
         
-
-        fFragmentParameters->setNamedConstant("uvScale", uvScaleFixed);
-        fFragmentParameters->setNamedConstant("uvOffset", uvOffset);
-        fFragmentParameters->setNamedConstant("uImageSize", GetImageSize());
-        fFragmentParameters->setNamedConstant("uViewportSize", GetClientSize());
-        fFragmentParameters->setNamedConstant("uShowGrid", fShowGrid == true ? 1 : 0);
+        fViewParams.showGrid = fShowGrid;
+        fViewParams.uViewportSize = GetClientSize();
+        fViewParams.uvOffset = uvOffset;
+        fViewParams.uvscale = uvScaleFixed;
+        fViewParams.uImageSize = GetImageSize();
+        
+        fRenderer->SetViewParams(fViewParams);
     }
-
-
-
-    // 'Ogre::WindowEventListener' implementation 
- /*   void OIV::windowClosed(Ogre::RenderWindow *  rw)
-    {
-        PostQuitMessage(0);
-    }
-
-   
-    void OIV::windowResized(Ogre::RenderWindow* rw)
-    {
-        HandleWindowResize();
-    }*/
 
     void OIV::HandleWindowResize()
     {
@@ -209,55 +72,153 @@ namespace OIV
             fScrollState.Refresh();
     }
 
-    void OIV::CreateCameraAndViewport()
+    bool OIV::IsImageLoaded() const
     {
-        using namespace Ogre;
-        RenderTarget* window = Root::getSingleton().getRenderSystem()->getRenderTarget("MainWindow");
-
-        this->fActiveCameraName = "MainCamera";
-        Camera* camera = fScene->createCamera(this->fActiveCameraName);
-        camera->setNearClipDistance(1);
-        camera->setFarClipDistance(500000.0);
-        camera->setAutoAspectRatio(true);
-        fActiveCamera = camera;
-        fViewPort = window->addViewport(camera);
-        //fViewPort->setDepthClear(0);
-        fViewPort->setClearEveryFrame(true);
-        fViewPort->setOverlaysEnabled(true);
-
-        float grayLevel = 0.0f;
-        fViewPort->setBackgroundColour(ColourValue::ColourValue(grayLevel, grayLevel, grayLevel));
+        return fOpenedImage.get() != nullptr;
     }
 
-    
-
-
-    void OIV::CreateScene()
+#pragma  region IPictureViewer implementation
+    // IPictureViewr implementation
+    int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
     {
-        using namespace Ogre;
 
-        rect = new Quad(true);
+        ImageSharedPtr image = ImageSharedPtr(fImageLoader.LoadImage(buffer, size, extension, onlyRegisteredExtension));
 
-        rect->setCorners(-1, 1, 1, -1);
-        AxisAlignedBox bb;
-        bb.setInfinite();
-        rect->setBoundingBox(bb);
+        if (image.get())
+        {
 
-        MaterialPtr material = MaterialManager::getSingleton().getByName("OgreViewer/QuadMaterial");
-        rect->setMaterial("OgreViewer/QuadMaterial");
-        fPass = material->getTechnique(0)->getPass(0);
-        fFragmentParameters = fPass->getFragmentProgramParameters();
-        fPass->getTextureUnitState(0)->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
-        ApplyFilter();
-        
-        fPass->setCullingMode(CULL_NONE);
+            fOpenedImage.swap(image);
+
+            using namespace easyexif;
+            EXIFInfo exifInfo;
+
+            if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), size) == PARSE_EXIF_SUCCESS)
+            {
+                //TODO: flip or rotate image if neccesary
+            }
 
 
-        fScene->getRootSceneNode()->createChildSceneNode()->attachObject(rect);
+            if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+            {
+                fScrollState.Reset(true);
+                return RC_Success;
+            }
 
-        fScene->setAmbientLight(ColourValue(0.8f, 0.8f, 0.8f));
-        fScene->setShadowTechnique(Ogre::ShadowTechnique::SHADOWTYPE_NONE);
-
-        CreateCameraAndViewport();
+            return RC_UknownError;
+        }
     }
+
+    double OIV::Zoom(double percentage, int x, int y)
+    {
+        fScrollState.Zoom(percentage, x, y);
+        return 0.0;
+    }
+
+    int OIV::Pan(double x, double y)
+    {
+        fScrollState.Pan(Vector2(x, y));
+        return 0.0;
+    }
+
+    int OIV::Init()
+    {
+        fRenderer = OgreRendererFactory::Create();
+        fRenderer->Init(fParent);
+        return 0;
+    }
+
+
+    int OIV::SetParent(size_t handle)
+    {
+        fParent = handle;
+        return 0;
+    }
+    int OIV::Refresh()
+    {
+        if (fIsRefresing == false)
+        {
+            fIsRefresing = true;
+            HandleWindowResize();
+            UpdateGpuParams();
+            fRenderer->Redraw();
+            fIsRefresing = false;
+        }
+
+        return 0;
+    }
+
+    Image* OIV::GetImage()
+    {
+        return fOpenedImage.get();
+    }
+
+    int OIV::SetFilterLevel(int filter_level)
+    {
+        int desiredFilterLevel = filter_level;
+        if (desiredFilterLevel >= 0 && desiredFilterLevel <= 1)
+        {
+            fFilterLevel = desiredFilterLevel;
+            fRenderer->SetFilterLevel(fFilterLevel);
+            Refresh();
+            return RC_Success;
+        }
+
+        return RC_WrongParameters;
+    }
+
+    int OIV::GetFileInformation(QryFileInformation& information)
+    {
+        if (IsImageLoaded())
+        {
+
+            information.bitsPerPixel = fOpenedImage->GetBitsPerTexel();
+            information.height = fOpenedImage->GetHeight();
+            information.width = fOpenedImage->GetWidth();
+            information.numMipMaps = 0;
+            information.rowPitchInBytes = fOpenedImage->GetRowPitchInBytes();
+            information.hasTransparency = 1;
+            information.imageDataSize = 0;
+            information.numChannels = 0;
+
+            return RC_Success;
+        }
+        else
+        {
+            return 1;
+        }
+    }
+
+    int OIV::GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY)
+    {
+        Vector2 texelPos = this->fScrollState.ClientPosToTexel(Vector2(mouseX, mouseY));
+        texelX = texelPos.x;
+        texelY = texelPos.y;
+        return RC_Success;
+    }
+
+    int OIV::SetTexelGrid(double gridSize)
+    {
+        fShowGrid = gridSize > 0.0;
+        Refresh();
+        return RC_Success;
+    }
+
+    int OIV::GetNumTexelsInCanvas(double &x, double &y)
+    {
+        Vector2 canvasSize = fScrollState.GetNumTexelsInCanvas();
+        x = canvasSize.x;
+        y = canvasSize.y;
+        return RC_Success;
+    }
+
+    int OIV::SetClientSize(uint16_t width, uint16_t height)
+    {
+        fClientWidth = width;
+        fClientHeight = height;
+        Refresh();
+        return 0;
+    }
+
+#pragma endregion
+
 }

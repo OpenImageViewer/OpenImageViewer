@@ -1,5 +1,5 @@
 #pragma once
-#include "OgreVector2.h"
+#include "Vector2.h"
 namespace OIV
 {
 
@@ -9,16 +9,16 @@ namespace OIV
         class Listener
         {
         public:
-            virtual Ogre::Vector2 GetClientSize() = 0;
-            virtual Ogre::Vector2 GetImageSize() = 0;
+            virtual Vector2 GetClientSize() = 0;
+            virtual Vector2 GetImageSize() = 0;
             virtual void NotifyDirty() = 0;
         };
 
         ZoomScrollState(Listener* listener) :
             fLockSmallImagesToCenter(false)
             , fListener(listener)
-            , fUVOffset(Ogre::Vector2::ZERO)
-            , fUVScale(Ogre::Vector2::UNIT_SCALE)
+            , fUVOffset(Vector2::ZERO)
+            , fUVScale(Vector2::UNIT_SCALE)
             , fSupressDirty(false)
             , fDirtyQueued(false)
             , fInverted(false)
@@ -31,17 +31,17 @@ namespace OIV
 
         // commands
         void Reset(bool refresh = false);
-        void Zoom(Ogre::Real amount,int x,int y);
-        void Pan(Ogre::Vector2 amont);
+        void Zoom(double amount,int x,int y);
+        void Pan(Vector2 amont);
         void Refresh();
 
 
         // queries
-        Ogre::Vector2 GetOffset() { return fUVOffset; }
-        Ogre::Vector2 GetScale() { return fUVScale; }
-        Ogre::Vector2 GetARFixedUVScale();
-        Ogre::Vector2 ClientPosToTexel(Ogre::Vector2 pos);
-        Ogre::Vector2 GetNumTexelsInCanvas();
+        Vector2 GetOffset() { return fUVOffset; }
+        Vector2 GetScale() { return fUVScale; }
+        Vector2 GetARFixedUVScale();
+        Vector2 ClientPosToTexel(Vector2 pos);
+        Vector2 GetNumTexelsInCanvas();
 
         void SetInvertedVCoordinate(bool inverted);
 
@@ -51,27 +51,27 @@ namespace OIV
         void NotifyDirty();
 
 
-        void SetScale(Ogre::Vector2 scale);
+        void SetScale(Vector2 scale);
         void SupressDirty(bool surpress);
 
-        void TranslateOffset(Ogre::Vector2 offset);
+        void TranslateOffset(Vector2 offset);
         void Center();
         double ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const;
-        Ogre::Vector2 FixAR(Ogre::Vector2 val, bool increase);
-        void SetOffset(Ogre::Vector2 offset);
-        Ogre::Vector2 GetScreenSpaceOrigin();
+        Vector2 FixAR(Vector2 val, bool increase);
+        void SetOffset(Vector2 offset);
+        Vector2 GetScreenSpaceOrigin();
 
     private: //member fields
         Listener* fListener;
-        Ogre::Vector2 fUVScale;
-        Ogre::Vector2 fUVOffset;
+        Vector2 fUVScale;
+        Vector2 fUVOffset;
         bool fSupressDirty;
         bool fDirtyQueued;
         bool fInverted;
         bool fLockSmallImagesToCenter;
 
-        Ogre::Vector2 fMarginLarge;
-        Ogre::Vector2 fMarginSmall;
+        Vector2 fMarginLarge;
+        Vector2 fMarginSmall;
 
     };
 }

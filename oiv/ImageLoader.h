@@ -1,9 +1,11 @@
 #pragma once
 #include "ImagePlugin.h"
 #include <vector>
+#include <map>
 #include <chrono>
 #include <Utility.h>
 #include <StringUtility.h>
+
 
 namespace OIV
 {

@@ -1,8 +1,6 @@
 #pragma once
 #include "ImagePlugin.h"
 #include <turbojpeg.h>
-#include <jpeglib.h>
-#include "OgrePlugin.h"
 
 namespace OIV
 {
