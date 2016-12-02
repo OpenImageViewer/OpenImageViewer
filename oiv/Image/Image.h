@@ -1,7 +1,6 @@
 #pragma once
 #include "ImageProperties.h"
 #include <memory>
-#include <string>
 namespace OIV
 {
 
@@ -12,14 +11,10 @@ namespace OIV
 
     public:
         Image(const ImageProperies& propeerties,double loadTime);
-        virtual ~Image() { if (fProperies.ImageBuffer != NULL) delete[]fProperies.ImageBuffer;}
-        bool Load(void* buffer, size_t size);
-        void Unload();
-        double GetLoadTime() const;
+        virtual ~Image() { if (fProperies.ImageBuffer != nullptr) delete[]fProperies.ImageBuffer;}
 
         // Query methods
-
-        
+        double GetLoadTime() const;
         const void* GetBuffer() const { return fProperies.ImageBuffer; }
         size_t GetWidth() const { return fProperies.Width; }
         size_t GetHeight() const { return fProperies.Height; }
