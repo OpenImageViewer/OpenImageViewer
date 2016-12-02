@@ -1,6 +1,6 @@
 #pragma once
 #include <interfaces/IRenderer.h>
-#include <ImageAbstract.h>
+#include <Image/Image.h>
 #include <OgrePrerequisites.h>
 #include "quad.h"
 #include "OgrePixelFormat.h"

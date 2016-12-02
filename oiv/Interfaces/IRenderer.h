@@ -1,5 +1,5 @@
 #pragma once
-#include "ImageAbstract.h"
+#include "Image/Image.h"
 #include "../ViewParameters.h"
 
 namespace OIV

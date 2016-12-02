@@ -1,9 +1,9 @@
 #pragma once
-#include "ImagePlugin.h"
+#include <Interfaces/IImagePlugin.h>
 #include <FreeImage.h>
 namespace OIV
 {
-    class PluginFreeImage : public ImagePlugin
+    class PluginFreeImage : public IImagePlugin
     {
 
     public:

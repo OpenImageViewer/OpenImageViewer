@@ -1,7 +1,7 @@
 #pragma once
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include "ImageLoader.h"
+#include "Image/ImageLoader.h"
 #include "interfaces/IRenderer.h"
 #include "ViewParameters.h"
 

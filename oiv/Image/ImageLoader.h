@@ -1,5 +1,5 @@
 #pragma once
-#include "ImagePlugin.h"
+#include "Interfaces/IImagePlugin.h"
 #include <vector>
 #include <map>
 #include <chrono>
@@ -11,15 +11,15 @@ namespace OIV
 {
     class ImageLoader
     {
-        typedef std::vector<ImagePlugin*> ListPlugin;
+        typedef std::vector<IImagePlugin*> ListPlugin;
         typedef std::map<std::string, ListPlugin> MapStringListPlugin;
         MapStringListPlugin fMapPlugins;
         ListPlugin fListPlugins;
 
-        ImagePlugin* GetFirstlugin(const std::string& hint)
+        IImagePlugin* GetFirstlugin(const std::string& hint)
         {
             using namespace std;
-            ImagePlugin* result = nullptr;
+            IImagePlugin* result = nullptr;
             auto it = fMapPlugins.find(hint);
             if (it != fMapPlugins.end())
             {
@@ -30,7 +30,7 @@ namespace OIV
             return result;
         }
     public:
-        void InstallPlugin(ImagePlugin* plugin)
+        void InstallPlugin(IImagePlugin* plugin)
         {
             fListPlugins.push_back(plugin);
             ListString tokens = StringUtility::split(StringUtility::ToLower(plugin->GetPluginProperties().supportedExtentions) , ';');
@@ -52,7 +52,7 @@ namespace OIV
 
             Image* loadedImage = nullptr;
             
-            ImagePlugin* choosenPlugin = GetFirstlugin(StringUtility::ToLower(extension));
+            IImagePlugin* choosenPlugin = GetFirstlugin(StringUtility::ToLower(extension));
 
             double loadTime;
             ImageProperies props;

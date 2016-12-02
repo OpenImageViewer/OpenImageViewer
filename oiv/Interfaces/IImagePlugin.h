@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "ImageProperties.h"
+#include <image/Image.h>
 namespace OIV
 {
     struct PluginProperties
@@ -8,7 +8,7 @@ namespace OIV
         std::string pluginDescription;
         std::string supportedExtentions;
     };
-    class ImagePlugin
+    class IImagePlugin
     {
     public:
         virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) = 0;

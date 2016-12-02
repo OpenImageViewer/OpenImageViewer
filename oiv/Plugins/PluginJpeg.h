@@ -1,10 +1,10 @@
 #pragma once
-#include "ImagePlugin.h"
+#include <Interfaces/IImagePlugin.h>
 #include <turbojpeg.h>
 
 namespace OIV
 {
-    class PluginJpeg : public ImagePlugin
+    class PluginJpeg : public IImagePlugin
     {
     private:
         static tjhandle ftjHandle;

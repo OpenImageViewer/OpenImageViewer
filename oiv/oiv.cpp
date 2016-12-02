@@ -2,9 +2,9 @@
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "precompiled.h"
 #include "oiv.h"
-#include "PluginJpeg.h"
-#include "PluginPng.h"
-#include "PluginFreeImage.h"
+#include "Plugins/PluginJpeg.h"
+#include "Plugins/PluginPng.h"
+#include "Plugins/PluginFreeImage.h"
 #include "External\easyexif\exif.h"
 #include "Interfaces\IRenderer.h"
 
@@ -103,9 +103,9 @@ namespace OIV
                 fScrollState.Reset(true);
                 return RC_Success;
             }
-
-            return RC_UknownError;
         }
+
+        return RC_UknownError;
     }
 
     double OIV::Zoom(double percentage, int x, int y)

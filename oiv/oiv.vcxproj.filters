@@ -7,14 +7,10 @@
     <ClCompile Include="API\functions.cpp">
       <Filter>API</Filter>
     </ClCompile>
-    <ClCompile Include="ImageProperties.cpp">
-      <Filter>ImageSource</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageAbstract.cpp">
-      <Filter>ImageSource</Filter>
-    </ClCompile>
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="Vector2.cpp" />
+    <ClCompile Include="Image\Image.cpp" />
+    <ClCompile Include="Image\ImageProperties.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -31,27 +27,6 @@
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="ImageAbstract.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="ImageProperties.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="ImageLoader.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="ImagePlugin.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginJpeg.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginPng.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
-    <ClInclude Include="PluginFreeImage.h">
-      <Filter>ImageSource</Filter>
-    </ClInclude>
     <ClInclude Include="Logger.h" />
     <ClInclude Include="External\easyexif\exif.h" />
     <ClInclude Include="ViewParameters.h" />
@@ -59,6 +34,13 @@
     <ClInclude Include="Interfaces\IRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
+    <ClInclude Include="Interfaces\IImagePlugin.h" />
+    <ClInclude Include="Image\Image.h" />
+    <ClInclude Include="Image\ImageLoader.h" />
+    <ClInclude Include="Image\ImageProperties.h" />
+    <ClInclude Include="Plugins\PluginFreeImage.h" />
+    <ClInclude Include="Plugins\PluginJpeg.h" />
+    <ClInclude Include="Plugins\PluginPng.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

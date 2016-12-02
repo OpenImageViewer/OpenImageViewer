@@ -1,9 +1,9 @@
 #pragma once
-#include "ImagePlugin.h"
+#include <Interfaces/IImagePlugin.h>
 #include <png.h>
 namespace OIV
 {
-    class PluginPng : public ImagePlugin
+    class PluginPng : public IImagePlugin
     {
     public:
 
@@ -41,7 +41,7 @@ namespace OIV
                 out_properties.NumSubImages = 0;
 
                 //read buffer
-                void* buffer = static_cast<BYTE*>(malloc(PNG_IMAGE_SIZE(image)));
+                void* buffer = malloc(PNG_IMAGE_SIZE(image));
 
                 if (buffer != nullptr &&
                     png_image_finish_read(&image, NULL/*background*/, buffer,
