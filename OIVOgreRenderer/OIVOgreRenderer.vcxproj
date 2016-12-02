@@ -79,6 +79,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>d:\DevelopmentExternal\Ogre\Source\Ogre-Default\OgreMain\include;d:\DevelopmentExternal\Ogre\Source\Ogre-Default\RenderSystems\Direct3D11\include;d:\Development\OpenImageViewer\oiv;d:\DevelopmentExternal\Ogre\Builds\Ogre-Default\include;D:\Development\OpenImageViewer\OIVUtil</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -96,6 +98,8 @@
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>d:\DevelopmentExternal\Ogre\Source\Ogre-Default\OgreMain\include;d:\DevelopmentExternal\Ogre\Source\Ogre-Default\RenderSystems\Direct3D11\include;d:\Development\OpenImageViewer\oiv</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -115,6 +119,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>d:\DevelopmentExternal\Ogre\Source\Ogre-Default\OgreMain\include;d:\DevelopmentExternal\Ogre\Source\Ogre-Default\RenderSystems\Direct3D11\include;d:\Development\OpenImageViewer\oiv</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -136,6 +141,7 @@
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>d:\DevelopmentExternal\Ogre\Source\Ogre-Default\OgreMain\include;d:\DevelopmentExternal\Ogre\Source\Ogre-Default\RenderSystems\Direct3D11\include;d:\Development\OpenImageViewer\oiv</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
