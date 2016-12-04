@@ -37,10 +37,8 @@ namespace OIV
 
      
         void HandleWindowResize();
-
-
         bool IsImageLoaded() const;
-
+        AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
 
     public:
         OIV();

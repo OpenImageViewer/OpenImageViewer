@@ -117,6 +117,7 @@
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="Image\AxisAlignedTransform.h" />
     <ClInclude Include="Image\Image.h" />
     <ClInclude Include="Image\ImageLoader.h" />
     <ClInclude Include="Image\ImageProperties.h" />

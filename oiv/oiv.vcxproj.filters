@@ -41,6 +41,7 @@
     <ClInclude Include="Plugins\PluginFreeImage.h" />
     <ClInclude Include="Plugins\PluginJpeg.h" />
     <ClInclude Include="Plugins\PluginPng.h" />
+    <ClInclude Include="Image\AxisAlignedTransform.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

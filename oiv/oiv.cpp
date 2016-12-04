@@ -77,6 +77,26 @@ namespace OIV
         return fOpenedImage.get() != nullptr;
     }
 
+    AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
+    {
+        AxisAlignedRTransform rotation;
+            switch (exifRotation)
+            {
+            case 3:
+                rotation = AAT_Rotate180;
+                break;
+            case 6:
+                rotation = AAT_Rotate90CW;
+                break;
+            case 8:
+                rotation = AAT_Rotate90CCW;
+                break;
+            default:
+                rotation = AAT_None;
+            }
+            return rotation;
+    }
+
 #pragma  region IPictureViewer implementation
     // IPictureViewr implementation
     int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
@@ -93,9 +113,7 @@ namespace OIV
             EXIFInfo exifInfo;
 
             if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), size) == PARSE_EXIF_SUCCESS)
-            {
-                //TODO: flip or rotate image if neccesary
-            }
+                fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
 
 
             if (fRenderer->SetImage(fOpenedImage) == RC_Success)
