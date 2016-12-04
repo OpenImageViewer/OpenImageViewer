@@ -75,11 +75,12 @@ namespace OIV
 
                 if (dataLoadFile->buffer != NULL && dataLoadFile->length > 0)
                 {
-                    if (sPictureRenderer->LoadFile(dataLoadFile->buffer
-                        , dataLoadFile->length
-                        , dataLoadFile->extension
-                        , dataLoadFile->onlyRegisteredExtension) == false)
-                        result = RC_UknownError;
+                    result = static_cast<ResultCode>(
+                        sPictureRenderer->LoadFile(dataLoadFile->buffer
+                            , dataLoadFile->length
+                            , dataLoadFile->extension
+                            , dataLoadFile->onlyRegisteredExtension));
+                        
                 }
                 else
                 {
