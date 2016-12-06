@@ -231,7 +231,7 @@ namespace OIV
     
     void TestApp::ToggleFullScreen()
     {
-        HWND hwnd = GetWindowHandle();
+        fWindow.ToggleFullScreen(Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
     }
 
     void TestApp::ToggleBorders()
@@ -287,7 +287,7 @@ namespace OIV
             PostQuitMessage(0);
             break;
         case 'F':
-            evnt->window->ToggleFullScreen(IsAlt ? true : false);
+            ToggleFullScreen();
             break;
         case VK_DOWN:
         case VK_RIGHT:
@@ -443,6 +443,10 @@ namespace OIV
             Zoom(zDelta * 0.2, mousePos.x, mousePos.y);
         }
         break;
+
+        case WM_MBUTTONDOWN:
+            ToggleFullScreen();
+            break;
 
         case WM_LBUTTONDOWN:
             SetCapture(uMsg.hwnd);
