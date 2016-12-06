@@ -12,6 +12,7 @@
 #include <sstream>
 #include <iostream>
 #include <API\functions.h>
+#include "win32/Win32Helper.h"
 
 
 namespace OIV
@@ -137,7 +138,7 @@ namespace OIV
         init.parentHandle = reinterpret_cast<size_t>(fWindow.GetHandleClient());
          
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
-        UpdateWindowSize();
+        UpdateWindowSize(NULL);
         LoadFile(filePath, false);
         SetFilterLevel(1);
         LoadFileInFolder(filePath);
@@ -398,15 +399,17 @@ namespace OIV
         }
     }
 
-    void TestApp::UpdateWindowSize()
-    {
-        SIZE size = fWindow.GetClientSize();
 
-            
-        ExecuteCommand(CMD_SetClientSize, 
-                       &CmdSetClientSizeRequest{static_cast<uint16_t>(size.cx), 
-                           static_cast<uint16_t>(size.cy) }, &CmdNull());
-        UpdateCanvasSize();
+    void TestApp::UpdateWindowSize(const Win32::EventWinMessage* winMessage)
+    {
+        if (winMessage == NULL || winMessage->window->GetHandleClient() == winMessage->message.hwnd)
+        {
+            SIZE size = fWindow.GetClientSize();
+            ExecuteCommand(CMD_SetClientSize,
+                &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
+                static_cast<uint16_t>(size.cy) }, &CmdNull());
+            UpdateCanvasSize();
+        }
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
@@ -417,8 +420,7 @@ namespace OIV
         switch (uMsg.message)
         {
         case WM_WINDOWPOSCHANGED:
-        case WM_SIZE:
-            UpdateWindowSize();
+            UpdateWindowSize(evnt);
             break;
 
         case WM_TIMER:

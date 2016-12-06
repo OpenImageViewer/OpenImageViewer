@@ -47,5 +47,8 @@
     <ClInclude Include="TestApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="win32\Win32Helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
