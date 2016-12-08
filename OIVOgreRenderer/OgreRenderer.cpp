@@ -17,7 +17,7 @@
 namespace OIV
 {
     OgreRenderer::OgreRenderer() :
-        fPass(nullptr)
+          fPass(nullptr)
         , fTextureName("OIVOpenedtexture")
     {
 
