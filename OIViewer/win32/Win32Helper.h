@@ -16,5 +16,23 @@ namespace OIV
             return (GetKeyState(virtualKey) & static_cast<USHORT>(0x0001)) != 0;
 
         }
+
+        static void MessageLoop()
+        {
+            MSG msg;
+            BOOL bRet;
+            while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
+            {
+                if (bRet == -1)
+                {
+                    // handle the error and possibly exit
+                }
+                else
+                {
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                }
+            }
+        }
     };
 }
