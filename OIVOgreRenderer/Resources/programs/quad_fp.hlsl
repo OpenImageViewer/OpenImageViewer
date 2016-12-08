@@ -1,31 +1,49 @@
-static const float4 white = float4(1, 1, 1, 1);
-static const float4 gray25 = float4(0.75, 0.75, 0.75, 1);
-static const float4 black = float4(0, 0, 0, 1);
-static const float4 midnightBlue = float4(25 / 255.0, 25 / 255.0 , 112 / 255.0, 1);
-static const float4 darkBlue = float4(0 / 255.0, 0 / 255.0, 40 / 255.0, 1);
-static const float4 red = float4(1, 0, 0, 1);
-uniform Texture2D texture_1;
-uniform SamplerState textureState_1;
+#if defined(HLSL) || defined(D3D11)
+	#define STATIC_CONST static const
+	#define SAMPLER2D Texture2D
+	#define SAMPLER_STATE SamplerState
+#elif GLSL
+	#define STATIC_CONST const
+	#define SAMPLER2D sampler2D
+	#define SAMPLER_STATE float
+	#define float2 vec2 
+	#define float3 vec3 
+	#define float4 vec4 
+	#define int2 ivec2
+	#define fmod mod
+	#define lerp mix
+#endif
+
+
+STATIC_CONST float4 white = float4(1, 1, 1, 1);
+STATIC_CONST float4 gray25 = float4(0.75, 0.75, 0.75, 1);
+STATIC_CONST float4 black = float4(0, 0, 0, 1);
+STATIC_CONST float4 midnightBlue = float4(25 / 255.0, 25 / 255.0 , 112 / 255.0, 1);
+STATIC_CONST float4 darkBlue = float4(0 / 255.0, 0 / 255.0, 40 / 255.0, 1);
+STATIC_CONST float4 red = float4(1, 0, 0, 1);
+
+//Globals
+uniform SAMPLER2D texture_1;
+uniform SAMPLER_STATE texture_1_state;
 uniform float2 uvScale;
 uniform float2 uvOffset;
 uniform float2 uImageSize;
 uniform float2 uViewportSize;
 uniform int uShowGrid;
 
-struct ShaderIn
+float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 {
-	float4 pos : SV_POSITION;
-	float2 uv : TEXCOORD;
-};
-
-struct ShaderOut
-{
-	float4 texelOut : SV_Target;
-};
-
+#if defined(HLSL) || defined(D3D11)
+//TODDO: change texture_1_state to support any sampler state
+	return texture_1.Sample(texture_1_state, coords);
+#else
+	return texture(i_Tex, coords);
+#endif
+	
+}
+#line 46
 float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
 {
-
     float2 checkerSize = float2(0.03, 0.03);
 	//Fix aspect ratio
 	if (viewportSize.x > viewportSize.y)
@@ -77,11 +95,11 @@ void DrawPixelGrid(
 		float2 oneOverPixelSize = 1.0 / pixelSize;
 		float2 factor2 = screenSize * oneOverPixelSize;
 		float2 offset = float2(0,0);
-		offset = uvOffset / uvScale % pixelSize;
+		offset = fmod( (uvOffset / uvScale) , pixelSize);
 		if (pixelSize.x >= pixelDrawThreshold.x && pixelSize.y >= pixelDrawThreshold.y)
 		{
 			float2 lineWidth = lineWidthInPixels / screenSize;
-			float2 modaa = (screenUV + offset)  % (1.0 / factor2);
+			float2 modaa = fmod( (screenUV + offset), (1.0 / factor2));
 			if (modaa.x < lineWidth.x || modaa.y < lineWidth.y )
 				texel = red;
 		}
@@ -94,24 +112,56 @@ void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4
 }
 void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texel)
 {
-    float4 sampledTexel = texture_1.Sample(textureState_1, uv);
+    float4 sampledTexel = SampleTexture(texture_1,uv);
     float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }
-void main(in ShaderIn input, out ShaderOut output)
+
+float4 GetFinalTexel(float2 i_inputUV,float2 i_viewportSize, float2 i_imageSize, float2 i_uvScale,float2 i_uvOffset,int i_showGrid )
 {
-    float4 texel = (float4)0;
-    float2 uv = input.uv * uvScale + uvOffset;
+    float4 texel;
+    float2 uv = i_inputUV * i_uvScale + i_uvOffset;
 
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-		FillBackGround(uv, input.uv, uViewportSize, texel);
-	else
-	{
-		DrawImage(uv, input.uv, uViewportSize, texel);
-		if (uShowGrid == 1)
-        	        DrawPixelGrid(uImageSize,uViewportSize,input.uv,uvScale,uvOffset,texel);
-	}
-		
-	texel.w = 1;
-    output.texelOut = texel;
+        FillBackGround(uv, i_inputUV, i_viewportSize, texel);
+    else
+    {
+        DrawImage(uv, i_inputUV, i_viewportSize, texel);
+        if (i_showGrid == 1)
+            DrawPixelGrid(i_imageSize, i_viewportSize, i_inputUV, i_uvScale, i_uvOffset, texel);
+    }
+
+    texel.w = 1;
+    return texel;
 }
+#if defined(HLSL) || defined(D3D11)
+////////////////////////
+///DIRECT3D HLSL SHADER
+///////////////////////
+struct ShaderIn
+{
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD;
+};
+struct ShaderOut
+{
+	float4 texelOut : SV_Target;
+};
+void main(in ShaderIn input, out ShaderOut output)
+{
+    output.texelOut = GetFinalTexel(input.uv, uViewportSize, uImageSize,uvScale, uvOffset, uShowGrid);
+}
+#else
+////////////////////////
+///OPENGL GLSL SHADER
+///////////////////////
+in vec2 coords;
+out vec4 outColor;
+void main()
+{
+
+
+  outColor = GetFinalTexel(coords, float2(1280,800), float2(0),float2(100000,100000), float2(0), 0);
+}
+
+#endif
