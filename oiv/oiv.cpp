@@ -7,8 +7,29 @@
 #include "Plugins/PluginFreeImage.h"
 #include "External\easyexif\exif.h"
 #include "Interfaces\IRenderer.h"
+#include "NullRenderer.h"
 
+
+//TODO: define the following using cmake
+// Allow null render for debug purpose, this flag is disabled by default.
+#define OIV_ALLOW_NULL_RENDERER 0
+
+// Build the Ogre renderer, currently implemented only for windows/Direct3D11.
+// This render will be deprecated and will be replaced by Direct3D11 renderer
+#define OIV_BUILD_RENDERER_OGRE 1
+
+// Build the OpenGL cross platform renderer, currently implemented only for windows.
+#define OIV_BUILD_RENDERER_GL 1
+
+#if OIV_BUILD_RENDERER_OGRE == 1
 #include "../OIVOgreRenderer/OgreRendererFactory.h"
+#endif
+
+#if OIV_BUILD_RENDERER_GL == 1
+#include "../OIVGLRenderer/OIVGLRendererFactory.h"
+#endif
+
+
 namespace OIV
 {
     OIV::OIV() :
@@ -97,7 +118,37 @@ namespace OIV
             return rotation;
     }
 
-#pragma  region IPictureViewer implementation
+    IRendererSharedPtr OIV::CreateBestRenderer()
+    {
+
+#ifdef _MSC_VER 
+    // Prefer Direct3D11 for windows.
+    #if OIV_BUILD_RENDERER_OGRE == 1
+        return OgreRendererFactory::Create();
+    #elif  OIV_BUILD_RENDERER_GL == 1
+        return GLRendererFactory::Create();
+    #elif OIV_ALLOW_NULL_RENDERER == 1
+        return IRendererSharedPtr(new NullRenderer());
+    #else
+        #error No valid renderers detected.
+    #endif
+
+#else // _MSC_VER
+// If no windows choose GL renderer
+    #if OIV_BUILD_RENDERER_GL == 1
+        return GLRendererFactory::Create();
+    #elif OIV_ALLOW_NULL_RENDERER == 1
+        return IRendererSharedPtr(new NullRenderer());
+    #else
+        #error No valid renderers detected.
+    #endif
+#endif
+
+        throw std::exception("wrong build configuration");
+
+    }
+
+#pragma region IPictureViewer implementation
     // IPictureViewr implementation
     int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
     {
@@ -108,7 +159,6 @@ namespace OIV
         {
 
             fOpenedImage.swap(image);
-
             using namespace easyexif;
             EXIFInfo exifInfo;
 
@@ -140,7 +190,7 @@ namespace OIV
 
     int OIV::Init()
     {
-        fRenderer = OgreRendererFactory::Create();
+        fRenderer = CreateBestRenderer();
         fRenderer->Init(fParent);
         return 0;
     }

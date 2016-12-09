@@ -1,7 +1,7 @@
 
 vertex_program OgreViewer/quad_vp hlsl
 {
-	source quad_vp.hlsl
+	source quad_vp.shader
 	entry_point main
 	target vs_4_0 vs_4_0_level_9_1 vs_4_0_level_9_3
 /*
@@ -14,7 +14,7 @@ vertex_program OgreViewer/quad_vp hlsl
 
 fragment_program OgreViewer/quad_fp hlsl
 {
-	source quad_fp.hlsl
+	source quad_fp.shader
 	entry_point main
 	target ps_4_0
 }

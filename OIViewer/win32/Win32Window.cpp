@@ -1,6 +1,5 @@
 #include "Win32Window.h"
 #include "MonitorInfo.h"
-#include "Logger.h"
 #include <tchar.h>
 
 namespace OIV

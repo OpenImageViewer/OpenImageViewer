@@ -12,42 +12,24 @@ namespace OIV
           public ZoomScrollState::Listener
         , public IPictureRenderer
     {
-    private:
-        ZoomScrollState     fScrollState;
-        size_t                fParent;
-        bool                fIsRefresing;
-        std::string fCurrentOpenedFile;
-        ImageLoader fImageLoader;
-        bool fShowGrid;
-        
-        
-        ImageSharedPtr fOpenedImage;
-        int fFilterLevel;
-        int fClientWidth;
-        int fClientHeight;
-
-        void UpdateGpuParams();
-
-        
 #pragma region  //-------------Scroll state listener------------------
         virtual Vector2 GetClientSize() override;
         virtual Vector2 GetImageSize() override;
         virtual void NotifyDirty() override;
-#pragma endregion        //----------------------------------------------------
+#pragma endregion 
 
-     
+#pragma region //-------------Private methods------------------
+        IRendererSharedPtr CreateBestRenderer();
         void HandleWindowResize();
         bool IsImageLoaded() const;
+        void UpdateGpuParams();
         AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
-
+        void LoadSettings();
+#pragma endregion
     public:
         OIV();
-        void LoadSettings();
 
-
-#pragma region IPictureListener
-        //-------------IPictureListener------------------
-        // 
+#pragma region //-------------IPictureListener implementation------------------
         virtual double Zoom(double percentage,int x,int y) override;
         virtual int Pan(double x, double y) override;
         virtual int LoadFile(void* buffer, size_t size, char* extension , bool onlyRegisteredExtension) override;
@@ -61,11 +43,21 @@ namespace OIV
         virtual int SetTexelGrid(double gridSize) override;
         virtual int GetNumTexelsInCanvas(double &x, double &y) override;
         virtual int SetClientSize(uint16_t width, uint16_t height) override;
-#pragma endregion         //----------------------------------------------------
+#pragma endregion
 
+#pragma region //-------------Private member fields------------------
     private:
         IRendererSharedPtr fRenderer;
         ViewParameters fViewParams;
-
+        ZoomScrollState fScrollState;
+        size_t fParent;
+        bool fIsRefresing;
+        std::string fCurrentOpenedFile;
+        ImageLoader fImageLoader;
+        bool fShowGrid;
+        ImageSharedPtr fOpenedImage;
+        int fFilterLevel;
+        int fClientWidth;
+        int fClientHeight;
     };
 }

@@ -18,3 +18,7 @@
 /OIViewer/x64/Debug
 /OIVOgreRenderer/Debug
 /OIVOgreRenderer/Release
+/OIVGLRenderer/Debug
+/OIVGLRenderer/OIVGLRenderer.vcxproj.user
+/OIVOgreRenderer/OIVOgreRenderer.vcxproj.user
+/OIViewer/Ogre.log

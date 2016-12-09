@@ -64,6 +64,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -76,8 +77,7 @@
       <Message>1</Message>
     </PreLinkEvent>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>call CopyResources $(ProjectDir) $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -94,11 +94,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>call CopyResources $(ProjectDir) $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -125,6 +125,7 @@
     <ClInclude Include="Interfaces\IRenderer.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
+    <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="oiv.h" />
     <ClInclude Include="Plugins\PluginFreeImage.h" />
     <ClInclude Include="Plugins\PluginJpeg.h" />
@@ -153,6 +154,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\OIVGLRenderer\OIVGLRenderer.vcxproj">
+      <Project>{d50bd30c-bcd9-4d5e-8416-700f10541792}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\OIVOgreRenderer\OIVOgreRenderer.vcxproj">
       <Project>{3be06286-4a17-49ae-abc2-0a4a3c0a9e25}</Project>
     </ProjectReference>

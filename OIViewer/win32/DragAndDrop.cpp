@@ -1,6 +1,5 @@
 #include "DragAndDrop.h"
 #include "Win32Window.h"
-#include "Logger.h"
 
 namespace OIV
 {
@@ -12,8 +11,8 @@ namespace OIV
         {
             if (SUCCEEDED(OleInitialize(NULL)))
             {
-                if (SUCCEEDED(RegisterDragDrop(fParentWindow.GetHandle(), this)))
-                    Logger::Log("Drag and drop target initialized");
+                if (SUCCEEDED(RegisterDragDrop(fParentWindow.GetHandle(), this))); 
+                    //Logger::Log("Drag and drop target initialized");
             }
 
 
