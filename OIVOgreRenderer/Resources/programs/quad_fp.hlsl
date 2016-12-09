@@ -36,7 +36,7 @@ float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 #if defined(HLSL) || defined(D3D11)
 //TODDO: change texture_1_state to support any sampler state
 	return texture_1.Sample(texture_1_state, coords);
-#else
+#elif GLSL
 	return texture(i_Tex, coords);
 #endif
 	
@@ -136,7 +136,7 @@ float4 GetFinalTexel(float2 i_inputUV,float2 i_viewportSize, float2 i_imageSize,
 }
 #if defined(HLSL) || defined(D3D11)
 ////////////////////////
-///DIRECT3D HLSL SHADER
+///DIRECT3D HLSL FRAGMENT SHADER
 ///////////////////////
 struct ShaderIn
 {
@@ -153,15 +153,13 @@ void main(in ShaderIn input, out ShaderOut output)
 }
 #else
 ////////////////////////
-///OPENGL GLSL SHADER
+///OPENGL GLSL FRAGMENT SHADER
 ///////////////////////
 in vec2 coords;
 out vec4 outColor;
 void main()
 {
-
-
-  outColor = GetFinalTexel(coords, float2(1280,800), float2(0),float2(100000,100000), float2(0), 0);
+  outColor = GetFinalTexel(coords, uViewportSize, uImageSize,uvScale, uvOffset, uShowGrid);
 }
 
 #endif
