@@ -14,6 +14,10 @@ OIV::OIVGLRenderer::OIVGLRenderer()
 void OIV::OIVGLRenderer::PrepareResources()
 {
     using namespace OIV;
+    
+    // Disable vsync
+    context.SetSwapInterval(0);
+
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
     std::wstring vertexShaderPath = L"./Resources/programs/quad_vp.shader";
@@ -24,26 +28,7 @@ void OIV::OIVGLRenderer::PrepareResources()
         , File::ReadAllText(fragmentShaderPath).c_str()));
 
     fProgram->Bind();
-
-    fViewportSize[0] = 1280;
-    fViewportSize[1] = 800;
-
-    fUVScale[0] = 1;
-    fUVScale[1] = 1;
-
-    fImageSize[0] = 800;
-    fImageSize[1] = 600;
-
-
-    //Load texels into textur object
-    std::ifstream file("d:/pixels.raw", std::ios::in | std::ios::binary);
-    size_t imageSize = 800 * 600 * 4;
-    char* buffer = new char[imageSize];
-    file.read(buffer, imageSize);
-
     fTexture = GLTextureUniquePtr(new GLTexture());
-    fTexture->SetRGBATexture(800, 600, buffer);
-
 
     Quad quad;
     GLint posAttrib = glGetAttribLocation(fProgram->GetProgram(), "position");
