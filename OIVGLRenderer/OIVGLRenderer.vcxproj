@@ -133,10 +133,12 @@
     <ClInclude Include="GLRenderer\GLGpuProgram.h" />
     <ClInclude Include="GLRenderer\GLTexture.h" />
     <ClInclude Include="GLRenderer\Quad.h" />
+    <ClInclude Include="GLRenderer\Win32\wglext.h" />
     <ClInclude Include="OIVGLRenderer.h" />
     <ClInclude Include="OIVGLRendererFactory.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="GLContext.cpp" />
     <ClCompile Include="OIVGLRenderer.cpp" />
     <ClCompile Include="OIVGLRendererFactory.cpp" />
   </ItemGroup>

@@ -1,6 +1,9 @@
 #pragma once
 #include <windows.h>
 #include <GL/GL.h>
+#include "GLRenderer/Win32/wglext.h"
+
+
 class GLContext
 {
 public:
@@ -15,34 +18,40 @@ public:
         purge();
     }
 
-    void init(HWND hWnd)
+    void init(HWND hWnd);
+
+    void initExtensions()
     {
-        // remember the window handle (HWND)
-        mhWnd = hWnd;
+        if (WGLExtensionSupported("WGL_EXT_swap_control"))
+        {
+            // Extension is supported, init pointers.
+            wglSwapIntervalEXT = reinterpret_cast<PFNWGLSWAPINTERVALEXTPROC>(wglGetProcAddress("wglSwapIntervalEXT"));
 
-        // get the device context (DC)
-        mhDC = GetDC(mhWnd);
-
-        // set the pixel format for the DC
-        PIXELFORMATDESCRIPTOR pfd;
-        ZeroMemory(&pfd, sizeof(pfd));
-        pfd.nSize = sizeof(pfd);
-        pfd.nVersion = 1;
-        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |
-            PFD_DOUBLEBUFFER;
-        pfd.iPixelType = PFD_TYPE_RGBA;
-        pfd.cColorBits = 32;
-        pfd.cDepthBits = 0;
-        pfd.iLayerType = PFD_MAIN_PLANE;
-        int format = ChoosePixelFormat(mhDC, &pfd);
-        SetPixelFormat(mhDC, format, &pfd);
-
-        // create the render context (RC)
-        mhRC = wglCreateContext(mhDC);
-
-        // make it the current render context
-        wglMakeCurrent(mhDC, mhRC);
+            // this is another function from WGL_EXT_swap_control extension
+            wglGetSwapIntervalEXT = reinterpret_cast<PFNWGLGETSWAPINTERVALEXTPROC>(wglGetProcAddress("wglGetSwapIntervalEXT"));
+        }
     }
+
+
+    bool WGLExtensionSupported(const char *extension_name)
+    {
+        // this is pointer to function which returns pointer to string with list of all wgl extensions
+        PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
+
+        // determine pointer to wglGetExtensionsStringEXT function
+        _wglGetExtensionsStringEXT = reinterpret_cast<PFNWGLGETEXTENSIONSSTRINGEXTPROC>(wglGetProcAddress("wglGetExtensionsStringEXT"));
+
+        if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
+        {
+            // string was not found
+            return false;
+        }
+
+        // extension is supported
+        return true;
+    }
+
+    
 
     void purge()
     {
@@ -58,6 +67,14 @@ public:
         reset();
     }
 
+    
+
+    void SetSwapInterval(int interval)
+    {
+        if (wglSwapIntervalEXT != nullptr)
+            wglSwapIntervalEXT(interval);
+    }
+
     void swapBuffers()
     {
         SwapBuffers(mhDC);
@@ -69,7 +86,15 @@ private:
         mhWnd = NULL;
         mhDC = NULL;
         mhRC = NULL;
+        wglSwapIntervalEXT = NULL;
+        wglGetSwapIntervalEXT = NULL;
     }
+
+    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+    PFNWGLGETSWAPINTERVALEXTPROC wglGetSwapIntervalEXT;
+
+  
+
 
     HWND mhWnd;
     HDC mhDC;

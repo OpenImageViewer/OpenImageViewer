@@ -39,12 +39,18 @@
     <ClInclude Include="OIVGLRendererFactory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GLRenderer\Win32\wglext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OIVGLRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OIVGLRendererFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GLContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
