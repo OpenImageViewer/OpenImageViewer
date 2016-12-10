@@ -63,7 +63,6 @@ int OIV::OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
     fShowGrid = viewParams.showGrid ? 1 : 0;
     
     fIsParamsDirty = true;
-    renderOneFrame();
     return 0;
 }
 
@@ -82,7 +81,6 @@ int OIV::OIVGLRenderer::SetFilterLevel(int filterLevel)
 int OIV::OIVGLRenderer::SetImage(const ImageSharedPtr image)
 {
     fTexture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
-    renderOneFrame();
     return 0;
 }
 
