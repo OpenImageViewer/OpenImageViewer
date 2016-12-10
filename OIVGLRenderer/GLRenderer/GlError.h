@@ -29,7 +29,6 @@ namespace OIV
 
     static bool GL_SUCCESS(GLuint result)
     {
-        if (result == 0)
-            throw std::exception("GL error");
+        return result != 0;
     }
 }
