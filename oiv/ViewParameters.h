@@ -7,7 +7,6 @@ namespace OIV
     public:
         Vector2 uvscale;
         Vector2 uvOffset;
-        Vector2 uImageSize;
         Vector2 uViewportSize;
         bool showGrid;
     };

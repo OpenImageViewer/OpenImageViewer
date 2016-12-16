@@ -57,8 +57,7 @@ int OIV::OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
 
     UpdateViewportSize(viewParams.uViewportSize.x, viewParams.uViewportSize.y);
 
-    fImageSize[0] = viewParams.uImageSize.x;
-    fImageSize[1] = viewParams.uImageSize.y;
+    
 
     fShowGrid = viewParams.showGrid ? 1 : 0;
     
@@ -80,6 +79,9 @@ int OIV::OIVGLRenderer::SetFilterLevel(int filterLevel)
 
 int OIV::OIVGLRenderer::SetImage(const ImageSharedPtr image)
 {
+    fImageSize[0] = image->GetWidth();
+    fImageSize[1] = image->GetHeight();
+    fIsParamsDirty = true;
     fTexture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
     return 0;
 }

@@ -82,7 +82,6 @@ namespace OIV
         fViewParams.uViewportSize = GetClientSize();
         fViewParams.uvOffset = uvOffset;
         fViewParams.uvscale = uvScaleFixed;
-        fViewParams.uImageSize = GetImageSize();
         
         fRenderer->SetViewParams(fViewParams);
     }

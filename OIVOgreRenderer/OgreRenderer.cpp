@@ -150,7 +150,6 @@ namespace OIV
     {
         fFragmentParameters->setNamedConstant("uvScale", ToOgre(viewParams.uvscale));
         fFragmentParameters->setNamedConstant("uvOffset", ToOgre(viewParams.uvOffset));
-        fFragmentParameters->setNamedConstant("uImageSize", ToOgre(viewParams.uImageSize));
         fFragmentParameters->setNamedConstant("uViewportSize", ToOgre(viewParams.uViewportSize));
         fFragmentParameters->setNamedConstant("uShowGrid", viewParams.showGrid == true ? 1 : 0);
         return 0;
@@ -228,8 +227,11 @@ namespace OIV
 
                 fPass->getTextureUnitState(0)->setTextureName(fTextureName);
 
+                fFragmentParameters->setNamedConstant("uImageSize", Ogre::Vector2(image->GetWidth(), image->GetHeight()));
+
                 return 0;
             }
+
         }
         return 1;
     }
