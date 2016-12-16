@@ -4,6 +4,7 @@
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="FileMapping.h" />
+    <ClInclude Include="FileHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility.cpp" />

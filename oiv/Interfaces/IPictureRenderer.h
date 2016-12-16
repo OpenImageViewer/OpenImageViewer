@@ -21,5 +21,6 @@ namespace OIV
         virtual int SetTexelGrid(double gridSize) = 0;
         virtual int GetNumTexelsInCanvas(double &x, double &y) = 0;
         virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
+        virtual ~IPictureRenderer() {};
     };
 }

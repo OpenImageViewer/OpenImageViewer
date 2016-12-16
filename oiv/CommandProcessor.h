@@ -8,14 +8,14 @@ namespace OIV
     class CommandProcessor
     {
     private:
-        static IPictureRenderer* sPictureRenderer;
+        static std::unique_ptr<IPictureRenderer> sPictureRenderer;
 
     public:
         static ResultCode ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData);
         static void Log(OIVCHAR* message);
         static bool IsInitialized()
         {
-            return sPictureRenderer != NULL;
+            return sPictureRenderer.get() != nullptr;
         }
 
     };

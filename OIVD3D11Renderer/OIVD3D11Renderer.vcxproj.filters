@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="D3D11Renderer.h" />
+    <ClInclude Include="OIVD3D11RendererFactory.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="OIVD3D11RendererFactory.cpp" />
+    <ClCompile Include="D3D11Renderer.cpp" />
+  </ItemGroup>
+</Project>

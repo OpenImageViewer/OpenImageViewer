@@ -12,6 +12,7 @@ namespace OIV
         virtual int SetViewParams(const ViewParameters& viewParams) = 0;
         virtual int Redraw() = 0;
         virtual int SetFilterLevel(int filterLevel) = 0;
+        virtual ~IRenderer() {}
     };
 
     typedef std::shared_ptr<IRenderer> IRendererSharedPtr;

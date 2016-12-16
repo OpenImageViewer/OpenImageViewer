@@ -2,13 +2,15 @@
 #include "CommandProcessor.h"
 #include "oiv.h"
 #include "Logger.h"
+#include <memory>
 
 
 namespace OIV
 {
     //extern std::unique_ptr<OIV> gViewer;
 
-    IPictureRenderer* CommandProcessor::sPictureRenderer = NULL;
+     
+     std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
 
     ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData)
     {
@@ -21,9 +23,10 @@ namespace OIV
         switch (command)
         {
         case CE_Init:
-            if (sPictureRenderer == NULL)
+            
+            if (sPictureRenderer.get() == nullptr)
             {
-                sPictureRenderer = new OIV();
+                sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
 
                 if (requestSize == sizeof(CmdDataInit))
                 {
@@ -208,6 +211,10 @@ namespace OIV
             }
 
             break;
+
+             case OIV_CMD_Destroy:
+                 sPictureRenderer.reset();
+                 break;
         }
 
         return result;

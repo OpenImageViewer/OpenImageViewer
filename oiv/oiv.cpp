@@ -21,6 +21,15 @@
 // Build the OpenGL cross platform renderer, currently implemented only for windows.
 #define OIV_BUILD_RENDERER_GL 1
 
+// Build the Direct3D11 windows renderer.
+#define OIV_BUILD_RENDERER_D3D11 1
+
+#if OIV_BUILD_RENDERER_D3D11 == 1
+#include "../OIVD3D11Renderer/OIVD3D11RendererFactory.h"
+#endif
+
+
+
 #if OIV_BUILD_RENDERER_OGRE == 1
 #include "../OIVOgreRenderer/OgreRendererFactory.h"
 #endif
@@ -121,8 +130,11 @@ namespace OIV
     {
 
 #ifdef _MSC_VER 
+     // Prefer Direct3D11 for windows.
+    #if OIV_BUILD_RENDERER_D3D11 == 1
+            return D3D11RendererFactory::Create();
     // Prefer Direct3D11 for windows.
-    #if OIV_BUILD_RENDERER_OGRE == 1
+    #elif OIV_BUILD_RENDERER_OGRE == 1
         return OgreRendererFactory::Create();
     #elif  OIV_BUILD_RENDERER_GL == 1
         return GLRendererFactory::Create();
@@ -285,7 +297,6 @@ namespace OIV
         Refresh();
         return 0;
     }
-
 #pragma endregion
 
 }

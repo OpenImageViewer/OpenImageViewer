@@ -161,6 +161,8 @@ namespace OIV
             }
         }
 
+        
+        ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
 
         std::cout << "Program ended.";
     }

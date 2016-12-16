@@ -35,6 +35,7 @@ extern "C"
         , CE_TexelGrid
         , CMD_SetClientSize
         , CMD_GetNumTexelsInCanvas
+        , OIV_CMD_Destroy
     };
 
     
