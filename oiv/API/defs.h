@@ -18,6 +18,12 @@ extern "C"
     typedef char OIVCHAR;
 #endif
 
+    // Naming convention.
+    // Command identifier   - OIV_CMD_[CommandName].
+    // Command request      - OIV_CMD_[CommandName]Request.
+    // Command response     - OIV_CMD_[CommandName]Response.
+
+
 
 
     enum CommandExecute
@@ -90,9 +96,17 @@ extern "C"
         double y;
     };
 
-    struct CmdRequestFilter
+    enum OIV_Filter_type
     {
-        int filterLevel;
+          FT_None
+        , FT_Linear
+        , FT_Lanczos3
+        , FT_Count
+    };
+
+    struct OIV_CMD_Filter_Request
+    {
+        OIV_Filter_type filterType;
     };
 
     struct CmdDataZoom

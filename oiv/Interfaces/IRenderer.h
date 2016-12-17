@@ -1,6 +1,7 @@
 #pragma once
 #include "Image/Image.h"
 #include "../ViewParameters.h"
+#include "API/defs.h"
 
 namespace OIV
 {
@@ -11,7 +12,7 @@ namespace OIV
         virtual int SetImage(const ImageSharedPtr image) = 0;
         virtual int SetViewParams(const ViewParameters& viewParams) = 0;
         virtual int Redraw() = 0;
-        virtual int SetFilterLevel(int filterLevel) = 0;
+        virtual int SetFilterLevel(OIV_Filter_type filterType) = 0;
         virtual ~IRenderer() {}
     };
 

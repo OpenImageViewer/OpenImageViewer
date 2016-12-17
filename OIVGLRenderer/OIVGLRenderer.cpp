@@ -71,7 +71,7 @@ int OIV::OIVGLRenderer::Redraw()
     return 0;
 }
 
-int OIV::OIVGLRenderer::SetFilterLevel(int filterLevel)
+int OIV::OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
 {
     //TODO: implement
     return 0;

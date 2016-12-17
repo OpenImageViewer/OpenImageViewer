@@ -114,11 +114,11 @@ namespace OIV
             break;
 
         case CE_FilterLevel:
-            if (requestSize == sizeof(CmdRequestFilter))
+            if (requestSize == sizeof(OIV_CMD_Filter_Request))
             {
-                CmdRequestFilter* data = reinterpret_cast<CmdRequestFilter*>(requestData);
+                OIV_CMD_Filter_Request* data = reinterpret_cast<OIV_CMD_Filter_Request*>(requestData);
                 
-                if (sPictureRenderer->SetFilterLevel(data->filterLevel) != 0)
+                if (sPictureRenderer->SetFilterLevel(data->filterType) != 0)
                 {
                     result = RC_UknownError;
                 }

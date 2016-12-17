@@ -40,7 +40,7 @@ namespace OIV
         int Init(size_t container) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         int Redraw() override;
-        int SetFilterLevel(int filterLevel) override;
+        int SetFilterLevel(OIV_Filter_type filtertype) override;
         int SetImage(const ImageSharedPtr image) override;
     private:
         bool fIsParamsDirty;

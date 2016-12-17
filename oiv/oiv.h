@@ -37,7 +37,7 @@ namespace OIV
         virtual int SetParent(size_t handle) override;
         virtual int Refresh() override;
         virtual Image* GetImage() override;
-        virtual int SetFilterLevel(int filter_level) override;
+        virtual int SetFilterLevel(OIV_Filter_type filter_level) override;
         virtual int GetFileInformation(QryFileInformation& information) override;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
         virtual int SetTexelGrid(double gridSize) override;

@@ -230,6 +230,7 @@ namespace OIV
         // Create the vertex buffer.
         HRESULT res = d3dDevice->CreateBuffer(&bufferDesc, &InitData, &fVertexBuffer);
 
+        HandleDeviceError(res, "Could not create buffer");
 
         // create buffer input layout
 
@@ -240,15 +241,6 @@ namespace OIV
 
 
         d3dDevice->CreateInputLayout(ied, 1, fVertexShaderMicroCode->GetBufferPointer(), fVertexShaderMicroCode->GetBufferSize(), &fInputLayout);
-        
-        
-        
-        
-        
-        
-        
-        
-        
 
 
         //******** Create constant buffer *********/
@@ -288,7 +280,7 @@ namespace OIV
     }
 
 
-    void D3D11Renderer::CreateDefaultSamplerState(D3D11_SAMPLER_DESC &sampler )
+    void D3D11Renderer::CreateDefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
     {
         sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -331,7 +323,12 @@ namespace OIV
             throw std::logic_error(errorMessage);
     }
 
-    void D3D11Renderer::HandleDeviceError(HRESULT result, std::string errorMessage ) const
+    void D3D11Renderer::HandleDeviceError(HRESULT result, std::string&& errorMessage) const
+    {
+        HandleDeviceError(result, errorMessage);
+    }
+
+    void D3D11Renderer::HandleDeviceError(HRESULT result, const std::string& errorMessage ) const
     {
         if (SUCCEEDED(result) == false)
         {
@@ -411,8 +408,31 @@ namespace OIV
         return 0;
     }
 
-    int D3D11Renderer::SetFilterLevel(int filterLevel)
+    int D3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
     {
+        D3D11_SAMPLER_DESC desc;
+        CreateDefaultSamplerState(desc);
+
+        switch (filterType)
+        {
+        case FT_None:
+            desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+            break;
+        case FT_Linear:
+            desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+            break;
+        case FT_Lanczos3:
+            desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+            break;
+        default:
+            throw std::runtime_error("wrong or corrupted value");
+
+        }
+
+        SAFE_RELEASE(fSamplerState);
+        d3dDevice->CreateSamplerState(&desc, &fSamplerState);
+        d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), &fSamplerState);
+
         return 0;
     }
 

@@ -1,10 +1,12 @@
 #pragma once
 #include "../oiv/interfaces/IRenderer.h"
+#include "../oiv/API/defs.h"
 #include <d3d11.h>
 
 namespace OIV
 {
     const std::string BLANK_STRING;
+
     struct VS_CONSTANT_BUFFER
     {
         float uvScale[2];
@@ -27,7 +29,7 @@ namespace OIV
         int SetViewParams(const ViewParameters& viewParams) override;
         void UpdateGpuParameters();
         int Redraw() override;
-        int SetFilterLevel(int filterLevel) override;
+        int SetFilterLevel(OIV_Filter_type filterType) override;
         int SetImage(const ImageSharedPtr image) override;
         
 #pragma endregion
@@ -47,7 +49,8 @@ namespace OIV
         void Destroy();
 
         void HandleError(std::string errorMessage) const;
-        void HandleDeviceError(HRESULT result, std::string errorMessage = BLANK_STRING) const;
+        void HandleDeviceError(HRESULT result, std::string&& erroeMessage ) const;
+        void HandleDeviceError(HRESULT result, const std::string& errorMessage = BLANK_STRING) const;
         void HandleCompileError(ID3DBlob* errors) const;
         void SetDevicestate();
 #pragma endregion

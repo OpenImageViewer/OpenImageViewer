@@ -20,7 +20,7 @@ namespace OIV
         int SetImage(const ImageSharedPtr image) override;
         int Init(size_t container) override;
         int Redraw() override;
-        int SetFilterLevel(int filterLevel) override;
+        int SetFilterLevel(OIV_Filter_type filterType) override;
 
 #pragma endregion
 

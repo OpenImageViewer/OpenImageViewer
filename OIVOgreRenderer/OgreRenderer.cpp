@@ -249,7 +249,7 @@ namespace OIV
         return 0;
     }
 
-    int OgreRenderer::SetFilterLevel(int filterLevel)
+    int OgreRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
     {
         using namespace Ogre;
         switch (filterLevel)

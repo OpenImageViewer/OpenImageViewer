@@ -257,9 +257,10 @@ namespace OIV
 
     void TestApp::SetFilterLevel(int filterLevel)
     {
-        CmdRequestFilter filter;
+        
+        OIV_CMD_Filter_Request filter;
 
-        filter.filterLevel = filterLevel;
+        filter.filterType = static_cast<OIV_Filter_type>(filterLevel);
         if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()))
             fFilterlevel = filterLevel;
     }

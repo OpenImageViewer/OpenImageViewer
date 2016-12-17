@@ -231,13 +231,11 @@ namespace OIV
         return fOpenedImage.get();
     }
 
-    int OIV::SetFilterLevel(int filter_level)
+    int OIV::SetFilterLevel(OIV_Filter_type filter_level)
     {
-        int desiredFilterLevel = filter_level;
-        if (desiredFilterLevel >= 0 && desiredFilterLevel <= 1)
+        if (filter_level >= FT_None && filter_level <= FT_Count)
         {
-            fFilterLevel = desiredFilterLevel;
-            fRenderer->SetFilterLevel(fFilterLevel);
+            fRenderer->SetFilterLevel(filter_level);
             Refresh();
             return RC_Success;
         }

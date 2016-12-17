@@ -16,7 +16,7 @@ namespace OIV
         virtual int GetFileInformation(QryFileInformation& information) = 0;
 
         virtual Image* GetImage() = 0;
-        virtual int SetFilterLevel(int filter_level) = 0;
+        virtual int SetFilterLevel(OIV_Filter_type filter_level) = 0;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) = 0;
         virtual int SetTexelGrid(double gridSize) = 0;
         virtual int GetNumTexelsInCanvas(double &x, double &y) = 0;
