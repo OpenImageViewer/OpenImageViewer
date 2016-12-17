@@ -206,7 +206,7 @@ namespace OIV
         // Front face - clock wise
         float quad[] =
         {
-            -1,  1 // top left corner
+              -1,  1 // top left corner
             ,  1,  1 // top right corner
             , -1, -1 // bottom left corner
             ,  1, -1 // bottom right corner
