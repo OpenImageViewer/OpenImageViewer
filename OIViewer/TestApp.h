@@ -42,12 +42,13 @@ namespace OIV
         int fKeyboardPanSpeed;
         double fKeyboardZoomSpeed;
         double fIsGridEnabled;
-
+        std::wstring fOpenedFile;
         static const int cTimerID = 1500;
         int fCurrentFileIndex;
         ListFiles fListFiles;
         void UpdateFileInfo(const CmdResponseLoad& load_response);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
+        bool LoadFile(const uint8_t* buffer, const size_t size, std::string extension,bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
     };
 }
