@@ -449,11 +449,39 @@ namespace OIV
         D3D11_MAPPED_SUBRESOURCE mappedResource;
         ReCreateTexture(image->GetWidth(), image->GetHeight());
         d3dContext->Map(fTexture, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mappedResource);
+        
+        if (mappedResource.RowPitch == image->GetRowPitchInBytes())
+        {
+            // row pitch is the same, one copy operation.
+            memcpy(mappedResource.pData, image->GetBuffer(), image->GetTotalSizeOfImageTexels());
+        }
+        else if (mappedResource.RowPitch > image->GetRowPitchInBytes())
+        {
+            uint8_t* dest = (uint8_t*)mappedResource.pData;
+            size_t destRowPitch = mappedResource.RowPitch;;
+            uint8_t* src = (uint8_t*)image->GetBuffer();
+            
+            uint8_t* source = (uint8_t*)image->GetBuffer();
+            size_t bytesPerRowOfPixels =  image->GetBytesPerRowOfPixels();
+            for (size_t y = 0 ; y < image->GetHeight(); y++)
+            {
+                memcpy(dest, src, image->GetBytesPerRowOfPixels());
+                dest += destRowPitch;
+                src += bytesPerRowOfPixels;;
+            }
+                
+            // row pitch is greater than image row pitch, copy line by line
+        }
+        else
+        {
+            //bad state, throw.
+            HandleError("Unexpected row pitch");
+        }
 
-        if (mappedResource.RowPitch != image->GetWidth() * 4)
-            HandleError("Row pitch is not normalized");
 
-        memcpy(mappedResource.pData, image->GetBuffer(), image->GetTotalSizeOfImageTexels());
+            
+
+        
         d3dContext->Unmap(fTexture, static_cast<UINT>(0));
         
         d3dContext->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
