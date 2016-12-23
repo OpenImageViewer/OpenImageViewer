@@ -43,6 +43,8 @@
     <ClInclude Include="Plugins\PluginPng.h" />
     <ClInclude Include="Image\AxisAlignedTransform.h" />
     <ClInclude Include="NullRenderer.h" />
+    <ClInclude Include="Image\PixelUtil.h" />
+    <ClInclude Include="Image\ImageUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
