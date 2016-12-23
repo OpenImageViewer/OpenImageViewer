@@ -56,7 +56,9 @@ extern "C"
         , RC_NotInitialized
         , RC_AlreadyInitialized
         , RC_WrongParameters
+        , RC_PixelFormatConversionFailed
         , RC_UknownError = 0xFF
+        , RC_InternalError = 0xFF + 1
 
     };
 

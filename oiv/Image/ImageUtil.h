@@ -16,6 +16,8 @@ namespace OIV
             {
                 if (sourceImage->GetImageType() == IT_BYTE_RGB)
                 {
+                    //TODO: convert without normalization.
+                    sourceImage->Normalize();
                     uint8_t* dest = nullptr;
                     PixelUtil::RGB24ToRGBA32((uint8_t**)&dest, (uint8_t*)sourceImage->GetBuffer(), sourceImage->GetSizeInMemory());
                     ImageProperies properties = sourceImage->GetProperties();
@@ -28,8 +30,8 @@ namespace OIV
 
                 if (sourceImage->GetImageType() == IT_BYTE_BGR)
                 {
+                    sourceImage->Normalize();
                     uint8_t* dest = nullptr;
-
                     PixelUtil::BGR24ToRGBA32((uint8_t**)&dest, (uint8_t*)sourceImage->GetBuffer(), sourceImage->GetSizeInMemory());
                     ImageProperies properties = sourceImage->GetProperties();
                     properties.Type = IT_BYTE_RGBA;

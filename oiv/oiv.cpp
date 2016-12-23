@@ -184,11 +184,17 @@ namespace OIV
                 //TODO: send the renderer a copy of the converted image.
                 fOpenedImage = ImageUtil::ConvertToRGBA(fOpenedImage);
 
-
-                if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+                if (fOpenedImage.get() != nullptr)
                 {
-                    fScrollState.Reset(true);
-                    resultCode = RC_Success;
+                    if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+                    {
+                        fScrollState.Reset(true);
+                        resultCode = RC_Success;
+                    }
+                    else
+                    {
+                        resultCode = RC_PixelFormatConversionFailed;
+                    }
                 }
             }
             else

@@ -13,13 +13,12 @@ namespace OIV
     
     void Image::Normalize()
     {
-        if (GetBitsPerTexel() % 8 != 0)
+        if (GetIsByteAligned() == false)
             throw std::logic_error("Can not normalize a non byte aligned pixel format");
-        
-        size_t targetRowPitch = GetBytesPerRowOfPixels();
 
-        if (GetRowPitchInBytes() != targetRowPitch)
+        if (GetIsRowPitchNormalized() == false)
         {
+            size_t targetRowPitch = GetBytesPerRowOfPixels();
             uint8_t* newBuffer = new uint8_t[GetTotalSizeOfImageTexels()];
             for (size_t y = 0; y < GetHeight()  ;y++ )
                 for (size_t x = 0; x < targetRowPitch; x++)

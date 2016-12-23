@@ -39,6 +39,9 @@ namespace OIV
         size_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
         size_t GetNumberOfUniqueColors() const { throw std::exception("Not implemented"); }
 
+        size_t targetRowPitch = GetBytesPerRowOfPixels();
+
+        bool GetIsRowPitchNormalized() const {return GetRowPitchInBytes() == GetBytesPerRowOfPixels();}
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }
 
         ImageType GetImageType() const { return fProperies.Type; }
