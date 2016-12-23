@@ -8,6 +8,7 @@
 #include "External\easyexif\exif.h"
 #include "Interfaces\IRenderer.h"
 #include "NullRenderer.h"
+#include "Image/ImageUtil.h"
 
 
 //TODO: define the following using cmake
@@ -163,28 +164,39 @@ namespace OIV
     // IPictureViewr implementation
     int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
     {
-
+        ResultCode resultCode = RC_UknownError;
+        
         ImageSharedPtr image = ImageSharedPtr(fImageLoader.LoadImage(buffer, size, extension, onlyRegisteredExtension));
 
         if (image.get())
         {
-
             fOpenedImage.swap(image);
-            using namespace easyexif;
-            EXIFInfo exifInfo;
 
-            if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), size) == PARSE_EXIF_SUCCESS)
-                fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
-
-
-            if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+            if (fOpenedImage.get() != nullptr)
             {
-                fScrollState.Reset(true);
-                return RC_Success;
+
+                using namespace easyexif;
+                EXIFInfo exifInfo;
+
+                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), size) == PARSE_EXIF_SUCCESS)
+                    fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
+
+                //TODO: send the renderer a copy of the converted image.
+                fOpenedImage = ImageUtil::ConvertToRGBA(fOpenedImage);
+
+
+                if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+                {
+                    fScrollState.Reset(true);
+                    resultCode = RC_Success;
+                }
+            }
+            else
+            {
+                resultCode = RC_UnsupportedFormat;
             }
         }
-
-        return RC_UknownError;
+        return resultCode;
     }
 
     double OIV::Zoom(double percentage, int x, int y)

@@ -51,6 +51,7 @@ extern "C"
         , RC_InvalidParameters
         , RC_FileNotFound
         , RC_FileNotSupported
+        , RC_UnsupportedFormat
         , RC_WrongDataSize
         , RC_NotInitialized
         , RC_AlreadyInitialized
