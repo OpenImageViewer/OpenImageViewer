@@ -163,11 +163,9 @@ namespace OIV
             }
             );
 
-
-
             // Extract the file extension
             std::experimental::filesystem::path p = filePath;
-            string extension = p.extension().string();
+            extension = p.extension().string();
             if (extension.empty() == false)
                 extension = extension.substr(1, extension.length() - 1);
         }
