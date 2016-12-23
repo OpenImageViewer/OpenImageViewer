@@ -148,9 +148,12 @@ namespace OIV
         uint8_t* buffer = nullptr;
         
         
+        const bool isInitialFile = filePath.empty() == false && experimental::filesystem::exists(filePath);
+        
         std::thread t;
+        string extension;
         // Load file into memory in a secondary thread.
-        if (filePath.empty() == false)
+        if (isInitialFile == true)
         {
             t = std::thread
             (
@@ -160,15 +163,15 @@ namespace OIV
             }
             );
 
-        }
-         
-        // Extract the file extension
-        std::experimental::filesystem::path p = filePath;
-        string extension = p.extension().string();
-        if (extension.empty() == false)
-            extension = extension.substr(1, extension.length() - 1);
 
-        
+
+            // Extract the file extension
+            std::experimental::filesystem::path p = filePath;
+            string extension = p.extension().string();
+            if (extension.empty() == false)
+                extension = extension.substr(1, extension.length() - 1);
+        }
+
         
         // initialize the windowing system of the window
         HINSTANCE moduleHanle = GetModuleHandle(NULL);
@@ -182,10 +185,13 @@ namespace OIV
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
         UpdateWindowSize(NULL);
         
-        // wait for file to finish loading and 
-        t.join();
-        LoadFile(buffer, bufferSize,  extension, false);
-        
+
+        if (isInitialFile == true)
+        {
+            // wait for file to finish loading and 
+            t.join();
+            LoadFile(buffer, bufferSize, extension, false);
+        }
 
         //Set linear image filtering
         SetFilterLevel(FT_Linear);
