@@ -25,3 +25,7 @@
 /OIVGLRenderer/Release
 /OIVD3D11Renderer/Debug
 /OIVD3D11Renderer/Release/
+OIVD3D11Renderer/x64/
+OIVOgreRenderer/x64/
+oiv/x64/
+x64/
