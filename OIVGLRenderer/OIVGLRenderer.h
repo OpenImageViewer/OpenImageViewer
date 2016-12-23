@@ -1,21 +1,16 @@
 #pragma once
 #define GLEW_STATIC
-#include <windows.h>
+
 #include <GL/glew.h>
 #include <GL/GL.h>
 #include "GLRenderer/GLGpuProgram.h"
-#include "GLRenderer/Quad.h"
 
 #pragma comment(lib, "opengl32")
 //#pragma comment(lib, "glu32")
 
 
-#include "../../OpenImageViewer/OIViewer/win32/Win32Window.h"
-#include "../../OpenImageViewer/OIViewer/win32/Win32Helper.h"
-#include <functional>
 #include "GLContext.h"
 #include "../OIVUtil/FileHelper.h"
-#include "OIVGLRenderer.h"
 #include "GLRenderer/GLTexture.h"
 #include <Interfaces/IRenderer.h>
 

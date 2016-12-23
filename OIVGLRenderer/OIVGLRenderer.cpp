@@ -1,4 +1,5 @@
 #include "OIVGLRenderer.h"
+#include "GLRenderer/Quad.h"
 
 OIV::OIVGLRenderer::OIVGLRenderer()
 {
@@ -49,13 +50,13 @@ int OIV::OIVGLRenderer::Init(size_t container)
 
 int OIV::OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
 {
-    fUVScale[0] = viewParams.uvscale.x;
-    fUVScale[1] = viewParams.uvscale.y;
+    fUVScale[0] = static_cast<GLfloat>(viewParams.uvscale.x);
+    fUVScale[1] = static_cast<GLfloat>(viewParams.uvscale.y);
 
-    fUVffset[0] = viewParams.uvOffset.x;
-    fUVffset[1] = viewParams.uvOffset.y;
+    fUVffset[0] = static_cast<GLfloat>(viewParams.uvOffset.x);
+    fUVffset[1] = static_cast<GLfloat>(viewParams.uvOffset.y);
 
-    UpdateViewportSize(viewParams.uViewportSize.x, viewParams.uViewportSize.y);
+    UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
 
     
 
@@ -79,8 +80,8 @@ int OIV::OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
 
 int OIV::OIVGLRenderer::SetImage(const ImageSharedPtr image)
 {
-    fImageSize[0] = image->GetWidth();
-    fImageSize[1] = image->GetHeight();
+    fImageSize[0] = static_cast<GLfloat>(image->GetWidth());
+    fImageSize[1] = static_cast<GLfloat>(image->GetHeight());
     fIsParamsDirty = true;
     fTexture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
     return 0;
@@ -98,8 +99,8 @@ void OIV::OIVGLRenderer::UpdateViewportSize(int x, int y)
 {
     glViewport(0, 0, x, y);
     fIsParamsDirty = true;
-    fViewportSize[0] = x;
-    fViewportSize[1] = y;
+    fViewportSize[0] = static_cast<GLfloat>(x);
+    fViewportSize[1] = static_cast<GLfloat>(y);
     fIsParamsDirty = true;
 }
 

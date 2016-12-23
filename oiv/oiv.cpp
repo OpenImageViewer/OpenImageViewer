@@ -30,11 +30,6 @@
 #endif
 
 
-
-#if OIV_BUILD_RENDERER_OGRE == 1
-#include "../OIVOgreRenderer/OgreRendererFactory.h"
-#endif
-
 #if OIV_BUILD_RENDERER_GL == 1
 #include "../OIVGLRenderer/OIVGLRendererFactory.h"
 #endif

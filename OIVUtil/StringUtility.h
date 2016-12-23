@@ -52,7 +52,8 @@ public:
     {
         using namespace std;
         string extension;
-        int pos = str.find_last_of(".");
+        
+        string::size_type pos = str.find_last_of(".");
         if (pos != std::string::npos)
             extension = str.substr(pos + 1, str.length() - pos - 1);
 
@@ -63,7 +64,7 @@ public:
     {
         using namespace std;
         wstring extension;
-        int pos = str.find_last_of(L".");
+        string::size_type pos = str.find_last_of(L".");
         if (pos != std::wstring::npos)
             extension = str.substr(pos + 1, str.length() - pos - 1);
 

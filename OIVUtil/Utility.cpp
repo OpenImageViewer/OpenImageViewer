@@ -26,7 +26,7 @@ tstring Utility::GetExePath()
 tstring Utility::GetExeFolder()
 {
     tstring filePath = Utility::GetExePath();
-    int idx = filePath.find_last_of(TEXT("\\"));
+    tstring::size_type idx = filePath.find_last_of(TEXT("\\"));
     filePath.erase(idx, filePath.length() - idx);
     return filePath;
 }
