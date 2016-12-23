@@ -12,6 +12,7 @@ namespace OIV
 
     public:
         Image(const ImageProperies& propeerties,double loadTime);
+        void Normalize();
         virtual ~Image() { if (fProperies.ImageBuffer != nullptr) delete[]fProperies.ImageBuffer;}
 
         void Transform(AxisAlignedRTransform transform);

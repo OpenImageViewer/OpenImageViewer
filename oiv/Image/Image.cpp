@@ -16,6 +16,35 @@ namespace OIV
         fProperies = propeerties;
         fLoadTime = loadTime;
     }
+    
+    void Image::Normalize()
+    {
+        if (GetBitsPerTexel() % 8 != 0)
+            throw std::logic_error("Can not normalize a non byte aligned pixel format");
+        
+        size_t targetRowPitch = GetBytesPerRowOfPixels();
+
+        if (GetRowPitchInBytes() != targetRowPitch)
+        {
+            uint8_t* newBuffer = new uint8_t[GetTotalSizeOfImageTexels()];
+            for (size_t y = 0; y < GetHeight()  ;y++ )
+                for (size_t x = 0; x < targetRowPitch; x++)
+                {
+                    size_t srcIndex = y * GetRowPitchInBytes() + x;
+                    size_t dstIndex = y * targetRowPitch + x;
+                    newBuffer[dstIndex] = fProperies.ImageBuffer[srcIndex];
+
+                }
+                
+            delete[]fProperies.ImageBuffer;
+
+            fProperies.ImageBuffer = newBuffer;
+            fProperies.RowPitchInBytes = targetRowPitch;
+        }
+        // else already normalized.
+    }
+
+
 
     double Image::GetLoadTime() const
     {
