@@ -16,16 +16,11 @@
 /OIViewer/OIViewer.vcxproj.user
 /OIViewer/x64/Release
 /OIViewer/x64/Debug
-/OIVOgreRenderer/Debug
-/OIVOgreRenderer/Release
 /OIVGLRenderer/Debug
 /OIVGLRenderer/OIVGLRenderer.vcxproj.user
-/OIVOgreRenderer/OIVOgreRenderer.vcxproj.user
-/OIViewer/Ogre.log
 /OIVGLRenderer/Release
 /OIVD3D11Renderer/Debug
 /OIVD3D11Renderer/Release/
 OIVD3D11Renderer/x64/
-OIVOgreRenderer/x64/
 oiv/x64/
 x64/
