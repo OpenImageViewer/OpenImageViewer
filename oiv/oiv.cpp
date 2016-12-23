@@ -15,10 +15,6 @@
 // Allow null render for debug purpose, this flag is disabled by default.
 #define OIV_ALLOW_NULL_RENDERER 0
 
-// Build the Ogre renderer, currently implemented only for windows/Direct3D11.
-// This render will be deprecated and will be replaced by Direct3D11 renderer
-#define OIV_BUILD_RENDERER_OGRE 1
-
 // Build the OpenGL cross platform renderer, currently implemented only for windows.
 #define OIV_BUILD_RENDERER_GL 1
 
@@ -130,8 +126,6 @@ namespace OIV
     #if OIV_BUILD_RENDERER_D3D11 == 1
             return D3D11RendererFactory::Create();
     // Prefer Direct3D11 for windows.
-    #elif OIV_BUILD_RENDERER_OGRE == 1
-        return OgreRendererFactory::Create();
     #elif  OIV_BUILD_RENDERER_GL == 1
         return GLRendererFactory::Create();
     #elif OIV_ALLOW_NULL_RENDERER == 1
