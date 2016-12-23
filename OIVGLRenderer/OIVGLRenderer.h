@@ -14,7 +14,7 @@
 #include "../../OpenImageViewer/OIViewer/win32/Win32Helper.h"
 #include <functional>
 #include "GLContext.h"
-#include "GLRenderer/FileHelper.h"
+#include "../OIVUtil/FileHelper.h"
 #include "OIVGLRenderer.h"
 #include "GLRenderer/GLTexture.h"
 #include <Interfaces/IRenderer.h>

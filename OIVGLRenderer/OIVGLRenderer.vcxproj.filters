@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GLRenderer\FileHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GLRenderer\GlError.h">
       <Filter>Header Files</Filter>
     </ClInclude>

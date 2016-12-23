@@ -3,9 +3,10 @@
 #include <d3d10sdklayers.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include "../OIVGLRenderer/GLRenderer/FileHelper.h"
 #include <stdint.h>
 #include "../OIVUtil/Utility.h"
+#include "../OIVUtil/FileHelper.h"
+
 
 namespace OIV
 {

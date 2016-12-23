@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 namespace OIV
 {
@@ -17,15 +18,20 @@ namespace OIV
             return buffer.str();
         }
 
-        //static void ReadAllBytes(std::wstring filePath,size_t& size, void*& buffer)
-        //{
-        //    using namespace std;
-        //    ifstream t(filePath);
-        //    memorys
-        //    stringstream buffer;
-        //    buffer << t.rdbuf();
-        //    return buffer.str();
-        //}
+        static void ReadAllBytes(std::wstring filePath,size_t& size, uint8_t*& buffer)
+        {
+            using namespace std;
+            using namespace std::experimental;
+            size_t fileSize = filesystem::file_size(filePath);
+            
+            uint8_t* buf = new uint8_t[fileSize];
+            ifstream t(filePath, std::ios::binary);
+            t.read((char*)buf, fileSize);
+
+            buffer = buf;
+            size = fileSize;
+
+        }
 
     };
 }

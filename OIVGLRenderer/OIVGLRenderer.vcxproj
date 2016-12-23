@@ -128,7 +128,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GLContext.h" />
-    <ClInclude Include="GLRenderer\FileHelper.h" />
     <ClInclude Include="GLRenderer\GlError.h" />
     <ClInclude Include="GLRenderer\GLGpuProgram.h" />
     <ClInclude Include="GLRenderer\GLTexture.h" />
