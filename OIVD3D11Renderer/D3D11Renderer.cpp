@@ -6,11 +6,12 @@
 #include <stdint.h>
 #include "../OIVUtil/Utility.h"
 #include "../OIVUtil/FileHelper.h"
+#include <filesystem>
 
 
 namespace OIV
 {
-
+ 
 #define SAFE_RELEASE(x) {if (x) {x->Release(); x = nullptr; } }
 
     D3D11Renderer::D3D11Renderer()
@@ -74,7 +75,7 @@ namespace OIV
         d3dContext->ClearRenderTargetView(fRenderTargetView, white);
     }
 
-    void D3D11Renderer::CreateShaders()
+    void D3D11Renderer::CompileShaders()
     {
         using namespace std;
         //Create shader/*
@@ -118,11 +119,11 @@ namespace OIV
         if (SUCCEEDED(res) == false)
             HandleCompileError(errors);
 
-        d3dDevice->CreateVertexShader(microCode->GetBufferPointer(), microCode->GetBufferSize(), nullptr, &fVertexShader);
+        fVertexShaderData = Blob(microCode);
+        SAFE_RELEASE(microCode);
         SAFE_RELEASE(errors);
-        fVertexShaderMicroCode = microCode;
-        microCode = nullptr;
-        //SAFE_RELEASE(microCode);
+            
+      
 
 
         res =
@@ -143,15 +144,10 @@ namespace OIV
         if (SUCCEEDED(res) == false)
             HandleCompileError(errors);
 
-
-        d3dDevice->CreatePixelShader(microCode->GetBufferPointer(), microCode->GetBufferSize(), nullptr, &fFragmentShader);
-        
-        
-
+        fFragmentShaderData =  Blob(microCode);
         SAFE_RELEASE(errors);
-        //SAFE_RELEASE(microCode);
-        fFragmentShaderMicroCode = microCode;
-        microCode = nullptr;
+        SAFE_RELEASE(microCode);
+        
     }
 
     void D3D11Renderer::CreateDevice(HWND windowHandle)
@@ -240,9 +236,8 @@ namespace OIV
             { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
 
-
-        d3dDevice->CreateInputLayout(ied, 1, fVertexShaderMicroCode->GetBufferPointer(), fVertexShaderMicroCode->GetBufferSize(), &fInputLayout);
-
+    HandleDeviceError(d3dDevice->CreateInputLayout(ied, 1, fVertexShaderData.buffer , fVertexShaderData.size, &fInputLayout)
+    , "Could not crate Input layout");
 
         //******** Create constant buffer *********/
 
@@ -295,13 +290,28 @@ namespace OIV
         sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
     }
 
+    void D3D11Renderer::CreateShaders()
+    {
+        if (LoadShadersFromDisk() == false)
+        {
+            CompileShaders();
+            SaveShadersToDisk();
+        }
+
+
+        HandleDeviceError(d3dDevice->CreateVertexShader(fVertexShaderData.buffer, fVertexShaderData.size, nullptr, &fVertexShader)
+            , " could not create vertex shader from microcode");
+
+        HandleDeviceError(d3dDevice->CreatePixelShader(fFragmentShaderData.buffer, fFragmentShaderData.size, nullptr, &fFragmentShader)
+            , " could not create pixel shader from microcode");
+    }
+
     int D3D11Renderer::Init(size_t container)
     {
         CreateDevice(reinterpret_cast<HWND>(container));
         ResizeBackBuffer(1280, 800);
         CreateShaders();
         CreateBuffers();
-
         SetDevicestate();
         return 0;
     }
@@ -346,8 +356,8 @@ namespace OIV
         SAFE_RELEASE(fTexture);
 
         D3D11_TEXTURE2D_DESC desc = { 0 };
-        desc.Width = width;
-        desc.Height = height;
+        desc.Width = static_cast<UINT>(width);
+        desc.Height = static_cast<UINT>(height);
         desc.MipLevels = desc.ArraySize = 1;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         desc.SampleDesc.Count = 1;
@@ -498,9 +508,7 @@ namespace OIV
 
         // Destory GPU programs.
         SAFE_RELEASE(fVertexShader);
-        SAFE_RELEASE(fVertexShaderMicroCode);
         SAFE_RELEASE(fFragmentShader);
-        SAFE_RELEASE(fFragmentShaderMicroCode);
 
         // Destory buffers
         SAFE_RELEASE(fConstantBuffer);
@@ -519,5 +527,37 @@ namespace OIV
     D3D11Renderer::~D3D11Renderer()
     {
         Destroy();
+    }
+
+    bool D3D11Renderer::LoadShadersFromDisk()
+    {
+        std::wstring oivAppDataFolder = Utility::GetAppDataFolder();
+
+        std::experimental::filesystem::path p = oivAppDataFolder;
+        std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
+        std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
+        try
+        {
+            File::ReadAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
+            File::ReadAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+            return true;
+        }
+        catch (...)
+        { }
+
+        return false;
+    }
+
+    void D3D11Renderer::SaveShadersToDisk()
+    {
+        std::wstring oivAppDataFolder = Utility::GetAppDataFolder();
+        
+        std::experimental::filesystem::path p = oivAppDataFolder;
+        std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
+        std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
+        
+        File::WriteAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
+        File::WriteAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+        
     }
 }

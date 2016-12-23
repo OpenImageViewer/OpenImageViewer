@@ -42,7 +42,7 @@ tstring Utility::GetAppDataFolder()
         szPath)))
     {
         tstring result = szPath;
-        result += TEXT("\\UniOgre");
+        result += TEXT("\\OIV");
         EnsurePath(result);
         return result;
     }

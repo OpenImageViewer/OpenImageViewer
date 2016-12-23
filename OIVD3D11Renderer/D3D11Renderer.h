@@ -7,6 +7,25 @@ namespace OIV
 {
     const std::string BLANK_STRING;
 
+    class Blob
+    {
+    public:
+        Blob(ID3D10Blob* blob)
+        {
+            size = blob->GetBufferSize();
+            buffer = new uint8_t[size];
+            memcpy(buffer, blob->GetBufferPointer(), size);
+        }
+        size_t size = 0;
+        uint8_t* buffer = nullptr;
+        Blob()
+        {
+            if (buffer)
+                delete[] buffer;
+        }
+
+    };
+
     struct VS_CONSTANT_BUFFER
     {
         float uvScale[2];
@@ -25,6 +44,8 @@ namespace OIV
         
  #pragma region /****IRenderer Overrides************/
     public:
+        bool LoadShadersFromDisk();
+        void SaveShadersToDisk();
         int Init(size_t container) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         void UpdateGpuParameters();
@@ -37,9 +58,10 @@ namespace OIV
  #pragma region //**** Private methods*****/
     private: 
         void ResizeBackBuffer(int x, int y);
-        void CreateShaders();
+        void CompileShaders();
         void CreateDevice(HWND windowHandle);
         void CreateDefaultSamplerState(D3D11_SAMPLER_DESC& sampler);
+        void CreateShaders();
         void CreateBuffers();
         void UpdateGpuParams();
         void renderOneFrame();
@@ -57,6 +79,9 @@ namespace OIV
     private:
         bool fIsParamsDirty = true;
         bool fShowDeviceErrors = true;
+        Blob fVertexShaderData;
+        Blob fFragmentShaderData;
+
 #pragma region /* Direct3D111 resources*/
         VS_CONSTANT_BUFFER fShaderParameters = { 0 };
         D3D11_VIEWPORT fViewport = {0};
@@ -66,9 +91,7 @@ namespace OIV
         IDXGISwapChain* d3dSwapChain = nullptr;
         ID3D11Texture2D *fTexture = nullptr;
         ID3D11VertexShader* fVertexShader = nullptr;
-        ID3DBlob* fVertexShaderMicroCode = nullptr;
         ID3D11PixelShader* fFragmentShader = nullptr;
-        ID3DBlob* fFragmentShaderMicroCode = nullptr;
         ID3D11Buffer* fVertexBuffer = nullptr;
         ID3D11InputLayout* fInputLayout = nullptr;
         ID3D11RenderTargetView* fRenderTargetView = nullptr;

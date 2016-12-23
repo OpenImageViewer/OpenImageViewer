@@ -30,7 +30,15 @@ namespace OIV
 
             buffer = buf;
             size = fileSize;
+        }
 
+        static void WriteAllBytes(const std::wstring& filePath, const size_t size, const uint8_t* const buffer)
+        {
+            using namespace std;
+            using namespace std::experimental;
+
+            ofstream file(filePath, std::ios::binary);
+            file.write((char*)buffer, size);
         }
 
     };
