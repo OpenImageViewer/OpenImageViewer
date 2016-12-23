@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+
 namespace OIV
 {
     enum ImageType
@@ -28,6 +30,6 @@ namespace OIV
         size_t BitsPerTexel;
         ImageType Type;
         size_t NumSubImages;
-        void* ImageBuffer;
+        uint8_t* ImageBuffer;
     };
 }

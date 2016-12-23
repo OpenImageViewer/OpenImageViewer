@@ -1,16 +1,10 @@
-#include <Image/Image.h>
 #include <chrono>
-#include <stdint.h>
+#include <Image/Image.h>
+#include <Image/PixelUtil.h>
+#include "ImageUtil.h"
+
 namespace OIV
 {
-    struct alignas(1) BitTexel8                         { uint8_t X; };
-                                                                     
-    struct alignas(1) BitTexel16 : public BitTexel8     { uint8_t Y; };
-                                                                     
-    struct alignas(1) BitTexel24 : public BitTexel16    { uint8_t Z; };
-                                                                     
-    struct alignas(1) BitTexel32 : public BitTexel24    { uint8_t W; };
-
     Image::Image(const ImageProperies& propeerties, double loadTime)
     {
         fProperies = propeerties;
@@ -51,23 +45,25 @@ namespace OIV
         return fLoadTime;
     }
 
-    
-
     void Image::Transform(AxisAlignedRTransform transform)
     {
-        if (GetBitsPerTexel() % 8 != 0)
-            throw std::exception("Axis aligned transformation is allowed only on byte aligned texel size");
+        if (GetIsByteAligned() == false)
+            throw std::logic_error("OIV::Image::Transom works only with byte aligned image formats");
         
         if (transform != AAT_None)
         {
-            void* src = fProperies.ImageBuffer;
-            void* dest = new char*[GetTotalSizeOfImageTexels()];
-            const size_t bytePerTexels = GetBytesPerTexel();
+            const uint8_t* src = fProperies.ImageBuffer;
+            const size_t srcRowPitch = GetRowPitchInBytes();
+            const size_t bytesPerRowOfPixels = GetBytesPerRowOfPixels();
+            const size_t destRowPitch = bytesPerRowOfPixels;
+            const size_t bytesPerTexel = GetBytesPerTexel();
 
-            for (size_t x = 0; x < fProperies.Width; x++)
-                for (size_t y = 0; y < fProperies.Height; y++)
+            uint8_t* dest = new uint8_t[GetTotalSizeOfImageTexels()];
+
+            for (size_t y = 0; y < fProperies.Height; y++)
+                for (size_t x = 0; x < fProperies.Width; x++)
                 {
-                    int idxSrc = x + y * fProperies.Width;
+                    const uint8_t* srcRow = src + y * srcRowPitch;
                     int idxDest;
                     
                     switch (transform)
@@ -89,23 +85,25 @@ namespace OIV
                         break;
 
                     default:
-                        throw std::exception("Wrong or corrupted value");
+                        throw std::runtime_error("Wrong or corrupted value");
                     }
 
 
-                    switch (bytePerTexels)
+                    
+                    switch (bytesPerTexel)
                     {
                     case 1:
-                        CopyTexel <BitTexel8>(dest, idxDest, src, idxSrc);
+                        
+                        PixelUtil::CopyTexel <PixelUtil::BitTexel8>(dest, idxDest, srcRow, x);
                         break;
                     case 2:
-                        CopyTexel<BitTexel16>(dest, idxDest, src, idxSrc);
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel16>(dest, idxDest, srcRow, x);
                         break;
                     case 3:
-                        CopyTexel<BitTexel24>(dest, idxDest, src, idxSrc);
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel24>(dest, idxDest, srcRow, x);
                         break;
                     case 4:
-                        CopyTexel<BitTexel32>(dest, idxDest, src, idxSrc);
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(dest, idxDest, srcRow, x);
                         break;
                     default:
                         throw std::exception("Wrong or corrupted value");
@@ -115,7 +113,7 @@ namespace OIV
             if (transform == AAT_Rotate90CW || transform == AAT_Rotate90CCW)
                 std::swap(fProperies.Height, fProperies.Width);
 
-            fProperies.RowPitchInBytes = fProperies.Width * (fProperies.BitsPerTexel / 8);
+            fProperies.RowPitchInBytes = fProperies.Width * bytesPerTexel;
 
             delete[]fProperies.ImageBuffer;
             fProperies.ImageBuffer = dest;

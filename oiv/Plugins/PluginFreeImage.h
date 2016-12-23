@@ -44,7 +44,7 @@ namespace OIV
                 out_properties.NumSubImages = 0;
 
                 int imageSizeInMemory = header.biHeight * out_properties.RowPitchInBytes;
-                out_properties.ImageBuffer = new char*[imageSizeInMemory];
+                out_properties.ImageBuffer = new uint8_t[imageSizeInMemory];
                 memcpy_s(out_properties.ImageBuffer, imageSizeInMemory, FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
 
 

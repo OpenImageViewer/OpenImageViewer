@@ -48,7 +48,7 @@ namespace OIV
                         PNG_IMAGE_ROW_STRIDE(image), NULL/*colormap*/) != 0)
                 {
                     success = true;
-                    out_properties.ImageBuffer = buffer;
+                    out_properties.ImageBuffer = static_cast<uint8_t*>(buffer);
                 }
             }
             return success;

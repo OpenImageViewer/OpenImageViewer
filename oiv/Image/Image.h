@@ -18,6 +18,9 @@ namespace OIV
         void Transform(AxisAlignedRTransform transform);
 
         
+        //Internal methods
+        const ImageProperies& GetProperties() const { return fProperies; } 
+
 
         // Query methods
         double GetLoadTime() const;
@@ -26,7 +29,7 @@ namespace OIV
         size_t GetHeight() const { return fProperies.Height; }
         size_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
         size_t GetBitsPerTexel() const { return fProperies.BitsPerTexel; }
-        
+        size_t GetBytesPerRowOfPixels() const { return GetWidth() * GetBytesPerTexel(); }
         size_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
         size_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
         size_t GetSlicePitchInTexels() const { return GetRowPitchInTexels() * GetHeight(); }
@@ -35,14 +38,11 @@ namespace OIV
         size_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
         size_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
         size_t GetNumberOfUniqueColors() const { throw std::exception("Not implemented"); }
+
+        bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }
+
         ImageType GetImageType() const { return fProperies.Type; }
         
-        template <class BIT_TEXEL_TYPE>
-        __forceinline  void Image::CopyTexel(void* dest, const size_t idxDest, const void* src, const size_t idxSrc) const
-        {
-            reinterpret_cast<BIT_TEXEL_TYPE*>(dest)[idxDest] = reinterpret_cast<const  BIT_TEXEL_TYPE*>(src)[idxSrc];
-        }
-
     private:
          double fLoadTime;
     };
