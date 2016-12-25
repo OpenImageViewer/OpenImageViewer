@@ -1,22 +1,15 @@
 #pragma once
-#include <string>
+#include <filesystem>
 #include <windows.h>
-#include "Utility.h"
 namespace OIV
 {
     class FileMapping
     {
-        std::wstring fFilePath;
-        size_t mSize;
-        HANDLE mHandleMMF;
-        HANDLE mHandleFile;
-        void *mView;
+        
     public:
 
-        FileMapping(std::wstring filePath)
+        FileMapping(std::wstring filePath) : fFilePath(filePath)
         {
-            fFilePath = filePath;
-            mView = mHandleMMF = mHandleFile = nullptr;
             Open();
         }
 
@@ -29,23 +22,6 @@ namespace OIV
         {
             Close();
             OpenImp();
-
-        }
-
-        void OpenImp()
-        {
-            mHandleFile = CreateFileW(fFilePath.c_str(), GENERIC_READ,
-                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL, NULL);
-
-            if (mHandleFile)
-            {
-                mHandleMMF = CreateFileMapping(mHandleFile, NULL, PAGE_READONLY, 0, 0, NULL);
-                if (mHandleMMF != NULL)
-                    mView = MapViewOfFile(mHandleMMF, FILE_MAP_READ, 0, 0, 0);
-            }
-
-            mSize = Utility::GetFileSize(fFilePath.c_str());
         }
 
         void Close()
@@ -62,15 +38,38 @@ namespace OIV
             mView = mHandleMMF = mHandleFile = nullptr;
         }
 
-        void* GetBuffer()
+        void* GetBuffer() const
         {
             return mView;
         }
-
-        size_t GetSize()
+        size_t GetSize() const
         {
             return mSize;
         }
 
+    private: //methods
+
+        void OpenImp()
+        {
+            mHandleFile = CreateFileW(fFilePath.c_str(), GENERIC_READ,
+                FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL, nullptr);
+
+            if (mHandleFile)
+            {
+                mHandleMMF = CreateFileMapping(mHandleFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
+                if (mHandleMMF != nullptr)
+                    mView = MapViewOfFile(mHandleMMF, FILE_MAP_READ, 0, 0, 0);
+            }
+
+            mSize = std::experimental::filesystem::file_size(fFilePath);
+        }
+
+    private: // member fields
+        const std::wstring fFilePath;
+        size_t mSize = 0;
+        HANDLE mHandleMMF = nullptr;
+        HANDLE mHandleFile = nullptr;
+        void *mView = nullptr;
     };
 }
