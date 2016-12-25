@@ -124,13 +124,14 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;c:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;legacy_stdio_definitions.lib;D3D11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>

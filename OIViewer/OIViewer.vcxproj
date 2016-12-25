@@ -22,7 +22,7 @@
     <ProjectGuid>{AAD4EC22-7E08-41B5-9CCB-FF1F15A6C799}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>OIViewer</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
