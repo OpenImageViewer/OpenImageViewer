@@ -62,8 +62,8 @@ extern "C"
 
     };
 
-#pragma pack(push, 1) 
     //-------Command Structs-------------------------
+#pragma pack(1)
 
     struct CmdNull
     {
@@ -122,9 +122,9 @@ extern "C"
     struct CmdResponseLoad
     {
         double loadTime;
-        int width;
-        int height;
-        int bpp;
+        uint32_t width;
+        uint32_t height;
+        uint8_t bpp;
     };
 
     struct CmdDataPan
@@ -147,27 +147,23 @@ extern "C"
         size_t parentHandle;
     };
 
-  /*  struct CmdDataClientMetrics
-    {
-        int width;
-        int height;
-    };*/
+  
 
     //-------Query Structs-------------------------
 
 
     struct QryFileInformation
     {
-        int width;
-        int height;
-        int bitsPerPixel;
-        int numMipMaps;
-        int numChannels;
-        int imageDataSize;
-        int rowPitchInBytes;
-        int hasTransparency;
+        size_t width;
+        size_t height;
+        size_t bitsPerPixel;
+        size_t numMipMaps;
+        size_t numChannels;
+        size_t imageDataSize;
+        size_t rowPitchInBytes;
+        size_t hasTransparency;
     };
 
-#pragma pack(pop) 
+#pragma pack() 
 
 }

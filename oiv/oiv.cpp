@@ -55,7 +55,7 @@ namespace OIV
     #pragma region ZoomScrollStateListener
     Vector2 OIV::GetImageSize()
     {
-        return fOpenedImage.get() ? Vector2(fOpenedImage->GetWidth(), fOpenedImage->GetHeight())
+        return fOpenedImage.get() ? Vector2(static_cast<double>(fOpenedImage->GetWidth()), static_cast<double>(fOpenedImage->GetHeight()))
             : Vector2::ZERO;
     }
 
@@ -167,7 +167,7 @@ namespace OIV
                 using namespace easyexif;
                 EXIFInfo exifInfo;
 
-                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), size) == PARSE_EXIF_SUCCESS)
+                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
                     fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
 
                 //TODO: send the renderer a copy of the converted image.

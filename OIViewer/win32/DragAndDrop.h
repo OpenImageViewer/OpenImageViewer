@@ -1,6 +1,5 @@
 #pragma once
 #include <shlobj.h>
-#include <shellapi.h>
 #include "Event.h"
 
 namespace OIV

@@ -25,11 +25,11 @@ int mainFunction(int argc, const wchar_t** argv)
 
 #ifdef WIN32
 
-int CALLBACK WinMain(
-    _In_ HINSTANCE hInstance,
-    _In_ HINSTANCE hPrevInstance,
-    _In_ LPSTR     lpCmdLine,
-    _In_ int       nCmdShow
+int WinMain(
+         HINSTANCE hInstance,
+         HINSTANCE hPrevInstance,
+         LPSTR     lpCmdLine,
+         int       nCmdShow
 )
 {
     int nArgs;

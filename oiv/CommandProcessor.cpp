@@ -95,9 +95,9 @@ namespace OIV
                 {
                     CmdResponseLoad* loadResponse = reinterpret_cast<CmdResponseLoad*>(responseData);
                     Image* image = sPictureRenderer->GetImage();
-                    loadResponse->width = image->GetWidth();
-                    loadResponse->height = image->GetHeight();
-                    loadResponse->bpp = image->GetBitsPerTexel();
+                    loadResponse->width = static_cast<uint32_t>(image->GetWidth());
+                    loadResponse->height = static_cast<uint32_t>(image->GetHeight());
+                    loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());
                     loadResponse->loadTime = image->GetLoadTime();
                 }
 

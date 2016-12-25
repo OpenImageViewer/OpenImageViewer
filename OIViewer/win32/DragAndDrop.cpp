@@ -11,8 +11,10 @@ namespace OIV
         {
             if (SUCCEEDED(OleInitialize(NULL)))
             {
-                if (SUCCEEDED(RegisterDragDrop(fParentWindow.GetHandle(), this))); 
+                if (SUCCEEDED(RegisterDragDrop(fParentWindow.GetHandle(), this)))
+                {
                     //Logger::Log("Drag and drop target initialized");
+                }
             }
 
 

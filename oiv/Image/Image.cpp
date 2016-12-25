@@ -63,12 +63,12 @@ namespace OIV
                 for (size_t x = 0; x < fProperies.Width; x++)
                 {
                     const uint8_t* srcRow = src + y * srcRowPitch;
-                    int idxDest;
+                    size_t idxDest;
                     
                     switch (transform)
                     {
                     case AAT_Rotate180:
-                        idxDest = -x + fProperies.Width - 1 + (-y + fProperies.Height - 1) * fProperies.Width;
+                        idxDest =  fProperies.Width - x -  1 + (fProperies.Height - y - 1) * fProperies.Width;
                         break;
                     case AAT_Rotate90CW:
                         idxDest = (fProperies.Height - 1 - y) + x * fProperies.Height;
@@ -77,7 +77,7 @@ namespace OIV
                         idxDest = y + (fProperies.Width - 1 - x) * fProperies.Height;
                         break;
                     case AAT_FlipVertical:
-                        idxDest = x + (-y + fProperies.Height - 1) * fProperies.Width;
+                        idxDest = x + (fProperies.Height - y - 1) * fProperies.Width;
                         break;
                     case AAT_FlipHorizontal:
                         idxDest = (fProperies.Width - 1 - x) + y * fProperies.Width;

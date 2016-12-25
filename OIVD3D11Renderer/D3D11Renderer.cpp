@@ -65,7 +65,7 @@ namespace OIV
     {
         SAFE_RELEASE(fRenderTargetView);
         d3dSwapChain->ResizeBuffers(1, x, y, DXGI_FORMAT_UNKNOWN, static_cast<UINT>(0));
-        ID3D11Texture2D* backbuffer;
+        ID3D11Texture2D* backbuffer = nullptr;
         d3dSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backbuffer));
         // create a render target pointing to the back buffer
         d3dDevice->CreateRenderTargetView(backbuffer, nullptr, &fRenderTargetView);

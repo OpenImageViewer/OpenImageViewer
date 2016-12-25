@@ -109,7 +109,7 @@ namespace OIV
         fCurrentFileIndex = -1;
 
         std::wstring workingFolder;
-        int idx = filePath.find_last_of(L"\\");
+        std::wstring::size_type idx = filePath.find_last_of(L"\\");
 
         if (idx > -1)
         {
@@ -221,9 +221,9 @@ namespace OIV
         if (fListFiles.empty())
             return;
 
-        int totalFiles = fListFiles.size();
+        ListFiles::size_type totalFiles = fListFiles.size();
 
-        int fileIndex = fCurrentFileIndex ;
+        ListFiles::size_type fileIndex = fCurrentFileIndex ;
 
 
         int sign;

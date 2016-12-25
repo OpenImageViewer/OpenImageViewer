@@ -14,7 +14,7 @@ tstring Utility::GetExePath()
     if (hModule != NULL)
     {
         // When passing NULL to GetModuleHandle, it returns handle of exe itself
-        GetModuleFileName(hModule, ownPth, (sizeof(ownPth)));
+        GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0])));
 
         // Use above module handle to get the path using GetModuleFileName()
         return tstring(ownPth);
