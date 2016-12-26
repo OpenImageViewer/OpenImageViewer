@@ -66,7 +66,6 @@ namespace OIV
         void UpdateGpuParams();
         void renderOneFrame();
         void UpdateViewportSize(int x, int y);
-        void ReCreateTexture(size_t width, size_t height);
         void PrepareResources();
         void Destroy();
 

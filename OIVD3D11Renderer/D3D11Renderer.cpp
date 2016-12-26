@@ -352,39 +352,6 @@ namespace OIV
         }
     }
 
-    void D3D11Renderer::ReCreateTexture(size_t width, size_t height)
-    {
-        SAFE_RELEASE(fTextureShaderResourceView);
-        SAFE_RELEASE(fTexture);
-
-        D3D11_TEXTURE2D_DESC desc = { 0 };
-        desc.Width = static_cast<UINT>(width);
-        desc.Height = static_cast<UINT>(height);
-        desc.MipLevels = desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_DYNAMIC;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        desc.MiscFlags = 0;
-
-        HRESULT res = d3dDevice->CreateTexture2D(&desc, nullptr, &fTexture);
-
-        HandleDeviceError(res, "Can not create texture");
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
-        memset(&viewDesc, 0, sizeof viewDesc);
-        
-        viewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        viewDesc.Texture2D.MostDetailedMip = 0;
-        viewDesc.Texture2D.MipLevels = 1;
-        viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        
-        res = d3dDevice->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView);
-        
-        HandleDeviceError(res, "Can not create 'Shader resource view'");
-    }
-
     int D3D11Renderer::SetViewParams(const ViewParameters & viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
@@ -458,46 +425,45 @@ namespace OIV
         fShaderParameters.uImageSize[1] = static_cast<float>(image->GetHeight());
         fIsParamsDirty = true;
         
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
-        ReCreateTexture(image->GetWidth(), image->GetHeight());
-        d3dContext->Map(fTexture, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mappedResource);
-        
-        if (mappedResource.RowPitch == image->GetRowPitchInBytes())
-        {
-            // row pitch is the same, one copy operation.
-            memcpy(mappedResource.pData, image->GetBuffer(), image->GetTotalSizeOfImageTexels());
-        }
-        else if (mappedResource.RowPitch > image->GetRowPitchInBytes())
-        {
-            uint8_t* dest = (uint8_t*)mappedResource.pData;
-            size_t destRowPitch = mappedResource.RowPitch;;
-            uint8_t* src = (uint8_t*)image->GetBuffer();
-            
-            uint8_t* source = (uint8_t*)image->GetBuffer();
-            size_t bytesPerRowOfPixels =  image->GetBytesPerRowOfPixels();
-            for (size_t y = 0 ; y < image->GetHeight(); y++)
-            {
-                memcpy(dest, src, image->GetBytesPerRowOfPixels());
-                dest += destRowPitch;
-                src += bytesPerRowOfPixels;;
-            }
-                
-            // row pitch is greater than image row pitch, copy line by line
-        }
-        else
-        {
-            //bad state, throw.
-            HandleError("Unexpected row pitch");
-        }
 
+        SAFE_RELEASE(fTextureShaderResourceView);
+        SAFE_RELEASE(fTexture);
 
-            
+        D3D11_TEXTURE2D_DESC desc = { 0 };
+        desc.Width = static_cast<UINT>(image->GetWidth());
+        desc.Height = static_cast<UINT>(image->GetHeight());
+        desc.MipLevels = desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_IMMUTABLE;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.CPUAccessFlags = static_cast<UINT>(0);
+        desc.MiscFlags = 0;
+        const D3D11_SUBRESOURCE_DATA subResourceData = {
+                                                      const_cast<void*>(image->GetBuffer())
+                                                    , static_cast<UINT>(image->GetRowPitchInBytes())
+                                                    , static_cast<UINT>(0) };
 
         
-        d3dContext->Unmap(fTexture, static_cast<UINT>(0));
+
+        HandleDeviceError(d3dDevice->CreateTexture2D(&desc, &subResourceData, &fTexture)
+            , "Can not create texture");
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
+        memset(&viewDesc, 0, sizeof viewDesc);
+
+        viewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        viewDesc.Texture2D.MostDetailedMip = 0;
+        viewDesc.Texture2D.MipLevels = 1;
+        viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+
+        
+
+        HandleDeviceError(d3dDevice->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView)
+            , "Can not create 'Shader resource view'");
         
         d3dContext->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
-       
+
         return 0;
     }
 
