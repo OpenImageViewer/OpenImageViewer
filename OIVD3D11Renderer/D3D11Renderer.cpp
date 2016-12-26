@@ -175,6 +175,8 @@ namespace OIV
         scd.BufferDesc.RefreshRate.Denominator = 1;
 
         UINT createFlags = 0;
+        createFlags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
+
 #ifdef _DEBUG
         createFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
