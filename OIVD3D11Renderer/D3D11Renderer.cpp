@@ -421,6 +421,8 @@ namespace OIV
         if (image->GetImageType() != IT_BYTE_RGBA)
             HandleError("Direct3D11 renderer supports only RGBA pixel format");
 
+        DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+
         fShaderParameters.uImageSize[0] = static_cast<float>(image->GetWidth());
         fShaderParameters.uImageSize[1] = static_cast<float>(image->GetHeight());
         fIsParamsDirty = true;
@@ -433,7 +435,7 @@ namespace OIV
         desc.Width = static_cast<UINT>(image->GetWidth());
         desc.Height = static_cast<UINT>(image->GetHeight());
         desc.MipLevels = desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.Format = textureFormat;
         desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_IMMUTABLE;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -452,7 +454,7 @@ namespace OIV
         D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
         memset(&viewDesc, 0, sizeof viewDesc);
 
-        viewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        viewDesc.Format = textureFormat;
         viewDesc.Texture2D.MostDetailedMip = 0;
         viewDesc.Texture2D.MipLevels = 1;
         viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;

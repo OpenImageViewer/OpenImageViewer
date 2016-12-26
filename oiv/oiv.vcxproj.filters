@@ -11,6 +11,7 @@
     <ClCompile Include="Vector2.cpp" />
     <ClCompile Include="Image\Image.cpp" />
     <ClCompile Include="Image\ImageProperties.cpp" />
+    <ClCompile Include="Image\ImageUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
