@@ -27,6 +27,53 @@ namespace OIV
 
         }
 
+        static void Convert(PixelConvertFunc convertFunc, uint8_t** i_dest, uint8_t* i_src, size_t texelSizeinBits, size_t numTexels)
+        {
+            //TODO: fine tune the minimum size required to open helper threads
+            const size_t MegaBytesPerThread = 6;
+            //TODO: choose max threads 
+            const size_t maxThreads = 5;
+
+
+            const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
+            const size_t texelsPerThread = bytesPerThread / (texelSizeinBits / 8);
+            static std::thread threads[maxThreads];
+            const uint8_t totalThreads = std::min(maxThreads, numTexels / texelsPerThread);
+            *i_dest = new uint8_t[numTexels * 4];
+            uint8_t* dest = *i_dest;
+            if (totalThreads > 0)
+            {
+                const size_t segmentSize = numTexels / (totalThreads + 1);
+
+                for (uint8_t threadNum = 0; threadNum < totalThreads; threadNum++)
+                {
+                    threads[threadNum] = std::thread
+                    (
+                        [convertFunc, threadNum, i_src, dest, segmentSize]()
+                    {
+
+                        const size_t start = threadNum * segmentSize;
+                        const size_t end = start + segmentSize;
+                        convertFunc(dest, i_src, start, end);
+                    }
+                    );
+                }
+
+                const size_t start = (totalThreads)* segmentSize;
+                const size_t end = start + segmentSize;
+                convertFunc(dest, i_src, start, end);
+
+                for (uint8_t i = 0; i < totalThreads; i++)
+                    threads[i].join();
+            }
+            else
+            {
+                // single threaded implementation.
+                convertFunc(dest, i_src, 0, numTexels);
+            }
+
+        }
+
         static void BGR24ToRGBA32(uint8_t* i_dest, uint8_t* i_src, std::size_t start, std::size_t end)
         {
             uint32_t* dst = (uint32_t*)i_dest;
