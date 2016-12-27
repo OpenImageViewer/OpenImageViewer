@@ -136,7 +136,7 @@ namespace OIV
         using namespace std::placeholders;
 
         std::size_t bufferSize = 0;
-        uint8_t* buffer = nullptr;
+        unique_ptr<uint8_t> buffer;
         
         
         const bool isInitialFile = filePath.empty() == false && experimental::filesystem::exists(filePath);
@@ -150,9 +150,10 @@ namespace OIV
             (
                 [&filePath, &buffer, &bufferSize]()
             {
-                OIV::File::ReadAllBytes(filePath, bufferSize, buffer);
-            }
-            );
+                uint8_t* tmp = nullptr;
+                File::ReadAllBytes(filePath, bufferSize, tmp);
+                buffer = unique_ptr<uint8_t>(tmp);
+            });
 
             // Extract the file extension
             std::experimental::filesystem::path p = filePath;
@@ -168,7 +169,7 @@ namespace OIV
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
         
 
-        //Init OIV
+        // Init OIV
         CmdDataInit init;
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
@@ -179,7 +180,7 @@ namespace OIV
         {
             // wait for file to finish loading and 
             t.join();
-            LoadFile(buffer, bufferSize, extension, false);
+            LoadFile(buffer.get(), bufferSize, extension, false);
         }
 
         //Set linear image filtering
