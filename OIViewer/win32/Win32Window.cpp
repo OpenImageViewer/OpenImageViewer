@@ -250,7 +250,7 @@ namespace OIV
                 MessageBox(nullptr,
                     _T("Call to RegisterClassEx failed!"),
                     _T("Win32 Guided Tour"),
-                    nullptr);
+                    MB_OK);
 
                 return 1;
             }
@@ -279,7 +279,7 @@ namespace OIV
                 MessageBox(nullptr,
                     _T("Call to CreateWindow failed!"),
                     _T("Win32 Guided Tour"),
-                    nullptr);
+                    MB_OK);
 
                 return 1;
             }

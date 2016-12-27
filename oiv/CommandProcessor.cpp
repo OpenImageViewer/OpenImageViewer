@@ -36,7 +36,6 @@ namespace OIV
 					const CmdDataInit* dataInit = reinterpret_cast<const CmdDataInit*>(requestData);
 					sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
                     sPictureRenderer->Init();
-					Logger::Log(_T("Render engine started."));
                 }
                 else
                     result = RC_WrongDataSize;
