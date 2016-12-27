@@ -25,6 +25,7 @@ namespace OIV
         // Query methods
         double GetLoadTime() const;
         const void* GetBuffer() const { return fProperies.ImageBuffer; }
+
         std::size_t GetWidth() const { return fProperies.Width; }
         std::size_t GetHeight() const { return fProperies.Height; }
         std::size_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
@@ -38,8 +39,6 @@ namespace OIV
         std::size_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
         std::size_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
         std::size_t GetNumberOfUniqueColors() const { throw std::exception("Not implemented"); }
-
-        std::size_t targetRowPitch = GetBytesPerRowOfPixels();
 
         bool GetIsRowPitchNormalized() const {return GetRowPitchInBytes() == GetBytesPerRowOfPixels();}
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }

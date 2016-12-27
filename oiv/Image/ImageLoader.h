@@ -5,6 +5,7 @@
 #include <chrono>
 #include <Utility.h>
 #include <StringUtility.h>
+#include "StopWatch.h"
 
 
 namespace OIV
@@ -75,13 +76,16 @@ namespace OIV
                 // Iterate all plugins till load succeeds.
                 for (auto plugin : fListPlugins)
                 {
-                    auto start = std::chrono::high_resolution_clock::now();
+                    StopWatch stopWatch;
+                    stopWatch.Start();
                     if (plugin->LoadImage(buffer, size, props))
                     {
-                        auto end = std::chrono::high_resolution_clock::now();
+                        stopWatch.Stop();
+                        
                         if ((props.IsInitialized() == false))
                             throw std::exception("Image properties are not completely initialized");
-                        loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
+                        
+                        loadTime = stopWatch.GetElapsedMicroSeconds();
                         loadedImage = new Image(props, loadTime);
                     }
                 }

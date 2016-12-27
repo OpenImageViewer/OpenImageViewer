@@ -66,7 +66,7 @@ namespace OIV
         std::string extension = StringUtility::ToAString(StringUtility::GetFileExtension(filePath));
 
 
-        if (LoadFile((uint8_t*)buffer, size, extension, onlyRegisteredExtension) == true)
+        if (buffer != nullptr && LoadFile((uint8_t*)buffer, size, extension, onlyRegisteredExtension) == true)
         {
                 /*QryFileInformation fileInfo;
                 ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/

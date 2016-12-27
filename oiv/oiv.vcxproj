@@ -196,6 +196,7 @@
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="Image\Image.cpp" />
     <ClCompile Include="Image\ImageProperties.cpp" />
+    <ClCompile Include="Image\ImageUtil.cpp" />
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="Vector2.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
