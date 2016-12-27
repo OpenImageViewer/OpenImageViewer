@@ -18,11 +18,11 @@ namespace OIV
             return buffer.str();
         }
 
-        static void ReadAllBytes(std::wstring filePath,size_t& size, uint8_t*& buffer)
+        static void ReadAllBytes(std::wstring filePath,std::size_t& size, uint8_t*& buffer)
         {
             using namespace std;
             using namespace std::experimental;
-            size_t fileSize = filesystem::file_size(filePath);
+            std::size_t fileSize = filesystem::file_size(filePath);
             
             uint8_t* buf = new uint8_t[fileSize];
             ifstream t(filePath, std::ios::binary);
@@ -32,7 +32,7 @@ namespace OIV
             size = fileSize;
         }
 
-        static void WriteAllBytes(const std::wstring& filePath, const size_t size, const uint8_t* const buffer)
+        static void WriteAllBytes(const std::wstring& filePath, const std::size_t size, const uint8_t* const buffer)
         {
             using namespace std;
             using namespace std::experimental;

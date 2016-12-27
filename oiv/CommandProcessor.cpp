@@ -12,7 +12,7 @@ namespace OIV
      
      std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
 
-    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData)
+	ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
     {
 
         if (command != CE_Init && IsInitialized() == false)
@@ -33,10 +33,10 @@ namespace OIV
                     // TODO: add width and height.
                     //sPictureRenderer->SetParentParamaters()
 
-                    CmdDataInit* dataInit = reinterpret_cast<CmdDataInit*>(requestData);
-                    sPictureRenderer->SetParent(static_cast<size_t>(dataInit->parentHandle));
+					const CmdDataInit* dataInit = reinterpret_cast<const CmdDataInit*>(requestData);
+					sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
                     sPictureRenderer->Init();
-                    Log(_T("Render engine started."));
+					Logger::Log(_T("Render engine started."));
                 }
                 else
                     result = RC_WrongDataSize;
@@ -49,7 +49,7 @@ namespace OIV
         case CE_Zoom:
             if (requestSize == sizeof(CmdDataZoom))
             {
-                CmdDataZoom* dataZoom = reinterpret_cast<CmdDataZoom*>(requestData);
+				const CmdDataZoom* dataZoom = reinterpret_cast<const CmdDataZoom*>(requestData);
                 sPictureRenderer->Zoom(dataZoom->amount, dataZoom->zoomX, dataZoom->zoomY);
 
             }
@@ -61,7 +61,7 @@ namespace OIV
         case CE_Pan:
             if (requestSize == sizeof(CmdDataPan))
             {
-                CmdDataPan* dataPan = reinterpret_cast<CmdDataPan*>(requestData);
+				const CmdDataPan* dataPan = reinterpret_cast<const CmdDataPan*>(requestData);
                 sPictureRenderer->Pan(dataPan->x, dataPan->y);
 
             }
@@ -74,12 +74,13 @@ namespace OIV
         case CE_LoadFile:
             if (requestSize == sizeof(CmdDataLoadFile))
             {
-                CmdDataLoadFile* dataLoadFile = reinterpret_cast<CmdDataLoadFile*>(requestData);
+				CmdDataLoadFile* dataLoadFile = const_cast<CmdDataLoadFile*>(reinterpret_cast<const CmdDataLoadFile*>(requestData));
 
-                if (dataLoadFile->buffer != NULL && dataLoadFile->length > 0)
+				if (dataLoadFile->buffer != nullptr && dataLoadFile->length > 0)
                 {
                     result = static_cast<ResultCode>(
-                        sPictureRenderer->LoadFile(dataLoadFile->buffer
+						sPictureRenderer->LoadFile(
+							dataLoadFile->buffer
                             , dataLoadFile->length
                             , dataLoadFile->extension
                             , dataLoadFile->onlyRegisteredExtension));
@@ -116,7 +117,7 @@ namespace OIV
         case CE_FilterLevel:
             if (requestSize == sizeof(OIV_CMD_Filter_Request))
             {
-                OIV_CMD_Filter_Request* data = reinterpret_cast<OIV_CMD_Filter_Request*>(requestData);
+				const OIV_CMD_Filter_Request* data = reinterpret_cast<const OIV_CMD_Filter_Request*>(requestData);
                 
                 if (sPictureRenderer->SetFilterLevel(data->filterType) != 0)
                 {
@@ -151,7 +152,7 @@ namespace OIV
         case CE_TexelAtMousePos:
             if (requestSize == sizeof(CmdRequestTexelAtMousePos) && responseSize == sizeof(CmdResponseTexelAtMousePos))
             {
-                CmdRequestTexelAtMousePos* request = reinterpret_cast<CmdRequestTexelAtMousePos*>(requestData);
+				const CmdRequestTexelAtMousePos* request = reinterpret_cast<const CmdRequestTexelAtMousePos*>(requestData);
                 CmdResponseTexelAtMousePos* response = reinterpret_cast<CmdResponseTexelAtMousePos*>(responseData);
 
                 if (sPictureRenderer->GetTexelAtMousePos(request->x,request->y, response->x, response->y) != 0)
@@ -167,7 +168,7 @@ namespace OIV
         case CE_TexelGrid:
             if (requestSize == sizeof(CmdRequestTexelGrid))
             {
-                CmdRequestTexelGrid* request = reinterpret_cast<CmdRequestTexelGrid*>(requestData);
+				const CmdRequestTexelGrid* request = reinterpret_cast<const CmdRequestTexelGrid*>(requestData);
 
                 if (sPictureRenderer->SetTexelGrid(request->gridSize) != 0)
                 {
@@ -199,7 +200,7 @@ namespace OIV
             
             if (requestSize == sizeof(CmdSetClientSizeRequest))
             {
-                CmdSetClientSizeRequest* request = reinterpret_cast<CmdSetClientSizeRequest*>(requestData);
+				const CmdSetClientSizeRequest* request = reinterpret_cast<const CmdSetClientSizeRequest*>(requestData);
                 if (sPictureRenderer->SetClientSize(request->width, request->height))
                 {
                     result = RC_UknownError;
@@ -218,10 +219,5 @@ namespace OIV
         }
 
         return result;
-    }
-   
-    void CommandProcessor::Log(OIVCHAR * message)
-    {
-        Logger::Log(StringUtility::ToAString(message).c_str());
     }
 }

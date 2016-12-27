@@ -62,7 +62,7 @@ namespace OIV
     {
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
-        size_t size = fileMapping.GetSize();
+        std::size_t size = fileMapping.GetSize();
         std::string extension = StringUtility::ToAString(StringUtility::GetFileExtension(filePath));
 
 
@@ -83,7 +83,7 @@ namespace OIV
         return false;
     }
 
-    bool TestApp::LoadFile(const uint8_t* buffer,  const size_t size,std::string extension, bool onlyRegisteredExtension)
+    bool TestApp::LoadFile(const uint8_t* buffer,  const std::size_t size,std::string extension, bool onlyRegisteredExtension)
     {
         CmdResponseLoad loadResponse;
         CmdDataLoadFile loadRequest;
@@ -144,7 +144,7 @@ namespace OIV
         using namespace std;
         using namespace std::placeholders;
 
-        size_t bufferSize = 0;
+        std::size_t bufferSize = 0;
         uint8_t* buffer = nullptr;
         
         
@@ -172,16 +172,16 @@ namespace OIV
 
         
         // initialize the windowing system of the window
-        HINSTANCE moduleHanle = GetModuleHandle(NULL);
+        HINSTANCE moduleHanle = GetModuleHandle(nullptr);
         fWindow.Create(moduleHanle, SW_SHOW);
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
         
 
         //Init OIV
         CmdDataInit init;
-        init.parentHandle = reinterpret_cast<size_t>(fWindow.GetHandleClient());
+        init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
-        UpdateWindowSize(NULL);
+        UpdateWindowSize(nullptr);
         
 
         if (isInitialFile == true)
@@ -286,7 +286,7 @@ namespace OIV
         HWND hwnd = GetWindowHandle();
         
         if (fIsSlideShowActive == false)
-            SetTimer(hwnd, cTimerID, 3000, NULL);
+            SetTimer(hwnd, cTimerID, 3000, nullptr);
         else
             KillTimer(hwnd, cTimerID);
         fIsSlideShowActive = !fIsSlideShowActive;
@@ -390,7 +390,7 @@ namespace OIV
         case 'P':
         {
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(NULL, L"open", command.c_str(),fOpenedFile.c_str(), NULL, SW_SHOWDEFAULT);
+            ShellExecute(nullptr, L"open", command.c_str(),fOpenedFile.c_str(), nullptr, SW_SHOWDEFAULT);
         }
             break;
 
@@ -449,7 +449,7 @@ namespace OIV
 
     void TestApp::UpdateWindowSize(const Win32::EventWinMessage* winMessage)
     {
-        if (winMessage == NULL || winMessage->window->GetHandleClient() == winMessage->message.hwnd)
+        if (winMessage == nullptr || winMessage->window->GetHandleClient() == winMessage->message.hwnd)
         {
             SIZE size = fWindow.GetClientSize();
             ExecuteCommand(CMD_SetClientSize,

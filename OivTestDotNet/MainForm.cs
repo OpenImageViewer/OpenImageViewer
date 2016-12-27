@@ -20,7 +20,7 @@ namespace OivTestDotNet
         [StructLayout(LayoutKind.Sequential, Pack= 1)]
         struct CmdDataLoadFile
         {
-            public int /*size_t*/ FileNamelength;
+            public int /*std::size_t*/ FileNamelength;
             public IntPtr filePath;
         };
 
@@ -28,7 +28,7 @@ namespace OivTestDotNet
         struct CmdDataInit
         {
 
-            public IntPtr /*size_t*/ parentHandle;
+            public IntPtr /*std::size_t*/ parentHandle;
         };
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         struct CmdDataClientMetrics

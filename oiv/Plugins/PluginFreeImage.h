@@ -20,7 +20,7 @@ namespace OIV
         }
 
 
-        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) override
+        virtual bool LoadImage(void* buffer, std::size_t size, ImageProperies& out_properties) override
         {
             FIBITMAP* freeImageHandle;
             bool opened = false;
@@ -71,7 +71,7 @@ namespace OIV
 
                 }
 
-                if (freeImageHandle != NULL)
+                if (freeImageHandle != nullptr)
                     FreeImage_Unload(freeImageHandle);
                 opened = true;
 

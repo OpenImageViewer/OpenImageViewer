@@ -21,14 +21,14 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         //Load texels into textur object
         /*std::ifstream file("d:/pixels.raw", std::ios::in | std::ios::binary);
-        size_t imageSize = 800 * 600 * 4;
+        std::size_t imageSize = 800 * 600 * 4;
         char* buffer = new char[imageSize];
         file.read(buffer, imageSize);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 800, 600, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);*/
 
     }
 
-    void SetRGBATexture(size_t width, size_t height, const void *buffer)
+    void SetRGBATexture(std::size_t width, std::size_t height, const void *buffer)
     {
         
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);

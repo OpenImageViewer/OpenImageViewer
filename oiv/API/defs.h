@@ -136,7 +136,7 @@ extern "C"
     struct CmdDataLoadFile
     {
         static const int EXTENSION_SIZE = 16;
-        size_t length;
+        std::size_t length;
         void* buffer;
         char extension[EXTENSION_SIZE];
         bool onlyRegisteredExtension;
@@ -144,7 +144,7 @@ extern "C"
 
     struct CmdDataInit
     {
-        size_t parentHandle;
+        std::size_t parentHandle;
     };
 
   
@@ -154,14 +154,14 @@ extern "C"
 
     struct QryFileInformation
     {
-        size_t width;
-        size_t height;
-        size_t bitsPerPixel;
-        size_t numMipMaps;
-        size_t numChannels;
-        size_t imageDataSize;
-        size_t rowPitchInBytes;
-        size_t hasTransparency;
+        std::size_t width;
+        std::size_t height;
+        std::size_t bitsPerPixel;
+        std::size_t numMipMaps;
+        std::size_t numChannels;
+        std::size_t imageDataSize;
+        std::size_t rowPitchInBytes;
+        std::size_t hasTransparency;
     };
 
 #pragma pack() 

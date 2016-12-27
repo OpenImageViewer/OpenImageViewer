@@ -29,7 +29,7 @@ namespace OIV
         if (errors == nullptr)
             HandleError("Direct3D11 raised a logic error.\nReason: misuse of error handling - no error");
 
-        size_t size = errors->GetBufferSize();
+        std::size_t size = errors->GetBufferSize();
         unique_ptr<char> errorString = unique_ptr<char>(new char[size]);
         memcpy(errorString.get(), errors->GetBufferPointer(), size);
     
@@ -308,7 +308,7 @@ namespace OIV
             , " could not create pixel shader from microcode");
     }
 
-    int D3D11Renderer::Init(size_t container)
+    int D3D11Renderer::Init(std::size_t container)
     {
         CreateDevice(reinterpret_cast<HWND>(container));
         ResizeBackBuffer(1280, 800);
@@ -447,7 +447,6 @@ namespace OIV
                                                     , static_cast<UINT>(0) };
 
         
-
         HandleDeviceError(d3dDevice->CreateTexture2D(&desc, &subResourceData, &fTexture)
             , "Can not create texture");
 

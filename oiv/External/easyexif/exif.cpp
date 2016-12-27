@@ -280,7 +280,7 @@ bool extract_values(C &container, const unsigned char *buf, const unsigned base,
     }
   }
   container.resize(entry.length());
-  for (size_t i = 0; i < entry.length(); ++i) {
+  for (std::size_t i = 0; i < entry.length(); ++i) {
     container[i] = parse<T, alignIntel>(data + sizeof(T) * i);
   }
   return true;

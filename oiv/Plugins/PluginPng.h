@@ -14,7 +14,7 @@ namespace OIV
         }
 
         //Base abstract methods
-        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) override
+        virtual bool LoadImage(void* buffer, std::size_t size, ImageProperies& out_properties) override
         {
             using namespace std;
             
@@ -44,8 +44,8 @@ namespace OIV
                 void* buffer = malloc(PNG_IMAGE_SIZE(image));
 
                 if (buffer != nullptr &&
-                    png_image_finish_read(&image, NULL/*background*/, buffer,
-                        PNG_IMAGE_ROW_STRIDE(image), NULL/*colormap*/) != 0)
+                    png_image_finish_read(&image, nullptr/*background*/, buffer,
+                        PNG_IMAGE_ROW_STRIDE(image), nullptr/*colormap*/) != 0)
                 {
                     success = true;
                     out_properties.ImageBuffer = static_cast<uint8_t*>(buffer);

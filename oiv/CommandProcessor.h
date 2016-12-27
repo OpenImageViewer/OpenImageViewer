@@ -11,7 +11,7 @@ namespace OIV
         static std::unique_ptr<IPictureRenderer> sPictureRenderer;
 
     public:
-        static ResultCode ProcessCommand(CommandExecute command, size_t requestSize, void* requestData, size_t responseSize, void* responseData);
+        static ResultCode ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData);
         static void Log(OIVCHAR* message);
         static bool IsInitialized()
         {

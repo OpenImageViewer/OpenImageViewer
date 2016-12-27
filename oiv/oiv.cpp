@@ -151,7 +151,7 @@ namespace OIV
 
 #pragma region IPictureViewer implementation
     // IPictureViewr implementation
-    int OIV::LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension)
+    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
     {
         ResultCode resultCode = RC_UknownError;
         
@@ -214,7 +214,7 @@ namespace OIV
     }
 
 
-    int OIV::SetParent(size_t handle)
+    int OIV::SetParent(std::size_t handle)
     {
         fParent = handle;
         return 0;

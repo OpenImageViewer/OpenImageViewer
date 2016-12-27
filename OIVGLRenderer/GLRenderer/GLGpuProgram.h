@@ -20,7 +20,7 @@ public:
         }
 
         //TODO: check all shader source has been uploaded
-        glShaderSource(shader, 1, &shadersource, NULL);
+        glShaderSource(shader, 1, &shadersource, nullptr);
         glCompileShader(shader);
         if (OIV::IsShaderCompiled(shader) == false)
         {

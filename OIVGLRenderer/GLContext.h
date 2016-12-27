@@ -36,12 +36,12 @@ public:
     bool WGLExtensionSupported(const char *extension_name)
     {
         // this is pointer to function which returns pointer to string with list of all wgl extensions
-        PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = NULL;
+        PFNWGLGETEXTENSIONSSTRINGEXTPROC _wglGetExtensionsStringEXT = nullptr;
 
         // determine pointer to wglGetExtensionsStringEXT function
         _wglGetExtensionsStringEXT = reinterpret_cast<PFNWGLGETEXTENSIONSSTRINGEXTPROC>(wglGetProcAddress("wglGetExtensionsStringEXT"));
 
-        if (strstr(_wglGetExtensionsStringEXT(), extension_name) == NULL)
+        if (strstr(_wglGetExtensionsStringEXT(), extension_name) == nullptr)
         {
             // string was not found
             return false;
@@ -57,7 +57,7 @@ public:
     {
         if (mhRC)
         {
-            wglMakeCurrent(NULL, NULL);
+            wglMakeCurrent(nullptr, nullptr);
             wglDeleteContext(mhRC);
         }
         if (mhWnd && mhDC)
@@ -83,11 +83,11 @@ private:
 
     void reset()
     {
-        mhWnd = NULL;
-        mhDC = NULL;
-        mhRC = NULL;
-        wglSwapIntervalEXT = NULL;
-        wglGetSwapIntervalEXT = NULL;
+        mhWnd = nullptr;
+        mhDC = nullptr;
+        mhRC = nullptr;
+        wglSwapIntervalEXT = nullptr;
+        wglGetSwapIntervalEXT = nullptr;
     }
 
     PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;

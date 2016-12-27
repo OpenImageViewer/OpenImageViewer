@@ -32,7 +32,7 @@ namespace OIV
 
 
     public:
-        int Init(size_t container) override;
+        int Init(std::size_t container) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filtertype) override;
