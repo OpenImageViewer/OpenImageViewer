@@ -32,9 +32,9 @@ namespace OIV
 #pragma region //-------------IPictureListener implementation------------------
         virtual double Zoom(double percentage,int x,int y) override;
         virtual int Pan(double x, double y) override;
-        virtual int LoadFile(void* buffer, size_t size, char* extension , bool onlyRegisteredExtension) override;
+        virtual int LoadFile(void* buffer, std::size_t size, char* extension , bool onlyRegisteredExtension) override;
         virtual int Init() override;
-        virtual int SetParent(size_t handle) override;
+        virtual int SetParent(std::size_t handle) override;
         virtual int Refresh() override;
         virtual Image* GetImage() override;
         virtual int SetFilterLevel(OIV_Filter_type filter_level) override;
@@ -50,7 +50,7 @@ namespace OIV
         IRendererSharedPtr fRenderer;
         ViewParameters fViewParams;
         ZoomScrollState fScrollState;
-        size_t fParent;
+        std::size_t fParent;
         bool fIsRefresing;
         std::string fCurrentOpenedFile;
         ImageLoader fImageLoader;

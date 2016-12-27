@@ -48,7 +48,7 @@ namespace OIV
         ListFiles fListFiles;
         void UpdateFileInfo(const CmdResponseLoad& load_response);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
-        bool LoadFile(const uint8_t* buffer, const size_t size, std::string extension,bool onlyRegisteredExtension);
+        bool LoadFile(const uint8_t* buffer, const std::size_t size, std::string extension,bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
     };
 }

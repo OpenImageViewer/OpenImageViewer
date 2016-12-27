@@ -16,7 +16,7 @@ namespace OIV
             buffer = new uint8_t[size];
             memcpy(buffer, blob->GetBufferPointer(), size);
         }
-        size_t size = 0;
+        std::size_t size = 0;
         uint8_t* buffer = nullptr;
         Blob()
         {
@@ -46,7 +46,7 @@ namespace OIV
     public:
         bool LoadShadersFromDisk();
         void SaveShadersToDisk();
-        int Init(size_t container) override;
+        int Init(std::size_t container) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         void UpdateGpuParameters();
         int Redraw() override;
@@ -66,7 +66,7 @@ namespace OIV
         void UpdateGpuParams();
         void renderOneFrame();
         void UpdateViewportSize(int x, int y);
-        void ReCreateTexture(size_t width, size_t height);
+        void ReCreateTexture(std::size_t width, std::size_t height);
         void PrepareResources();
         void Destroy();
 

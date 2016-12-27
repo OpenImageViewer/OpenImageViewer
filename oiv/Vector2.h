@@ -96,14 +96,14 @@ namespace OIV
             std::swap(y, other.y);
         }
 
-        inline double operator [] (const size_t i) const
+        inline double operator [] (const std::size_t i) const
         {
             assert(i < 2);
 
             return *(&x + i);
         }
 
-        inline double& operator [] (const size_t i)
+        inline double& operator [] (const std::size_t i)
         {
             assert(i < 2);
 

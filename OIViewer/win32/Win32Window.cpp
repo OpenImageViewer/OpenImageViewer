@@ -25,7 +25,7 @@ namespace OIV
         {
             HWND hwnd = fHandleWindow;
             SetWindowLong(hwnd, GWL_STYLE,fWindowStyles);
-            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+            SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         }
@@ -194,14 +194,14 @@ namespace OIV
             hwndStatus = CreateWindowEx(
                 0, // no extended styles
                 STATUSCLASSNAME, // name of status bar class
-                (PCTSTR)NULL, // no text when first created
+                (PCTSTR)nullptr, // no text when first created
                 SBARS_SIZEGRIP | // includes a sizing grip
                 WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, // creates a visible child window
                 0, 0, 0, 0, // ignores size and position
                 hwndParent, // handle to parent window
                 (HMENU)idStatus, // child window identifier
                 hinst, // handle to application instance
-                NULL); // no window creation data
+                nullptr); // no window creation data
 
                        // Get the coordinates of the parent window's client area.
 
@@ -219,7 +219,7 @@ namespace OIV
 
         void Win32WIndow::SetStatusBarText(std::wstring message, int part, int type)
         {
-            if (fHandleStatusBar != NULL)
+            if (fHandleStatusBar != nullptr)
                 SendMessage(fHandleStatusBar, SB_SETTEXT, MAKEWORD(part, type), reinterpret_cast<LPARAM>(message.c_str()));
         }
 
@@ -239,18 +239,18 @@ namespace OIV
             wcex.cbWndExtra = 0;
             wcex.hInstance = hInstance;
             wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
-            wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+            wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
             wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-            wcex.lpszMenuName = NULL;
+            wcex.lpszMenuName = nullptr;
             wcex.lpszClassName = szWindowClass;
             wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
 
             if (!RegisterClassEx(&wcex))
             {
-                MessageBox(NULL,
+                MessageBox(nullptr,
                     _T("Call to RegisterClassEx failed!"),
                     _T("Win32 Guided Tour"),
-                    NULL);
+                    nullptr);
 
                 return 1;
             }
@@ -265,8 +265,8 @@ namespace OIV
                 CW_USEDEFAULT,
                 1200,
                 800,
-                NULL,
-                NULL,
+                nullptr,
+                nullptr,
                 hInstance,
                 this
             );
@@ -276,10 +276,10 @@ namespace OIV
 
             if (!fHandleWindow)
             {
-                MessageBox(NULL,
+                MessageBox(nullptr,
                     _T("Call to CreateWindow failed!"),
                     _T("Win32 Guided Tour"),
-                    NULL);
+                    nullptr);
 
                 return 1;
             }
@@ -300,7 +300,7 @@ namespace OIV
                 1200,
                 800,
                 fHandleWindow,
-                NULL,
+                nullptr,
                 hInstance,
                 this
             );
@@ -323,7 +323,7 @@ namespace OIV
 
         void Win32WIndow::ResizeStatusBar()
         {
-            if (fHandleStatusBar == NULL)
+            if (fHandleStatusBar == nullptr)
                 return;
             RECT rcClient;
             HLOCAL hloc;
@@ -333,7 +333,7 @@ namespace OIV
                 return;
 
 
-            SetWindowPos(fHandleStatusBar, NULL, 0, 0, -1, -1, 0);
+            SetWindowPos(fHandleStatusBar, nullptr, 0, 0, -1, -1, 0);
             // Allocate an array for holding the right edge coordinates.
             hloc = LocalAlloc(LHND, sizeof(int) * fStatusWindowParts);
             paParts = (PINT)LocalLock(hloc);
@@ -402,7 +402,7 @@ namespace OIV
                 ShowWindow(fHandleStatusBar, SW_HIDE);
             }
 
-            SetWindowPos(fHandleClient, NULL, 0, 0, clientSize.cx, clientSize.cy,0);
+            SetWindowPos(fHandleClient, nullptr, 0, 0, clientSize.cx, clientSize.cy,0);
         }
 
         void Win32WIndow::ShowStatusBar(bool show)

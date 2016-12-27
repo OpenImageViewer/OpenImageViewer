@@ -8,9 +8,9 @@ namespace OIV
     public:
         virtual double Zoom(double percentage,int x, int y) = 0;
         virtual int Pan(double x, double y) = 0;
-        virtual int LoadFile(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension) = 0;
+        virtual int LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension) = 0;
         virtual int Init() = 0;
-        virtual int SetParent(size_t handle) = 0;
+        virtual int SetParent(std::size_t handle) = 0;
         virtual int Refresh() = 0;
 
         virtual int GetFileInformation(QryFileInformation& information) = 0;

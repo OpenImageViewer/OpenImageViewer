@@ -9,7 +9,7 @@ namespace OIV
             m_cRef(1)
             , fParentWindow(parentWindow)
         {
-            if (SUCCEEDED(OleInitialize(NULL)))
+            if (SUCCEEDED(OleInitialize(nullptr)))
             {
                 if (SUCCEEDED(RegisterDragDrop(fParentWindow.GetHandle(), this)))
                 {
@@ -38,7 +38,7 @@ namespace OIV
                 AddRef();
                 return S_OK;
             }
-            *ppv = NULL;
+            *ppv = nullptr;
             return E_NOINTERFACE;
         }
 
@@ -80,14 +80,14 @@ namespace OIV
 
         void DragAndDropTarget::OpenFilesFromDataObject(IDataObject* pdto)
         {
-            FORMATETC fmte = { CF_HDROP, NULL, DVASPECT_CONTENT,
+            FORMATETC fmte = { CF_HDROP, nullptr, DVASPECT_CONTENT,
                 -1, TYMED_HGLOBAL };
             STGMEDIUM stgm;
             if (SUCCEEDED(pdto->GetData(&fmte, &stgm)))
             {
                 HDROP hdrop = reinterpret_cast<HDROP>(stgm.hGlobal);
 
-                UINT cFiles = DragQueryFile(hdrop, 0xFFFFFFFF, NULL, 0);
+                UINT cFiles = DragQueryFile(hdrop, 0xFFFFFFFF, nullptr, 0);
                 for (UINT i = 0; i < cFiles; i++)
                 {
                     TCHAR szFile[MAX_PATH];

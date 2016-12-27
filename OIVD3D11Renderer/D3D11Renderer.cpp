@@ -29,7 +29,7 @@ namespace OIV
         if (errors == nullptr)
             HandleError("Direct3D11 raised a logic error.\nReason: misuse of error handling - no error");
 
-        size_t size = errors->GetBufferSize();
+        std::size_t size = errors->GetBufferSize();
         unique_ptr<char> errorString = unique_ptr<char>(new char[size]);
         memcpy(errorString.get(), errors->GetBufferPointer(), size);
     
@@ -306,7 +306,7 @@ namespace OIV
             , " could not create pixel shader from microcode");
     }
 
-    int D3D11Renderer::Init(size_t container)
+    int D3D11Renderer::Init(std::size_t container)
     {
         CreateDevice(reinterpret_cast<HWND>(container));
         ResizeBackBuffer(1280, 800);
@@ -350,7 +350,7 @@ namespace OIV
         }
     }
 
-    void D3D11Renderer::ReCreateTexture(size_t width, size_t height)
+    void D3D11Renderer::ReCreateTexture(std::size_t width, std::size_t height)
     {
         SAFE_RELEASE(fTextureShaderResourceView);
         SAFE_RELEASE(fTexture);
@@ -468,12 +468,12 @@ namespace OIV
         else if (mappedResource.RowPitch > image->GetRowPitchInBytes())
         {
             uint8_t* dest = (uint8_t*)mappedResource.pData;
-            size_t destRowPitch = mappedResource.RowPitch;;
+            std::size_t destRowPitch = mappedResource.RowPitch;;
             uint8_t* src = (uint8_t*)image->GetBuffer();
             
             uint8_t* source = (uint8_t*)image->GetBuffer();
-            size_t bytesPerRowOfPixels =  image->GetBytesPerRowOfPixels();
-            for (size_t y = 0 ; y < image->GetHeight(); y++)
+            std::size_t bytesPerRowOfPixels =  image->GetBytesPerRowOfPixels();
+            for (std::size_t y = 0 ; y < image->GetHeight(); y++)
             {
                 memcpy(dest, src, image->GetBytesPerRowOfPixels());
                 dest += destRowPitch;

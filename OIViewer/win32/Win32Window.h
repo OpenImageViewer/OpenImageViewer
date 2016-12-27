@@ -13,7 +13,7 @@ namespace OIV
 {
     namespace Win32
     {
-#define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p)=NULL; } }
+#define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p)=nullptr; } }
         class Win32WIndow
         {
         public:

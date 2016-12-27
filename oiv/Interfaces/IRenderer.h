@@ -8,7 +8,7 @@ namespace OIV
     class IRenderer
     {
     public:
-        virtual int Init(size_t container) = 0;
+        virtual int Init(std::size_t container) = 0;
         virtual int SetImage(const ImageSharedPtr image) = 0;
         virtual int SetViewParams(const ViewParameters& viewParams) = 0;
         virtual int Redraw() = 0;

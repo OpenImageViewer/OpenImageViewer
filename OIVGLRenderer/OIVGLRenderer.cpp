@@ -38,7 +38,7 @@ void OIV::OIVGLRenderer::PrepareResources()
     glClearColor(0.0f, 0.f, 0.f, 1.0f);
 }
 
-int OIV::OIVGLRenderer::Init(size_t container)
+int OIV::OIVGLRenderer::Init(std::size_t container)
 {
     context.init(reinterpret_cast<HWND>(container));
     glewInit();

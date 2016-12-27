@@ -16,7 +16,7 @@ namespace OIV
             return pluginProperties;
         }
 
-        virtual bool LoadImage(void* buffer, size_t size, ImageProperies& out_properties) override
+        virtual bool LoadImage(void* buffer, std::size_t size, ImageProperies& out_properties) override
         {
             bool success = false;
         

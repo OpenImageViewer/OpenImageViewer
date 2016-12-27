@@ -19,12 +19,12 @@ namespace OIV
         mMapMonitors.clear();
         mListMonitorInfo.clear();
         mMonitorsCount = 0;
-        EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, (LPARAM)this);
+        EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc, (LPARAM)this);
     }
     //---------------------------------------------------------------------
     const MONITORINFO * const MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
     {
-        LPMONITORINFO result = NULL;
+        LPMONITORINFO result = nullptr;
         if (monitorIndex >= mListMonitorInfo.size() && allowRefresh)
             Refresh();
 

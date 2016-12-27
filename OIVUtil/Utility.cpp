@@ -10,10 +10,10 @@ tstring Utility::GetExePath()
     TCHAR ownPth[MAX_PATH];
 
     // Will contain exe path
-    HMODULE hModule = GetModuleHandle(NULL);
-    if (hModule != NULL)
+    HMODULE hModule = GetModuleHandle(nullptr);
+    if (hModule != nullptr)
     {
-        // When passing NULL to GetModuleHandle, it returns handle of exe itself
+        // When passing nullptr to GetModuleHandle, it returns handle of exe itself
         GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0])));
 
         // Use above module handle to get the path using GetModuleFileName()
@@ -35,9 +35,9 @@ tstring Utility::GetAppDataFolder()
 {
     TCHAR szPath[MAX_PATH];
 
-    if (SUCCEEDED(SHGetFolderPath(NULL,
+    if (SUCCEEDED(SHGetFolderPath(nullptr,
         CSIDL_APPDATA | CSIDL_FLAG_CREATE,
-        NULL,
+        nullptr,
         0,
         szPath)))
     {
@@ -54,7 +54,7 @@ void Utility::EnsurePath(const tstring& path)
 {
     if (DirectoryExists(path) == false)
     {
-        SHCreateDirectoryEx(NULL, path.c_str(), NULL);
+        SHCreateDirectoryEx(nullptr, path.c_str(), nullptr);
     }
 }
 
@@ -116,7 +116,7 @@ void Utility::find_files(tstring wrkdir, ListFiles &lstFileData, bool recursive 
     FindClose(hFile);
 }
 
-size_t Utility::GetFileSize(const wchar_t* filePath)
+std::size_t Utility::GetFileSize(const wchar_t* filePath)
 {
     WIN32_FILE_ATTRIBUTE_DATA fad;
     if (!GetFileAttributesExW(filePath, GetFileExInfoStandard, &fad))
@@ -126,7 +126,7 @@ size_t Utility::GetFileSize(const wchar_t* filePath)
     LARGE_INTEGER size;
     size.HighPart = fad.nFileSizeHigh;
     size.LowPart = fad.nFileSizeLow;
-    size_t fileSize = size.QuadPart;
+    std::size_t fileSize = size.QuadPart;
     return fileSize;
 }
 

@@ -46,7 +46,7 @@ namespace OIV
             }
         }
     
-        Image* LoadImage(void* buffer, size_t size, char* extension, bool onlyRegisteredExtension = true)
+        Image* LoadImage(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true)
         {
             using namespace std;
 

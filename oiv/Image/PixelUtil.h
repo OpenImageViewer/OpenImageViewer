@@ -18,18 +18,18 @@ namespace OIV
 
         // A function to copy a same format texel from one place to another
         template <class BIT_TEXEL_TYPE>
-        static __forceinline  void CopyTexel(void* dest, const size_t idxDest, const void* src, const size_t idxSrc)
+        static __forceinline  void CopyTexel(void* dest, const std::size_t idxDest, const void* src, const std::size_t idxSrc)
         {
             reinterpret_cast<BIT_TEXEL_TYPE*>(dest)[idxDest] = reinterpret_cast<const  BIT_TEXEL_TYPE*>(src)[idxSrc];
 
         }
 
-        static void RGB24ToRGBA32(uint8_t** dest, uint8_t* src, size_t size)
+        static void RGB24ToRGBA32(uint8_t** dest, uint8_t* src, std::size_t size)
         {
             if (size % 3 != 0)
                 throw std::logic_error("Data is not aligned");
 
-            size_t totalElements = size / 3;
+            std::size_t totalElements = size / 3;
 
             *dest = new uint8_t[totalElements * 4];
 
@@ -49,12 +49,12 @@ namespace OIV
             }
         }
 
-        static void BGR24ToRGBA32(uint8_t** dest, uint8_t* src, size_t size)
+        static void BGR24ToRGBA32(uint8_t** dest, uint8_t* src, std::size_t size)
         {
             if (size % 3 != 0)
                 throw std::logic_error("Data is not aligned");
 
-            size_t totalElements = size / 3;
+            std::size_t totalElements = size / 3;
 
             *dest = new uint8_t[totalElements * 4];
 

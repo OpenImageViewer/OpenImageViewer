@@ -18,13 +18,13 @@ namespace OIV
 
         if (GetIsRowPitchNormalized() == false)
         {
-            size_t targetRowPitch = GetBytesPerRowOfPixels();
+            std::size_t targetRowPitch = GetBytesPerRowOfPixels();
             uint8_t* newBuffer = new uint8_t[GetTotalSizeOfImageTexels()];
-            for (size_t y = 0; y < GetHeight()  ;y++ )
-                for (size_t x = 0; x < targetRowPitch; x++)
+            for (std::size_t y = 0; y < GetHeight()  ;y++ )
+                for (std::size_t x = 0; x < targetRowPitch; x++)
                 {
-                    size_t srcIndex = y * GetRowPitchInBytes() + x;
-                    size_t dstIndex = y * targetRowPitch + x;
+                    std::size_t srcIndex = y * GetRowPitchInBytes() + x;
+                    std::size_t dstIndex = y * targetRowPitch + x;
                     newBuffer[dstIndex] = fProperies.ImageBuffer[srcIndex];
 
                 }
@@ -52,18 +52,18 @@ namespace OIV
         if (transform != AAT_None)
         {
             const uint8_t* src = fProperies.ImageBuffer;
-            const size_t srcRowPitch = GetRowPitchInBytes();
-            const size_t bytesPerRowOfPixels = GetBytesPerRowOfPixels();
-            const size_t destRowPitch = bytesPerRowOfPixels;
-            const size_t bytesPerTexel = GetBytesPerTexel();
+            const std::size_t srcRowPitch = GetRowPitchInBytes();
+            const std::size_t bytesPerRowOfPixels = GetBytesPerRowOfPixels();
+            const std::size_t destRowPitch = bytesPerRowOfPixels;
+            const std::size_t bytesPerTexel = GetBytesPerTexel();
 
             uint8_t* dest = new uint8_t[GetTotalSizeOfImageTexels()];
 
-            for (size_t y = 0; y < fProperies.Height; y++)
-                for (size_t x = 0; x < fProperies.Width; x++)
+            for (std::size_t y = 0; y < fProperies.Height; y++)
+                for (std::size_t x = 0; x < fProperies.Width; x++)
                 {
                     const uint8_t* srcRow = src + y * srcRowPitch;
-                    size_t idxDest;
+                    std::size_t idxDest;
                     
                     switch (transform)
                     {

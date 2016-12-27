@@ -42,7 +42,7 @@ namespace OIV
         {
             return mView;
         }
-        size_t GetSize() const
+        std::size_t GetSize() const
         {
             return mSize;
         }
@@ -67,7 +67,7 @@ namespace OIV
 
     private: // member fields
         const std::wstring fFilePath;
-        size_t mSize = 0;
+        std::size_t mSize = 0;
         HANDLE mHandleMMF = nullptr;
         HANDLE mHandleFile = nullptr;
         void *mView = nullptr;
