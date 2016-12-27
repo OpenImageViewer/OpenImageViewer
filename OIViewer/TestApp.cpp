@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <thread>
 #include "FileHelper.h"
+#include <cassert>
 
 
 namespace OIV
@@ -34,7 +35,7 @@ namespace OIV
         , fIsSlideShowActive(false)
         , fFilterlevel(0)
         , fIsGridEnabled(false)
-        , fCurrentFileIndex(-1)
+        , fCurrentFileIndex(std::numeric_limits<ListFiles::size_type>::max())
     {
         
         new MonitorInfo();
@@ -106,32 +107,22 @@ namespace OIV
     void TestApp::LoadFileInFolder(std::wstring filePath)
     {
         fListFiles.clear();
-        fCurrentFileIndex = -1;
+        fCurrentFileIndex = std::numeric_limits<ListFiles::size_type>::max();
+        
+        std::experimental::filesystem::path workingPath  = filePath;
 
-        std::wstring workingFolder;
-        std::wstring::size_type idx = filePath.find_last_of(L"\\");
-
-        if (idx > -1)
-        {
-            workingFolder = filePath.substr(0, idx);
-        }
-        else
+        workingPath = workingPath.parent_path();
+        
+        if (workingPath.empty() == true)
         {
             TCHAR path[MAX_PATH];
             if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
-            {
-                workingFolder = path;
-                if (workingFolder.at(workingFolder.length() - 1) == '\\')
-                    workingFolder.erase(workingFolder.length() - 1, 1);
-
-                filePath = workingFolder + L"\\" + filePath;
-            }
-
+                workingPath = path;
         }
 
-        if (workingFolder.empty() == false)
+        if (workingPath.empty() == false)
         {
-            Utility::find_files(workingFolder, fListFiles);
+            Utility::find_files(workingPath.wstring(), fListFiles);
             ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
@@ -211,7 +202,8 @@ namespace OIV
             return;
 
         std::wstringstream ss;
-        ss << L"File " << (fCurrentFileIndex == -1 ? 0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
+        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<ListFiles::size_type>::max() ? 
+            0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
 
         fWindow.SetStatusBarText(ss.str(), 1, 0);
     }
@@ -222,15 +214,14 @@ namespace OIV
             return;
 
         ListFiles::size_type totalFiles = fListFiles.size();
-
-        ListFiles::size_type fileIndex = fCurrentFileIndex ;
+        int32_t fileIndex = static_cast<int32_t>(fCurrentFileIndex);
 
 
         int sign;
         if (step == std::numeric_limits<int>::max())
         {
             // Last
-            fileIndex = fListFiles.size();
+            fileIndex = static_cast<int32_t>(fListFiles.size());
             sign = -1;
         }
         else if (step == std::numeric_limits<int>::min())
@@ -262,7 +253,10 @@ namespace OIV
 
 
         if (isLoaded)
-            fCurrentFileIndex = fileIndex;
+        {
+            assert(fileIndex >= 0 && fileIndex < totalFiles);
+            fCurrentFileIndex = static_cast<ListFiles::size_type>(fileIndex);
+        }
 
 
         UpdateFileInddex();
