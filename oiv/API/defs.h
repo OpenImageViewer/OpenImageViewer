@@ -1,7 +1,7 @@
 
 #pragma once
 #include <cwchar>
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef OIV_NO_CLIENT_BUILD
     #define OIV_EXPOSE_FUNCTION __declspec(dllexport)
