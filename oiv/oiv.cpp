@@ -10,6 +10,8 @@
 #include "NullRenderer.h"
 #include "Image/ImageUtil.h"
 
+#include <Codecs/CodecPSD/Include/CodecPSDFactory.h>
+
 
 //TODO: define the following using cmake
 // Allow null render for debug purpose, this flag is disabled by default.
@@ -45,7 +47,12 @@ namespace OIV
     {
         fImageLoader.InstallPlugin(new PluginJpeg());
         fImageLoader.InstallPlugin(new PluginPng());
+        fImageLoader.InstallPlugin(CodecPSDFactory::Create());
+        
+
+        //TODO: remove free image codec with specialized codecs.
         fImageLoader.InstallPlugin(new PluginFreeImage());
+        
 
     }
 

@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OIVGLRenderer", "OIVGLRende
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OIVD3D11Renderer", "OIVD3D11Renderer\OIVD3D11Renderer.vcxproj", "{C049ED5B-7B0B-4693-A0ED-AA4AFE1A1437}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecPSD", "Codecs\CodecPSD\CodecPSD.vcxproj", "{D0EA563A-A39D-4402-9EE9-F4E427DA4591}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,16 @@ Global
 		{C049ED5B-7B0B-4693-A0ED-AA4AFE1A1437}.Release|x64.Build.0 = Release|x64
 		{C049ED5B-7B0B-4693-A0ED-AA4AFE1A1437}.Release|x86.ActiveCfg = Release|Win32
 		{C049ED5B-7B0B-4693-A0ED-AA4AFE1A1437}.Release|x86.Build.0 = Release|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Debug|x64.ActiveCfg = Debug|x64
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Debug|x64.Build.0 = Debug|x64
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Debug|x86.ActiveCfg = Debug|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Debug|x86.Build.0 = Debug|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Release|Any CPU.ActiveCfg = Release|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Release|x64.ActiveCfg = Release|x64
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Release|x64.Build.0 = Release|x64
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Release|x86.ActiveCfg = Release|Win32
+		{D0EA563A-A39D-4402-9EE9-F4E427DA4591}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

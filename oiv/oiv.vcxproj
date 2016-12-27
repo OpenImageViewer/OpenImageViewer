@@ -97,6 +97,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -125,7 +126,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;c:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -156,6 +157,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -177,7 +179,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;c:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -246,6 +248,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Codecs\CodecPSD\CodecPSD.vcxproj">
+      <Project>{d0ea563a-a39d-4402-9ee9-f4e427da4591}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\OIVD3D11Renderer\OIVD3D11Renderer.vcxproj">
       <Project>{c049ed5b-7b0b-4693-a0ed-aa4afe1a1437}</Project>
     </ProjectReference>
