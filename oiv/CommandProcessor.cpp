@@ -12,7 +12,7 @@ namespace OIV
      
      std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
 
-    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, std::size_t requestSize, const void* requestData, std::size_t responseSize, void* responseData)
+	ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
     {
 
         if (command != CE_Init && IsInitialized() == false)
@@ -34,9 +34,9 @@ namespace OIV
                     //sPictureRenderer->SetParentParamaters()
 
 					const CmdDataInit* dataInit = reinterpret_cast<const CmdDataInit*>(requestData);
-                    sPictureRenderer->SetParent(static_cast<size_t>(dataInit->parentHandle));
+					sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
                     sPictureRenderer->Init();
-                    Log(_T("Render engine started."));
+					Logger::Log(_T("Render engine started."));
                 }
                 else
                     result = RC_WrongDataSize;
@@ -74,12 +74,13 @@ namespace OIV
         case CE_LoadFile:
             if (requestSize == sizeof(CmdDataLoadFile))
             {
-				const CmdDataLoadFile* dataLoadFile = reinterpret_cast<const CmdDataLoadFile*>(requestData);
+				CmdDataLoadFile* dataLoadFile = const_cast<CmdDataLoadFile*>(reinterpret_cast<const CmdDataLoadFile*>(requestData));
 
 				if (dataLoadFile->buffer != nullptr && dataLoadFile->length > 0)
                 {
                     result = static_cast<ResultCode>(
-                        sPictureRenderer->LoadFile(dataLoadFile->buffer
+						sPictureRenderer->LoadFile(
+							dataLoadFile->buffer
                             , dataLoadFile->length
                             , dataLoadFile->extension
                             , dataLoadFile->onlyRegisteredExtension));
@@ -218,10 +219,5 @@ namespace OIV
         }
 
         return result;
-    }
-   
-    void CommandProcessor::Log(OIVCHAR * message)
-    {
-        Logger::Log(StringUtility::ToAString(message).c_str());
     }
 }
