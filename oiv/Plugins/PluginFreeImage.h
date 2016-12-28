@@ -1,4 +1,7 @@
 #pragma once
+#define OIV_BUILD_PLUGIN_FREE_IMAGE 1
+
+#if OIV_BUILD_PLUGIN_FREE_IMAGE == 1
 #include <Interfaces/IImagePlugin.h>
 #include <FreeImage.h>
 namespace OIV
@@ -84,3 +87,4 @@ namespace OIV
         }
     };
 }
+#endif

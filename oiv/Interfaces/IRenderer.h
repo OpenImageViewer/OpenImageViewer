@@ -1,7 +1,7 @@
 #pragma once
-#include "Image/Image.h"
+#include "../Image/Image.h"
 #include "../ViewParameters.h"
-#include "API/defs.h"
+#include "../API/defs.h"
 
 namespace OIV
 {
@@ -17,5 +17,4 @@ namespace OIV
     };
 
     typedef std::shared_ptr<IRenderer> IRendererSharedPtr;
-}
-    
+}    

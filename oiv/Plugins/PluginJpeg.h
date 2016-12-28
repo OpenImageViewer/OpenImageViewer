@@ -1,4 +1,7 @@
 #pragma once
+#define OIV_BUILD_PLUGIN_JPEG 1
+
+#if OIV_BUILD_PLUGIN_JPEG == 1
 #include <Interfaces/IImagePlugin.h>
 #include <turbojpeg.h>
 
@@ -48,3 +51,4 @@ namespace OIV
     };
     tjhandle PluginJpeg::ftjHandle = tjInitDecompress();
 }
+#endif

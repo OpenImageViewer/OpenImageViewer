@@ -1,6 +1,6 @@
 #pragma once
 #include "../API/defs.h"
-#include <Image/Image.h>
+#include "../Image/Image.h"
 namespace OIV
 {
     class IPictureRenderer

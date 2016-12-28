@@ -1,5 +1,5 @@
 #pragma once
-#include "Interfaces/IImagePlugin.h"
+#include "../Interfaces/IImagePlugin.h"
 #include <vector>
 #include <map>
 #include <chrono>
@@ -83,7 +83,7 @@ namespace OIV
                         stopWatch.Stop();
                         
                         if ((props.IsInitialized() == false))
-                            throw std::exception("Image properties are not completely initialized");
+                            throw std::runtime_error("Image properties are not completely initialized");
                         
                         loadTime = stopWatch.GetElapsedMicroSeconds();
                         loadedImage = new Image(props, loadTime);

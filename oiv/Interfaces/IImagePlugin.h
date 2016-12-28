@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <image/Image.h>
+#include "../Image/Image.h"
 namespace OIV
 {
     struct PluginProperties

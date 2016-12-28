@@ -105,7 +105,7 @@ namespace OIV
                         PixelUtil::CopyTexel<PixelUtil::BitTexel32>(dest, idxDest, srcRow, x);
                         break;
                     default:
-                        throw std::exception("Wrong or corrupted value");
+                        throw std::runtime_error("Wrong or corrupted value");
                     }
                 }
 

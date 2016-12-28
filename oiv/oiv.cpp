@@ -10,12 +10,15 @@
 #include "NullRenderer.h"
 #include "Image/ImageUtil.h"
 
-#include <Codecs/CodecPSD/Include/CodecPSDFactory.h>
+#define OIV_BUILD_PLUGIN_PSD 1
 
+#if OIV_BUILD_PLUGIN_PSD == 1
+#include <Codecs/CodecPSD/Include/CodecPSDFactory.h>
+#endif
 
 //TODO: define the following using cmake
 // Allow null render for debug purpose, this flag is disabled by default.
-#define OIV_ALLOW_NULL_RENDERER 0
+#define OIV_ALLOW_NULL_RENDERER 1
 
 // Build the OpenGL cross platform renderer, currently implemented only for windows.
 #define OIV_BUILD_RENDERER_GL 1
@@ -45,15 +48,21 @@ namespace OIV
         , fClientHeight(-1)
 
     {
+#if OIV_BUILD_PLUGIN_JPEG == 1
         fImageLoader.InstallPlugin(new PluginJpeg());
+#endif
+#if OIV_BUILD_PLUGIN_PNG == 1
         fImageLoader.InstallPlugin(new PluginPng());
+#endif
+#if OIV_BUILD_PLUGIN_PSD == 1
         fImageLoader.InstallPlugin(CodecPSDFactory::Create());
+#endif
         
 
         //TODO: remove free image codec with specialized codecs.
+#if OIV_BUILD_PLUGIN_FREE_IMAGE == 1
         fImageLoader.InstallPlugin(new PluginFreeImage());
-        
-
+#endif
     }
 
     
