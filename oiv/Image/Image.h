@@ -1,7 +1,8 @@
 #pragma once
-#include "ImageProperties.h"
 #include <memory>
+#include <stdexcept>
 #include "AxisAlignedTransform.h"
+#include "ImageProperties.h"
 
 namespace OIV
 {
@@ -38,7 +39,7 @@ namespace OIV
         std::size_t GetTotalSizeOfImageTexels() const { return GetTotalPixels() *  GetBytesPerTexel(); } 
         std::size_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
         std::size_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
-        std::size_t GetNumberOfUniqueColors() const { throw std::exception("Not implemented"); }
+        std::size_t GetNumberOfUniqueColors() const { throw std::runtime_error("Not implemented"); }
 
         bool GetIsRowPitchNormalized() const {return GetRowPitchInBytes() == GetBytesPerRowOfPixels();}
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }

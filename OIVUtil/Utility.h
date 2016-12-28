@@ -1,6 +1,6 @@
 #pragma once
 
-#include "API\defs.h"
+#include "../oiv/API/defs.h"
 #include <list>
 typedef std::basic_string<OIVCHAR> tstring;
 typedef std::list<tstring> ListFiles;

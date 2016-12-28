@@ -1,4 +1,7 @@
 #pragma once
+#define OIV_BUILD_PLUGIN_PNG 1
+
+#if OIV_BUILD_PLUGIN_PNG == 1
 #include <Interfaces/IImagePlugin.h>
 #include <png.h>
 namespace OIV
@@ -55,3 +58,4 @@ namespace OIV
         }
     };
 }
+#endif
