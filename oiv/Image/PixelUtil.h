@@ -32,14 +32,16 @@ namespace OIV
             using namespace std;
             //TODO: fine tune the minimum size required to open helper threads
             const size_t MegaBytesPerThread = 6;
-            //TODO: choose max threads 
-            const uint8_t maxThreads = 5;
+            static const uint8_t MaxGlobalThrads = 32;
+            static uint8_t maxThreads = static_cast<uint8_t>(
+                min(static_cast<unsigned int>(MaxGlobalThrads), max(1u, thread::hardware_concurrency() - 1)));
+            static std::thread threads[MaxGlobalThrads];
 
 
             const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
             const size_t bytesPerPixel = dstTexelSizeinBits / 8;
             const size_t texelsPerThread = bytesPerThread / bytesPerPixel;
-            static std::thread threads[maxThreads];
+            
             const uint8_t totalThreads = std::min(maxThreads, static_cast<uint8_t>(numTexels / texelsPerThread));
             *i_dest = new uint8_t[numTexels * bytesPerPixel];
             uint8_t* dest = *i_dest;
