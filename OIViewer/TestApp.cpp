@@ -323,12 +323,18 @@ namespace OIV
 
     void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        bool IsAlt = (GetKeyState(VK_MENU) & (USHORT)0x8000) != 0;
-        bool IsControl = (GetKeyState(VK_CONTROL) & (USHORT)0x8000) != 0;
-        bool IsShift = (GetKeyState(VK_SHIFT) & (USHORT)0x8000) != 0;
+        bool IsAlt = (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
+        bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
+        bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
 
         switch (evnt->message.wParam)
         {
+        case VK_OEM_4:
+            Rotate90Degree(false);
+            break;
+        case VK_OEM_6:
+            Rotate90Degree(true);
+            break;
         case 'Q':
         case VK_ESCAPE:
             PostQuitMessage(0);
@@ -463,6 +469,13 @@ namespace OIV
                 static_cast<uint16_t>(size.cy) }, &CmdNull());
             UpdateCanvasSize();
         }
+    }
+
+    void TestApp::Rotate90Degree(bool clockwise)
+    {
+        OIV_AxisAlignedRTransform tansform = clockwise ? OIV_AxisAlignedRTransform::AAT_Rotate90CW : OIV_AxisAlignedRTransform::AAT_Rotate90CCW;
+        ExecuteCommand(OIV_CMD_AxisAlignedTransform,
+            &OIV_CMDAxisalignedTransformRequest{ tansform }, &CmdNull());
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)

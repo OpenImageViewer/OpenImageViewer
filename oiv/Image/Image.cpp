@@ -44,7 +44,7 @@ namespace OIV
         return fLoadTime;
     }
 
-    void Image::Transform(AxisAlignedRTransform transform)
+    void Image::Transform(OIV_AxisAlignedRTransform transform)
     {
         if (GetIsByteAligned() == false)
             throw std::logic_error("OIV::Image::Transom works only with byte aligned image formats");

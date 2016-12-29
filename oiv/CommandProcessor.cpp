@@ -215,6 +215,12 @@ namespace OIV
              case OIV_CMD_Destroy:
                  sPictureRenderer.reset();
                  break;
+             
+             case OIV_CMD_AxisAlignedTransform:
+                 const OIV_CMDAxisalignedTransformRequest* request = reinterpret_cast<const OIV_CMDAxisalignedTransformRequest*>(requestData);
+                 result = sPictureRenderer->AxisAlignTrasnform(request->transform);
+ 
+                break;
         }
 
         return result;
