@@ -213,6 +213,7 @@
     <ClInclude Include="Image\Image.h" />
     <ClInclude Include="Image\ImageLoader.h" />
     <ClInclude Include="Image\ImageProperties.h" />
+    <ClInclude Include="Image\ImageType.h" />
     <ClInclude Include="Image\ImageUtil.h" />
     <ClInclude Include="Image\PixelUtil.h" />
     <ClInclude Include="Interfaces\IImagePlugin.h" />

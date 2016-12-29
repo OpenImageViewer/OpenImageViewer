@@ -25,7 +25,7 @@ namespace OIV
 
         // Query methods
         double GetLoadTime() const;
-        const void* GetBuffer() const { return fProperies.ImageBuffer; }
+        const uint8_t* GetBuffer() const { return fProperies.ImageBuffer; }
 
         std::size_t GetWidth() const { return fProperies.Width; }
         std::size_t GetHeight() const { return fProperies.Height; }

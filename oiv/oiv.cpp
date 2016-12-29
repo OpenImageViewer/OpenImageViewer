@@ -187,7 +187,7 @@ namespace OIV
                     fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
 
                 //TODO: send the renderer a copy of the converted image.
-                fOpenedImage = ImageUtil::ConvertToRGBA(fOpenedImage);
+                fOpenedImage = ImageUtil::Convert(fOpenedImage, IT_BYTE_RGBA);
 
                 if (fOpenedImage.get() != nullptr)
                 {
