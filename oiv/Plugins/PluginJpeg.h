@@ -1,5 +1,5 @@
 #pragma once
-#define OIV_BUILD_PLUGIN_JPEG 1
+#include "Configuration.h"
 
 #if OIV_BUILD_PLUGIN_JPEG == 1
 #include <Interfaces/IImagePlugin.h>
