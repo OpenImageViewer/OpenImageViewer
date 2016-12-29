@@ -65,11 +65,11 @@ namespace OIV
             HWND fHandleClient;
             HWND fHandleStatusBar;
             int fStatusWindowParts;
-            OIV::FullSceenState fFullSceenState;
+            FullSceenState fFullSceenState;
             WINDOWPLACEMENT fLastWindowPlacement;
             
             DragAndDropTarget* fDragAndDrop;
-            bool fShowStatusBar;
+            bool fShowStatusBar = true;
             bool fShowBorders;
         public:
             EventCallbackCollection fListeners;
