@@ -26,18 +26,18 @@ namespace OIV
             int width = 0;
             int height = 0;
 
-            int bytesPerPixel = 3;
+            int bytesPerPixel = 4;
             int subsamp;
             unsigned long jpegSize = static_cast<unsigned long>(size);
             if (tjDecompressHeader2(ftjHandle,static_cast<unsigned char*>( buffer), jpegSize, &width, &height, &subsamp) != -1)
             {
                 unsigned char* bufferDecompressed = new unsigned char[width * height * bytesPerPixel];
 
-                if (tjDecompress2(ftjHandle, static_cast<unsigned char*>(buffer), jpegSize, bufferDecompressed, width, width * bytesPerPixel, height, TJPF_RGB, 0) != -1)
+                if (tjDecompress2(ftjHandle, static_cast<unsigned char*>(buffer), jpegSize, bufferDecompressed, width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
                 {
                     out_properties.ImageBuffer = static_cast<uint8_t*>(bufferDecompressed);
                     out_properties.BitsPerTexel = bytesPerPixel * 8;
-                    out_properties.Type = IT_BYTE_BGR;
+                    out_properties.Type = IT_BYTE_RGBA;
                     out_properties.Width = width;
                     out_properties.Height = height;
                     out_properties.RowPitchInBytes = bytesPerPixel * width;
