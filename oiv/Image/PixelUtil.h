@@ -127,7 +127,7 @@ namespace OIV
             uint8_t* dstBuffer;
             OIV_AxisAlignedRTransform transform;
             size_t srcRowPitch;
-            uint8_t bytesPerTexel;
+            size_t bytesPerTexel;
         };
 
         static void TransformTexels(const TransformTexelsInfo& transformInfo)

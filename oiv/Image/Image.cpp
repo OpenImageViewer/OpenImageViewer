@@ -37,8 +37,6 @@ namespace OIV
         // else already normalized.
     }
 
-
-
     double Image::GetLoadTime() const
     {
         return fLoadTime;
@@ -46,28 +44,68 @@ namespace OIV
 
     void Image::Transform(OIV_AxisAlignedRTransform transform)
     {
+        using namespace std;
         if (GetIsByteAligned() == false)
             throw std::logic_error("OIV::Image::Transom works only with byte aligned image formats");
         
         if (transform != AAT_None)
         {
-            
             uint8_t* dest = new uint8_t[GetTotalSizeOfImageTexels()];
-            PixelUtil::TransformTexelsInfo desc;
-            desc.transform = transform;
-            desc.dstBuffer = dest;
-            desc.srcBuffer = fProperies.ImageBuffer;
-            desc.width = GetWidth();
-            desc.height = GetHeight();
-            desc.bytesPerTexel = GetBytesPerTexel();
-            desc.srcRowPitch = GetRowPitchInBytes();
-            desc.endRow = 0;
-            desc.startCol = 0;
-            desc.endCol = GetWidth();
-            desc.startRow = 0;
-            desc.endRow = GetHeight();
 
-            PixelUtil::TransformTexels(desc);
+            const size_t MegaBytesPerThread = 6;
+            static const uint8_t MaxGlobalThrads = 32;
+            static uint8_t maxThreads = static_cast<uint8_t>(
+                min(static_cast<unsigned int>(MaxGlobalThrads), max(1u, thread::hardware_concurrency() - 1)));
+            static thread threads[MaxGlobalThrads];
+
+
+            const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
+            const uint8_t totalThreads = std::min(maxThreads, static_cast<uint8_t>(GetTotalSizeOfImageTexels() /  bytesPerThread));
+            PixelUtil::TransformTexelsInfo descTemplate;
+            descTemplate.transform = transform;
+            descTemplate.dstBuffer = dest;
+            descTemplate.srcBuffer = fProperies.ImageBuffer;
+            descTemplate.width = GetWidth();
+            descTemplate.height = GetHeight();
+            descTemplate.bytesPerTexel = GetBytesPerTexel();
+            descTemplate.srcRowPitch = GetRowPitchInBytes();
+            descTemplate.startCol = 0;
+            descTemplate.endCol = GetWidth();
+            descTemplate.startRow = 0;
+            descTemplate.endRow = GetHeight();
+
+            if (totalThreads > 0)
+            {
+                size_t rowsPerThread = GetHeight() / totalThreads;
+                for (uint8_t threadNum = 0; threadNum < totalThreads; threadNum++)
+                {
+
+                    threads[threadNum] = std::thread
+                    (
+                        [&descTemplate,rowsPerThread, threadNum]()
+                    {
+                        PixelUtil::TransformTexelsInfo desc = descTemplate;
+                        desc.startRow = rowsPerThread * threadNum;
+                        desc.endRow = rowsPerThread * (threadNum + 1);
+                        PixelUtil::TransformTexels(desc);
+                    }
+                    );
+                }
+
+                PixelUtil::TransformTexelsInfo desc = descTemplate;
+                desc.startRow = rowsPerThread * totalThreads;
+                desc.endRow = GetHeight();
+
+                PixelUtil::TransformTexels(desc);
+
+                for (uint8_t i = 0; i < totalThreads; i++)
+                    threads[i].join();
+            }
+            else
+            {
+                // single (main) thread implementation
+                PixelUtil::TransformTexels(descTemplate);
+            }
 
             if (transform == AAT_Rotate90CW || transform == AAT_Rotate90CCW)
                 std::swap(fProperies.Height, fProperies.Width);
