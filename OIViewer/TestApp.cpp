@@ -110,6 +110,7 @@ namespace OIV
         fCurrentFileIndex = std::numeric_limits<ListFiles::size_type>::max();
         
         std::experimental::filesystem::path workingPath  = filePath;
+        std::experimental::filesystem::path fullFilePath = filePath;
 
         workingPath = workingPath.parent_path();
         
@@ -117,13 +118,16 @@ namespace OIV
         {
             TCHAR path[MAX_PATH];
             if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
+            {
                 workingPath = path;
+                fullFilePath = workingPath / filePath;
+            }
         }
 
         if (workingPath.empty() == false)
         {
             Utility::find_files(workingPath.wstring(), fListFiles);
-            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
