@@ -28,8 +28,8 @@ namespace OIV
             FIBITMAP* freeImageHandle;
             bool opened = false;
 
-            FIMEMORY* memStream = FreeImage_OpenMemory(static_cast<BYTE*>(buffer), size);
-            FREE_IMAGE_FORMAT format =  FreeImage_GetFileTypeFromMemory(memStream, size);
+            FIMEMORY* memStream = FreeImage_OpenMemory(static_cast<BYTE*>(buffer),static_cast<DWORD>(size));
+            FREE_IMAGE_FORMAT format =  FreeImage_GetFileTypeFromMemory(memStream, static_cast<int>(size));
             freeImageHandle = FreeImage_LoadFromMemory(format, memStream, 0);
             if (freeImageHandle && FreeImage_FlipVertical(freeImageHandle))
             {
@@ -46,7 +46,7 @@ namespace OIV
 
                 out_properties.NumSubImages = 0;
 
-                int imageSizeInMemory = header.biHeight * out_properties.RowPitchInBytes;
+                std::size_t imageSizeInMemory = header.biHeight * out_properties.RowPitchInBytes;
                 out_properties.ImageBuffer = new uint8_t[imageSizeInMemory];
                 memcpy_s(out_properties.ImageBuffer, imageSizeInMemory, FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
 
@@ -61,7 +61,7 @@ namespace OIV
                         out_properties.Type = IT_BYTE_8BIT;
                         break;
                     case 32:
-                        out_properties.Type = IT_BYTE_ARGB;
+                        out_properties.Type = IT_BYTE_RGBA;
                         break;
                     case 24:
                         out_properties.Type = IT_BYTE_RGB;
