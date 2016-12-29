@@ -210,6 +210,7 @@
     <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="Image\AxisAlignedTransform.h" />
     <ClInclude Include="Image\Image.h" />
     <ClInclude Include="Image\ImageLoader.h" />
     <ClInclude Include="Image\ImageProperties.h" />
@@ -225,7 +226,6 @@
     <ClInclude Include="Plugins\PluginFreeImage.h" />
     <ClInclude Include="Plugins\PluginJpeg.h" />
     <ClInclude Include="Plugins\PluginPng.h" />
-    <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="Vector2.h" />
     <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="ZoomScrollState.h" />
