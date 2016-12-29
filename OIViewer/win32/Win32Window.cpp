@@ -32,10 +32,10 @@ namespace OIV
 
         void Win32WIndow::SetWindowed()
         {
+            fFullSceenState = FSS_Windowed;
             fWindowStyles |= WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
             UpdateWindowStyles();
             RestorePlacement();
-            fFullSceenState = FSS_Windowed;
         }
 
 
@@ -59,11 +59,13 @@ namespace OIV
         void Win32WIndow::SetFullScreen(bool multiMonitor)
         {
             HWND hwnd = fHandleWindow;
-            fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW & ~WS_CLIPCHILDREN;
-            UpdateWindowStyles();
+            
             MONITORINFO mi = { sizeof(mi) };
             GetMonitorInfo(MonitorFromWindow(fHandleWindow, MONITOR_DEFAULTTOPRIMARY), &mi);
             RECT rect = mi.rcMonitor;
+
+            if (fFullSceenState == FSS_Windowed)
+                SavePlacement();
 
             if (multiMonitor)
             {
@@ -73,7 +75,10 @@ namespace OIV
             else
                 fFullSceenState = FSS_SingleScreen;
 
-            SavePlacement();
+            
+
+            fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW & ~WS_CLIPCHILDREN;
+            UpdateWindowStyles();
             
             SetWindowPos(hwnd, HWND_TOP,
                 rect.left, rect.top,
@@ -81,7 +86,6 @@ namespace OIV
                 rect.bottom - rect.top,
                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 
-            fShowStatusBar = fFullSceenState == FSS_Windowed;
             RefreshWindow();
         }
 
@@ -389,7 +393,7 @@ namespace OIV
             clientSize.cy = rect.bottom - rect.top;
 
 
-            if (fShowStatusBar)
+            if (fShowStatusBar && fFullSceenState == FullSceenState::FSS_Windowed)
             {
                 RECT statusBarRect;
                 ShowWindow(fHandleStatusBar,  SW_SHOW);

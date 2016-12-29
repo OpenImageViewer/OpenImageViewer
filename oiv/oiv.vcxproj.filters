@@ -47,6 +47,7 @@
     <ClInclude Include="Image\PixelUtil.h" />
     <ClInclude Include="Image\ImageUtil.h" />
     <ClInclude Include="Configuration.h" />
+    <ClInclude Include="Image\ImageType.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

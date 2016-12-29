@@ -5,36 +5,66 @@
 
 namespace OIV
 {
-    
-
     class ImageUtil
     {
     private:
-        
-        typedef std::unordered_map<uint32_t, PixelConvertFunc> MapConvertKeyToFunc;
+        struct ConvertKey
+        {
+            struct Hash
+            {
+                std::size_t operator()(const ConvertKey& key) const
+                {
+                    return key.source << 16 | key.target;
+                }
+            };
 
+            ConvertKey(ImageType aSource, ImageType aTarget)
+            {
+              source = aSource;
+              target = aTarget;
+            }
+
+            bool operator==(const ConvertKey& rhs) const
+            {
+                return source == rhs.source && target == rhs.target;
+            }
+
+            ImageType source;
+            ImageType target;
+        };
+
+        typedef std::unordered_map<ConvertKey, PixelConvertFunc, ConvertKey::Hash> MapConvertKeyToFunc;
         static MapConvertKeyToFunc sConvertionFunction;
-        
 
     public:
-        static ImageSharedPtr ConvertToRGBA(ImageSharedPtr sourceImage)
+
+        static ImageSharedPtr Convert(ImageSharedPtr sourceImage, ImageType targetPixelFormat)
         {
             ImageSharedPtr convertedImage;
 
-            if (sourceImage->GetImageType() != IT_BYTE_RGBA)
+            if (sourceImage->GetImageType() != targetPixelFormat)
             {
-                auto converter = sConvertionFunction.find(sourceImage->GetImageType() << 16 | IT_BYTE_RGBA);
+                
+                auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
+
                 if (converter != sConvertionFunction.end())
                 {
+                    uint8_t targetPixelSize = ImageTypeSize(targetPixelFormat);
                     uint8_t* dest = nullptr;
+
                     //TODO: convert without normalization.
                     sourceImage->Normalize();
-                    PixelUtil::Convert(converter->second, (uint8_t**)&dest, (uint8_t*)sourceImage->GetBuffer(), sourceImage->GetBitsPerTexel(), sourceImage->GetTotalPixels());
+                    PixelUtil::Convert(converter->second
+                        , &dest
+                        , sourceImage->GetBuffer()
+                        , targetPixelSize
+                        , sourceImage->GetTotalPixels());
+
                     ImageProperies properties = sourceImage->GetProperties();
-                    properties.Type = IT_BYTE_RGBA;
+                    properties.Type = targetPixelFormat;
                     properties.ImageBuffer = dest;
-                    properties.RowPitchInBytes = sourceImage->GetRowPitchInTexels() * 4;
-                    properties.BitsPerTexel = 32;
+                    properties.RowPitchInBytes = sourceImage->GetRowPitchInTexels() * (targetPixelSize / 8);
+                    properties.BitsPerTexel = targetPixelSize;
                     convertedImage = ImageSharedPtr(new Image(properties, sourceImage->GetLoadTime()));
                 }
             }

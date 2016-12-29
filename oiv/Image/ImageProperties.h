@@ -1,23 +1,9 @@
 #pragma once
 #include <cstdint>
-#include <cstdio>
+#include "ImageType.h"
 
 namespace OIV
 {
-	enum ImageType
-	{
-		IT_UNKNOWN
-		, IT_BYTE_RGBA
-		, IT_BYTE_BGR
-		, IT_BYTE_BGRA
-		, IT_BYTE_RGB
-		, IT_BYTE_ARGB
-		, IT_BYTE_ABGR
-		, IT_FLOAT
-		, IT_BYTE_8BIT
-	};
-
-
 	class ImageProperies
 	{
 	public:

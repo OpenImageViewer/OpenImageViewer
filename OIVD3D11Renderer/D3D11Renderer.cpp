@@ -1,13 +1,11 @@
 #include "D3D11Renderer.h"
 #include <d3dcommon.h>
-#include <d3d10sdklayers.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include <cstdint>>
-#include "../OIVUtil/Utility.h"
-#include "../OIVUtil/FileHelper.h"
 #include <filesystem>
 
+#include "../OIVUtil/Utility.h"
+#include "../OIVUtil/FileHelper.h"
 
 namespace OIV
 {
@@ -442,7 +440,7 @@ namespace OIV
         desc.CPUAccessFlags = static_cast<UINT>(0);
         desc.MiscFlags = 0;
         const D3D11_SUBRESOURCE_DATA subResourceData = {
-                                                      const_cast<void*>(image->GetBuffer())
+                                                      (image->GetBuffer())
                                                     , static_cast<UINT>(image->GetRowPitchInBytes())
                                                     , static_cast<UINT>(0) };
 

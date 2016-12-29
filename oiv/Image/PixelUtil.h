@@ -6,7 +6,7 @@
 
 namespace OIV
 {
-    typedef void(*PixelConvertFunc)(uint8_t* i_dest, uint8_t* i_src, size_t start, size_t end);
+    typedef void(*PixelConvertFunc)(uint8_t* i_dest, const uint8_t* i_src, size_t start, size_t end);
     class PixelUtil
     {
     public:
@@ -27,8 +27,9 @@ namespace OIV
 
         }
 
-        static void Convert(PixelConvertFunc convertFunc, uint8_t** i_dest, uint8_t* i_src, size_t texelSizeinBits, size_t numTexels)
+        static void Convert(PixelConvertFunc convertFunc, uint8_t** i_dest, const uint8_t* i_src, const uint8_t dstTexelSizeinBits, const size_t numTexels)
         {
+            using namespace std;
             //TODO: fine tune the minimum size required to open helper threads
             const size_t MegaBytesPerThread = 6;
             //TODO: choose max threads 
@@ -36,10 +37,11 @@ namespace OIV
 
 
             const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
-            const size_t texelsPerThread = bytesPerThread / (texelSizeinBits / 8);
+            const size_t bytesPerPixel = dstTexelSizeinBits / 8;
+            const size_t texelsPerThread = bytesPerThread / bytesPerPixel;
             static std::thread threads[maxThreads];
             const uint8_t totalThreads = std::min(maxThreads, static_cast<uint8_t>(numTexels / texelsPerThread));
-            *i_dest = new uint8_t[numTexels * 4];
+            *i_dest = new uint8_t[numTexels * bytesPerPixel];
             uint8_t* dest = *i_dest;
             if (totalThreads > 0)
             {
@@ -74,7 +76,7 @@ namespace OIV
 
         }
 
-        static void BGR24ToRGBA32(uint8_t* i_dest, uint8_t* i_src, std::size_t start, std::size_t end)
+        static void BGR24ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
         {
             uint32_t* dst = (uint32_t*)i_dest;
             BitTexel24 * src = (BitTexel24*)i_src;
@@ -86,7 +88,7 @@ namespace OIV
         }
 
 
-        static void RGB24ToRGBA32(uint8_t* i_dest, uint8_t* i_src, std::size_t start, std::size_t end)
+        static void RGB24ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
         {
             uint32_t* dst = (uint32_t*)i_dest;
             BitTexel24 * src = (BitTexel24*)i_src;
@@ -97,7 +99,7 @@ namespace OIV
             }
         }
 
-        static void BGRA32ToRGBA32(uint8_t* i_dest, uint8_t* i_src, std::size_t start, std::size_t end)
+        static void BGRA32ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
             BitTexel32 * src = (BitTexel32*)i_src;

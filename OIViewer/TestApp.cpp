@@ -17,6 +17,7 @@
 #include <thread>
 #include "FileHelper.h"
 #include <cassert>
+#include "StopWatch.h"
 
 
 namespace OIV
@@ -50,12 +51,15 @@ namespace OIV
         return fWindow.GetHandle();
     }
 
-    void TestApp::UpdateFileInfo(const CmdResponseLoad& loadResponse)
+    void TestApp::UpdateFileInfo(const CmdResponseLoad& loadResponse, const long double& totalLoadTime)
     {
         std::wstringstream ss;
         
-        ss << loadResponse.width << L" X " << loadResponse.height << L" X " 
-            << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(3) << loadResponse.loadTime << " ms";
+        ss << loadResponse.width << L" X " << loadResponse.height << L" X "
+            << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(1) << loadResponse.loadTime <<
+            L"/" << totalLoadTime << L" ms";
+                
+            
         fWindow.SetStatusBarText(ss.str(), 0, 0);
     }
 
@@ -95,10 +99,13 @@ namespace OIV
         strcpy_s(loadRequest.extension, CmdDataLoadFile::EXTENSION_SIZE, fileExtension.c_str());
         loadRequest.onlyRegisteredExtension = onlyRegisteredExtension;
 
+        StopWatch stopWatch;
+        stopWatch.Start();
         bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadRequest, &loadResponse) == true;
+        stopWatch.Stop();
         if (success)
         {
-            UpdateFileInfo(loadResponse);
+            UpdateFileInfo(loadResponse,stopWatch.GetElapsedMicroSeconds());
         }
 
         return success;
@@ -110,6 +117,7 @@ namespace OIV
         fCurrentFileIndex = std::numeric_limits<ListFiles::size_type>::max();
         
         std::experimental::filesystem::path workingPath  = filePath;
+        std::experimental::filesystem::path fullFilePath = filePath;
 
         workingPath = workingPath.parent_path();
         
@@ -117,13 +125,16 @@ namespace OIV
         {
             TCHAR path[MAX_PATH];
             if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
+            {
                 workingPath = path;
+                fullFilePath = workingPath / filePath;
+            }
         }
 
         if (workingPath.empty() == false)
         {
             Utility::find_files(workingPath.wstring(), fListFiles);
-            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
