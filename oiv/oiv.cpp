@@ -104,9 +104,9 @@ namespace OIV
         return fOpenedImage.get() != nullptr;
     }
 
-    AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
+    OIV_AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
     {
-        AxisAlignedRTransform rotation;
+        OIV_AxisAlignedRTransform rotation;
             switch (exifRotation)
             {
             case 3:
@@ -307,6 +307,21 @@ namespace OIV
         fClientHeight = height;
         Refresh();
         return 0;
+    }
+
+    ResultCode OIV::AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform)
+    {
+        if (fOpenedImage.get() != nullptr)
+        {
+            fOpenedImage->Transform(transform);
+            if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+            {
+                fScrollState.Reset(true);
+                return RC_Success;
+            }
+
+        }
+        return RC_UknownError;
     }
 #pragma endregion
 

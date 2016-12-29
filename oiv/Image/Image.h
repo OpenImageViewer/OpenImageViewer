@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include <stdexcept>
-#include "AxisAlignedTransform.h"
 #include "ImageProperties.h"
+#include <API/defs.h>
 
 namespace OIV
 {
@@ -16,7 +16,7 @@ namespace OIV
         void Normalize();
         virtual ~Image() { if (fProperies.ImageBuffer != nullptr) delete[]fProperies.ImageBuffer;}
 
-        void Transform(AxisAlignedRTransform transform);
+        void Transform(OIV_AxisAlignedRTransform transform);
 
         
         //Internal methods

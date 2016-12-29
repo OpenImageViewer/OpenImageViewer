@@ -32,14 +32,16 @@ namespace OIV
             using namespace std;
             //TODO: fine tune the minimum size required to open helper threads
             const size_t MegaBytesPerThread = 6;
-            //TODO: choose max threads 
-            const uint8_t maxThreads = 5;
+            static const uint8_t MaxGlobalThrads = 32;
+            static uint8_t maxThreads = static_cast<uint8_t>(
+                min(static_cast<unsigned int>(MaxGlobalThrads), max(1u, thread::hardware_concurrency() - 1)));
+            static std::thread threads[MaxGlobalThrads];
 
 
             const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
             const size_t bytesPerPixel = dstTexelSizeinBits / 8;
             const size_t texelsPerThread = bytesPerThread / bytesPerPixel;
-            static std::thread threads[maxThreads];
+            
             const uint8_t totalThreads = std::min(maxThreads, static_cast<uint8_t>(numTexels / texelsPerThread));
             *i_dest = new uint8_t[numTexels * bytesPerPixel];
             uint8_t* dest = *i_dest;
@@ -111,6 +113,74 @@ namespace OIV
                 dst[i].Z = src[i].X;
                 dst[i].W = src[i].W;
             }
+        }
+
+        struct TransformTexelsInfo
+        {
+            size_t startRow;
+            size_t endRow;
+            size_t startCol;
+            size_t endCol;
+            size_t width;
+            size_t height;
+            uint8_t* srcBuffer;
+            uint8_t* dstBuffer;
+            OIV_AxisAlignedRTransform transform;
+            size_t srcRowPitch;
+            size_t bytesPerTexel;
+        };
+
+        static void TransformTexels(const TransformTexelsInfo& transformInfo)
+        {
+            for (std::size_t y = transformInfo.startRow; y < transformInfo.endRow; y++)
+                for (std::size_t x = transformInfo.startCol; x < transformInfo.endCol; x++)
+                {
+                    const uint8_t* srcRow = transformInfo.srcBuffer + y * transformInfo.srcRowPitch;
+                    std::size_t idxDest;
+
+                    switch (transformInfo.transform)
+                    {
+                    case AAT_Rotate180:
+                        idxDest = transformInfo.width - x - 1 + (transformInfo.height - y - 1) * transformInfo.width;
+                        break;
+                    case AAT_Rotate90CW:
+                        idxDest = (transformInfo.height - 1 - y) + x * transformInfo.height;
+                        break;
+                    case AAT_Rotate90CCW:
+                        idxDest = y + (transformInfo.width - 1 - x) * transformInfo.height;
+                        break;
+                    case AAT_FlipVertical:
+                        idxDest = x + (transformInfo.height - y - 1) * transformInfo.width;
+                        break;
+                    case AAT_FlipHorizontal:
+                        idxDest = (transformInfo.width - 1 - x) + y * transformInfo.width;
+                        break;
+
+                    default:
+                        throw std::runtime_error("Wrong or corrupted value");
+                    }
+
+
+
+                    switch (transformInfo.bytesPerTexel)
+                    {
+                    case 1:
+
+                        PixelUtil::CopyTexel <PixelUtil::BitTexel8>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 2:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel16>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 3:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel24>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 4:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    default:
+                        throw std::runtime_error("Wrong or corrupted value");
+                    }
+                }
         }
 
         //static void BGR32ToRGBA32(uint8_t** i_dest, uint8_t* i_src, size_t size)

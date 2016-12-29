@@ -27,6 +27,7 @@ namespace OIV
         void UpdateTexelPos();
         void UpdateWindowSize(const Win32::EventWinMessage* winMessage);
 #pragma region Win32 event handling
+        void Rotate90Degree(bool clockwise);
         void handleKeyInput(const Win32::EventWinMessage* evnt);
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);

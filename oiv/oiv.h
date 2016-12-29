@@ -23,7 +23,7 @@ namespace OIV
         void HandleWindowResize();
         bool IsImageLoaded() const;
         void UpdateGpuParams();
-        AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
+        OIV_AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
         void LoadSettings();
 #pragma endregion
     public:
@@ -43,6 +43,7 @@ namespace OIV
         virtual int SetTexelGrid(double gridSize) override;
         virtual int GetNumTexelsInCanvas(double &x, double &y) override;
         virtual int SetClientSize(uint16_t width, uint16_t height) override;
+        virtual ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) override;
 #pragma endregion
 
 #pragma region //-------------Private member fields------------------
@@ -59,5 +60,6 @@ namespace OIV
         int fFilterLevel;
         int fClientWidth;
         int fClientHeight;
+#pragma endregion
     };
 }
