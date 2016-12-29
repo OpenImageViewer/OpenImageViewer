@@ -113,6 +113,74 @@ namespace OIV
             }
         }
 
+        struct TransformTexelsInfo
+        {
+            size_t startRow;
+            size_t endRow;
+            size_t startCol;
+            size_t endCol;
+            size_t width;
+            size_t height;
+            uint8_t* srcBuffer;
+            uint8_t* dstBuffer;
+            OIV_AxisAlignedRTransform transform;
+            size_t srcRowPitch;
+            uint8_t bytesPerTexel;
+        };
+
+        static void TransformTexels(const TransformTexelsInfo& transformInfo)
+        {
+            for (std::size_t y = transformInfo.startRow; y < transformInfo.endRow; y++)
+                for (std::size_t x = transformInfo.startCol; x < transformInfo.endCol; x++)
+                {
+                    const uint8_t* srcRow = transformInfo.srcBuffer + y * transformInfo.srcRowPitch;
+                    std::size_t idxDest;
+
+                    switch (transformInfo.transform)
+                    {
+                    case AAT_Rotate180:
+                        idxDest = transformInfo.width - x - 1 + (transformInfo.height - y - 1) * transformInfo.width;
+                        break;
+                    case AAT_Rotate90CW:
+                        idxDest = (transformInfo.height - 1 - y) + x * transformInfo.height;
+                        break;
+                    case AAT_Rotate90CCW:
+                        idxDest = y + (transformInfo.width - 1 - x) * transformInfo.height;
+                        break;
+                    case AAT_FlipVertical:
+                        idxDest = x + (transformInfo.height - y - 1) * transformInfo.width;
+                        break;
+                    case AAT_FlipHorizontal:
+                        idxDest = (transformInfo.width - 1 - x) + y * transformInfo.width;
+                        break;
+
+                    default:
+                        throw std::runtime_error("Wrong or corrupted value");
+                    }
+
+
+
+                    switch (transformInfo.bytesPerTexel)
+                    {
+                    case 1:
+
+                        PixelUtil::CopyTexel <PixelUtil::BitTexel8>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 2:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel16>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 3:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel24>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    case 4:
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(transformInfo.dstBuffer, idxDest, srcRow, x);
+                        break;
+                    default:
+                        throw std::runtime_error("Wrong or corrupted value");
+                    }
+                }
+        }
+
         //static void BGR32ToRGBA32(uint8_t** i_dest, uint8_t* i_src, size_t size)
         //{
         //    if (size % 3 != 0)

@@ -51,68 +51,28 @@ namespace OIV
         
         if (transform != AAT_None)
         {
-            const uint8_t* src = fProperies.ImageBuffer;
-            const std::size_t srcRowPitch = GetRowPitchInBytes();
-            const std::size_t bytesPerRowOfPixels = GetBytesPerRowOfPixels();
-            const std::size_t destRowPitch = bytesPerRowOfPixels;
-            const std::size_t bytesPerTexel = GetBytesPerTexel();
-
+            
             uint8_t* dest = new uint8_t[GetTotalSizeOfImageTexels()];
+            PixelUtil::TransformTexelsInfo desc;
+            desc.transform = transform;
+            desc.dstBuffer = dest;
+            desc.srcBuffer = fProperies.ImageBuffer;
+            desc.width = GetWidth();
+            desc.height = GetHeight();
+            desc.bytesPerTexel = GetBytesPerTexel();
+            desc.srcRowPitch = GetRowPitchInBytes();
+            desc.endRow = 0;
+            desc.startCol = 0;
+            desc.endCol = GetWidth();
+            desc.startRow = 0;
+            desc.endRow = GetHeight();
 
-            for (std::size_t y = 0; y < fProperies.Height; y++)
-                for (std::size_t x = 0; x < fProperies.Width; x++)
-                {
-                    const uint8_t* srcRow = src + y * srcRowPitch;
-                    std::size_t idxDest;
-                    
-                    switch (transform)
-                    {
-                    case AAT_Rotate180:
-                        idxDest =  fProperies.Width - x -  1 + (fProperies.Height - y - 1) * fProperies.Width;
-                        break;
-                    case AAT_Rotate90CW:
-                        idxDest = (fProperies.Height - 1 - y) + x * fProperies.Height;
-                        break;
-                    case AAT_Rotate90CCW:
-                        idxDest = y + (fProperies.Width - 1 - x) * fProperies.Height;
-                        break;
-                    case AAT_FlipVertical:
-                        idxDest = x + (fProperies.Height - y - 1) * fProperies.Width;
-                        break;
-                    case AAT_FlipHorizontal:
-                        idxDest = (fProperies.Width - 1 - x) + y * fProperies.Width;
-                        break;
-
-                    default:
-                        throw std::runtime_error("Wrong or corrupted value");
-                    }
-
-
-                    
-                    switch (bytesPerTexel)
-                    {
-                    case 1:
-                        
-                        PixelUtil::CopyTexel <PixelUtil::BitTexel8>(dest, idxDest, srcRow, x);
-                        break;
-                    case 2:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel16>(dest, idxDest, srcRow, x);
-                        break;
-                    case 3:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel24>(dest, idxDest, srcRow, x);
-                        break;
-                    case 4:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(dest, idxDest, srcRow, x);
-                        break;
-                    default:
-                        throw std::runtime_error("Wrong or corrupted value");
-                    }
-                }
+            PixelUtil::TransformTexels(desc);
 
             if (transform == AAT_Rotate90CW || transform == AAT_Rotate90CCW)
                 std::swap(fProperies.Height, fProperies.Width);
 
-            fProperies.RowPitchInBytes = fProperies.Width * bytesPerTexel;
+            fProperies.RowPitchInBytes = fProperies.Width * GetBytesPerTexel();
 
             delete[]fProperies.ImageBuffer;
             fProperies.ImageBuffer = dest;
