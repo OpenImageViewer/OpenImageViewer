@@ -1,5 +1,5 @@
 #pragma once
-#include "interfaces/IRenderer.h"
+#include "Interfaces/IRenderer.h"
 
 namespace OIV
 {

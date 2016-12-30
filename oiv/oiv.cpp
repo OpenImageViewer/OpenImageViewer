@@ -150,7 +150,7 @@ namespace OIV
     #endif
 #endif
 
-        throw std::exception("wrong build configuration");
+        throw std::runtime_error("wrong build configuration");
 
     }
 

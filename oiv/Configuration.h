@@ -1,7 +1,7 @@
 #pragma once
 //TODO: define the following using cmake
 //MISC
-#define OIV_NO_CLIENT_BUILD 1
+#define OIV_CLIENT_BUILD 0
 
 //Codecs
 #define OIV_BUILD_PLUGIN_FREE_IMAGE 1

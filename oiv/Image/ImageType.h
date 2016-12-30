@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <stdexcept>
+#include "../Common/linux.h"
 
 namespace OIV
 {
@@ -20,7 +21,7 @@ namespace OIV
     };
 
     
-    __forceinline  uint8_t ImageTypeSize(ImageType imageType)
+    OIV_FORCE_INLINE uint8_t ImageTypeSize(ImageType imageType)
     {
         switch (imageType)
         {

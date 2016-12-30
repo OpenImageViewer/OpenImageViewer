@@ -2,7 +2,7 @@
 #include <memory>
 #include <stdexcept>
 #include "ImageProperties.h"
-#include <API/defs.h>
+#include "../API/defs.h"
 
 namespace OIV
 {

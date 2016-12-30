@@ -3,12 +3,6 @@
 #include <cwchar>
 #include <cstdint>
 
-#if OIV_NO_CLIENT_BUILD == 1
-    #define OIV_EXPOSE_FUNCTION __declspec(dllexport)
-#else
-    #define OIV_EXPOSE_FUNCTION __declspec( dllimport )
-#endif
-
 extern "C"
 {
 
