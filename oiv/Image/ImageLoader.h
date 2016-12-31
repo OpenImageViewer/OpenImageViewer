@@ -85,7 +85,7 @@ namespace OIV
                         if ((props.IsInitialized() == false))
                             throw std::runtime_error("Image properties are not completely initialized");
                         
-                        loadTime = stopWatch.GetElapsedMicroSeconds();
+                        loadTime = stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds);
                         loadedImage = new Image(props, loadTime);
                     }
                 }

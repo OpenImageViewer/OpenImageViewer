@@ -164,6 +164,7 @@
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="win32\DragAndDrop.cpp" />
     <ClCompile Include="win32\MonitorInfo.cpp" />
+    <ClCompile Include="win32\RawInput\RawInputMouseWindow.cpp" />
     <ClCompile Include="win32\Win32Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -171,6 +172,8 @@
     <ClInclude Include="win32\DragAndDrop.h" />
     <ClInclude Include="win32\Event.h" />
     <ClInclude Include="win32\MonitorInfo.h" />
+    <ClInclude Include="win32\RawInput\RawInputMouse.h" />
+    <ClInclude Include="win32\RawInput\RawInputMouseWindow.h" />
     <ClInclude Include="win32\Win32Helper.h" />
     <ClInclude Include="win32\Win32Window.h" />
   </ItemGroup>

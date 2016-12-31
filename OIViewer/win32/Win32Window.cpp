@@ -16,6 +16,7 @@ namespace OIV
             , fDragAndDrop(nullptr)
             , fWindowStyles(0)
             , fWindowStylesClient(0)
+            , fMouseState(this)
         {
 
         }
@@ -135,6 +136,24 @@ namespace OIV
             SAFE_RELEASE(fDragAndDrop);
         }
 
+        void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input)
+        {
+            if (event_raw_input->header.dwType == RIM_TYPEMOUSE)
+                HandleRawInputMouse(event_raw_input->data.mouse);
+        }
+
+        void Win32WIndow::HandleRawInputMouse(const RAWMOUSE& mouse)
+        {
+            fMouseState.Update(mouse);
+
+          
+
+            EventRawInputMouseStateChanged rawInputEvent;
+            rawInputEvent.window = this;
+            RaiseEvent(rawInputEvent);
+        }
+        
+
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Win32WIndow* window = reinterpret_cast<Win32WIndow*>(GetProp(hWnd, _T("windowClass")));
@@ -149,6 +168,32 @@ namespace OIV
                     std::exception("Unable to set window property");
             }
             case WM_ERASEBKGND:
+                break;
+            case WM_INPUT:
+            {
+                LPBYTE lpb;
+                UINT dwSize;
+                RAWINPUT *raw;
+
+                GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+
+                lpb = new BYTE[dwSize];
+
+                if (lpb == NULL)
+                    return 0;
+
+                if (GetRawInputData((HRAWINPUT)lParam,
+                    RID_INPUT,
+                    lpb,
+                    &dwSize,
+                    sizeof(RAWINPUTHEADER)) != dwSize)
+                {
+                   // error
+                }
+                window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb));
+                
+             
+            }
                 break;
             case WM_SIZE:
                 if (window->GetHandle() == hWnd)
@@ -322,6 +367,9 @@ namespace OIV
             SetStatusBarText(_T("pixel: "), 0, SBT_NOBORDERS);
             SetStatusBarText(_T("File: "), 1, 0);
 
+            RawInput::ResiterWindow(fHandleWindow);
+            
+
             return 0;
         }
 
@@ -382,6 +430,18 @@ namespace OIV
             return clientSize;
         }
 
+        void Win32WIndow::GetClientRectangle(RECT& clientRect) const
+        {
+            GetClientRect(fHandleWindow, &clientRect);
+            if (IsWindowVisible(fHandleStatusBar))
+            {
+                RECT rect;
+                GetWindowRect(fHandleStatusBar, &rect);
+                clientRect.bottom -= rect.bottom - rect.top;
+            }
+        }
+
+       
         void Win32WIndow::HandleResize()
         {
             UpdateWindowStyles();

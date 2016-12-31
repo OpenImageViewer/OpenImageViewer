@@ -34,5 +34,12 @@ namespace OIV
                 }
             }
         }
+
+        static POINT GetMouseCursorPosition()
+        {
+            POINT mousePos;
+            GetCursorPos(&mousePos);
+            return mousePos;
+        }
     };
 }

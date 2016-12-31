@@ -9,30 +9,25 @@ namespace OIV
         class Event
         {
         public:
-            Win32WIndow* window;
-            Event()
-            {
-                window = nullptr;
-            }
-            virtual ~Event()
-            {
-                
-            }
+            Win32WIndow* window = nullptr;
+            virtual ~Event() {}
         };
 
         class EventWinMessage : public Event
         {
         public:
-            EventWinMessage()
-            {
-                memset(&message, 0, sizeof(MSG));
-            }
-            MSG message;
+            MSG message = { 0 };
+        };
+
+        class EventRawInputMouseStateChanged : public Event
+        {
+            
         };
 
         typedef std::function< bool(const Event*) > EventCallback;
         typedef std::vector <EventCallback> EventCallbackCollection;
         
+
         class EventDragDrop : public Event
         {
             

@@ -10,7 +10,6 @@
 #include <tchar.h>
 #include "win32/MonitorInfo.h"
 #include <sstream>
-#include <iostream>
 #include <API\functions.h>
 #include "win32/Win32Helper.h"
 #include <filesystem>
@@ -105,7 +104,7 @@ namespace OIV
         stopWatch.Stop();
         if (success)
         {
-            UpdateFileInfo(loadResponse,stopWatch.GetElapsedMicroSeconds());
+            UpdateFileInfo(loadResponse,stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
         }
 
         return success;
@@ -199,14 +198,14 @@ namespace OIV
 
         // Load all files in the directory of the loaded file
         LoadFileInFolder(filePath);
-
-
         
         Win32Helper::MessageLoop();
 
         // Destry OIV when windows is closed.
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
+
+
 
     void TestApp::UpdateFileInddex()
     {
@@ -409,6 +408,33 @@ namespace OIV
         }
     }
 
+
+    void TestApp::FlushInput(bool calledFromIdleTimer)
+    {
+        uint64_t currentTime = static_cast<uint64_t>(stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
+
+        if (currentTime - fLastMouseUpdateTime > inputInteval)
+        {
+            if (fPanX != 0 || fPanY != 0)
+            {
+                Pan(fPanX, fPanY);
+                fPanX = fPanY = 0;
+            }
+
+            fLastMouseUpdateTime = currentTime;
+
+            if (calledFromIdleTimer)
+                SetInputFlushTimer(false);
+        }
+        else
+        {
+            //skipped update, activate input flush timer
+            SetInputFlushTimer(true);
+        }
+    }
+
+    
+
     void TestApp::Pan(int horizontalPIxels, int verticalPixels )
     {
         CmdDataPan pan;
@@ -481,8 +507,6 @@ namespace OIV
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         const MSG& uMsg = evnt->message;
-        static int lastX = -1;
-        static int lastY = -1;
         switch (uMsg.message)
         {
         case WM_WINDOWPOSCHANGED:
@@ -493,6 +517,13 @@ namespace OIV
         {
             if (uMsg.wParam == cTimerID)
                 JumpFiles(1);
+            else if (uMsg.wParam == cTimerIDInputFlush)
+            {
+                uint64_t currentTime = static_cast<uint64_t>(stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
+                if (currentTime - fLastMouseUpdateTime > inputInteval * 2)
+                    FlushInput(true);
+            }
+
         }
         break;
 
@@ -501,56 +532,28 @@ namespace OIV
             handleKeyInput(evnt);
             break;
 
-        case WM_MOUSEWHEEL:
-        {
-            int zDelta = (GET_WHEEL_DELTA_WPARAM(uMsg.wParam) / WHEEL_DELTA);
-            //20% percent zoom in each wheel step
-            POINT mousePos = fWindow.GetMousePosition();
-            Zoom(zDelta * 0.2, mousePos.x, mousePos.y);
-        }
-        break;
-
-        case WM_MBUTTONDOWN:
-            ToggleFullScreen();
-            break;
-
-        case WM_LBUTTONDOWN:
-            SetCapture(uMsg.hwnd);
-            break;
-
-        case WM_LBUTTONUP:
-            ReleaseCapture();
-            lastX = -1;
-            break;
-
         case WM_MOUSEMOVE:
-        {
             UpdateTexelPos();
-            if (GetCapture() == nullptr)
-                return false;
-            int xPos = GET_X_LPARAM(uMsg.lParam);
-            int yPos = GET_Y_LPARAM(uMsg.lParam);
-
-            int deltax = xPos - lastX;
-            int deltaY = yPos - lastY;
-
-            bool isLeftDown = uMsg.wParam & MK_LBUTTON;
-
-            if (isLeftDown)
-            {
-                if (lastX != -1)
-                {
-                    Pan(-deltax, -deltaY);
-                }
-
-                lastX = xPos;
-                lastY = yPos;
-            }
-        }
+            break;
         break;
         }
         return true;
     }
+
+    void TestApp::SetInputFlushTimer(bool enable)
+    {
+        if (fInputFlushTimerEnabled != enable)
+        {
+            fInputFlushTimerEnabled = enable;
+
+            if (fInputFlushTimerEnabled)
+                SetTimer(GetWindowHandle(), cTimerIDInputFlush, 5, nullptr);
+            else
+                KillTimer(GetWindowHandle(), cTimerIDInputFlush);
+        }
+    }
+
+    
 
     bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
@@ -562,18 +565,69 @@ namespace OIV
         
     }
 
+    void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
+    {
+        using namespace Win32;
+        bool updateNeeded = false;
+        
+        const Win32::RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
+        switch (mouseState.GetButtonState(MouseState::Button::Left))
+        {
+        
+        case Win32::MouseState::State::Down:
+            if (mouseState.IsCaptured(MouseState::Button::Left))
+            {
+                fPanX += -mouseState.GetX();
+                fPanY += -mouseState.GetY();
+                updateNeeded = true;
+            }
+            break;
+        }
+
+
+
+        LONG wheelDelta = mouseState.GetWheel();
+        if (wheelDelta != 0)
+        {
+            POINT mousePos = fWindow.GetMousePosition();
+            //20% percent zoom in each wheel step
+            Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
+        }
+
+
+        if (updateNeeded)
+        {
+            FlushInput();
+        }
+
+        if (mouseState.IsButtonPressed(Win32::MouseState::Button::Middle))
+        {
+            ToggleFullScreen();
+        }
+
+
+      
+    }
+
     bool TestApp::HandleMessages(const Win32::Event* evnt1)
     {
 
-        const Win32::EventWinMessage* evnt = dynamic_cast<const Win32::EventWinMessage*>(evnt1);
+        using namespace Win32;
+        const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
 
         if (evnt != nullptr)
             return HandleWinMessageEvent(evnt);
 
-        const Win32::EventDdragDropFile* dragDropEvent = dynamic_cast<const Win32::EventDdragDropFile*>(evnt1);
+        const EventDdragDropFile* dragDropEvent = dynamic_cast<const EventDdragDropFile*>(evnt1);
 
         if (dragDropEvent != nullptr)
             return HandleFileDragDropEvent(dragDropEvent);
+
+        const EventRawInputMouseStateChanged* rawInputEvent = dynamic_cast<const EventRawInputMouseStateChanged*>(evnt1);
+
+        if (rawInputEvent != nullptr)
+            HandleRawInputMouse(rawInputEvent);
+
 
         return false;
 

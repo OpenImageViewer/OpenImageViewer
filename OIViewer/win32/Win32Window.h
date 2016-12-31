@@ -6,6 +6,7 @@
 #include <functional>
 #include "DragAndDrop.h"
 #include "../FullScreenState.h"
+#include "RawInput/RawInputMouseWindow.h"
 
 
 // Global variables
@@ -37,9 +38,13 @@ namespace OIV
 
             void DestroyResources();
             SIZE GetClientSize() const;
+            void GetClientRectangle(RECT& clientRect) const;
             void HandleResize();
             void ShowStatusBar(bool show);
             void ShowBorders(bool show_borders);
+
+            void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
+            void HandleRawInputMouse(const RAWMOUSE& mouse);
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             
             HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE
@@ -51,6 +56,8 @@ namespace OIV
 
             int WINAPI Create(HINSTANCE hInstance,
                 int nCmdShow);
+
+            const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
 
             friend DragAndDropTarget;
         private:
@@ -71,6 +78,8 @@ namespace OIV
             DragAndDropTarget* fDragAndDrop;
             bool fShowStatusBar = true;
             bool fShowBorders;
+            RawInputMouseWindow fMouseState;
+
         public:
             EventCallbackCollection fListeners;
         };

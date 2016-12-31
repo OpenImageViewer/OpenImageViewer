@@ -30,6 +30,9 @@
     <ClCompile Include="TestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="win32\RawInput\RawInputMouseWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="win32\DragAndDrop.h">
@@ -48,6 +51,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="win32\Win32Helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\RawInput\RawInputMouse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="win32\RawInput\RawInputMouseWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
