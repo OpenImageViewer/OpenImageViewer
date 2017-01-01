@@ -21,7 +21,7 @@ namespace OIV
 
         // A function to copy a same format texel from one place to another
         template <class BIT_TEXEL_TYPE>
-        static __forceinline  void CopyTexel(void* dest, const std::size_t idxDest, const void* src, const std::size_t idxSrc)
+        static OIV_FORCE_INLINE  void CopyTexel(void* dest, const std::size_t idxDest, const void* src, const std::size_t idxSrc)
         {
             reinterpret_cast<BIT_TEXEL_TYPE*>(dest)[idxDest] = reinterpret_cast<const  BIT_TEXEL_TYPE*>(src)[idxSrc];
 

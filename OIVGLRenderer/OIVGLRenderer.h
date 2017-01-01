@@ -12,7 +12,7 @@
 #include "GLContext.h"
 #include "../OIVUtil/FileHelper.h"
 #include "GLRenderer/GLTexture.h"
-#include <Interfaces/IRenderer.h>
+#include "../oiv/Interfaces/IRenderer.h"
 
 namespace OIV
 {

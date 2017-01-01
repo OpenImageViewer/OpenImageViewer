@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <chrono>
-#include <Image/Image.h>
-#include <Image/PixelUtil.h>
-#include "ImageUtil.h"
+#include <thread>
+#include "Image.h"
+#include "PixelUtil.h"
 
 namespace OIV
 {

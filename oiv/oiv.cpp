@@ -1,6 +1,5 @@
 #pragma warning(disable : 4275 ) // disables warning 4275, pop and push from exceptions
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
-#include "precompiled.h"
 #include "oiv.h"
 #include "Plugins/PluginJpeg.h"
 #include "Plugins/PluginPng.h"
@@ -151,7 +150,7 @@ namespace OIV
     #endif
 #endif
 
-        throw std::exception("wrong build configuration");
+        throw std::runtime_error("wrong build configuration");
 
     }
 

@@ -1,8 +1,8 @@
 #pragma once
-#include "Configuration.h"
+#include "../Configuration.h"
 
 #if OIV_BUILD_PLUGIN_JPEG == 1
-#include <Interfaces/IImagePlugin.h>
+#include "../Interfaces/IImagePlugin.h"
 #include <turbojpeg.h>
 
 namespace OIV

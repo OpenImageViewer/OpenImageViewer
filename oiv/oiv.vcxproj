@@ -127,6 +127,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableLanguageExtensions>true</DisableLanguageExtensions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -208,8 +209,10 @@
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="CommandProcessor.h" />
+    <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="Image\AxisAlignedTransform.h" />
     <ClInclude Include="Image\Image.h" />
     <ClInclude Include="Image\ImageLoader.h" />
     <ClInclude Include="Image\ImageProperties.h" />
@@ -225,7 +228,6 @@
     <ClInclude Include="Plugins\PluginFreeImage.h" />
     <ClInclude Include="Plugins\PluginJpeg.h" />
     <ClInclude Include="Plugins\PluginPng.h" />
-    <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="Vector2.h" />
     <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="ZoomScrollState.h" />
