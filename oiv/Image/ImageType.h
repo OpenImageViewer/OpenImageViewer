@@ -41,7 +41,7 @@ namespace OIV
         case IT_FLOAT64:
             return 64;
         default:
-            throw std::runtime_error("Wrong or correupted value");
+            throw std::runtime_error("Wrong or corrupted value");
         }
     }
 }
