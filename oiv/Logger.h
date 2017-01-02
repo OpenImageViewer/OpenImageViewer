@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <sstream>
 
 namespace OIV
 {
@@ -8,8 +9,10 @@ namespace OIV
     public:
         static void Log(const char* message)
         {
-            OutputDebugStringA(message);
-            OutputDebugStringA("\n");
+            std::stringstream ss;
+            ss << message << "\n";
+            OutputDebugStringA(ss.str().c_str());
+            
         }
     };
 }
