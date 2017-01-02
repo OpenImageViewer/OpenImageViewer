@@ -190,7 +190,8 @@ namespace OIV
         {
             // wait for file to finish loading and 
             t.join();
-            LoadFile(buffer.get(), bufferSize, extension, false);
+            if (LoadFile(buffer.get(), bufferSize, extension, false) == true)
+                fOpenedFile = filePath;
         }
 
         //Set linear image filtering
@@ -408,33 +409,6 @@ namespace OIV
         }
     }
 
-
-    void TestApp::FlushInput(bool calledFromIdleTimer)
-    {
-        uint64_t currentTime = static_cast<uint64_t>(stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
-
-        if (currentTime - fLastMouseUpdateTime > inputInteval)
-        {
-            if (fPanX != 0 || fPanY != 0)
-            {
-                Pan(fPanX, fPanY);
-                fPanX = fPanY = 0;
-            }
-
-            fLastMouseUpdateTime = currentTime;
-
-            if (calledFromIdleTimer)
-                SetInputFlushTimer(false);
-        }
-        else
-        {
-            //skipped update, activate input flush timer
-            SetInputFlushTimer(true);
-        }
-    }
-
-    
-
     void TestApp::Pan(int horizontalPIxels, int verticalPixels )
     {
         CmdDataPan pan;
@@ -517,12 +491,7 @@ namespace OIV
         {
             if (uMsg.wParam == cTimerID)
                 JumpFiles(1);
-            else if (uMsg.wParam == cTimerIDInputFlush)
-            {
-                uint64_t currentTime = static_cast<uint64_t>(stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
-                if (currentTime - fLastMouseUpdateTime > inputInteval * 2)
-                    FlushInput(true);
-            }
+            
 
         }
         break;
@@ -539,20 +508,6 @@ namespace OIV
         }
         return true;
     }
-
-    void TestApp::SetInputFlushTimer(bool enable)
-    {
-        if (fInputFlushTimerEnabled != enable)
-        {
-            fInputFlushTimerEnabled = enable;
-
-            if (fInputFlushTimerEnabled)
-                SetTimer(GetWindowHandle(), cTimerIDInputFlush, 5, nullptr);
-            else
-                KillTimer(GetWindowHandle(), cTimerIDInputFlush);
-        }
-    }
-
     
 
     bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
@@ -568,45 +523,38 @@ namespace OIV
     void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
     {
         using namespace Win32;
-        bool updateNeeded = false;
         
-        const Win32::RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
+        const RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
         switch (mouseState.GetButtonState(MouseState::Button::Left))
         {
         
         case Win32::MouseState::State::Down:
             if (mouseState.IsCaptured(MouseState::Button::Left))
             {
-                fPanX += -mouseState.GetX();
-                fPanY += -mouseState.GetY();
-                updateNeeded = true;
+                if (evnt->DeltaX != 0 || evnt->DeltaY !=0)
+                    Pan(-evnt->DeltaX, -evnt->DeltaY);
             }
             break;
         }
 
 
 
-        LONG wheelDelta = mouseState.GetWheel();
+        LONG wheelDelta = evnt->DeltaWheel;
         if (wheelDelta != 0)
         {
-            POINT mousePos = fWindow.GetMousePosition();
-            //20% percent zoom in each wheel step
-            Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
+            if (mouseState.IsCaptured(MouseState::Button::Left) || (evnt->window->IsMouseCursorInClientRect()))
+            {
+                POINT mousePos = fWindow.GetMousePosition();
+                //20% percent zoom in each wheel step
+                Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
+            }
         }
-
-
-        if (updateNeeded)
+        
+        if (evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed)
         {
-            FlushInput();
+            ToggleFullScreen();   
         }
 
-        if (mouseState.IsButtonPressed(Win32::MouseState::Button::Middle))
-        {
-            ToggleFullScreen();
-        }
-
-
-      
     }
 
     bool TestApp::HandleMessages(const Win32::Event* evnt1)

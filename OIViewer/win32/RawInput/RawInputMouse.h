@@ -1,8 +1,6 @@
 #pragma once
 #include  <windows.h>
-#include <stdexcept>
-#include "Logger.h"
-#include <sstream>
+#include <vector>
 
 namespace OIV
 {
@@ -33,28 +31,32 @@ namespace OIV
         {
         public:
             enum Button { Left,Right,Middle,Third, Forth, Fifth};
-            enum State { NotSet, Down, Up, Pressed, Released };
+            enum State { NotSet, Down, Up, Pressed, Released};
+            
+            struct ButtonEvent
+            {
+                Button button;
+                //Pressed or released.
+                State state;
+            };
             static const int Max_Buttons = 3;
+            
+            typedef std::vector<ButtonEvent> ListButtonEvent;
         private:
             State fButtons[Max_Buttons] = { NotSet };
             LONG fDeltaX = 0;
             LONG fDeltaY = 0;
             LONG fwheel = 0;
+            
+
+            ListButtonEvent fButtonActions;
+
         public:
 
             LONG GetX() const { return fDeltaX; }
             LONG GetY() const { return fDeltaY; }
             LONG GetWheel() const { return fwheel; }
-            
-            bool IsButtonPressed(Button button) const
-            {
-                return fButtons[button] == Pressed;
-            }
 
-            bool IsButtonDown(Button button) const
-            {
-                return fButtons[button] == Down;
-            }
             virtual void SetButtonState(Button button , State state)
             {
                 fButtons[button] = state;
@@ -62,29 +64,40 @@ namespace OIV
 
             void Update(const RAWMOUSE& mouse)
             {
-                fDeltaX = mouse.lLastX;
-                fDeltaY = mouse.lLastY;
+                fDeltaX += mouse.lLastX;
+                fDeltaY += mouse.lLastY;
                 if (mouse.ulButtons & 0x0400)
-                    fwheel = static_cast<SHORT>(mouse.usButtonData) / WHEEL_DELTA;
-                else
-                    fwheel = 0;
-
+                    fwheel += static_cast<SHORT>(mouse.usButtonData) / WHEEL_DELTA;
                 for (int i = 0; i < Max_Buttons; i++)
                 {
 
                     State state = fButtons[i];
                     Button button = static_cast<Button>(i);
                     if (mouse.ulButtons & (1ul << (i * 2)))
-                        SetButtonState(button, Pressed);
-                    else if (state == Pressed)
+                    {
                         SetButtonState(button, Down);
-                    
+                        fButtonActions.push_back({ button,Pressed });
+                    }
                     if (mouse.ulButtons & (2ul << (i * 2)))
-                        SetButtonState(button, Released);
-                    else if (state == Released)
+                    {
                         SetButtonState(button, Up);
+                        fButtonActions.push_back({ button, Released });
+                    }
                 }
             }
+
+            void Flush()
+            {
+                fDeltaX = fDeltaY = fwheel = 0;
+                fButtonActions.clear();
+            }
+
+            
+            ListButtonEvent&& MoveButtonActions()
+            {
+                return std::move(fButtonActions);
+            }
+
 
             State GetButtonState(Button button) const
             {

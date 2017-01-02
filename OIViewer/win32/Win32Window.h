@@ -7,6 +7,7 @@
 #include "DragAndDrop.h"
 #include "../FullScreenState.h"
 #include "RawInput/RawInputMouseWindow.h"
+#include "StopWatch.h"
 
 
 // Global variables
@@ -42,9 +43,16 @@ namespace OIV
             void HandleResize();
             void ShowStatusBar(bool show);
             void ShowBorders(bool show_borders);
+            bool IsInFocus() const;
+            bool IsMouseCursorInClientRect() const;
 
+            void FlushInput(bool calledFromIdleTimer);
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
+            void SetInputFlushTimer(bool enable);
             void HandleRawInputMouse(const RAWMOUSE& mouse);
+            
+
+
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             
             HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE
@@ -78,7 +86,13 @@ namespace OIV
             DragAndDropTarget* fDragAndDrop;
             bool fShowStatusBar = true;
             bool fShowBorders;
+            
             RawInputMouseWindow fMouseState;
+            bool fInputFlushTimerEnabled = false;
+            static const int cTimerIDRawInputFlush = 2500;
+            uint16_t fRawInputInterval = 5;
+            StopWatch fRawInputTimer = (true);
+            uint64_t fRawInputLastEventDisptchTime = 0;;
 
         public:
             EventCallbackCollection fListeners;

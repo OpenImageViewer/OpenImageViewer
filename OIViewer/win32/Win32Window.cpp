@@ -135,24 +135,85 @@ namespace OIV
             fDragAndDrop->Detach();
             SAFE_RELEASE(fDragAndDrop);
         }
+#pragma region RawInput
+
+
+        void Win32WIndow::FlushInput(bool calledFromIdleTimer)
+        {
+            
+            uint64_t currentTime = static_cast<uint64_t>(fRawInputTimer.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
+
+            if (currentTime - fRawInputLastEventDisptchTime > fRawInputInterval)
+            {
+                // Raise events and flush input
+
+                EventRawInputMouseStateChanged rawInputEvent;
+                rawInputEvent.window = this;
+                rawInputEvent.DeltaX = static_cast<int16_t>(fMouseState.GetX());
+                rawInputEvent.DeltaY = static_cast<int16_t>(fMouseState.GetY());
+                rawInputEvent.DeltaWheel = static_cast<int16_t>(fMouseState.GetWheel());
+                rawInputEvent.ChangedButtons = fMouseState.MoveButtonActions();
+                RaiseEvent(rawInputEvent);
+                fMouseState.Flush();
+
+                fRawInputLastEventDisptchTime = currentTime;
+
+                if (calledFromIdleTimer)
+                    SetInputFlushTimer(false);
+            }
+            else
+            {
+                //skipped update, activate input flush timer
+                SetInputFlushTimer(true);
+            }
+        }
+
+     
 
         void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input)
         {
             if (event_raw_input->header.dwType == RIM_TYPEMOUSE)
                 HandleRawInputMouse(event_raw_input->data.mouse);
+
+
+            FlushInput(false);
+
+        }
+
+
+        
+
+        void Win32WIndow::SetInputFlushTimer(bool enable)
+        {
+            if (fInputFlushTimerEnabled != enable)
+            {
+                fInputFlushTimerEnabled = enable;
+
+                if (fInputFlushTimerEnabled)
+                    SetTimer(fHandleWindow, cTimerIDRawInputFlush, 5, nullptr);
+                else
+                    KillTimer(fHandleWindow, cTimerIDRawInputFlush);
+            }
         }
 
         void Win32WIndow::HandleRawInputMouse(const RAWMOUSE& mouse)
         {
             fMouseState.Update(mouse);
-
-          
-
-            EventRawInputMouseStateChanged rawInputEvent;
-            rawInputEvent.window = this;
-            RaiseEvent(rawInputEvent);
         }
-        
+
+#pragma endregion
+
+        bool Win32WIndow::IsInFocus() const
+        {
+            return GetFocus() == fHandleWindow;
+        }
+
+        bool Win32WIndow::IsMouseCursorInClientRect() const
+        {
+            RECT rect;
+            GetClientRectangle(rect);
+            return PtInRect(&rect, GetMousePosition()) == TRUE;
+        }
 
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
@@ -161,6 +222,12 @@ namespace OIV
             bool defaultProc = false;
             switch (message)
             {
+            case WM_TIMER:
+                if (wParam == cTimerIDRawInputFlush)
+                     window->FlushInput(true);
+            
+                break;
+
             case WM_CREATE:
             {
                 CREATESTRUCT* s = (CREATESTRUCT*)lParam;
@@ -173,13 +240,12 @@ namespace OIV
             {
                 LPBYTE lpb;
                 UINT dwSize;
-                RAWINPUT *raw;
-
-                GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
-
+                
+                GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+                
                 lpb = new BYTE[dwSize];
 
-                if (lpb == NULL)
+                if (lpb == nullptr)
                     return 0;
 
                 if (GetRawInputData((HRAWINPUT)lParam,
@@ -188,7 +254,7 @@ namespace OIV
                     &dwSize,
                     sizeof(RAWINPUTHEADER)) != dwSize)
                 {
-                   // error
+                    throw std::runtime_error("Unknown error");
                 }
                 window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb));
                 

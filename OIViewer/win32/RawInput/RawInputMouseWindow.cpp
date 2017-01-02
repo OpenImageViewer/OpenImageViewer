@@ -9,17 +9,11 @@ namespace OIV
         {
             MouseState::SetButtonState(button, state);
 
-            if (state == Pressed)
+            if (state == Down && fWin->IsInFocus() && fWin->IsMouseCursorInClientRect())
             {
-                RECT rect;
-                fWin->GetClientRectangle(rect);
-
-                if (PtInRect(&rect, fWin->GetMousePosition()) == TRUE)
-                {
-                    fCaptured[button] = true;
-                }
+               fCaptured[button] = true;
             }
-            else if (state == Released)
+            else if (state == Up)
                 fCaptured[button] = false;
         }
     }

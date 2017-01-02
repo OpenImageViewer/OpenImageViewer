@@ -56,14 +56,9 @@ namespace OIV
         double fKeyboardZoomSpeed;
         double fIsGridEnabled;
         std::wstring fOpenedFile;
-        LONG fPanX = 0l;
-        LONG fPanY = 0l;
-        bool fInputFlushTimerEnabled = false;
+        
         static const int cTimerID = 1500;
-        static const int cTimerIDInputFlush = 2500;
-        static const int inputInteval = 5;
-        StopWatch stopWatch = (true);
-        uint64_t fLastMouseUpdateTime = 0;;
+        
         ListFiles::size_type fCurrentFileIndex;
         ListFiles fListFiles;
         
