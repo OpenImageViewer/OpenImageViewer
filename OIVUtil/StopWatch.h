@@ -10,7 +10,7 @@ namespace OIV
         enum TimeUnit { Undefined = 0, NanoSeconds = 1, MicroSeconds = 2, Milliseconds = 3, Seconds = 4};
     private:
 
-        time_type multiplierMap[5] = {0L,1,0.001L,0.000001L,0.000000001L};
+        const time_type multiplierMap[5] = {0L,1,0.001L,0.000001L,0.000000001L};
     public:
 
         StopWatch(bool start = false)
