@@ -15,7 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
-    <ClInclude Include="PreCompiled.h" />
     <ClInclude Include="ZoomScrollState.h" />
     <ClInclude Include="API\defs.h">
       <Filter>API</Filter>
@@ -47,6 +46,8 @@
     <ClInclude Include="Image\ImageUtil.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="Image\ImageType.h" />
+    <ClInclude Include="Common\linux.h" />
+    <ClInclude Include="Image\AxisAlignedTransform.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

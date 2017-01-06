@@ -6,6 +6,7 @@
     <ClInclude Include="FileMapping.h" />
     <ClInclude Include="FileHelper.h" />
     <ClInclude Include="StopWatch.h" />
+    <ClInclude Include="Point.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Utility.cpp" />

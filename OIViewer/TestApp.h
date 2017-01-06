@@ -3,6 +3,7 @@
 #include "API/defs.h"
 #include <Utility.h>
 #include "StopWatch.h"
+#include "AutoScroll.h"
 
 namespace OIV
 {
@@ -31,9 +32,7 @@ namespace OIV
         void Rotate90Degree(bool clockwise);
         void handleKeyInput(const Win32::EventWinMessage* evnt);
 
-        void FlushInput(bool calledFromIdleTimer = false);
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
-        void SetInputFlushTimer(bool enable);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
@@ -42,6 +41,7 @@ namespace OIV
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private: //methods
+        void OnScroll(int32_t x, int32_t y);
         void UpdateFileInfo(const CmdResponseLoad& load_response, const long double& totalLoadTime);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
         bool LoadFile(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
@@ -50,15 +50,15 @@ namespace OIV
 
     private:
         Win32::Win32WIndow fWindow;
+        AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1, std::placeholders::_2));
+
         int fFilterlevel;
         bool fIsSlideShowActive;
         int fKeyboardPanSpeed;
         double fKeyboardZoomSpeed;
         double fIsGridEnabled;
         std::wstring fOpenedFile;
-        
-        static const int cTimerID = 1500;
-        
+        int cTimerID = 1500;
         ListFiles::size_type fCurrentFileIndex;
         ListFiles fListFiles;
         

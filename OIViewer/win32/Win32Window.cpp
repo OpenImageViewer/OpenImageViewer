@@ -21,6 +21,10 @@ namespace OIV
 
         }
 
+        HRESULT Win32WIndow::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
+        {
+            return ::SendMessage(fHandleWindow, msg, wParam, lparam);
+        }
 
         void Win32WIndow::UpdateWindowStyles()
         {
@@ -335,7 +339,7 @@ namespace OIV
         void Win32WIndow::SetStatusBarText(std::wstring message, int part, int type)
         {
             if (fHandleStatusBar != nullptr)
-                SendMessage(fHandleStatusBar, SB_SETTEXT, MAKEWORD(part, type), reinterpret_cast<LPARAM>(message.c_str()));
+                ::SendMessage(fHandleStatusBar, SB_SETTEXT, MAKEWORD(part, type), reinterpret_cast<LPARAM>(message.c_str()));
         }
 
         int Win32WIndow::Create(HINSTANCE hInstance, int nCmdShow)
@@ -467,7 +471,7 @@ namespace OIV
             }
 
             // Tell the status bar to create the window parts.
-            SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
+            ::SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
                 paParts);
 
             // Free the array, and return.

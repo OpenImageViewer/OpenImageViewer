@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="FileHelper.h" />
     <ClInclude Include="FileMapping.h" />
+    <ClInclude Include="Point.h" />
     <ClInclude Include="StopWatch.h" />
     <ClInclude Include="StringUtility.h" />
     <ClInclude Include="Utility.h" />

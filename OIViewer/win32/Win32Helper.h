@@ -41,5 +41,13 @@ namespace OIV
             GetCursorPos(&mousePos);
             return mousePos;
         }
+
+        static void MoveMouse(PointI32 point)
+        {
+
+            POINT mousePos;
+            ::GetCursorPos(&mousePos);
+            ::SetCursorPos(mousePos.x + point.x, mousePos.y + point.y);
+        }
     };
 }

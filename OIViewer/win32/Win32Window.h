@@ -23,6 +23,7 @@ namespace OIV
 
         public:
             Win32WIndow();
+            HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void UpdateWindowStyles();
             void SetWindowed();
             void UpdateWindowPos();

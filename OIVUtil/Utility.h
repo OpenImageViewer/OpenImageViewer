@@ -9,6 +9,13 @@ typedef ListFiles::iterator ListFilesIterator;
 class Utility
 {
 public:
+
+     template <typename T> 
+    static int8_t Sign(T val) 
+    {
+        return (T(0) < val) - (val < T(0));
+    }
+
     static tstring GetExePath();
 
     static tstring GetExeFolder();

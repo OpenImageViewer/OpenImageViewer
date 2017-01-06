@@ -18,7 +18,6 @@
 #include <cassert>
 #include "StopWatch.h"
 
-
 namespace OIV
 {
     template <class T,class U>
@@ -37,7 +36,6 @@ namespace OIV
         , fIsGridEnabled(false)
         , fCurrentFileIndex(std::numeric_limits<ListFiles::size_type>::max())
     {
-        
         new MonitorInfo();
     }
 
@@ -140,6 +138,12 @@ namespace OIV
             UpdateFileInddex();
         }
     }
+
+    void TestApp::OnScroll(int32_t x, int32_t y)
+    {
+        Pan(x, y);
+    }
+
     void TestApp::Run(std::wstring filePath)
     {
         using namespace std;
@@ -329,10 +333,10 @@ namespace OIV
 
         switch (evnt->message.wParam)
         {
-        case VK_OEM_4:
+        case VK_OEM_4: // '['
             Rotate90Degree(false);
             break;
-        case VK_OEM_6:
+        case VK_OEM_6: // ']'
             Rotate90Degree(true);
             break;
         case 'Q':
@@ -402,9 +406,9 @@ namespace OIV
         case 'P':
         {
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(nullptr, L"open", command.c_str(),fOpenedFile.c_str(), nullptr, SW_SHOWDEFAULT);
+            ShellExecute(nullptr, L"open", command.c_str(), fOpenedFile.c_str(), nullptr, SW_SHOWDEFAULT);
         }
-            break;
+        break;
 
         }
     }
@@ -488,13 +492,13 @@ namespace OIV
             break;
 
         case WM_TIMER:
-        {
             if (uMsg.wParam == cTimerID)
                 JumpFiles(1);
-            
-
-        }
         break;
+
+        case AutoScroll::PRIVATE_WN_AUTO_SCROLL:
+            fAutoScroll.PerformAutoScroll(evnt);
+            break;
 
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
@@ -525,24 +529,25 @@ namespace OIV
         using namespace Win32;
         
         const RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
-        switch (mouseState.GetButtonState(MouseState::Button::Left))
-        {
+
+        const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
+        const bool IsLeftCatured = mouseState.IsCaptured(MouseState::Button::Left);
+        const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
+        const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
+        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::State::Pressed;
+        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Pressed;
+        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed;
         
-        case Win32::MouseState::State::Down:
-            if (mouseState.IsCaptured(MouseState::Button::Left))
-            {
-                if (evnt->DeltaX != 0 || evnt->DeltaY !=0)
-                    Pan(-evnt->DeltaX, -evnt->DeltaY);
-            }
-            break;
+        if (IsRightCatured == true)
+        {
+            if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
+                Pan(-evnt->DeltaX, -evnt->DeltaY);
         }
-
-
 
         LONG wheelDelta = evnt->DeltaWheel;
         if (wheelDelta != 0)
         {
-            if (mouseState.IsCaptured(MouseState::Button::Left) || (evnt->window->IsMouseCursorInClientRect()))
+            if (IsLeftCatured || (evnt->window->IsMouseCursorInClientRect()))
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
@@ -550,9 +555,16 @@ namespace OIV
             }
         }
         
-        if (evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed)
+        if (IsMiddlePressed)
         {
-            ToggleFullScreen();   
+            fAutoScroll.ToggleAutoScroll();
+        }
+
+        if (    (IsRightPressed && IsLeftPressed)
+             || (IsRightPressed && IsLeftDown)
+             || (IsRightDown && IsLeftPressed))
+        {
+            ToggleFullScreen();
         }
 
     }
