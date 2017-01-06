@@ -21,7 +21,7 @@ namespace OIV
         deltaAbs.y = deltaAbs.y < fAutoScrollMercyZone ? 0 : (deltaAbs.y - (fAutoScrollMercyZone - 1));
         fAutoScrollPanning += deltaAbs * (elapsed / 100.0f) * deltaFromScrollPosition.Sign();
 
-        if (fAutoScrollPanning.Abs().IsZero() == false)
+        if (fAutoScrollPanning.Abs() != PointF32::Zero)
         {
             PointI32 actualPanning = static_cast<PointI32>(fAutoScrollPanning);
             fOnScroll(actualPanning.x, actualPanning.y);

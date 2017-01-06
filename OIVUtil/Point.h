@@ -31,9 +31,14 @@ namespace OIV
             y = aY;
         }
 
-        bool IsZero()
+        bool operator==( const Point& rhs) const
         {
-            return x == 0 && y == 0;
+            return x == rhs.x && y == rhs.y;
+        }
+
+        bool operator!=(const Point& rhs) const
+        {
+            return (*this == rhs) == false;
         }
 
         Point operator-(const Point& rhs) const
@@ -51,12 +56,12 @@ namespace OIV
             return Point(abs(x), abs(y));
         }
 
-        Point Sqrt()
+        Point Sqrt() const
         {
             return{static_cast<POINT_TYPE>(std::sqrt(x)), static_cast<POINT_TYPE>(std::sqrt(y)) };
         }
 
-        Point operator*(const Point& point )
+        Point operator*(const Point& point ) const
         {
             return Point(x * point.x, y * point.y);
         }
@@ -78,7 +83,7 @@ namespace OIV
         }
 
         template <class T>
-        Point operator*(const T& scalar)
+        Point operator*(const T& scalar) const
         {
             return Point(x * scalar, y * scalar);
         }
