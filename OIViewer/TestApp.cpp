@@ -531,9 +531,8 @@ namespace OIV
         const RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
 
         const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
-        const bool IsLeftCatured = mouseState.IsCaptured(MouseState::Button::Left);
-        const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
+        const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::State::Pressed;
         const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Pressed;
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed;
@@ -547,7 +546,7 @@ namespace OIV
         LONG wheelDelta = evnt->DeltaWheel;
         if (wheelDelta != 0)
         {
-            if (IsLeftCatured || (evnt->window->IsMouseCursorInClientRect()))
+            if (IsRightCatured || (evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus()))
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
