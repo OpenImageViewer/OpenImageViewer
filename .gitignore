@@ -25,3 +25,14 @@ OIVD3D11Renderer/x64/
 oiv/x64/
 x64/
 /oiv.VC.VC.opendb
+ImageCodec/Codecs/CodecPSD/Debug/
+ImageCodec/Codecs/CodecPSD/Depends/
+ImageCodec/ImageLoader/Debug/
+ImageCodec/Debug/
+ImageCodec/.vs/ImageLoader/v14/.suo
+ImageCodec/ImageLoader/ImageLoader.VC.db
+ImageCodec/ImageLoader.VC.db
+ImageCodec/ImageLoader.vcxproj.user
+ImageCodec/ImageLoader/ImageLoader.vcxproj.user
+ImageUtil/ImageUtil.vcxproj.user
+ImageCodec/Codecs/CodecJPG/CodecJPG.vcxproj.user

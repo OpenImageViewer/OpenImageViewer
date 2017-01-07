@@ -59,8 +59,8 @@ namespace OIV
         double fIsGridEnabled;
         std::wstring fOpenedFile;
         int cTimerID = 1500;
-        ListFiles::size_type fCurrentFileIndex;
-        ListFiles fListFiles;
+        LLUtils::ListString::size_type fCurrentFileIndex;
+        LLUtils::ListString fListFiles;
         
     };
 }

@@ -34,7 +34,7 @@ namespace OIV
         , fIsSlideShowActive(false)
         , fFilterlevel(0)
         , fIsGridEnabled(false)
-        , fCurrentFileIndex(std::numeric_limits<ListFiles::size_type>::max())
+        , fCurrentFileIndex(std::numeric_limits<LLUtils::ListString::size_type>::max())
     {
         new MonitorInfo();
     }
@@ -62,6 +62,7 @@ namespace OIV
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
+        using namespace LLUtils;
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
         std::size_t size = fileMapping.GetSize();
@@ -87,6 +88,7 @@ namespace OIV
 
     bool TestApp::LoadFile(const uint8_t* buffer,  const std::size_t size,std::string extension, bool onlyRegisteredExtension)
     {
+        using namespace LLUtils;
         CmdResponseLoad loadResponse;
         CmdDataLoadFile loadRequest;
 
@@ -111,7 +113,7 @@ namespace OIV
     void TestApp::LoadFileInFolder(std::wstring filePath)
     {
         fListFiles.clear();
-        fCurrentFileIndex = std::numeric_limits<ListFiles::size_type>::max();
+        fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         
         std::experimental::filesystem::path workingPath  = filePath;
         std::experimental::filesystem::path fullFilePath = filePath;
@@ -130,8 +132,8 @@ namespace OIV
 
         if (workingPath.empty() == false)
         {
-            Utility::find_files(workingPath.wstring(), fListFiles);
-            ListFilesIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
+            LLUtils::Utility::find_files(workingPath.wstring(), fListFiles);
+            LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
@@ -165,7 +167,7 @@ namespace OIV
                 [&filePath, &buffer, &bufferSize]()
             {
                 uint8_t* tmp = nullptr;
-                File::ReadAllBytes(filePath, bufferSize, tmp);
+                LLUtils::File::ReadAllBytes(filePath, bufferSize, tmp);
                 buffer = unique_ptr<uint8_t>(tmp);
             });
 
@@ -218,7 +220,7 @@ namespace OIV
             return;
 
         std::wstringstream ss;
-        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<ListFiles::size_type>::max() ? 
+        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<LLUtils::ListString::size_type>::max() ? 
             0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
 
         fWindow.SetStatusBarText(ss.str(), 1, 0);
@@ -229,7 +231,7 @@ namespace OIV
         if (fListFiles.empty())
             return;
 
-        ListFiles::size_type totalFiles = fListFiles.size();
+        LLUtils::ListString::size_type totalFiles = fListFiles.size();
         int32_t fileIndex = static_cast<int32_t>(fCurrentFileIndex);
 
 
@@ -252,7 +254,7 @@ namespace OIV
         }
 
         bool isLoaded = false;
-        ListFilesIterator it;
+        LLUtils::ListStringIterator it;
 
         do
         {
@@ -271,7 +273,7 @@ namespace OIV
         if (isLoaded)
         {
             assert(fileIndex >= 0 && fileIndex < totalFiles);
-            fCurrentFileIndex = static_cast<ListFiles::size_type>(fileIndex);
+            fCurrentFileIndex = static_cast<LLUtils::ListString::size_type>(fileIndex);
         }
 
 

@@ -97,7 +97,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -126,7 +127,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -157,7 +159,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -179,7 +182,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -193,12 +197,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="APIImpl.cpp" />
     <ClCompile Include="API\functions.cpp" />
     <ClCompile Include="CommandProcessor.cpp" />
     <ClCompile Include="External\easyexif\exif.cpp" />
-    <ClCompile Include="Image\Image.cpp" />
-    <ClCompile Include="Image\ImageProperties.cpp" />
-    <ClCompile Include="Image\ImageUtil.cpp" />
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="Vector2.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
@@ -212,13 +214,6 @@
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
     <ClInclude Include="Image\AxisAlignedTransform.h" />
-    <ClInclude Include="Image\Image.h" />
-    <ClInclude Include="Image\ImageLoader.h" />
-    <ClInclude Include="Image\ImageProperties.h" />
-    <ClInclude Include="Image\ImageType.h" />
-    <ClInclude Include="Image\ImageUtil.h" />
-    <ClInclude Include="Image\PixelUtil.h" />
-    <ClInclude Include="Interfaces\IImagePlugin.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
@@ -250,17 +245,17 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Codecs\CodecPSD\CodecPSD.vcxproj">
-      <Project>{d0ea563a-a39d-4402-9ee9-f4e427da4591}</Project>
+    <ProjectReference Include="..\ImageCodec\ImageLoader\ImageLoader.vcxproj">
+      <Project>{585c252a-75da-435d-accb-dff914f4f732}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\ImageUtil\ImageUtil.vcxproj">
+      <Project>{cc43b3fb-0c60-4357-a944-596b32aaeb24}</Project>
     </ProjectReference>
     <ProjectReference Include="..\OIVD3D11Renderer\OIVD3D11Renderer.vcxproj">
       <Project>{c049ed5b-7b0b-4693-a0ed-aa4afe1a1437}</Project>
     </ProjectReference>
     <ProjectReference Include="..\OIVGLRenderer\OIVGLRenderer.vcxproj">
       <Project>{d50bd30c-bcd9-4d5e-8416-700f10541792}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\OIVUtil\OIVUtil.vcxproj">
-      <Project>{6ae17c1b-9263-4035-badf-2107258731fa}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

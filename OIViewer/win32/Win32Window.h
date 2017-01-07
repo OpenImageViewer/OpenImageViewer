@@ -92,7 +92,7 @@ namespace OIV
             bool fInputFlushTimerEnabled = false;
             static const int cTimerIDRawInputFlush = 2500;
             uint16_t fRawInputInterval = 5;
-            StopWatch fRawInputTimer = (true);
+            LLUtils::StopWatch fRawInputTimer = (true);
             uint64_t fRawInputLastEventDisptchTime = 0;;
 
         public:

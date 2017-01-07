@@ -25,8 +25,8 @@ void OIV::OIVGLRenderer::PrepareResources()
     std::wstring fragmentShaderPath = L"./Resources/programs/quad_fp.shader";
 
     fProgram = GLGpuProgramUniquePtr(new GLGpuProgram(
-        File::ReadAllText(vertexShaderPath).c_str()
-        , File::ReadAllText(fragmentShaderPath).c_str()));
+        LLUtils::File::ReadAllText(vertexShaderPath).c_str()
+        , LLUtils::File::ReadAllText(fragmentShaderPath).c_str()));
 
     fProgram->Bind();
     fTexture = GLTextureUniquePtr(new GLTexture());
@@ -78,7 +78,7 @@ int OIV::OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
     return 0;
 }
 
-int OIV::OIVGLRenderer::SetImage(const ImageSharedPtr image)
+int OIV::OIVGLRenderer::SetImage(const IMCodec::ImageSharedPtr image)
 {
     fImageSize[0] = static_cast<GLfloat>(image->GetWidth());
     fImageSize[1] = static_cast<GLfloat>(image->GetHeight());

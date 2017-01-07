@@ -31,9 +31,9 @@ namespace OIV
 #pragma region Private member fields
     private:
         bool fAutoScrolling = false;
-        PointI32 fAutoScrollPosition = PointI32::Zero;
-        StopWatch fAutoScrollStopWatch;
-        PointF32 fAutoScrollPanning = PointF32::Zero;
+        LLUtils::PointI32 fAutoScrollPosition = LLUtils::PointI32::Zero;
+        LLUtils::StopWatch fAutoScrollStopWatch;
+        LLUtils::PointF32 fAutoScrollPanning = LLUtils::PointF32::Zero;
         uint8_t fAutoScrollMercyZone = 20;
         MMRESULT fAutoScrollTimerID = 0;
         Win32::Win32WIndow* fWindow;

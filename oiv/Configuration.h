@@ -3,11 +3,6 @@
 //MISC
 #define OIV_CLIENT_BUILD 0
 
-//Codecs
-#define OIV_BUILD_PLUGIN_FREE_IMAGE 1
-#define OIV_BUILD_PLUGIN_JPEG 1
-#define OIV_BUILD_PLUGIN_PNG 1
-#define OIV_BUILD_PLUGIN_PSD 1
 
 //Renderer
 // Allow null render for debug purpose, this flag is disabled by default.

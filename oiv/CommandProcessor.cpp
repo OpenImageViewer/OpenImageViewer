@@ -93,7 +93,7 @@ namespace OIV
                 if (result == RC_Success &&  responseSize == sizeof(CmdResponseLoad))
                 {
                     CmdResponseLoad* loadResponse = reinterpret_cast<CmdResponseLoad*>(responseData);
-                    Image* image = sPictureRenderer->GetImage();
+                    IMCodec::Image* image = sPictureRenderer->GetImage();
                     loadResponse->width = static_cast<uint32_t>(image->GetWidth());
                     loadResponse->height = static_cast<uint32_t>(image->GetHeight());
                     loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());

@@ -8,11 +8,12 @@
 #pragma comment(lib, "opengl32")
 //#pragma comment(lib, "glu32")
 
-
+#include <FileHelper.h>
+#include <Image.h>
 #include "GLContext.h"
-#include "../OIVUtil/FileHelper.h"
 #include "GLRenderer/GLTexture.h"
 #include "../oiv/Interfaces/IRenderer.h"
+
 
 namespace OIV
 {
@@ -36,7 +37,7 @@ namespace OIV
         int SetViewParams(const ViewParameters& viewParams) override;
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filtertype) override;
-        int SetImage(const ImageSharedPtr image) override;
+        int SetImage(const IMCodec::ImageSharedPtr image) override;
     private:
         bool fIsParamsDirty;
         GLGpuProgramUniquePtr fProgram;

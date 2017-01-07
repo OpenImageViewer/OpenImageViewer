@@ -42,7 +42,7 @@ namespace OIV
             return mousePos;
         }
 
-        static void MoveMouse(PointI32 point)
+        static void MoveMouse(LLUtils::PointI32 point)
         {
 
             POINT mousePos;

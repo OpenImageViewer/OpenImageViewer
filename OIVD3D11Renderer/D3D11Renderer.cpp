@@ -4,8 +4,8 @@
 #include <d3dcompiler.h>
 #include <filesystem>
 
-#include "../OIVUtil/Utility.h"
-#include "../OIVUtil/FileHelper.h"
+#include <Utility.h>
+#include <FileHelper.h>
 
 namespace OIV
 {
@@ -77,12 +77,12 @@ namespace OIV
     {
         using namespace std;
         //Create shader/*
-        wstring executableDirPath = Utility::GetExeFolder();
+        wstring executableDirPath = LLUtils::Utility::GetExeFolder();
         
         wstring vertexShaderPath = executableDirPath   + L"/Resources/programs/quad_vp.shader";
         wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_fp.shader";
-        string vertexSource = File::ReadAllText(vertexShaderPath);
-        string fragmentSource = File::ReadAllText(fragmentShaderPath);
+        string vertexSource = LLUtils::File::ReadAllText(vertexShaderPath);
+        string fragmentSource = LLUtils::File::ReadAllText(fragmentShaderPath);
 
         if (vertexSource.empty() == true || fragmentSource.empty() == true)
             HandleError("Direct3D11 could not locate the GPU programs");
@@ -414,9 +414,9 @@ namespace OIV
         return 0;
     }
 
-    int D3D11Renderer::SetImage(const ImageSharedPtr image)
+    int D3D11Renderer::SetImage(const IMCodec::ImageSharedPtr image)
     {
-        if (image->GetImageType() != IT_BYTE_RGBA)
+        if (image->GetImageType() != IMCodec::IT_BYTE_RGBA)
             HandleError("Direct3D11 renderer supports only RGBA pixel format");
 
         DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -498,15 +498,15 @@ namespace OIV
 
     bool D3D11Renderer::LoadShadersFromDisk()
     {
-        std::wstring oivAppDataFolder = Utility::GetAppDataFolder();
+        std::wstring oivAppDataFolder = LLUtils::Utility::GetAppDataFolder();
 
         std::experimental::filesystem::path p = oivAppDataFolder;
         std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
         std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
         try
         {
-            File::ReadAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
-            File::ReadAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+            LLUtils::File::ReadAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
+            LLUtils::File::ReadAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
             return true;
         }
         catch (...)
@@ -517,14 +517,14 @@ namespace OIV
 
     void D3D11Renderer::SaveShadersToDisk()
     {
-        std::wstring oivAppDataFolder = Utility::GetAppDataFolder();
+        std::wstring oivAppDataFolder = LLUtils::Utility::GetAppDataFolder();
         
         std::experimental::filesystem::path p = oivAppDataFolder;
         std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
         std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
-        
-        File::WriteAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
-        File::WriteAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+
+        LLUtils::File::WriteAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
+        LLUtils::File::WriteAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
         
     }
 }

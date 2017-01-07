@@ -11,6 +11,7 @@ namespace OIV
 
     void AutoScroll::PerformAutoScroll(const Win32::EventWinMessage* evnt)
     {
+        using namespace LLUtils;
         fAutoScrollStopWatch.Stop();
         const long double elapsed = fAutoScrollStopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds);
         fAutoScrollStopWatch.Start();
@@ -42,7 +43,7 @@ namespace OIV
         else
         {
             timeKillEvent(fAutoScrollTimerID);
-            fAutoScrollPosition = PointI32::Zero;
+            fAutoScrollPosition = LLUtils::PointI32::Zero;
         }
     }
 

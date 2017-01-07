@@ -1,7 +1,7 @@
 #pragma once
 #include "ZoomScrollState.h"
 #include "Interfaces\IPictureRenderer.h"
-#include "Image/ImageLoader.h"
+#include <ImageLoader.h>
 #include "interfaces/IRenderer.h"
 #include "ViewParameters.h"
 
@@ -36,7 +36,8 @@ namespace OIV
         virtual int Init() override;
         virtual int SetParent(std::size_t handle) override;
         virtual int Refresh() override;
-        virtual Image* GetImage() override;
+        IMCodec::Image* GetDisplayImage();
+        virtual IMCodec::Image* GetImage() override;
         virtual int SetFilterLevel(OIV_Filter_type filter_level) override;
         virtual int GetFileInformation(QryFileInformation& information) override;
         virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
@@ -54,9 +55,11 @@ namespace OIV
         std::size_t fParent;
         bool fIsRefresing;
         std::string fCurrentOpenedFile;
-        ImageLoader fImageLoader;
+        IMCodec::ImageLoader fImageLoader;
         bool fShowGrid;
-        ImageSharedPtr fOpenedImage;
+        IMCodec::ImageSharedPtr fOpenedImage;
+        IMCodec::ImageSharedPtr fDisplayedImage;
+        
         int fFilterLevel;
         int fClientWidth;
         int fClientHeight;

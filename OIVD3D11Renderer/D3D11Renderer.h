@@ -2,6 +2,7 @@
 #include "../oiv/interfaces/IRenderer.h"
 #include "../oiv/API/defs.h"
 #include <d3d11.h>
+#include <Image.h>
 
 namespace OIV
 {
@@ -51,7 +52,7 @@ namespace OIV
         void UpdateGpuParameters();
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filterType) override;
-        int SetImage(const ImageSharedPtr image) override;
+        int SetImage(const IMCodec::ImageSharedPtr image) override;
         
 #pragma endregion
 

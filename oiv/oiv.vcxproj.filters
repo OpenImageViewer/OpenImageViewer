@@ -9,9 +9,7 @@
     </ClCompile>
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="Vector2.cpp" />
-    <ClCompile Include="Image\Image.cpp" />
-    <ClCompile Include="Image\ImageProperties.cpp" />
-    <ClCompile Include="Image\ImageUtil.cpp" />
+    <ClCompile Include="APIImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -34,18 +32,11 @@
     <ClInclude Include="Interfaces\IRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="Interfaces\IImagePlugin.h" />
-    <ClInclude Include="Image\Image.h" />
-    <ClInclude Include="Image\ImageLoader.h" />
-    <ClInclude Include="Image\ImageProperties.h" />
     <ClInclude Include="Plugins\PluginFreeImage.h" />
     <ClInclude Include="Plugins\PluginJpeg.h" />
     <ClInclude Include="Plugins\PluginPng.h" />
     <ClInclude Include="NullRenderer.h" />
-    <ClInclude Include="Image\PixelUtil.h" />
-    <ClInclude Include="Image\ImageUtil.h" />
     <ClInclude Include="Configuration.h" />
-    <ClInclude Include="Image\ImageType.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Image\AxisAlignedTransform.h" />
   </ItemGroup>

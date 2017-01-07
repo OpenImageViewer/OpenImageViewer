@@ -1,18 +1,12 @@
 #pragma warning(disable : 4275 ) // disables warning 4275, pop and push from exceptions
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "oiv.h"
-#include "Plugins/PluginJpeg.h"
-#include "Plugins/PluginPng.h"
-#include "Plugins/PluginFreeImage.h"
 #include "External\easyexif\exif.h"
 #include "Interfaces\IRenderer.h"
 #include "NullRenderer.h"
-#include "Image/ImageUtil.h"
+#include <ImageLoader.h>
+#include <ImageUtil.h>
 #include "Configuration.h"
-
-#if OIV_BUILD_PLUGIN_PSD == 1
-#include <Codecs/CodecPSD/Include/CodecPSDFactory.h>
-#endif
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
@@ -23,6 +17,7 @@
 #if OIV_BUILD_RENDERER_GL == 1
 #include "../OIVGLRenderer/OIVGLRendererFactory.h"
 #endif
+
 
 
 namespace OIV
@@ -37,30 +32,14 @@ namespace OIV
         , fClientHeight(-1)
 
     {
-#if OIV_BUILD_PLUGIN_JPEG == 1
-        fImageLoader.InstallPlugin(new PluginJpeg());
-#endif
-#if OIV_BUILD_PLUGIN_PNG == 1
-        fImageLoader.InstallPlugin(new PluginPng());
-#endif
-#if OIV_BUILD_PLUGIN_PSD == 1
-        fImageLoader.InstallPlugin(CodecPSDFactory::Create());
-#endif
-        
 
-        //TODO: remove free image codec with specialized codecs.
-#if OIV_BUILD_PLUGIN_FREE_IMAGE == 1
-        fImageLoader.InstallPlugin(new PluginFreeImage());
-#endif
     }
-
-    
 
 
     #pragma region ZoomScrollStateListener
     Vector2 OIV::GetImageSize()
     {
-        return fOpenedImage.get() ? Vector2(static_cast<double>(fOpenedImage->GetWidth()), static_cast<double>(fOpenedImage->GetHeight()))
+        return GetDisplayImage() ? Vector2(static_cast<double>(GetDisplayImage()->GetWidth()), static_cast<double>(GetDisplayImage()->GetHeight()))
             : Vector2::ZERO;
     }
 
@@ -74,7 +53,6 @@ namespace OIV
         Refresh();
     }
     #pragma endregion 
-
    
 
     void OIV::UpdateGpuParams()
@@ -159,28 +137,30 @@ namespace OIV
     int OIV::LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
     {
         ResultCode resultCode = RC_UknownError;
-        
-        ImageSharedPtr image = ImageSharedPtr(fImageLoader.LoadImage(buffer, size, extension, onlyRegisteredExtension));
+        using namespace IMCodec;
+        ImageSharedPtr image = IMCodec::ImageSharedPtr(fImageLoader.LoadImage(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
 
-        if (image.get())
+        if (image != nullptr)
         {
             fOpenedImage.swap(image);
 
-            if (fOpenedImage.get() != nullptr)
+            if (fOpenedImage != nullptr)
             {
+                fDisplayedImage = fOpenedImage;
 
                 using namespace easyexif;
                 EXIFInfo exifInfo;
 
                 if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-                    fOpenedImage->Transform(ResolveExifRotation(exifInfo.Orientation));
+                    fDisplayedImage = IMUtil::ImageUtil::Transform(
+                        static_cast<IMUtil::AxisAlignedRTransform>( ResolveExifRotation(exifInfo.Orientation))
+                            , fDisplayedImage);
 
-                //TODO: send the renderer a copy of the converted image.
-                fOpenedImage = ImageUtil::Convert(fOpenedImage, IT_BYTE_RGBA);
+                fDisplayedImage = IMUtil::ImageUtil::Convert(fDisplayedImage, IMCodec::IT_BYTE_RGBA);
 
-                if (fOpenedImage.get() != nullptr)
+                if (fDisplayedImage != nullptr)
                 {
-                    if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+                    if (fRenderer->SetImage(fDisplayedImage) == RC_Success)
                     {
                         fScrollState.Reset(true);
                         resultCode = RC_Success;
@@ -238,7 +218,12 @@ namespace OIV
         return 0;
     }
 
-    Image* OIV::GetImage()
+    IMCodec::Image* OIV::GetDisplayImage()
+    {
+        return fDisplayedImage.get();
+    }
+
+    IMCodec::Image* OIV::GetImage()
     {
         return fOpenedImage.get();
     }
@@ -310,15 +295,14 @@ namespace OIV
 
     ResultCode OIV::AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform)
     {
-        if (fOpenedImage.get() != nullptr)
+        if (fDisplayedImage.get() != nullptr)
         {
-            fOpenedImage->Transform(transform);
-            if (fRenderer->SetImage(fOpenedImage) == RC_Success)
+            fDisplayedImage = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(transform), fDisplayedImage);
+            if (fDisplayedImage != nullptr && fRenderer->SetImage(fDisplayedImage) == RC_Success)
             {
                 fScrollState.Reset(true);
                 return RC_Success;
             }
-
         }
         return RC_UknownError;
     }
