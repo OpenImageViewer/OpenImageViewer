@@ -556,7 +556,7 @@ namespace OIV
             }
         }
         
-        if (IsMiddlePressed)
+        if (IsMiddlePressed && evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus())
         {
             fAutoScroll.ToggleAutoScroll();
         }
