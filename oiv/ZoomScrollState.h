@@ -1,5 +1,5 @@
 #pragma once
-#include "Vector2.h"
+#include "Point.h"
 namespace OIV
 {
 
@@ -9,16 +9,16 @@ namespace OIV
         class Listener
         {
         public:
-            virtual Vector2 GetClientSize() = 0;
-            virtual Vector2 GetImageSize() = 0;
+            virtual LLUtils::PointI32 GetClientSize() = 0;
+            virtual LLUtils::PointI32 GetImageSize() = 0;
             virtual void NotifyDirty() = 0;
         };
 
         ZoomScrollState(Listener* listener) :
             fLockSmallImagesToCenter(false)
             , fListener(listener)
-            , fUVOffset(Vector2::ZERO)
-            , fUVScale(Vector2::UNIT_SCALE)
+            , fUVOffset(LLUtils::PointF64::Zero)
+            , fUVScale(LLUtils::PointF64::One)
             , fSupressDirty(false)
             , fDirtyQueued(false)
             , fInverted(false)
@@ -32,16 +32,22 @@ namespace OIV
         // commands
         void Reset(bool refresh = false);
         void Zoom(double amount,int x,int y);
-        void Pan(Vector2 amont);
+        void Pan(LLUtils::PointF64 amont);
         void Refresh();
 
 
-        // queries
-        Vector2 GetOffset() { return fUVOffset; }
-        Vector2 GetScale() { return fUVScale; }
-        Vector2 GetARFixedUVScale();
-        Vector2 ClientPosToTexel(Vector2 pos);
-        Vector2 GetNumTexelsInCanvas();
+        // public queries
+        LLUtils::PointF64 GetOffset() const { return fUVOffset; }
+        LLUtils::PointF64 GetScale() const { return fUVScale; }
+        LLUtils::PointF64 GetARFixedUVScale() const;
+        LLUtils::PointF64 ClientPosToTexel(LLUtils::PointI32 pos) const;
+        LLUtils::PointF64 GetNumTexelsInCanvas() const;
+
+    private:
+        // private queries
+        LLUtils::PointF64 GetScreenSpaceOrigin() const;
+        LLUtils::PointF64 GetImageSize() const;
+        LLUtils::PointF64 GetClientSize() const;
 
         void SetInvertedVCoordinate(bool inverted);
 
@@ -51,27 +57,26 @@ namespace OIV
         void NotifyDirty();
 
 
-        void SetScale(Vector2 scale);
+        void SetScale(LLUtils::PointF64 scale);
         void SupressDirty(bool surpress);
 
-        void TranslateOffset(Vector2 offset);
+        void TranslateOffset(LLUtils::PointF64 offset);
         void Center();
         double ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const;
-        Vector2 FixAR(Vector2 val, bool increase);
-        void SetOffset(Vector2 offset);
-        Vector2 GetScreenSpaceOrigin();
-
+        LLUtils::PointF64 FixAR(LLUtils::PointF64 val, bool increase);
+        void SetOffset(LLUtils::PointF64 offset);
+        
     private: //member fields
         Listener* fListener;
-        Vector2 fUVScale;
-        Vector2 fUVOffset;
+        LLUtils::PointF64 fUVScale;
+        LLUtils::PointF64 fUVOffset;
         bool fSupressDirty;
         bool fDirtyQueued;
         bool fInverted;
         bool fLockSmallImagesToCenter;
 
-        Vector2 fMarginLarge;
-        Vector2 fMarginSmall;
+        LLUtils::PointF64 fMarginLarge;
+        LLUtils::PointF64 fMarginSmall;
 
     };
 }

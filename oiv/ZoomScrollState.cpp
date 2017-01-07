@@ -1,9 +1,11 @@
-#include "ZoomScrollState.h"
 #include <algorithm>
+#include <cassert>
+#include "ZoomScrollState.h"
+
 
 namespace OIV
 {
-    void ZoomScrollState::TranslateOffset(Vector2 offset)
+    void ZoomScrollState::TranslateOffset(LLUtils::PointF64 offset)
     {
         SetOffset(fUVOffset + offset);
     }
@@ -11,8 +13,8 @@ namespace OIV
 
     void ZoomScrollState::Center()
     {
-        Vector2 uvscale = GetARFixedUVScale();
-        fUVOffset = -(uvscale - 1.0) / 2;
+        LLUtils::PointF64 uvscale = GetARFixedUVScale();
+        fUVOffset = -(uvscale - 1.0) * 0.5;
     }
     
 
@@ -24,7 +26,7 @@ namespace OIV
             // Image is larger than window
             double marginFactor = marginLarge * scale;
             double maxOffset = 1.0 - scale + marginFactor;
-            offset = std::max(static_cast<double>(-marginFactor), std::min(maxOffset, desiredOffset));
+            offset = (std::max)(static_cast<double>(-marginFactor), (std::min)(maxOffset, desiredOffset));
         }
         else
         {
@@ -42,7 +44,7 @@ namespace OIV
                 double minOffset = -scale + 1.0 + marginFactor;
                 if (minOffset < maxOffset)
                 {
-                    offset = std::min(std::max(desiredOffset, minOffset), maxOffset);
+                    offset = (std::min)((std::max)(desiredOffset, minOffset), maxOffset);
                 }
                 else
                 {
@@ -55,10 +57,10 @@ namespace OIV
         return offset;
     }
 
-    Vector2 ZoomScrollState::FixAR(Vector2 val, bool increase)
+    LLUtils::PointF64 ZoomScrollState::FixAR(LLUtils::PointF64 val, bool increase)
     {
-        Vector2 windowSize = fListener->GetClientSize();
-        Vector2 result;
+        LLUtils::PointF64 windowSize = GetClientSize();
+        LLUtils::PointF64 result;
         double ar = windowSize.x / windowSize.y;
         result = val;
 
@@ -80,12 +82,12 @@ namespace OIV
         return result;
     }
 
-    void ZoomScrollState::SetOffset(Vector2 offset)
+    void ZoomScrollState::SetOffset(LLUtils::PointF64 offset)
     {
-        Vector2 uvScale = GetARFixedUVScale();
+        LLUtils::PointF64 uvScale = GetARFixedUVScale();
 
-        Vector2 marginLarge = FixAR(fMarginLarge, false);
-        Vector2 marginSmall = FixAR(fMarginSmall, false);
+        LLUtils::PointF64 marginLarge = FixAR(fMarginLarge, false);
+        LLUtils::PointF64 marginSmall = FixAR(fMarginSmall, false);
         
         
         fUVOffset.x = ResolveOffset(offset.x, uvScale.x, marginLarge.x, marginSmall.x);
@@ -94,40 +96,51 @@ namespace OIV
     }
 
 
-    Vector2 ZoomScrollState::GetScreenSpaceOrigin()
+    LLUtils::PointF64 ZoomScrollState::GetScreenSpaceOrigin() const
     {
-        return GetOffset() / GetARFixedUVScale() * fListener->GetClientSize();
+        return GetOffset() / GetARFixedUVScale() * static_cast<LLUtils::PointF64>( fListener->GetClientSize());
     }
 
-    Vector2 ZoomScrollState::ClientPosToTexel(Vector2 pos)
+    LLUtils::PointF64 ZoomScrollState::GetImageSize() const
     {
-        Vector2 texel = (pos + GetScreenSpaceOrigin()) / fListener->GetClientSize() * fListener->GetImageSize() * GetARFixedUVScale();
+        return static_cast<LLUtils::PointF64>(fListener->GetImageSize());
+    }
+
+    LLUtils::PointF64 ZoomScrollState::GetClientSize() const
+    {
+        return static_cast<LLUtils::PointF64>(fListener->GetClientSize());
+    }
+
+
+    LLUtils::PointF64 ZoomScrollState::ClientPosToTexel(LLUtils::PointI32 pos) const
+    {
+        LLUtils::PointF64 texel = (static_cast<LLUtils::PointF64>(pos) + GetScreenSpaceOrigin()) / GetClientSize() * GetImageSize() * GetARFixedUVScale();
         return texel;
     }
 
-    void ZoomScrollState::SetScale(Vector2 scale)
+    void ZoomScrollState::SetScale(LLUtils::PointF64 scale)
     {
         fUVScale = scale;
         NotifyDirty();
     }
 
-    Vector2 ZoomScrollState::GetNumTexelsInCanvas()
+    LLUtils::PointF64 ZoomScrollState::GetNumTexelsInCanvas() const
     {
-        return fListener->GetImageSize() * GetARFixedUVScale();
+        return GetImageSize() * GetARFixedUVScale();
     }
 
-    Vector2 ZoomScrollState::GetARFixedUVScale()
+    LLUtils::PointF64 ZoomScrollState::GetARFixedUVScale() const
     {
-        Vector2 windowSize = fListener->GetClientSize();
-        Vector2 textureSize = fListener->GetImageSize();
-        if (textureSize == Vector2::ZERO)
+        LLUtils::PointF64 windowSize = GetClientSize();
+        LLUtils::PointF64 textureSize = GetImageSize();
+        if (textureSize == LLUtils::PointF64::Zero)
             return fUVScale;
 
         double textureAR = textureSize.x / textureSize.y;
         double windowAR = windowSize.x / windowSize.y;
 
 
-        Vector2 fixedUVScale = fUVScale;
+        LLUtils::PointF64 fixedUVScale = fUVScale;
         double ARFix = textureAR / windowAR;;
         if (ARFix < 1)
             fixedUVScale.x /= ARFix;
@@ -183,8 +196,8 @@ namespace OIV
 
     void ZoomScrollState::Reset(bool refresh /*= false*/)
     {
-        fUVOffset = Vector2::ZERO;
-        fUVScale = Vector2::UNIT_SCALE;
+        fUVOffset = LLUtils::PointF64::Zero;
+        fUVScale = LLUtils::PointF64::One;
 
         Center();
 
@@ -194,13 +207,14 @@ namespace OIV
 
     void ZoomScrollState::Zoom(double amount, int x, int y)
     {
+        using namespace LLUtils;
         if (amount == 0)
             return;
 
         SupressDirty(true);
 
-        Vector2 zoomPoint;
-        Vector2 windowSize = fListener->GetClientSize();
+        PointF64 zoomPoint;
+        PointF64 windowSize = GetClientSize();
 
         
         zoomPoint.x = x >= 0 ? (static_cast<double>(x) / windowSize.x) : 0.5;
@@ -222,18 +236,18 @@ namespace OIV
             targetZoom = currentZoom * (1 + amount);
         else
         if (amount < 0)
-            targetZoom = currentZoom *( 1.0 - std::min(-amount,0.95));
+            targetZoom = currentZoom *( 1.0 - (std::min)(-amount,0.95));
 
-        Vector2 uvNewScale = Vector2::UNIT_SCALE /  targetZoom;
+        PointF64 uvNewScale = PointF64::One /  targetZoom;
 
-        Vector2 oldScaleFixed = GetARFixedUVScale();
+        PointF64 oldScaleFixed = GetARFixedUVScale();
         SetScale(uvNewScale);
-        Vector2 newScaleFixed = GetARFixedUVScale();
+        PointF64 newScaleFixed = GetARFixedUVScale();
 
-        Vector2 totalOffset = (oldScaleFixed - newScaleFixed);
+        PointF64 totalOffset = (oldScaleFixed - newScaleFixed);
 
         //zoom around the zoom point
-        Vector2 offsetChange = totalOffset * zoomPoint;
+        PointF64 offsetChange = totalOffset * zoomPoint;
         TranslateOffset(offsetChange);
         SupressDirty(false);
     }
@@ -243,9 +257,9 @@ namespace OIV
         fInverted = inverted;
     }
 
-    void ZoomScrollState::Pan(Vector2 amount)
+    void ZoomScrollState::Pan(LLUtils::PointF64 amount)
     {
-        Vector2 panFactor = amount * GetARFixedUVScale() / fListener->GetClientSize();
+        LLUtils::PointF64 panFactor = amount * GetARFixedUVScale() / GetClientSize();
         panFactor.y *= fInverted ? -1 : 1;
         TranslateOffset(panFactor);
     }

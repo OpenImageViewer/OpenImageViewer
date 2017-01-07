@@ -36,3 +36,4 @@ ImageCodec/ImageLoader.vcxproj.user
 ImageCodec/ImageLoader/ImageLoader.vcxproj.user
 ImageUtil/ImageUtil.vcxproj.user
 ImageCodec/Codecs/CodecJPG/CodecJPG.vcxproj.user
+ImageCodec/Codecs/CodecFreeImage/CodecFreeImage.vcxproj.user

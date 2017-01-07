@@ -43,7 +43,7 @@ namespace IMCodec
         }
     }
 
-    Image* ImageLoader::LoadImage(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
+    Image* ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
     {
         using namespace std;
 

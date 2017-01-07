@@ -17,6 +17,7 @@
 #include "FileHelper.h"
 #include <cassert>
 #include "StopWatch.h"
+#include <PlatformUtility.h>
 
 namespace OIV
 {
@@ -132,7 +133,7 @@ namespace OIV
 
         if (workingPath.empty() == false)
         {
-            LLUtils::Utility::find_files(workingPath.wstring(), fListFiles);
+            LLUtils::PlatformUtility::find_files(workingPath.wstring(), fListFiles);
             LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
@@ -538,7 +539,7 @@ namespace OIV
         const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::State::Pressed;
         const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Pressed;
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed;
-        
+        const bool isMouseInsideWindowAndfocus = evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus();
         if (IsRightCatured == true)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
@@ -548,7 +549,7 @@ namespace OIV
         LONG wheelDelta = evnt->DeltaWheel;
         if (wheelDelta != 0)
         {
-            if (IsRightCatured || (evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus()))
+            if (IsRightCatured || isMouseInsideWindowAndfocus)
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
@@ -556,12 +557,13 @@ namespace OIV
             }
         }
         
-        if (IsMiddlePressed && evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus())
+        if (IsMiddlePressed && isMouseInsideWindowAndfocus)
         {
             fAutoScroll.ToggleAutoScroll();
         }
 
-        if (    (IsRightPressed && IsLeftPressed)
+        if (     isMouseInsideWindowAndfocus 
+             && (IsRightPressed && IsLeftPressed)
              || (IsRightPressed && IsLeftDown)
              || (IsRightDown && IsLeftPressed))
         {

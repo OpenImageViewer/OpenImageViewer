@@ -19,7 +19,7 @@ namespace IMCodec
 
         ImageLoader();
         void InstallPlugin(IImagePlugin* plugin);
-        Image* LoadImage(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true);
+        Image* Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true);
     };
 
    

@@ -15,7 +15,7 @@ namespace OIV
         static void Log(OIVCHAR* message);
         static bool IsInitialized()
         {
-            return sPictureRenderer.get() != nullptr;
+            return sPictureRenderer != nullptr;
         }
 
     };

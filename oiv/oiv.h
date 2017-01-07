@@ -13,8 +13,8 @@ namespace OIV
         , public IPictureRenderer
     {
 #pragma region  //-------------Scroll state listener------------------
-        virtual Vector2 GetClientSize() override;
-        virtual Vector2 GetImageSize() override;
+        virtual LLUtils::PointI32 GetClientSize() override;
+        virtual LLUtils::PointI32 GetImageSize() override;
         virtual void NotifyDirty() override;
 #pragma endregion 
 

@@ -37,15 +37,18 @@ namespace OIV
 
 
     #pragma region ZoomScrollStateListener
-    Vector2 OIV::GetImageSize()
+    LLUtils::PointI32 OIV::GetImageSize()
     {
-        return GetDisplayImage() ? Vector2(static_cast<double>(GetDisplayImage()->GetWidth()), static_cast<double>(GetDisplayImage()->GetHeight()))
-            : Vector2::ZERO;
+        using namespace LLUtils;
+        return GetDisplayImage() ? PointI32(
+                static_cast<PointI32::point_type>(GetDisplayImage()->GetWidth()),
+                static_cast<PointI32::point_type>(GetDisplayImage()->GetHeight()))
+            : PointI32::Zero;
     }
 
-    Vector2 OIV::GetClientSize()
+    LLUtils::PointI32 OIV::GetClientSize()
     {
-        return Vector2(fClientWidth, fClientHeight);
+        return LLUtils::PointI32(fClientWidth, fClientHeight);
     }
     
     void OIV::NotifyDirty()
@@ -57,10 +60,10 @@ namespace OIV
 
     void OIV::UpdateGpuParams()
     {
-        Vector2 uvScaleFixed = fScrollState.GetARFixedUVScale();
-        Vector2 uvOffset = fScrollState.GetOffset();
-        if (fOpenedImage.get() == nullptr)
-            uvScaleFixed = Vector2(1000000, 100000);
+        LLUtils::PointF64 uvScaleFixed = fScrollState.GetARFixedUVScale();
+        LLUtils::PointF64 uvOffset = fScrollState.GetOffset();
+        if (fOpenedImage == nullptr)
+            uvScaleFixed = LLUtils::PointF64(1000000, 100000);
         
         fViewParams.showGrid = fShowGrid;
         fViewParams.uViewportSize = GetClientSize();
@@ -78,7 +81,7 @@ namespace OIV
 
     bool OIV::IsImageLoaded() const
     {
-        return fOpenedImage.get() != nullptr;
+        return fOpenedImage != nullptr;
     }
 
     OIV_AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
@@ -138,7 +141,7 @@ namespace OIV
     {
         ResultCode resultCode = RC_UknownError;
         using namespace IMCodec;
-        ImageSharedPtr image = IMCodec::ImageSharedPtr(fImageLoader.LoadImage(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
+        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
 
         if (image != nullptr)
         {
@@ -187,7 +190,7 @@ namespace OIV
 
     int OIV::Pan(double x, double y)
     {
-        fScrollState.Pan(Vector2(x, y));
+        fScrollState.Pan({ x, y });
         return 0.0;
     }
 
@@ -264,7 +267,7 @@ namespace OIV
 
     int OIV::GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY)
     {
-        Vector2 texelPos = this->fScrollState.ClientPosToTexel(Vector2(mouseX, mouseY));
+        LLUtils::PointF64 texelPos = this->fScrollState.ClientPosToTexel({ mouseX, mouseY });
         texelX = texelPos.x;
         texelY = texelPos.y;
         return RC_Success;
@@ -279,7 +282,7 @@ namespace OIV
 
     int OIV::GetNumTexelsInCanvas(double &x, double &y)
     {
-        Vector2 canvasSize = fScrollState.GetNumTexelsInCanvas();
+        LLUtils::PointF64 canvasSize = fScrollState.GetNumTexelsInCanvas();
         x = canvasSize.x;
         y = canvasSize.y;
         return RC_Success;
@@ -295,7 +298,7 @@ namespace OIV
 
     ResultCode OIV::AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform)
     {
-        if (fDisplayedImage.get() != nullptr)
+        if (fDisplayedImage != nullptr)
         {
             fDisplayedImage = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(transform), fDisplayedImage);
             if (fDisplayedImage != nullptr && fRenderer->SetImage(fDisplayedImage) == RC_Success)

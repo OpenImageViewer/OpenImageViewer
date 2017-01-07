@@ -96,7 +96,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -126,7 +126,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -158,7 +158,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -181,7 +181,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Development\OpenImageViewer\oiv\External\libpsd-0.9\include;C:\libjpeg-turbo64\include;D:\DevelopmentExternal\libpng-code;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64;d:\Development\OpenImageViewer;d:\Development\OpenImageViewer\ImageUtil\Include;d:\Development\OpenImageViewer\ImageCodec\Image\Include;d:\Development\OpenImageViewer\ImageCodec\ImageLoader\Include;d:\Development\OpenImageViewer\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -202,7 +202,6 @@
     <ClCompile Include="CommandProcessor.cpp" />
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="oiv.cpp" />
-    <ClCompile Include="Vector2.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -213,16 +212,11 @@
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
-    <ClInclude Include="Image\AxisAlignedTransform.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
     <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="oiv.h" />
-    <ClInclude Include="Plugins\PluginFreeImage.h" />
-    <ClInclude Include="Plugins\PluginJpeg.h" />
-    <ClInclude Include="Plugins\PluginPng.h" />
-    <ClInclude Include="Vector2.h" />
     <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="ZoomScrollState.h" />
   </ItemGroup>

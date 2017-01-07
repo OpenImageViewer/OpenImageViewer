@@ -8,7 +8,6 @@
       <Filter>API</Filter>
     </ClCompile>
     <ClCompile Include="External\easyexif\exif.cpp" />
-    <ClCompile Include="Vector2.cpp" />
     <ClCompile Include="APIImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -28,17 +27,12 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="External\easyexif\exif.h" />
     <ClInclude Include="ViewParameters.h" />
-    <ClInclude Include="Vector2.h" />
     <ClInclude Include="Interfaces\IRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
-    <ClInclude Include="Plugins\PluginFreeImage.h" />
-    <ClInclude Include="Plugins\PluginJpeg.h" />
-    <ClInclude Include="Plugins\PluginPng.h" />
     <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="Common\linux.h" />
-    <ClInclude Include="Image\AxisAlignedTransform.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

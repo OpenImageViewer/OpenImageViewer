@@ -5,6 +5,7 @@
 #include <filesystem>
 
 #include <Utility.h>
+#include <PlatformUtility.h>
 #include <FileHelper.h>
 
 namespace OIV
@@ -77,7 +78,7 @@ namespace OIV
     {
         using namespace std;
         //Create shader/*
-        wstring executableDirPath = LLUtils::Utility::GetExeFolder();
+        wstring executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
         
         wstring vertexShaderPath = executableDirPath   + L"/Resources/programs/quad_vp.shader";
         wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_fp.shader";
@@ -498,7 +499,7 @@ namespace OIV
 
     bool D3D11Renderer::LoadShadersFromDisk()
     {
-        std::wstring oivAppDataFolder = LLUtils::Utility::GetAppDataFolder();
+        std::wstring oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
 
         std::experimental::filesystem::path p = oivAppDataFolder;
         std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
@@ -517,7 +518,7 @@ namespace OIV
 
     void D3D11Renderer::SaveShadersToDisk()
     {
-        std::wstring oivAppDataFolder = LLUtils::Utility::GetAppDataFolder();
+        std::wstring oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
         
         std::experimental::filesystem::path p = oivAppDataFolder;
         std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";

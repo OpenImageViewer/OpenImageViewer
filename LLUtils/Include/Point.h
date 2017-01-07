@@ -1,4 +1,8 @@
 #pragma once
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "Utility.h"
 
 namespace LLUtils
@@ -10,6 +14,8 @@ namespace LLUtils
         
     public:
         static const Point<POINT_TYPE> Zero;
+        static const Point<POINT_TYPE> One;
+        using point_type = POINT_TYPE;
         
         POINT_TYPE x = 0;
         POINT_TYPE y = 0;
@@ -31,6 +37,31 @@ namespace LLUtils
             y = aY;
         }
 
+#pragma region operations
+        Point Abs() const
+        {
+            using namespace std;
+            return Point(abs(x), abs(y));
+        }
+
+        Point Sqrt() const
+        {
+            return{ static_cast<POINT_TYPE>(std::sqrt(x)), static_cast<POINT_TYPE>(std::sqrt(y)) };
+        }
+
+        double DistanceSquared(const Point& rhs) const
+        {
+            return (x - rhs.x) * (x - rhs.x) + (y - rhs.y) * (y - rhs.y);
+        }
+
+        double Distance(const Point& rhs) const
+        {
+            return sqrt(DistanceSquared(rhs));
+        }
+
+#pragma endregion operations
+
+ #pragma region Binary operators
         bool operator==( const Point& rhs) const
         {
             return x == rhs.x && y == rhs.y;
@@ -45,25 +76,45 @@ namespace LLUtils
         {
             return{ x - rhs.x , y - rhs.y };
         }
+        
         Point operator+(const Point& rhs) const
         {
             return Point ( x + rhs.x , y  + rhs.y );
         }
-
-        Point Abs() const
+        Point operator*(const Point& rhs) const
         {
-            using namespace std;
-            return Point(abs(x), abs(y));
+            return Point(x * rhs.x, y * rhs.y);
         }
 
-        Point Sqrt() const
+        Point operator/(const Point& point) const
         {
-            return{static_cast<POINT_TYPE>(std::sqrt(x)), static_cast<POINT_TYPE>(std::sqrt(y)) };
+            return Point(x / point.x, y / point.y);
+        }
+        //Scalars
+        template <class SCALAR_TYPE>
+        Point operator-(SCALAR_TYPE scalar) const
+        {
+            return{ x - scalar , y - scalar };
+        }
+        template <class SCALAR_TYPE>
+        Point operator/(SCALAR_TYPE scalar) const
+        {
+            return Point(x / scalar, y / scalar);
+        }
+        template <class SCALAR_TYPE>
+        Point operator*(SCALAR_TYPE scalar) const
+        {
+            return Point(x * scalar, y * scalar);
         }
 
-        Point operator*(const Point& point ) const
+
+#pragma endregion Binary operators
+
+#pragma region Unary operators
+
+        Point operator-()
         {
-            return Point(x * point.x, y * point.y);
+            return{ -x,-y };
         }
 
         template <class T>
@@ -74,18 +125,13 @@ namespace LLUtils
             return *this;
         }
 
+        
         template <class T>
         Point& operator+=(T scalar)
         {
             x += scalar;
             y += scalar;
             return *this;
-        }
-
-        template <class T>
-        Point operator*(const T& scalar) const
-        {
-            return Point(x * scalar, y * scalar);
         }
 
         Point& operator*=(Point rhs)
@@ -108,6 +154,7 @@ namespace LLUtils
             y -= rhs.y;
             return *this;
         }
+#pragma endregion Unary operators
         
         template <class BASE_TYPE>
         explicit operator Point<BASE_TYPE>() const
@@ -132,6 +179,9 @@ namespace LLUtils
     };
     template <class POINT_TYPE>
     const Point<POINT_TYPE>  Point<POINT_TYPE>::Zero = Point<POINT_TYPE>(0, 0);
+
+    template <class POINT_TYPE>
+    const Point<POINT_TYPE>  Point<POINT_TYPE>::One = Point<POINT_TYPE>(1, 1);
 
     typedef Point<int32_t> PointI32;
     typedef Point<float> PointF32;

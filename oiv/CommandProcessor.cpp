@@ -23,7 +23,7 @@ namespace OIV
         {
         case CE_Init:
             
-            if (sPictureRenderer.get() == nullptr)
+            if (sPictureRenderer == nullptr)
             {
                 sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
 

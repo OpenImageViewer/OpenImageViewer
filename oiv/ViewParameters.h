@@ -1,13 +1,13 @@
 #pragma once
-#include "Vector2.h"
+#include "Point.h"
 namespace OIV
 {
     class ViewParameters
     {
     public:
-        Vector2 uvscale;
-        Vector2 uvOffset;
-        Vector2 uViewportSize;
+        LLUtils::PointF64 uvscale;
+        LLUtils::PointF64 uvOffset;
+        LLUtils::PointI32 uViewportSize;
         bool showGrid;
     };
 }

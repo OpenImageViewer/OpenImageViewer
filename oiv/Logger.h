@@ -1,5 +1,5 @@
 #pragma once
-#include <windows.h>
+//#include <windows.h>
 #include <sstream>
 
 namespace OIV
@@ -11,7 +11,7 @@ namespace OIV
         {
             std::stringstream ss;
             ss << message << "\n";
-            OutputDebugStringA(ss.str().c_str());
+            //OutputDebugStringA(ss.str().c_str());
             
         }
     };

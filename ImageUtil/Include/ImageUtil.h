@@ -59,7 +59,7 @@ namespace IMUtil
 
 
                 const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
-                const uint8_t totalThreads = std::min(maxThreads, static_cast<uint8_t>(image->GetTotalSizeOfImageTexels() / bytesPerThread));
+                const uint8_t totalThreads = (std::min)(maxThreads, static_cast<uint8_t>(image->GetTotalSizeOfImageTexels() / bytesPerThread));
                 PixelUtil::TransformTexelsInfo descTemplate;
                 descTemplate.transform = transform;
                 descTemplate.dstBuffer = dest;
