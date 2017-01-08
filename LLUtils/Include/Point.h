@@ -25,9 +25,10 @@ namespace LLUtils
             return static_cast<uint32_t>(std::abs(static_cast<long const>(val)));
         }
 
-        float abs(const float val) const
+        template <class T>
+        T abs(const T val) const
         {
-            return static_cast<float>(std::abs(static_cast<long const>(val)));
+            return static_cast<T>(std::abs(static_cast<T>(val)));
         }
 
         Point() {}

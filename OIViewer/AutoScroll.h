@@ -26,18 +26,26 @@ namespace OIV
         private:
         static void OnAutoScrollTimer(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
 #pragma endregion
-
-    
+        
+        typedef LLUtils::PointF64 ScrollPointType;
+   
 #pragma region Private member fields
     private:
+        //Scroll paramaters
+        uint16_t fScrollTimeDelay = 1; // in milliseconds
+        uint8_t fAutoScrollDeadZone = 20; // in pixels
+        uint16_t fScrollSpeed = 5; // pixels per second per step
+
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = LLUtils::PointI32::Zero;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        LLUtils::PointF32 fAutoScrollPanning = LLUtils::PointF32::Zero;
-        uint8_t fAutoScrollMercyZone = 20;
+        ScrollPointType fAutoScrollPanning = ScrollPointType::Zero;
+        
+        
         MMRESULT fAutoScrollTimerID = 0;
         Win32::Win32WIndow* fWindow;
         OnScrollFunction fOnScroll;
+        
 #pragma endregion
     };
 

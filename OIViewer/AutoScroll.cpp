@@ -15,19 +15,19 @@ namespace OIV
         fAutoScrollStopWatch.Stop();
         const long double elapsed = fAutoScrollStopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds);
         fAutoScrollStopWatch.Start();
-        PointF32 deltaFromScrollPosition = static_cast<PointF32>(PointI32(fWindow->GetMousePosition()) - fAutoScrollPosition);
+        ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(PointI32(fWindow->GetMousePosition()) - fAutoScrollPosition);
 
-        PointF32 deltaAbs = deltaFromScrollPosition.Abs();
-        deltaAbs.x = deltaAbs.x < fAutoScrollMercyZone ? 0 : (deltaAbs.x - (fAutoScrollMercyZone - 1));
-        deltaAbs.y = deltaAbs.y < fAutoScrollMercyZone ? 0 : (deltaAbs.y - (fAutoScrollMercyZone - 1));
-        fAutoScrollPanning += deltaAbs * (elapsed / 100.0f) * deltaFromScrollPosition.Sign();
+        ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
+        deltaAbs.x = deltaAbs.x < fAutoScrollDeadZone ? 0 : (deltaAbs.x - (fAutoScrollDeadZone - 1));
+        deltaAbs.y = deltaAbs.y < fAutoScrollDeadZone ? 0 : (deltaAbs.y - (fAutoScrollDeadZone - 1));
+        fAutoScrollPanning += deltaAbs * (elapsed * fScrollSpeed * 0.001) * deltaFromScrollPosition.Sign();
 
-        if (fAutoScrollPanning.Abs() != PointF32::Zero)
+        if (fAutoScrollPanning.Abs() != ScrollPointType::Zero)
         {
             PointI32 actualPanning = static_cast<PointI32>(fAutoScrollPanning);
             fOnScroll(actualPanning.x, actualPanning.y);
             
-            fAutoScrollPanning -= static_cast<PointF32>(actualPanning);
+            fAutoScrollPanning -= static_cast<ScrollPointType>(actualPanning);
         }
     }
 
@@ -37,7 +37,7 @@ namespace OIV
 
         if (fAutoScrolling)
         {
-            fAutoScrollTimerID = timeSetEvent(5, 0, OnAutoScrollTimer, reinterpret_cast<DWORD_PTR>(fWindow), TIME_PERIODIC);
+            fAutoScrollTimerID = timeSetEvent(fScrollTimeDelay, 0, OnAutoScrollTimer, reinterpret_cast<DWORD_PTR>(fWindow), TIME_PERIODIC);
             fAutoScrollPosition = fWindow->GetMousePosition();
         }
         else
