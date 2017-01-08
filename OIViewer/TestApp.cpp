@@ -1,6 +1,5 @@
 #define NOMINMAX
 #include "TestApp.h"
-#include "Utility.h"
 #include "FileMapping.h"
 #include "StringUtility.h"
 #include <limits>
@@ -553,7 +552,11 @@ namespace OIV
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
-                Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
+                if (IsRightCatured)
+                    //  Zoom to center if currently panning.
+                    Zoom(wheelDelta * 0.2);
+                else
+                    Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
             }
         }
         
