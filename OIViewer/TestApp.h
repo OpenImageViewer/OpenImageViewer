@@ -41,7 +41,7 @@ namespace OIV
         bool ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private: //methods
-        void OnScroll(int32_t x, int32_t y);
+        void OnScroll(LLUtils::PointI32 panAmount);
         void UpdateFileInfo(const CmdResponseLoad& load_response, const long double& totalLoadTime);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
         bool LoadFile(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
@@ -50,7 +50,7 @@ namespace OIV
 
     private:
         Win32::Win32WIndow fWindow;
-        AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1, std::placeholders::_2));
+        AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
 
         int fFilterlevel;
         bool fIsSlideShowActive;

@@ -10,7 +10,7 @@ namespace OIV
     class AutoScroll
     {
     public:
-        typedef std::function< void(int32_t, int32_t) > OnScrollFunction;
+        typedef std::function< void(LLUtils::PointI32) > OnScrollFunction;
         static const UINT PRIVATE_WN_AUTO_SCROLL = WM_USER + 1;
         AutoScroll(Win32::Win32WIndow* window, OnScrollFunction scrollFunc) :
                fWindow(window)

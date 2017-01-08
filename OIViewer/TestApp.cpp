@@ -141,9 +141,9 @@ namespace OIV
         }
     }
 
-    void TestApp::OnScroll(int32_t x, int32_t y)
+    void TestApp::OnScroll(LLUtils::PointI32 panAmount)
     {
-        Pan(x, y);
+        Pan(panAmount.x, panAmount.y);
     }
 
     void TestApp::Run(std::wstring filePath)

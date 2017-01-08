@@ -25,7 +25,7 @@ namespace OIV
         if (fAutoScrollPanning.Abs() != ScrollPointType::Zero)
         {
             PointI32 actualPanning = static_cast<PointI32>(fAutoScrollPanning);
-            fOnScroll(actualPanning.x, actualPanning.y);
+            fOnScroll(actualPanning);
             
             fAutoScrollPanning -= static_cast<ScrollPointType>(actualPanning);
         }
