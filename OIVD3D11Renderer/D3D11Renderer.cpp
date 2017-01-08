@@ -417,7 +417,7 @@ namespace OIV
 
     int D3D11Renderer::SetImage(const IMCodec::ImageSharedPtr image)
     {
-        if (image->GetImageType() != IMCodec::IT_BYTE_RGBA)
+        if (image->GetImageType() != IMCodec::TF_I_R8_G8_B8_A8)
             HandleError("Direct3D11 renderer supports only RGBA pixel format");
 
         DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;

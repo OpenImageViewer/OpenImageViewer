@@ -33,13 +33,12 @@ namespace IMCodec
             {
 
                 BITMAPINFO* imageInfo = FreeImage_GetInfo(freeImageHandle);
-                FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(freeImageHandle);
+                FREE_IMAGE_TYPE TexelFormat = FreeImage_GetImageType(freeImageHandle);
 
                 const BITMAPINFOHEADER& header = imageInfo->bmiHeader;
 
                 out_properties.Width = header.biWidth;
                 out_properties.Height = header.biHeight;
-                out_properties.BitsPerTexel = header.biBitCount;
                 out_properties.RowPitchInBytes = FreeImage_GetPitch(freeImageHandle);
 
                 out_properties.NumSubImages = 0;
@@ -49,23 +48,23 @@ namespace IMCodec
                 memcpy_s(out_properties.ImageBuffer, imageSizeInMemory, FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
 
 
-                switch (imageType)
+                switch (TexelFormat)
                 {
                 case FIT_BITMAP:
                 {
                     switch (header.biBitCount)
                     {
                     case 8:
-                        out_properties.Type = IT_BYTE_8BIT;
+                        out_properties.Type = TF_I_X8;
                         break;
                     case 32:
-                        out_properties.Type = IT_BYTE_RGBA;
+                        out_properties.Type = TF_I_R8_G8_B8_A8;
                         break;
                     case 24:
-                        out_properties.Type = IT_BYTE_RGB;
+                        out_properties.Type = TF_I_R8_G8_B8;
                         break;
                     default:
-                        out_properties.Type = IT_UNKNOWN;
+                        out_properties.Type = TF_UNKNOWN;
 
                     }
                 }

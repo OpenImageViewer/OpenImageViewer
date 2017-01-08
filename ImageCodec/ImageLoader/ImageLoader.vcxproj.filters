@@ -45,6 +45,15 @@
     <ClInclude Include="Source\EmbeddedPluginInstaller.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Image\Include\Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Image\Include\imageproperties.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Image\Include\TexelFormat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Image.cpp">
@@ -54,9 +63,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\ImageLoader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ImageType.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\EmbeddedPluginInstaller.cpp">

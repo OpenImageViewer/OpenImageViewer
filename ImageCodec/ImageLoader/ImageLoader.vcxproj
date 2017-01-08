@@ -149,6 +149,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Image\Include\Image.h" />
+    <ClInclude Include="..\Image\Include\imageproperties.h" />
+    <ClInclude Include="..\Image\Include\TexelFormat.h" />
     <ClInclude Include="BuildConfig.h" />
     <ClInclude Include="Include\DefaultPluginInstaller.h" />
     <ClInclude Include="Include\IImagePlugin.h" />
@@ -165,7 +168,6 @@
     <ClCompile Include="Source\Image.cpp" />
     <ClCompile Include="Source\ImageLoader.cpp" />
     <ClCompile Include="Source\ImageProperties.cpp" />
-    <ClCompile Include="Source\ImageType.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Codecs\CodecFreeImage\CodecFreeImage.vcxproj">

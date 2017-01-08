@@ -36,7 +36,7 @@ namespace IMCodec
         std::size_t GetWidth() const { return fProperies.Width; }
         std::size_t GetHeight() const { return fProperies.Height; }
         std::size_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
-        std::size_t GetBitsPerTexel() const { return fProperies.BitsPerTexel; }
+        std::size_t GetBitsPerTexel() const { return GetTexelFormatSize(fProperies.Type); }
         std::size_t GetBytesPerRowOfPixels() const { return GetWidth() * GetBytesPerTexel(); }
         std::size_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
         std::size_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
@@ -49,7 +49,7 @@ namespace IMCodec
         bool GetIsRowPitchNormalized() const {return GetRowPitchInBytes() == GetBytesPerRowOfPixels();}
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }
 
-        ImageType GetImageType() const { return fProperies.Type; }
+        TexelFormat GetImageType() const { return fProperies.Type; }
         
     private:
          double fLoadTime;

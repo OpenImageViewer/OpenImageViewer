@@ -30,15 +30,14 @@ namespace IMCodec
             {
                 
                 //Assign image properties
-                out_properties.BitsPerTexel = PNG_IMAGE_PIXEL_SIZE(image.format) * 8;
                 out_properties.RowPitchInBytes = PNG_IMAGE_ROW_STRIDE(image);
                 out_properties.Width = image.width;
                 out_properties.Height = image.height;
 
                 if (image.format == PNG_FORMAT_RGBA)
-                    out_properties.Type = IT_BYTE_RGBA;
+                    out_properties.Type = TF_I_R8_G8_B8_A8;
                 if (image.format == PNG_FORMAT_RGB)
-                    out_properties.Type = IT_BYTE_BGR;
+                    out_properties.Type = TF_I_B8_G8_R8;
                 out_properties.NumSubImages = 0;
 
                 //read buffer

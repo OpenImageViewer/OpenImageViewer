@@ -159,7 +159,7 @@ namespace OIV
                         static_cast<IMUtil::AxisAlignedRTransform>( ResolveExifRotation(exifInfo.Orientation))
                             , fDisplayedImage);
 
-                fDisplayedImage = IMUtil::ImageUtil::Convert(fDisplayedImage, IMCodec::IT_BYTE_RGBA);
+                fDisplayedImage = IMUtil::ImageUtil::Convert(fDisplayedImage, TF_I_R8_G8_B8_A8);
 
                 if (fDisplayedImage != nullptr)
                 {

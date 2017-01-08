@@ -19,7 +19,7 @@ namespace IMUtil
                 }
             };
 
-            ConvertKey(IMCodec::ImageType aSource, IMCodec::ImageType aTarget)
+            ConvertKey(IMCodec::TexelFormat aSource, IMCodec::TexelFormat aTarget)
             {
               source = aSource;
               target = aTarget;
@@ -30,8 +30,8 @@ namespace IMUtil
                 return source == rhs.source && target == rhs.target;
             }
 
-            IMCodec::ImageType source;
-            IMCodec::ImageType target;
+            IMCodec::TexelFormat source;
+            IMCodec::TexelFormat target;
         };
 
         typedef std::unordered_map<ConvertKey, PixelConvertFunc, ConvertKey::Hash> MapConvertKeyToFunc;
@@ -154,7 +154,7 @@ namespace IMUtil
             return ImageSharedPtr(new Image(normalizedImageProperties, image->GetLoadTime()));
         }
 
-        static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::ImageType targetPixelFormat)
+        static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
         {
             using namespace IMCodec;
             ImageSharedPtr convertedImage;
@@ -166,7 +166,7 @@ namespace IMUtil
 
                 if (converter != sConvertionFunction.end())
                 {
-                    uint8_t targetPixelSize = ImageTypeSize(targetPixelFormat);
+                    uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
                     uint8_t* dest = nullptr;
                     
                     //TODO: convert without normalization.
@@ -182,7 +182,6 @@ namespace IMUtil
                     properties.Type = targetPixelFormat;
                     properties.ImageBuffer = dest;
                     properties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
-                    properties.BitsPerTexel = targetPixelSize;
                     return ImageSharedPtr(new Image(properties, convertedImage->GetLoadTime()));
                 }
             }
