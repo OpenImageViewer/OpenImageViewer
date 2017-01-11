@@ -145,7 +145,7 @@ namespace OIV
         void Win32WIndow::FlushInput(bool calledFromIdleTimer)
         {
             
-            uint64_t currentTime = static_cast<uint64_t>(fRawInputTimer.GetElapsedTime(LLUtils::StopWatch::TimeUnit::Milliseconds));
+            uint64_t currentTime = static_cast<uint64_t>(fRawInputTimer.GetElapsedTimeInteger(LLUtils::StopWatch::TimeUnit::Milliseconds));
 
             if (currentTime - fRawInputLastEventDisptchTime > fRawInputInterval)
             {

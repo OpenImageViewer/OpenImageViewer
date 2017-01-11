@@ -71,8 +71,8 @@ namespace IMCodec
             // Iterate all plugins till load succeeds.
             for (auto plugin : fListPlugins)
             {
-                LLUtils::StopWatch stopWatch;
-                stopWatch.Start();
+                LLUtils::StopWatch stopWatch(true);
+                //stopWatch.Start();
                 if (plugin->LoadImage(buffer, size, props))
                 {
                     stopWatch.Stop();
@@ -80,7 +80,7 @@ namespace IMCodec
                     if ((props.IsInitialized() == false))
                         throw std::runtime_error("Image properties are not completely initialized");
 
-                    loadTime = stopWatch.GetElapsedTime(LLUtils::StopWatch::TimeUnit::Milliseconds);
+                    loadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
                     loadedImage = new Image(props, loadTime);
                 }
             }

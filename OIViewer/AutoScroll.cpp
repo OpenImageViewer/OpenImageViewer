@@ -13,7 +13,7 @@ namespace OIV
     {
         using namespace LLUtils;
         fAutoScrollStopWatch.Stop();
-        const long double elapsed = fAutoScrollStopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds);
+        const long double elapsed = fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
         fAutoScrollStopWatch.Start();
         ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(PointI32(fWindow->GetMousePosition()) - fAutoScrollPosition);
 

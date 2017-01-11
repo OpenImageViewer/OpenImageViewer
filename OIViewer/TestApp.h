@@ -2,7 +2,6 @@
 #include "win32/Win32Window.h"
 #include "API/defs.h"
 #include <Utility.h>
-#include "StopWatch.h"
 #include "AutoScroll.h"
 
 namespace OIV

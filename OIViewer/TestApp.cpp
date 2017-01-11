@@ -104,7 +104,7 @@ namespace OIV
         stopWatch.Stop();
         if (success)
         {
-            UpdateFileInfo(loadResponse,stopWatch.GetElapsedTime(StopWatch::TimeUnit::Milliseconds));
+            UpdateFileInfo(loadResponse,stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds));
         }
 
         return success;
