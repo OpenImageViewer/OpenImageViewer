@@ -1,4 +1,6 @@
 #include "MonitorInfo.h"
+#include <algorithm>
+
 namespace OIV
 {
     MonitorInfo MonitorInfo::sInstance;
