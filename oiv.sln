@@ -27,6 +27,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecPNG", "ImageCodec\Code
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecFreeImage", "ImageCodec\Codecs\CodecFreeImage\CodecFreeImage.vcxproj", "{02888425-78B9-4EDE-9577-21CE73872C6F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecDDS", "ImageCodec\Codecs\CodecDDS\CodecDDS.vcxproj", "{FAA6E433-C27B-4B00-AE54-87F611191CBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -149,6 +151,16 @@ Global
 		{02888425-78B9-4EDE-9577-21CE73872C6F}.Release|x64.Build.0 = Release|x64
 		{02888425-78B9-4EDE-9577-21CE73872C6F}.Release|x86.ActiveCfg = Release|Win32
 		{02888425-78B9-4EDE-9577-21CE73872C6F}.Release|x86.Build.0 = Release|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Debug|x64.ActiveCfg = Debug|x64
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Debug|x64.Build.0 = Debug|x64
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Debug|x86.ActiveCfg = Debug|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Debug|x86.Build.0 = Debug|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Release|Any CPU.ActiveCfg = Release|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Release|x64.ActiveCfg = Release|x64
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Release|x64.Build.0 = Release|x64
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Release|x86.ActiveCfg = Release|Win32
+		{FAA6E433-C27B-4B00-AE54-87F611191CBF}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

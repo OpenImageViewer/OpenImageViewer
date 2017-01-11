@@ -11,6 +11,9 @@
 #if IMCODEC_BUILD_CODEC_PNG == 1
     #include "Codecs/CodecPNG/Include/CodecPNGFactory.h"
 #endif
+#if IMCODEC_BUILD_CODEC_DDS == 1
+#include "Codecs/CodecDDS/Include/CodecDDSFactory.h"
+#endif
 #if IMCODEC_BUILD_CODEC_FREE_IMAGE == 1
     #include "Codecs/CodecFreeImage/Include/CodecFreeImageFactory.h"
 #endif
@@ -22,6 +25,7 @@ namespace IMCodec
 {
     bool EmbeddedPluginInstaller::InstallPlugins(ImageLoader* imageLoader)
     {
+        // install codec by priority, first installed is with the higher priority.
 #if IMCODEC_BUILD_CODEC_PSD == 1
         imageLoader->InstallPlugin(CodecPSDFactory::Create());
 #endif
@@ -30,6 +34,9 @@ namespace IMCodec
 #endif
 #if IMCODEC_BUILD_CODEC_PNG == 1
         imageLoader->InstallPlugin(CodecPNGFactory::Create());
+#endif
+#if IMCODEC_BUILD_CODEC_DDS == 1
+        imageLoader->InstallPlugin(CodecDDSFactory::Create());
 #endif
 #if IMCODEC_BUILD_CODEC_FREE_IMAGE == 1
         imageLoader->InstallPlugin(CodecFreeImageFactory::Create());

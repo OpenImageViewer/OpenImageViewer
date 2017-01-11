@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{585C252A-75DA-435D-ACCB-DFF914F4F732}</ProjectGuid>
+    <ProjectGuid>{FAA6E433-C27B-4B00-AE54-87F611191CBF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ImageLoader</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <RootNamespace>CodecDDS</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -76,13 +76,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Image\Include;..\..\Imageloader\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -94,13 +89,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
+      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Image\Include;..\..\Imageloader\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -114,12 +104,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Image\Include;..\..\Imageloader\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -135,12 +121,8 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <DisableLanguageExtensions>true</DisableLanguageExtensions>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Image\Include;..\..\Imageloader\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -149,42 +131,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Image\Include\Image.h" />
-    <ClInclude Include="..\Image\Include\imageproperties.h" />
-    <ClInclude Include="..\Image\Include\TexelFormat.h" />
-    <ClInclude Include="BuildConfig.h" />
-    <ClInclude Include="Include\DefaultPluginInstaller.h" />
-    <ClInclude Include="Include\IImagePlugin.h" />
-    <ClInclude Include="Include\Image.h" />
-    <ClInclude Include="Include\ImageLoader.h" />
-    <ClInclude Include="include\imageproperties.h" />
-    <ClInclude Include="Include\ImageType.h" />
-    <ClInclude Include="Source\EmbeddedPluginInstaller.h" />
-    <ClInclude Include="Source\ImageProperties.h" />
-    <ClInclude Include="Source\ImageType.h" />
+    <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EmbeddedPluginInstaller.cpp" />
-    <ClCompile Include="Source\Image.cpp" />
-    <ClCompile Include="Source\ImageLoader.cpp" />
-    <ClCompile Include="Source\ImageProperties.cpp" />
+    <ClCompile Include="Source\CodecDDSFactory.cpp" />
+    <ClCompile Include="Source\nv_dds.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Codecs\CodecDDS\CodecDDS.vcxproj">
-      <Project>{faa6e433-c27b-4b00-ae54-87f611191cbf}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecFreeImage\CodecFreeImage.vcxproj">
-      <Project>{02888425-78b9-4ede-9577-21ce73872c6f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecJPG\CodecJPG.vcxproj">
-      <Project>{b10f5658-a86c-44c2-883f-8648235e721f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecPNG\CodecPNG.vcxproj">
-      <Project>{21bbf272-404d-4bc6-b67a-d9bb3d34f32e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecPSD\CodecPSD.vcxproj">
-      <Project>{d0ea563a-a39d-4402-9ee9-f4e427da4591}</Project>
-    </ProjectReference>
+    <ClInclude Include="Include\CodecDDSFactory.h" />
+    <ClInclude Include="Source\CodecDDS.h" />
+    <ClInclude Include="Source\nv_dds.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
