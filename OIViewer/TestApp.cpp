@@ -1,4 +1,3 @@
-#define NOMINMAX
 #include "TestApp.h"
 #include "FileMapping.h"
 #include "StringUtility.h"
@@ -335,11 +334,17 @@ namespace OIV
 
         switch (evnt->message.wParam)
         {
+        case 'V':
+            TransformImage(AAT_FlipVertical);
+        case 'H':
+            TransformImage(AAT_FlipHorizontal);
+                break;
         case VK_OEM_4: // '['
-            Rotate90Degree(false);
+            TransformImage(AAT_Rotate90CCW);
             break;
         case VK_OEM_6: // ']'
-            Rotate90Degree(true);
+            TransformImage(AAT_Rotate90CW);
+            
             break;
         case 'Q':
         case VK_ESCAPE:
@@ -477,11 +482,10 @@ namespace OIV
         }
     }
 
-    void TestApp::Rotate90Degree(bool clockwise)
+    void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
     {
-        OIV_AxisAlignedRTransform tansform = clockwise ? OIV_AxisAlignedRTransform::AAT_Rotate90CW : OIV_AxisAlignedRTransform::AAT_Rotate90CCW;
         ExecuteCommand(OIV_CMD_AxisAlignedTransform,
-            &OIV_CMDAxisalignedTransformRequest{ tansform }, &CmdNull());
+            &OIV_CMDAxisalignedTransformRequest{ transform }, &CmdNull());
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
