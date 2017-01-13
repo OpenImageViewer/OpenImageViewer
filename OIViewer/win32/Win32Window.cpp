@@ -306,8 +306,6 @@ namespace OIV
         HWND Win32WIndow::DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts)
         {
             HWND hwndStatus;
-            // Ensure that the common control DLL is loaded.
-            InitCommonControls();
 
             // Create the status bar.
             hwndStatus = CreateWindowEx(
