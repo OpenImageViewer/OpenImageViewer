@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <Point.h>
 namespace OIV
 {
     class Win32Helper
@@ -44,10 +45,14 @@ namespace OIV
 
         static void MoveMouse(LLUtils::PointI32 point)
         {
-
             POINT mousePos;
             ::GetCursorPos(&mousePos);
             ::SetCursorPos(mousePos.x + point.x, mousePos.y + point.y);
+        }
+
+        static SIZE GetRectSize(const RECT& rect)
+        {
+            return{ rect.right - rect.left , rect.bottom - rect.top };
         }
     };
 }

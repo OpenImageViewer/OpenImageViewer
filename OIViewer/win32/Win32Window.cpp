@@ -1,6 +1,7 @@
 #include "Win32Window.h"
 #include "MonitorInfo.h"
 #include <tchar.h>
+#include "Win32Helper.h"
 
 namespace OIV
 {
@@ -214,9 +215,7 @@ namespace OIV
 
         bool Win32WIndow::IsMouseCursorInClientRect() const
         {
-            RECT rect;
-            GetClientRectangle(rect);
-            return PtInRect(&rect, GetMousePosition()) == TRUE;
+            return PtInRect(&GetClientRectangle(), GetMousePosition()) == TRUE;
         }
 
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -485,28 +484,14 @@ namespace OIV
 
         SIZE Win32WIndow::GetClientSize() const
         {
-            RECT rect;
-            GetClientRect(fHandleWindow, &rect);
-            SIZE clientSize;
-            clientSize.cx = rect.right - rect.left;
-            clientSize.cy = rect.bottom - rect.top;
-            if (IsWindowVisible(fHandleStatusBar))
-            {
-                GetWindowRect(fHandleStatusBar, &rect);
-                clientSize.cy -= rect.bottom - rect.top;
-            }
-            return clientSize;
+            return Win32Helper::GetRectSize(GetClientRectangle());
         }
 
-        void Win32WIndow::GetClientRectangle(RECT& clientRect) const
+        RECT Win32WIndow::GetClientRectangle() const
         {
-            GetClientRect(fHandleWindow, &clientRect);
-            if (IsWindowVisible(fHandleStatusBar))
-            {
-                RECT rect;
-                GetWindowRect(fHandleStatusBar, &rect);
-                clientRect.bottom -= rect.bottom - rect.top;
-            }
+            RECT rect;
+            GetClientRect(fHandleClient, &rect);
+            return rect;
         }
 
        

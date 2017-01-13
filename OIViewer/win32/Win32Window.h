@@ -40,7 +40,7 @@ namespace OIV
 
             void DestroyResources();
             SIZE GetClientSize() const;
-            void GetClientRectangle(RECT& clientRect) const;
+            RECT GetClientRectangle() const;
             void HandleResize();
             void ShowStatusBar(bool show);
             void ShowBorders(bool show_borders);
