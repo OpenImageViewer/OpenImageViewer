@@ -58,15 +58,19 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\oiv.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\oiv.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\oiv.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\oiv.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
@@ -152,13 +156,13 @@
     <ClInclude Include="..\Image\Include\Image.h" />
     <ClInclude Include="..\Image\Include\imageproperties.h" />
     <ClInclude Include="..\Image\Include\TexelFormat.h" />
-    <ClInclude Include="BuildConfig.h" />
     <ClInclude Include="Include\DefaultPluginInstaller.h" />
     <ClInclude Include="Include\IImagePlugin.h" />
     <ClInclude Include="Include\Image.h" />
     <ClInclude Include="Include\ImageLoader.h" />
     <ClInclude Include="include\imageproperties.h" />
     <ClInclude Include="Include\ImageType.h" />
+    <ClInclude Include="Source\BuildConfig.h" />
     <ClInclude Include="Source\EmbeddedPluginInstaller.h" />
     <ClInclude Include="Source\ImageProperties.h" />
     <ClInclude Include="Source\ImageType.h" />

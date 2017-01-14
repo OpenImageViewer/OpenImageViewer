@@ -39,9 +39,6 @@
     <ClInclude Include="Include\DefaultPluginInstaller.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="BuildConfig.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\EmbeddedPluginInstaller.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -52,6 +49,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Image\Include\TexelFormat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\BuildConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

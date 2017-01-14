@@ -1,7 +1,7 @@
 #pragma once
 #include "..\ApiImpl.h"
 #include "defs.h"
-#include "Common/linux.h"
+#include "..\Common/linux.h"
 
 extern "C"
 {
