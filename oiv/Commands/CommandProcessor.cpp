@@ -1,48 +1,36 @@
 #include "CommandProcessor.h"
-#include "oiv.h"
-#include "Logger.h"
 #include <memory>
+#include "Handlers/CommandHandlerInit.h"
+#include "Handlers/CommandHandlerLoadFile.h"
 
 
 namespace OIV
 {
-    //extern std::unique_ptr<OIV> gViewer;
+    std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
+    CommandProcessor::MapCommanderHandler CommandProcessor::sCommandHandlers = 
 
-     
-     std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
+    { 
+          std::make_pair(CE_Init,new CommandHandlerInit()) 
+        , std::make_pair(CE_LoadFile,new CommandHandlerLoadFile())
+    };
+    
 
 	ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
     {
+        auto pair = sCommandHandlers.find(command);
+        //return pair == sCommandHandlers.end() ? RC_UnknownCommand : pair->second->Execute(requestData, requestSize, responseData, responseSize);
 
-        if (command != CE_Init && IsInitialized() == false)
-            return ResultCode::RC_NotInitialized;
+        if (pair != sCommandHandlers.end())
+            return pair->second->Execute(requestData, requestSize, responseData, responseSize);
 
-        ResultCode result = ResultCode::RC_Success;
-
+        
+        /*if (command != CE_Init && IsInitialized() == false)
+            return ResultCode::RC_NotInitialized;*/
+        ResultCode result = RC_Success;
+     
         switch (command)
         {
-        case CE_Init:
-            
-            if (sPictureRenderer == nullptr)
-            {
-                sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
-
-                if (requestSize == sizeof(CmdDataInit))
-                {
-                    // TODO: add width and height.
-                    //sPictureRenderer->SetParentParamaters()
-
-					const CmdDataInit* dataInit = reinterpret_cast<const CmdDataInit*>(requestData);
-					sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
-                    sPictureRenderer->Init();
-                }
-                else
-                    result = RC_WrongDataSize;
-
-            }
-            else
-                result = ResultCode::RC_AlreadyInitialized;
-
+          
             break;
         case CE_Zoom:
             if (requestSize == sizeof(CmdDataZoom))
@@ -67,45 +55,6 @@ namespace OIV
             {
                 result = RC_WrongDataSize;
             }
-            break;
-
-        case CE_LoadFile:
-            if (requestSize == sizeof(CmdDataLoadFile))
-            {
-				CmdDataLoadFile* dataLoadFile = const_cast<CmdDataLoadFile*>(reinterpret_cast<const CmdDataLoadFile*>(requestData));
-
-				if (dataLoadFile->buffer != nullptr && dataLoadFile->length > 0)
-                {
-                    result = static_cast<ResultCode>(
-						sPictureRenderer->LoadFile(
-							dataLoadFile->buffer
-                            , dataLoadFile->length
-                            , dataLoadFile->extension
-                            , dataLoadFile->onlyRegisteredExtension));
-                        
-                }
-                else
-                {
-                    result = RC_InvalidParameters;
-                }
-
-                //Optional response
-                if (result == RC_Success &&  responseSize == sizeof(CmdResponseLoad))
-                {
-                    CmdResponseLoad* loadResponse = reinterpret_cast<CmdResponseLoad*>(responseData);
-                    IMCodec::Image* image = sPictureRenderer->GetImage();
-                    loadResponse->width = static_cast<uint32_t>(image->GetWidth());
-                    loadResponse->height = static_cast<uint32_t>(image->GetHeight());
-                    loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());
-                    loadResponse->loadTime = image->GetLoadTime();
-                }
-
-            }
-            else
-            {
-                result = RC_WrongDataSize;
-            }
-
             break;
 
         case CE_Refresh:

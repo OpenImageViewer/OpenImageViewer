@@ -1,5 +1,5 @@
 #include "APIImpl.h"
-#include "CommandProcessor.h"
+#include "Commands/CommandProcessor.h"
 
 namespace OIV
 {

@@ -3,12 +3,13 @@
   <ItemGroup>
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
-    <ClCompile Include="CommandProcessor.cpp" />
     <ClCompile Include="API\functions.cpp">
       <Filter>API</Filter>
     </ClCompile>
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="APIImpl.cpp" />
+    <ClCompile Include="Commands\CommandProcessor.cpp" />
+    <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -20,7 +21,6 @@
       <Filter>API</Filter>
     </ClInclude>
     <ClInclude Include="APIImpl.h" />
-    <ClInclude Include="CommandProcessor.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -33,6 +33,10 @@
     <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="Common\linux.h" />
+    <ClInclude Include="Commands\CommandProcessor.h" />
+    <ClInclude Include="Commands\CommandHandler.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

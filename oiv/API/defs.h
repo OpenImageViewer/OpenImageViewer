@@ -52,6 +52,9 @@ extern "C"
         , RC_AlreadyInitialized
         , RC_WrongParameters
         , RC_PixelFormatConversionFailed
+        , RC_UnknownCommand
+        , RC_BadRequestSize
+        , RC_BadResponseSize
         , RC_UknownError = 0xFF
         , RC_InternalError = 0xFF + 1
 
