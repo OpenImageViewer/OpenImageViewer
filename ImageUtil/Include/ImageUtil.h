@@ -113,7 +113,7 @@ namespace IMUtil
 
                 transformedProperties.RowPitchInBytes = transformedProperties.Width * image->GetBytesPerTexel();
                 transformedProperties.ImageBuffer = dest;
-                return ImageSharedPtr(new Image(transformedProperties, image->GetLoadTime()));
+                return ImageSharedPtr(new Image(transformedProperties, image->GetData()));
             }
             else
                 return image;
@@ -151,7 +151,7 @@ namespace IMUtil
             normalizedImageProperties.RowPitchInBytes = targetRowPitch;
 
             
-            return ImageSharedPtr(new Image(normalizedImageProperties, image->GetLoadTime()));
+            return ImageSharedPtr(new Image(normalizedImageProperties, image->GetData()));
         }
 
         static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
@@ -179,10 +179,10 @@ namespace IMUtil
                         , convertedImage->GetTotalPixels());
 
                     ImageProperies properties = convertedImage->GetProperties();
-                    properties.Type = targetPixelFormat;
+                    properties.TexelFormatDecompressed = targetPixelFormat;
                     properties.ImageBuffer = dest;
                     properties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
-                    return ImageSharedPtr(new Image(properties, convertedImage->GetLoadTime()));
+                    return ImageSharedPtr(new Image(properties, convertedImage->GetData()));
                 }
             }
             else

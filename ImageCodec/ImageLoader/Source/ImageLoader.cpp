@@ -43,48 +43,37 @@ namespace IMCodec
         }
     }
 
+    Image* ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size)
+    {
+        ImageProperies props;
+        ImageData imageData;
+        LLUtils::StopWatch stopWatch(true);
+        Image* loadedImage = nullptr;
+        if (plugin->LoadImage(buffer, size, props))
+        {
+            imageData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+            if ((props.IsInitialized() == false))
+                throw std::runtime_error("Image properties are not completely initialized");
+            loadedImage = new Image(props, imageData);
+        }
+
+        return loadedImage;
+    }
+
     Image* ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
     {
-        using namespace std;
-
         Image* loadedImage = nullptr;
-
+        
         IImagePlugin* choosenPlugin = GetFirstPlugin(LLUtils::StringUtility::ToLower(LLUtils::StringUtility::ToWString(extension)));
-
-        double loadTime;
-        ImageProperies props;
         if (choosenPlugin != nullptr)
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            if (choosenPlugin->LoadImage(buffer, size, props))
-            {
-                auto end = std::chrono::high_resolution_clock::now();
-                if ((props.IsInitialized() == true))
-                {
-                    loadTime = (end - start).count() / static_cast<long double>(1000.0 * 1000.0);
-                    loadedImage = new Image(props, loadTime);
-                }
-            }
-        }
-        else if (onlyRegisteredExtension == false)
-        {
-            // Iterate all plugins till load succeeds.
+            loadedImage = TryLoad(choosenPlugin, buffer, size);
+        
+        // If image not loaded and allow to load using unregistred file extensions, iterate over all image plugins.
+        if (loadedImage == nullptr && onlyRegisteredExtension == false)
             for (auto plugin : fListPlugins)
-            {
-                LLUtils::StopWatch stopWatch(true);
-                //stopWatch.Start();
-                if (plugin->LoadImage(buffer, size, props))
-                {
-                    stopWatch.Stop();
-
-                    if ((props.IsInitialized() == false))
-                        throw std::runtime_error("Image properties are not completely initialized");
-
-                    loadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-                    loadedImage = new Image(props, loadTime);
-                }
-            }
-        }
+                // In case we try to a choosen plugin and it failed. don't try again.
+                if (plugin != choosenPlugin)
+                    loadedImage = TryLoad(plugin, buffer, size);
 
         return loadedImage;
     }

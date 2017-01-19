@@ -25,7 +25,8 @@ extern "C"
           CE_NoOperation
         , CE_Init
         , CE_Destory
-        , CE_LoadFile
+        , OIV_CMD_LoadFile
+        , OIV_CMD_DisplayImage
         , CE_Zoom
         , CE_Pan
         , CE_FilterLevel
@@ -55,9 +56,11 @@ extern "C"
         , RC_UnknownCommand
         , RC_BadRequestSize
         , RC_BadResponseSize
+        , RC_RenderError
+        , RC_InvalidImageHandle
         , RC_UknownError = 0xFF
-        , RC_InternalError = 0xFF + 1
-
+        , RC_InternalError = 0xFF + 1,
+        
     };
 
     //-------Command Structs-------------------------
@@ -134,13 +137,7 @@ extern "C"
         int zoomY;
     };
 
-    struct CmdResponseLoad
-    {
-        double loadTime;
-        uint32_t width;
-        uint32_t height;
-        uint8_t bpp;
-    };
+    
 
     struct CmdDataPan
     {
@@ -148,14 +145,63 @@ extern "C"
         double y;
     };
 
-    struct CmdDataLoadFile
+    
+    enum OIV_CMD_LoadFile_Flags
     {
-        static const int EXTENSION_SIZE = 16;
-        std::size_t length;
-        void* buffer;
-        char extension[EXTENSION_SIZE];
-        bool onlyRegisteredExtension;
+        None,
+        OnlyRegisteredExtension = 1 << 0
     };
+
+    struct OIV_CMD_LoadFile_Request
+    {
+        static const uint8_t EXTENSION_SIZE = 16;
+        static const uint8_t MAX_SUBIMAGE_HIERARCHY = 10;
+        void* buffer;
+        std::size_t length;
+        char extension[EXTENSION_SIZE];
+        OIV_CMD_LoadFile_Flags flags;
+        int16_t subImageIndices[MAX_SUBIMAGE_HIERARCHY];
+        
+    };
+
+    typedef int16_t ImageHandle;
+    const ImageHandle ImageNullHandle = -1;
+
+    struct OIV_CMD_LoadFile_Response
+    {
+        double loadTime;
+        uint32_t width;
+        uint32_t height;
+        uint8_t bpp;
+        uint32_t sizeInMemory;
+        ImageHandle handle;
+    };
+
+    ////
+    enum OIV_CMD_DisplayImage_Flags
+    {
+          DF_None
+        , DF_ApplyExifTransformation = 1 << 0
+        , DF_ResetScrollState = 2 << 0
+    };
+
+    struct OIV_CMD_DisplayImage_Request
+    {
+        ImageHandle handle;
+        OIV_CMD_DisplayImage_Flags displayFlags;
+
+    };
+
+    /*struct OIV_CMD_DisplayImage_Response
+    {
+        double loadTime;
+        uint32_t width;
+        uint32_t height;
+        uint8_t bpp;
+        uint32_t sizeInMemory;
+        ImageHandle handle;
+    }; */
+    
 
     struct CmdDataInit
     {

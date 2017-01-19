@@ -207,11 +207,13 @@
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />

@@ -55,20 +55,20 @@ namespace IMCodec
             switch (format)
             {
                 case GL_BGRA_EXT:
-                    out_properties.Type = TF_I_B8_G8_R8_A8;
+                    out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
                     break;
                 case GL_BGR_EXT:
-                    out_properties.Type = TF_I_B8_G8_R8;
+                    out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8;
                     break;
                 case GL_RGB:
-                    out_properties.Type = TF_I_R8_G8_B8;
+                    out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8;
                     break;
                 case GL_RGBA:
-                    out_properties.Type = TF_I_R8_G8_B8_A8;
+                    out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
                     break;
             }
             //TODO: chech if need to extract row pitch from DDS.
-            out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.Type) / 8;
+            out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.TexelFormatDecompressed) / 8;
             success = true;
             
             return success;

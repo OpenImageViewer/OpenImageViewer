@@ -34,9 +34,11 @@
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
+    <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

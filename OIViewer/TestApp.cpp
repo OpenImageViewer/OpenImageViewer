@@ -47,7 +47,16 @@ namespace OIV
         return fWindow.GetHandle();
     }
 
-    void TestApp::UpdateFileInfo(const CmdResponseLoad& loadResponse, const long double& totalLoadTime)
+    void TestApp::DisplayImage(ImageHandle image_handle)
+    {
+        OIV_CMD_DisplayImage_Request displayRequest = {};
+
+        displayRequest.handle = image_handle;
+        displayRequest.displayFlags = OIV_CMD_DisplayImage_Flags::DF_ResetScrollState;
+        bool success = ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull()) == true;
+    }
+
+    void TestApp::UpdateFileInfo(const OIV_CMD_LoadFile_Response& loadResponse, const long double& totalLoadTime)
     {
         std::wstringstream ss;
         
@@ -57,6 +66,7 @@ namespace OIV
                 
             
         fWindow.SetStatusBarText(ss.str(), 0, 0);
+        fLastOpenedFileHandle = loadResponse.handle;
     }
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
@@ -88,22 +98,21 @@ namespace OIV
     bool TestApp::LoadFile(const uint8_t* buffer,  const std::size_t size,std::string extension, bool onlyRegisteredExtension)
     {
         using namespace LLUtils;
-        CmdResponseLoad loadResponse;
-        CmdDataLoadFile loadRequest;
+        OIV_CMD_LoadFile_Response loadResponse;
+        OIV_CMD_LoadFile_Request loadRequest = {};
 
         loadRequest.buffer = (void*)buffer;
         loadRequest.length = size;
         std::string fileExtension = extension; 
-        strcpy_s(loadRequest.extension, CmdDataLoadFile::EXTENSION_SIZE, fileExtension.c_str());
-        loadRequest.onlyRegisteredExtension = onlyRegisteredExtension;
-
-        StopWatch stopWatch;
-        stopWatch.Start();
-        bool success  = ExecuteCommand(CommandExecute::CE_LoadFile, &loadRequest, &loadResponse) == true;
+        strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::EXTENSION_SIZE, fileExtension.c_str());
+        loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(loadRequest.flags | (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0));
+        StopWatch stopWatch(true);
+        bool success  = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
         stopWatch.Stop();
         if (success)
         {
             UpdateFileInfo(loadResponse,stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds));
+            DisplayImage(fLastOpenedFileHandle);
         }
 
         return success;

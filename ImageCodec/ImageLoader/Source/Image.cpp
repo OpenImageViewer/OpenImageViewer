@@ -7,16 +7,11 @@
 
 namespace IMCodec
 {
-    Image::Image(const ImageProperies& propeerties, double loadTime)
-    {
-        fProperies = propeerties;
-        fLoadTime = loadTime;
-    }
-    
-  
+    Image::Image(const ImageProperies& propeerties,const ImageData& imageData)
+        : fProperies(propeerties), fImageData(imageData)
 
-    double Image::GetLoadTime() const
     {
-        return fLoadTime;
+    
     }
+   
 }

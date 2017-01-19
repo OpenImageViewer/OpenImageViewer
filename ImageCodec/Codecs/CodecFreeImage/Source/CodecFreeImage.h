@@ -55,16 +55,16 @@ namespace IMCodec
                     switch (header.biBitCount)
                     {
                     case 8:
-                        out_properties.Type = TF_I_X8;
+                        out_properties.TexelFormatDecompressed = TF_I_X8;
                         break;
                     case 32:
-                        out_properties.Type = TF_I_R8_G8_B8_A8;
+                        out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
                         break;
                     case 24:
-                        out_properties.Type = TF_I_R8_G8_B8;
+                        out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8;
                         break;
                     default:
-                        out_properties.Type = TF_UNKNOWN;
+                        out_properties.TexelFormatDecompressed = TF_UNKNOWN;
 
                     }
                 }

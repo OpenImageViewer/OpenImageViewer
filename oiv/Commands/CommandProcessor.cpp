@@ -2,6 +2,7 @@
 #include <memory>
 #include "Handlers/CommandHandlerInit.h"
 #include "Handlers/CommandHandlerLoadFile.h"
+#include "Handlers/CommandHandlerDisplayImage.h"
 
 
 namespace OIV
@@ -11,7 +12,8 @@ namespace OIV
 
     { 
           std::make_pair(CE_Init,new CommandHandlerInit()) 
-        , std::make_pair(CE_LoadFile,new CommandHandlerLoadFile())
+        , std::make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
+        , std::make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
     };
     
 

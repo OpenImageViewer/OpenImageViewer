@@ -4,6 +4,7 @@
 #include <ImageLoader.h>
 #include "interfaces/IRenderer.h"
 #include "ViewParameters.h"
+#include "ImageManager.h"
 
 
 namespace OIV
@@ -13,56 +14,65 @@ namespace OIV
         , public IPictureRenderer
     {
 #pragma region  //-------------Scroll state listener------------------
-        virtual LLUtils::PointI32 GetClientSize() override;
-        virtual LLUtils::PointI32 GetImageSize() override;
-        virtual void NotifyDirty() override;
+        LLUtils::PointI32 GetClientSize() override;
+        LLUtils::PointI32 GetImageSize() override;
+        void NotifyDirty() override;
 #pragma endregion 
+
+    public:
+
+#pragma region //-------------IPictureListener implementation------------------
+        double Zoom(double percentage,int x,int y) override;
+        int Pan(double x, double y) override;
+        int LoadFile(void* buffer, std::size_t size, char* extension , bool onlyRegisteredExtension, ImageHandle& handle) override;
+        ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) override;
+        int Init() override;
+        int SetParent(std::size_t handle) override;
+        int Refresh() override;
+        
+        IMCodec::Image* GetImage(ImageHandle handle) override;
+        int SetFilterLevel(OIV_Filter_type filter_level) override;
+        int GetFileInformation(QryFileInformation& information) override;
+        int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
+        int SetTexelGrid(double gridSize) override;
+        int GetNumTexelsInCanvas(double &x, double &y) override;
+        int SetClientSize(uint16_t width, uint16_t height) override;
+        ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) override;
+#pragma endregion
 
 #pragma region //-------------Private methods------------------
         IRendererSharedPtr CreateBestRenderer();
+        //int DisplayImage(ImageHandle handle);
         void HandleWindowResize();
-        bool IsImageLoaded() const;
+        bool IsImageDisplayed() const;
         void UpdateGpuParams();
         OIV_AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
+        IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image) const;
         void LoadSettings();
-#pragma endregion
-    public:
-        OIV();
-
-#pragma region //-------------IPictureListener implementation------------------
-        virtual double Zoom(double percentage,int x,int y) override;
-        virtual int Pan(double x, double y) override;
-        virtual int LoadFile(void* buffer, std::size_t size, char* extension , bool onlyRegisteredExtension) override;
-        virtual int Init() override;
-        virtual int SetParent(std::size_t handle) override;
-        virtual int Refresh() override;
-        IMCodec::Image* GetDisplayImage();
-        virtual IMCodec::Image* GetImage() override;
-        virtual int SetFilterLevel(OIV_Filter_type filter_level) override;
-        virtual int GetFileInformation(QryFileInformation& information) override;
-        virtual int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
-        virtual int SetTexelGrid(double gridSize) override;
-        virtual int GetNumTexelsInCanvas(double &x, double &y) override;
-        virtual int SetClientSize(uint16_t width, uint16_t height) override;
-        virtual ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) override;
+        IMCodec::ImageSharedPtr GetDisplayImage() const;
+        IMCodec::ImageSharedPtr GetActiveImage() const;
 #pragma endregion
 
 #pragma region //-------------Private member fields------------------
+
     private:
-        IRendererSharedPtr fRenderer;
-        ViewParameters fViewParams;
-        ZoomScrollState fScrollState;
-        std::size_t fParent;
-        bool fIsRefresing;
+
         std::string fCurrentOpenedFile;
         IMCodec::ImageLoader fImageLoader;
-        bool fShowGrid;
-        IMCodec::ImageSharedPtr fOpenedImage;
-        IMCodec::ImageSharedPtr fDisplayedImage;
-        
-        int fFilterLevel;
-        int fClientWidth;
-        int fClientHeight;
+        ImageManager fImageManager;
+        IRendererSharedPtr fRenderer = nullptr;
+        ZoomScrollState fScrollState = this;
+        ViewParameters fViewParams = {};
+        std::size_t fParent = 0;
+        bool fIsRefresing = false;
+        bool fShowGrid = false;
+        ImageHandle fActiveHandle = ImageNullHandle;
+        IMCodec::ImageSharedPtr fDisplayedImage = nullptr;
+        OIV_Filter_type fFilterLevel = OIV_Filter_type::FT_Linear;
+
+        //TODO: change to PointI32
+        int fClientWidth = -1;
+        int fClientHeight = -1;
 #pragma endregion
     };
 }

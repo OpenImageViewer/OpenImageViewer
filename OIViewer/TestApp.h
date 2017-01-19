@@ -12,6 +12,7 @@ namespace OIV
         TestApp();
         ~TestApp();
         HWND GetWindowHandle() const;
+        void DisplayImage(ImageHandle image_handle);
         void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
@@ -41,7 +42,7 @@ namespace OIV
 
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
-        void UpdateFileInfo(const CmdResponseLoad& load_response, const long double& totalLoadTime);
+        void UpdateFileInfo(const OIV_CMD_LoadFile_Response& load_response, const long double& totalLoadTime);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
         bool LoadFile(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
@@ -60,6 +61,7 @@ namespace OIV
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex;
         LLUtils::ListString fListFiles;
+        ImageHandle fLastOpenedFileHandle = ImageNullHandle;
         
     };
 }
