@@ -7,24 +7,14 @@ namespace OIV
 {
     namespace Win32
     {
-        Win32WIndow::Win32WIndow() :
-              fHandleWindow(nullptr)
-            , fHandleClient(nullptr)
-            , fHandleStatusBar(nullptr)
-            , fStatusWindowParts(4)
-            , fFullSceenState(FSS_Windowed)
-            , fLastWindowPlacement({ 0 })
-            , fDragAndDrop(nullptr)
-            , fWindowStyles(0)
-            , fWindowStylesClient(0)
-            , fMouseState(this)
-        {
-
-        }
-
         HRESULT Win32WIndow::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
         {
             return ::SendMessage(fHandleWindow, msg, wParam, lparam);
+        }
+
+        bool Win32WIndow::IsFullScreen() const
+        {
+            return fFullSceenState != FSS_Windowed;
         }
 
         void Win32WIndow::UpdateWindowStyles()
@@ -206,7 +196,15 @@ namespace OIV
             fMouseState.Update(mouse);
         }
 
+        
 #pragma endregion
+
+        void Win32WIndow::Move(const int16_t delta_x, const int16_t delta_y)
+        {
+            RECT rect;
+            GetWindowRect(fHandleWindow, &rect);
+            MoveWindow(fHandleWindow, rect.left + delta_x, rect.top + delta_y, rect.right - rect.left, rect.bottom - rect.top, false);
+        }
 
         bool Win32WIndow::IsInFocus() const
         {
@@ -307,7 +305,7 @@ namespace OIV
             hwndStatus = CreateWindowEx(
                 0, // no extended styles
                 STATUSCLASSNAME, // name of status bar class
-                (PCTSTR)nullptr, // no text when first created
+                nullptr, // no text when first created
                 SBARS_SIZEGRIP | // includes a sizing grip
                 WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, // creates a visible child window
                 0, 0, 0, 0, // ignores size and position
@@ -315,8 +313,6 @@ namespace OIV
                 (HMENU)idStatus, // child window identifier
                 hinst, // handle to application instance
                 nullptr); // no window creation data
-
-                       // Get the coordinates of the parent window's client area.
 
 
             return hwndStatus;
@@ -399,7 +395,6 @@ namespace OIV
          
             
             fHandleStatusBar = DoCreateStatusBar(fHandleWindow,  12, hInstance, 3);
-
             ResizeStatusBar();
 
             fWindowStylesClient = WS_CHILD;

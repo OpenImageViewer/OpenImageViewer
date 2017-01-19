@@ -28,13 +28,13 @@ namespace OIV
             int16_t DeltaWheel;
             MouseState::ListButtonEvent ChangedButtons;
 
-            MouseState::State GetButtonEvent(MouseState::Button button) const
+            MouseState::EventType GetButtonEvent(MouseState::Button button) const
             {
-                MouseState::State result = MouseState::State::NotSet;
+                MouseState::EventType result = MouseState::EventType::ET_NotSet;
                 for (auto s : ChangedButtons)
                 {
                     if (s.button == button)
-                        result = s.state;
+                        result = s.eventType;
                 }
 
                 return result;

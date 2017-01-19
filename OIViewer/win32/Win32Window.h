@@ -20,13 +20,10 @@ namespace OIV
         {
         public:
 
-
-        public:
-            Win32WIndow();
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
+            bool IsFullScreen() const;
             void UpdateWindowStyles();
             void SetWindowed();
-            void UpdateWindowPos();
             void SavePlacement();
             void RestorePlacement();
             void RefreshWindow();
@@ -51,7 +48,7 @@ namespace OIV
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
             void HandleRawInputMouse(const RAWMOUSE& mouse);
-            
+            void Move(const int16_t delta_x, const int16_t delta_y);
 
 
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -73,29 +70,27 @@ namespace OIV
             void ResizeStatusBar();
             void RaiseEvent(const Event& evnt);
 
-        private:
+        private: 
             
-            DWORD fWindowStyles;
-            DWORD fWindowStylesClient;
-            HWND fHandleWindow;
-            HWND fHandleClient;
-            HWND fHandleStatusBar;
-            int fStatusWindowParts;
-            FullSceenState fFullSceenState;
-            WINDOWPLACEMENT fLastWindowPlacement;
+            DWORD fWindowStyles = 0;
+            DWORD fWindowStylesClient = 0;
+            HWND fHandleWindow = nullptr;
+            HWND fHandleClient = nullptr;
+            HWND fHandleStatusBar = nullptr;
+            int fStatusWindowParts = 4;
+            FullSceenState fFullSceenState = FSS_Windowed;
+            WINDOWPLACEMENT fLastWindowPlacement = { 0 };
             
-            DragAndDropTarget* fDragAndDrop;
+            DragAndDropTarget* fDragAndDrop = nullptr;
             bool fShowStatusBar = true;
             bool fShowBorders;
             
-            RawInputMouseWindow fMouseState;
+            RawInputMouseWindow fMouseState = RawInputMouseWindow(this);
             bool fInputFlushTimerEnabled = false;
             static const int cTimerIDRawInputFlush = 2500;
             uint16_t fRawInputInterval = 5;
             LLUtils::StopWatch fRawInputTimer = (true);
             uint64_t fRawInputLastEventDisptchTime = 0;;
-
-        public:
             EventCallbackCollection fListeners;
         };
     }
