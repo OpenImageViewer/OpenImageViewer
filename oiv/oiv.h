@@ -70,9 +70,8 @@ namespace OIV
         IMCodec::ImageSharedPtr fDisplayedImage = nullptr;
         OIV_Filter_type fFilterLevel = OIV_Filter_type::FT_Linear;
 
-        //TODO: change to PointI32
-        int fClientWidth = -1;
-        int fClientHeight = -1;
+        LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
+        
 #pragma endregion
     };
 }

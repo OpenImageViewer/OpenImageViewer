@@ -198,6 +198,7 @@
     <ClCompile Include="Commands\CommandProcessor.cpp" />
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
     <ClCompile Include="External\easyexif\exif.cpp" />
+    <ClCompile Include="ImageManager.cpp" />
     <ClCompile Include="oiv.cpp" />
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
@@ -207,9 +208,19 @@
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerNumTexelsInCanvas.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />

@@ -53,8 +53,19 @@ namespace IMCodec
         {
             imageData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
             if ((props.IsInitialized() == false))
-                throw std::runtime_error("Image properties are not completely initialized");
-            loadedImage = new Image(props, imageData);
+            {
+                // Image properties is not completely initialized, image is considered bogus.
+                if (props.ImageBuffer != nullptr)
+                {
+                    delete[]props.ImageBuffer;
+                    props.ImageBuffer = nullptr;
+                }
+            }
+            else
+            {
+                loadedImage = new Image(props, imageData);
+            }
+
         }
 
         return loadedImage;

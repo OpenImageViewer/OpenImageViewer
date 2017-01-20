@@ -22,8 +22,13 @@ namespace OIV
     template <class T,class U>
     bool TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
     {
-        return
-            OIV_Execute(command, sizeof(T), request, sizeof(U), response) == ResultCode::RC_Success;
+        ResultCode result = (ResultCode)OIV_Execute(command, sizeof(T), request, sizeof(U), response);
+
+        if (result != ResultCode::RC_Success && result != ResultCode::RC_FileNotSupported)
+            throw std::runtime_error("Could not execute command");
+
+        
+        return result == ResultCode::RC_Success;
             
     }
 

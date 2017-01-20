@@ -35,7 +35,7 @@ namespace OIV
 
     LLUtils::PointI32 OIV::GetClientSize()
     {
-        return LLUtils::PointI32(fClientWidth, fClientHeight);
+        return fClientSize;
     }
     
     void OIV::NotifyDirty()
@@ -169,17 +169,18 @@ namespace OIV
     // IPictureViewr implementation
     int OIV::LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension, ImageHandle& handle)
     {
-        ResultCode resultCode = RC_UknownError;
         using namespace IMCodec;
         ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
 
         if (image != nullptr)
         {
             handle = fImageManager.AddImage(image);
-            resultCode = RC_Success;
+            return RC_Success;
         }
-            
-        return resultCode;
+        else
+        {
+            return RC_FileNotSupported;
+        }
     }
 
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
@@ -338,8 +339,7 @@ namespace OIV
 
     int OIV::SetClientSize(uint16_t width, uint16_t height)
     {
-        fClientWidth = width;
-        fClientHeight = height;
+        fClientSize = { width, height };
         Refresh();
         return 0;
     }

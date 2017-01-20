@@ -13,6 +13,7 @@ namespace OIV
             return VERIFY_REQUEST(CmdDataInit, requestSize);
         }
 
+        // Implementation at cpp file
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override;
     };
 

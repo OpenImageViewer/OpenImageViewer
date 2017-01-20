@@ -14,7 +14,10 @@ namespace OIV
 
 #define VERIFY_REQUEST(REQ,REQ_SIZE) sizeof(REQ) != REQ_SIZE ?\
      ResultCode::RC_BadRequestSize : ResultCode::RC_Success;
-    
+
+#define VERIFY_RESPONSE(RES,RES_SIZE) sizeof(RES) != RES_SIZE ?\
+     ResultCode::RC_BadResponseSize : ResultCode::RC_Success;
+
 
     class CommandHandler
     {
@@ -29,7 +32,8 @@ namespace OIV
         }
 
     protected:
-        virtual ResultCode Verify(std::size_t requestSize, std::size_t responseSize) = 0;
+        virtual ResultCode Verify(std::size_t requestSize, std::size_t responseSize) { return RC_Success; }
+
         virtual ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) = 0;
     };
 }

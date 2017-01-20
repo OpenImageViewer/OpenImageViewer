@@ -10,6 +10,7 @@
     <ClCompile Include="APIImpl.cpp" />
     <ClCompile Include="Commands\CommandProcessor.cpp" />
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
+    <ClCompile Include="ImageManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -39,6 +40,16 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerNumTexelsInCanvas.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
