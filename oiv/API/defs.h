@@ -26,6 +26,7 @@ extern "C"
         , CE_Init
         , CE_Destory
         , OIV_CMD_LoadFile
+        , OIV_CMD_UnloadFile
         , OIV_CMD_DisplayImage
         , CE_Zoom
         , CE_Pan
@@ -174,6 +175,11 @@ extern "C"
         uint32_t height;
         uint8_t bpp;
         uint32_t sizeInMemory;
+        ImageHandle handle;
+    };
+
+    struct OIV_CMD_UnloadFile_Request
+    {
         ImageHandle handle;
     };
 

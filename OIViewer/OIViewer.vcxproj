@@ -178,8 +178,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AutoScroll.h" />
+    <ClInclude Include="FileLoadEntry.h" />
     <ClInclude Include="FullScreenState.h" />
     <ClInclude Include="TestApp.h" />
+    <ClInclude Include="win32\UserMessages.h" />
     <ClInclude Include="win32\DragAndDrop.h" />
     <ClInclude Include="win32\Event.h" />
     <ClInclude Include="win32\MonitorInfo.h" />

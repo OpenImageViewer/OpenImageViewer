@@ -9,9 +9,9 @@ namespace OIV
     {
 
         ResultCode result = RC_UknownError;
-        if (CommandProcessor::sPictureRenderer == nullptr)
+        //if (CommandProcessor::sPictureRenderer == nullptr)
         {
-            CommandProcessor::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
+            //CommandProcessor::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
             // TODO: add width and height.
             //sPictureRenderer->SetParentParamaters()
 
@@ -21,8 +21,8 @@ namespace OIV
             result = RC_Success;
 
         }
-        else
-            result = ResultCode::RC_AlreadyInitialized;
+        //else
+          //  result = ResultCode::RC_AlreadyInitialized;
 
         return result;
     }

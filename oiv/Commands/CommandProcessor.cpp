@@ -13,16 +13,19 @@
 #include "Handlers/CommandHandlerSetClientSize.h"
 #include "Handlers/CommandHandlerDestroy.h"
 #include "Handlers/CommandHandlerAxisAlignedTransform.h"
+#include "Handlers/CommandHandlerUnloadFile.h"
+#include "oiv.h"
 
 
 namespace OIV
 {
-    std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer;
+    std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
     CommandProcessor::MapCommanderHandler CommandProcessor::sCommandHandlers =
 
     {
           std::make_pair(CE_Init,new CommandHandlerInit())
         , std::make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
+        , std::make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
         , std::make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
         , std::make_pair(CE_Zoom,new CommandHandlerZoom())
         , std::make_pair(CE_Pan,new CommandHandlerPan())

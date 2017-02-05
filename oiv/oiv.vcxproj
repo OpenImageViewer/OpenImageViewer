@@ -220,6 +220,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />

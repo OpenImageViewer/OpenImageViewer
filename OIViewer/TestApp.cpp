@@ -1,21 +1,25 @@
+#include <limits>
+#include <iomanip>
+#include <filesystem>
+#include <thread>
+#include <future>
+#include <cassert>
+
+
 #include "TestApp.h"
 #include "FileMapping.h"
 #include "StringUtility.h"
-#include <limits>
-#include <iomanip>
 #include "win32/Win32Window.h"
-#include <windowsx.h>
+#include <windows.h>
 #include <tchar.h>
 #include "win32/MonitorInfo.h"
-#include <sstream>
+
 #include <API\functions.h>
 #include "win32/Win32Helper.h"
-#include <filesystem>
-#include <thread>
 #include "FileHelper.h"
-#include <cassert>
 #include "StopWatch.h"
 #include <PlatformUtility.h>
+#include "win32/UserMessages.h"
 
 namespace OIV
 {
@@ -61,46 +65,68 @@ namespace OIV
         bool success = ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull()) == true;
     }
 
-    void TestApp::UpdateFileInfo(const OIV_CMD_LoadFile_Response& loadResponse, const long double& totalLoadTime)
+    void TestApp::UpdateTitle()
     {
         std::wstringstream ss;
-        
-        ss << loadResponse.width << L" X " << loadResponse.height << L" X "
-            << loadResponse.bpp << L" BPP | loaded in " << std::fixed << std::setprecision(1) << loadResponse.loadTime <<
-            L"/" << totalLoadTime << L" ms";
-                
-            
-        fWindow.SetStatusBarText(ss.str(), 0, 0);
-        fLastOpenedFileHandle = loadResponse.handle;
+        ss << fOpenedFile.fileName << L" - OpenImageViewer";
+        HWND handle = GetWindowHandle();
+        SetWindowTextW(handle, ss.str().c_str());   
+    }
+
+
+    void TestApp::UpdateStatusBar()
+    {
+        fWindow.SetStatusBarText(fOpenedFile.GetStringDescriptor(), 0, 0);
+    }
+
+  
+    void TestApp::FinalizeImageLoad()
+    {
+        DisplayImage(fOpenedFile.imageHandle);
+        // Enter this function only from themain thread.
+        UpdateTitle();
+        UpdateStatusBar();
+        UpdateFileInddex();
+    }
+
+ 
+
+    void TestApp::NotifyImageLoaded()
+    {
+        if (GetCurrentThreadId() == fMainThreadID)
+            FinalizeImageLoad();
+        else
+        {
+            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, 0, 0);
+            // send message to main thread.
+        }
     }
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
+        fOpenedFile.fileName = filePath;
         using namespace LLUtils;
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
         std::size_t size = fileMapping.GetSize();
         std::string extension = StringUtility::ToAString(StringUtility::GetFileExtension(filePath));
-
-
-        if (buffer != nullptr && LoadFile((uint8_t*)buffer, size, extension, onlyRegisteredExtension) == true)
-        {
-                /*QryFileInformation fileInfo;
-                ExecuteCommand(CE_GetFileInformation, &CmdNull(), &fileInfo);*/
-                fOpenedFile = filePath;
-                std::wstringstream ss;
-
-                ss << filePath << L" - OpenImageViewer";
-                HWND handle = GetWindowHandle();
-                SetWindowTextW(handle, ss.str().c_str());
-                UpdateFileInddex();
-                return true;
-        }
-        
-        return false;
+        return LoadFileFromBuffer((uint8_t*)buffer, size, extension, onlyRegisteredExtension);
     }
 
-    bool TestApp::LoadFile(const uint8_t* buffer,  const std::size_t size,std::string extension, bool onlyRegisteredExtension)
+
+    void TestApp::UnloadFile()
+    {
+        
+        OIV_CMD_UnloadFile_Request unloadRequest = {};
+        if (fOpenedFile.imageHandle != ImageNullHandle)
+        {
+            unloadRequest.handle = fOpenedFile.loadResponse.handle;
+            ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &CmdNull());
+            fOpenedFile.imageHandle = ImageNullHandle;
+        }
+    }
+
+    bool TestApp::LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension)
     {
         using namespace LLUtils;
         OIV_CMD_LoadFile_Response loadResponse;
@@ -108,20 +134,23 @@ namespace OIV
 
         loadRequest.buffer = (void*)buffer;
         loadRequest.length = size;
-        std::string fileExtension = extension; 
+        std::string fileExtension = extension;
         strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::EXTENSION_SIZE, fileExtension.c_str());
         loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(loadRequest.flags | (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0));
         StopWatch stopWatch(true);
-        bool success  = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
-        stopWatch.Stop();
+        bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
         if (success)
         {
-            UpdateFileInfo(loadResponse,stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds));
-            DisplayImage(fLastOpenedFileHandle);
+            UnloadFile();
+            fOpenedFile.totalLoadTime = stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
+            fOpenedFile.loadResponse = loadResponse;
+            fOpenedFile.imageHandle = loadResponse.handle;
+            NotifyImageLoaded();
         }
-
         return success;
     }
+    
+    
 
     void TestApp::LoadFileInFolder(std::wstring filePath)
     {
@@ -159,69 +188,46 @@ namespace OIV
         Pan(panAmount.x, panAmount.y);
     }
 
+
     void TestApp::Run(std::wstring filePath)
     {
         using namespace std;
-        using namespace std::placeholders;
+        using namespace placeholders;
+        using namespace experimental;
+        
+        const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
+        
+        future <bool> asyncResult;
 
-        std::size_t bufferSize = 0;
-        unique_ptr<uint8_t> buffer;
-        
-        
-        const bool isInitialFile = filePath.empty() == false && experimental::filesystem::exists(filePath);
-        
-        std::thread t;
-        string extension;
-        // Load file into memory in a secondary thread.
         if (isInitialFile == true)
-        {
-            t = std::thread
-            (
-                [&filePath, &buffer, &bufferSize]()
-            {
-                uint8_t* tmp = nullptr;
-                LLUtils::File::ReadAllBytes(filePath, bufferSize, tmp);
-                buffer = unique_ptr<uint8_t>(tmp);
-            });
-
-            // Extract the file extension
-            std::experimental::filesystem::path p = filePath;
-            extension = p.extension().string();
-            if (extension.empty() == false)
-                extension = extension.substr(1, extension.length() - 1);
-        }
-
-        
+            asyncResult  = async(launch::async, &TestApp::LoadFile, this, filePath, false);
+            
         // initialize the windowing system of the window
         HINSTANCE moduleHanle = GetModuleHandle(nullptr);
         fWindow.Create(moduleHanle, SW_SHOW);
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
         
-
-        // Init OIV
+        // Init OIV renderer
         CmdDataInit init;
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
+
         UpdateWindowSize(nullptr);
-        
+        asyncResult.wait();
 
-        if (isInitialFile == true)
+        /*if (asyncResult.get())
         {
-            // wait for file to finish loading and 
-            t.join();
-            if (LoadFile(buffer.get(), bufferSize, extension, false) == true)
-                fOpenedFile = filePath;
-        }
-
-        //Set linear image filtering
-        SetFilterLevel(FT_Linear);
-
+            FinalizeImageLoad()
+            DisplayImage(fLastOpenedFileHandle);
+            
+        }*/
+        
         // Load all files in the directory of the loaded file
         LoadFileInFolder(filePath);
         
         Win32Helper::MessageLoop();
 
-        // Destry OIV when windows is closed.
+        // Destroy OIV when window is closed.
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
@@ -427,7 +433,7 @@ namespace OIV
         case 'P':
         {
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(nullptr, L"open", command.c_str(), fOpenedFile.c_str(), nullptr, SW_SHOWDEFAULT);
+            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedFile.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
         }
         break;
 
@@ -515,8 +521,11 @@ namespace OIV
             if (uMsg.wParam == cTimerID)
                 JumpFiles(1);
         break;
-
-        case AutoScroll::PRIVATE_WN_AUTO_SCROLL:
+        case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
+            NotifyImageLoaded();
+        break;
+        
+        case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
             fAutoScroll.PerformAutoScroll(evnt);
             break;
 

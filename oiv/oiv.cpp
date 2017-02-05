@@ -241,6 +241,11 @@ namespace OIV
         return 0.0;
     }
 
+    ResultCode OIV::UnloadFile(const ImageHandle handle)
+    {
+        return fImageManager.RemoveImage(handle) == true ? RC_Success : RC_FileNotFound;
+    }
+
     int OIV::Init()
     {
         fRenderer = CreateBestRenderer();

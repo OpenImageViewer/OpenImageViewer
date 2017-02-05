@@ -3,6 +3,7 @@
 #include "API/defs.h"
 #include <Utility.h>
 #include "AutoScroll.h"
+#include "FileLoadEntry.h"
 
 namespace OIV
 {
@@ -13,6 +14,8 @@ namespace OIV
         ~TestApp();
         HWND GetWindowHandle() const;
         void DisplayImage(ImageHandle image_handle);
+        void UpdateTitle();
+        void UpdateStatusBar();
         void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
@@ -42,26 +45,35 @@ namespace OIV
 
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
+        
+        void OnFileLoaded(std::wstring filePath);
+        
+        //void LoadFileAsync(std::wstring filePath, bool onlyRegisteredExtension);
+        bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
+        void UnloadFile();
+        bool FileLoaded(std::wstring filePath);
         void UpdateFileInfo(const OIV_CMD_LoadFile_Response& load_response, const long double& totalLoadTime);
-        bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension = true);
-        bool LoadFile(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
+        void FinalizeImageLoad();
+        std::wstring BuildImageStringDesctriptor(const OIV_CMD_LoadFile_Response& loadresponse);
+        void NotifyImageLoaded();
+        bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
         
 
     private:
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
-
         int fFilterlevel;
         bool fIsSlideShowActive;
         int fKeyboardPanSpeed;
         double fKeyboardZoomSpeed;
         double fIsGridEnabled;
-        std::wstring fOpenedFile;
+        FileLoadEntry fOpenedFile;
+        DWORD fMainThreadID = GetCurrentThreadId();
+        
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex;
         LLUtils::ListString fListFiles;
-        ImageHandle fLastOpenedFileHandle = ImageNullHandle;
         
     };
 }

@@ -1,4 +1,5 @@
 #include "AutoScroll.h"
+#include "win32/UserMessages.h"
 
 
 namespace OIV
@@ -6,7 +7,7 @@ namespace OIV
 #pragma region AutoScroll
     void AutoScroll::OnAutoScrollTimer(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
     {
-        reinterpret_cast<Win32::Win32WIndow*>(dwUser)->SendMessage(PRIVATE_WN_AUTO_SCROLL, 0, 0);
+        reinterpret_cast<Win32::Win32WIndow*>(dwUser)->SendMessage(Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, 0, 0);
     }
 
     void AutoScroll::PerformAutoScroll(const Win32::EventWinMessage* evnt)

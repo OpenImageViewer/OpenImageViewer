@@ -17,7 +17,7 @@ namespace OIV
         static MapCommanderHandler sCommandHandlers;
 
     public:
-        static std::unique_ptr<IPictureRenderer> sPictureRenderer;  
+        static std::unique_ptr<IPictureRenderer> sPictureRenderer;
         static ResultCode ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData);
         static void Log(OIVCHAR* message);
         static bool IsInitialized()
