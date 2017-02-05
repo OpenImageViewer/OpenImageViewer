@@ -18,28 +18,46 @@ namespace OIV
     }
     
 
-    double ZoomScrollState::ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const
+    double ZoomScrollState::ResolveOffset(double desiredOffset, double scale, double marginOuter, double marginInner) const
     {
         double offset;
         if (scale < 1)
         {
             // Image is larger than window
-            double marginFactor = marginLarge * scale;
+            double marginFactor = marginOuter * scale;
             double maxOffset = 1.0 - scale + marginFactor;
             offset = (std::max)(static_cast<double>(-marginFactor), (std::min)(maxOffset, desiredOffset));
         }
         else
         {
 
-            // Image is smaller then window
-            if (fLockSmallImagesToCenter)
+            switch (fSmallImageOffsetStyle)
             {
-                //Keep in center
+            
+            case SIS_LockCenterBothAxis:
                 offset = -(scale - 1) / 2;
-            }
-            else
+                break;
+            
+            case SIS_Default:
+            case SIS_NoLock:
             {
-                double marginFactor = marginSmall * scale;
+                double maxOffset = marginOuter;
+                double minOffset = -scale + (1.0 - marginOuter);
+                if (minOffset < maxOffset)
+                {
+                    offset = (std::min)((std::max)(desiredOffset, minOffset), maxOffset);
+                }
+                else
+                {
+                    //No room for margin - Keep in center
+                    offset = -(scale - 1) / 2;
+                }
+                break;
+            }
+            
+            case SIS_LockCenterFitAxis:
+            {
+                double marginFactor = marginInner * scale;
                 double maxOffset = -marginFactor;
                 double minOffset = -scale + 1.0 + marginFactor;
                 if (minOffset < maxOffset)
@@ -52,6 +70,11 @@ namespace OIV
                     offset = -(scale - 1) / 2;
                 }
             }
+            break;
+            default:
+                throw std::logic_error("wrong or corrupted value");
+            }
+
         }
 
         return offset;
@@ -86,8 +109,8 @@ namespace OIV
     {
         LLUtils::PointF64 uvScale = GetARFixedUVScale();
 
-        LLUtils::PointF64 marginLarge = FixAR(fMarginLarge, false);
-        LLUtils::PointF64 marginSmall = FixAR(fMarginSmall, false);
+        LLUtils::PointF64 marginLarge = FixAR(fMarginsOuterbounds, false);
+        LLUtils::PointF64 marginSmall = FixAR(fMarginsInnerBounds, false);
         
         
         fUVOffset.x = ResolveOffset(offset.x, uvScale.x, marginLarge.x, marginSmall.x);

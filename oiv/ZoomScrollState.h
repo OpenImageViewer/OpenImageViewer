@@ -14,16 +14,21 @@ namespace OIV
             virtual void NotifyDirty() = 0;
         };
 
+       
+        enum SmallImageOffsetStyle
+        {
+              SIS_Default
+            , SIS_LockCenterBothAxis
+            , SIS_LockCenterFitAxis
+            , SIS_NoLock
+        };
+       
+
+
         ZoomScrollState(Listener* listener) :
-            fLockSmallImagesToCenter(false)
-            , fListener(listener)
-            , fUVOffset(LLUtils::PointF64::Zero)
-            , fUVScale(LLUtils::PointF64::One)
-            , fSupressDirty(false)
-            , fDirtyQueued(false)
-            , fInverted(false)
-            , fMarginLarge(0.25, 0.25)
-            , fMarginSmall(0.1, 0.1)
+            
+             fListener(listener)
+            
         {
 
 
@@ -67,16 +72,16 @@ namespace OIV
         void SetOffset(LLUtils::PointF64 offset);
         
     private: //member fields
-        Listener* fListener;
-        LLUtils::PointF64 fUVScale;
-        LLUtils::PointF64 fUVOffset;
-        bool fSupressDirty;
-        bool fDirtyQueued;
-        bool fInverted;
-        bool fLockSmallImagesToCenter;
+        Listener* fListener = nullptr;
+        LLUtils::PointF64 fUVScale = LLUtils::PointF64::One;
+        LLUtils::PointF64 fUVOffset = LLUtils::PointF64::Zero;
+        bool fSupressDirty = false;
+        bool fDirtyQueued = false;
+        bool fInverted = false;
+        SmallImageOffsetStyle fSmallImageOffsetStyle = SIS_Default;
 
-        LLUtils::PointF64 fMarginLarge;
-        LLUtils::PointF64 fMarginSmall;
+        LLUtils::PointF64 fMarginsOuterbounds = LLUtils::PointF64(0.25, 0.25);
+        LLUtils::PointF64 fMarginsInnerBounds = LLUtils::PointF64(0.1, 0.1);
 
     };
 }
