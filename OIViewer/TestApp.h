@@ -23,7 +23,7 @@ namespace OIV
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
-        void SetFilterLevel(int filterLevel);
+        void SetFilterLevel(OIV_Filter_type filterType);
         void ToggleGrid();
         
         void Pan(int horizontalPIxels, int verticalPixels);
@@ -63,16 +63,17 @@ namespace OIV
     private:
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
-        int fFilterlevel;
-        bool fIsSlideShowActive;
-        int fKeyboardPanSpeed;
-        double fKeyboardZoomSpeed;
-        double fIsGridEnabled;
+        OIV_Filter_type fFilterType = OIV_Filter_type::FT_Linear;
+        
+        bool fIsSlideShowActive = false;
+        int fKeyboardPanSpeed = 100;
+        double fKeyboardZoomSpeed = 0.1;
+        double fIsGridEnabled = false;
         FileLoadEntry fOpenedFile;
         DWORD fMainThreadID = GetCurrentThreadId();
         
         int cTimerID = 1500;
-        LLUtils::ListString::size_type fCurrentFileIndex;
+        LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;
         
     };

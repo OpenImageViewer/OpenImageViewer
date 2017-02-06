@@ -36,13 +36,7 @@ namespace OIV
             
     }
 
-    TestApp::TestApp() :
-          fKeyboardPanSpeed(100)
-        , fKeyboardZoomSpeed(0.1)
-        , fIsSlideShowActive(false)
-        , fFilterlevel(0)
-        , fIsGridEnabled(false)
-        , fCurrentFileIndex(std::numeric_limits<LLUtils::ListString::size_type>::max())
+    TestApp::TestApp() 
     {
         new MonitorInfo();
     }
@@ -213,14 +207,9 @@ namespace OIV
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
         UpdateWindowSize(nullptr);
-        asyncResult.wait();
 
-        /*if (asyncResult.get())
-        {
-            FinalizeImageLoad()
-            DisplayImage(fLastOpenedFileHandle);
-            
-        }*/
+        if (asyncResult.valid())
+            asyncResult.wait();
         
         // Load all files in the directory of the loaded file
         LoadFileInFolder(filePath);
@@ -324,14 +313,15 @@ namespace OIV
         
     }
 
-    void TestApp::SetFilterLevel(int filterLevel)
+    void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
         
         OIV_CMD_Filter_Request filter;
 
-        filter.filterType = static_cast<OIV_Filter_type>(filterLevel);
+        filter.filterType = static_cast<OIV_Filter_type>( std::min(OIV_Filter_type::FT_Count - 1,
+            std::max(static_cast<int>(OIV_Filter_type::FT_None), static_cast<int>(filterType)) ));
         if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()))
-            fFilterlevel = filterLevel;
+            fFilterType = filter.filterType;
     }
 
     void TestApp::ToggleGrid()
@@ -356,6 +346,7 @@ namespace OIV
         {
         case 'V':
             TransformImage(AAT_FlipVertical);
+            break;
         case 'H':
             TransformImage(AAT_FlipHorizontal);
                 break;
@@ -396,10 +387,10 @@ namespace OIV
             ToggleBorders();
             break;
         case VK_OEM_PERIOD:
-            SetFilterLevel(fFilterlevel + 1);
+            SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(fFilterType) + 1));
             break;
         case VK_OEM_COMMA:
-            SetFilterLevel(fFilterlevel - 1);
+            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(fFilterType) - 1));
             break;
         case VK_NUMPAD8:
             Pan(0, -fKeyboardPanSpeed);

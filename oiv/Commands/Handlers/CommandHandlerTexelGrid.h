@@ -11,7 +11,7 @@ namespace OIV
     protected:
         ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override
         {
-            return VERIFY(CmdRequestTexelAtMousePos, requestSize, CmdResponseTexelAtMousePos, responseSize);
+            return VERIFY_REQUEST (CmdRequestTexelGrid, requestSize);
         }
 
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
