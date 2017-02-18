@@ -222,6 +222,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />

@@ -20,6 +20,7 @@
 #include "StopWatch.h"
 #include <PlatformUtility.h>
 #include "win32/UserMessages.h"
+#include "UserSettings.h"
 
 namespace OIV
 {
@@ -71,6 +72,18 @@ namespace OIV
     void TestApp::UpdateStatusBar()
     {
         fWindow.SetStatusBarText(fOpenedFile.GetStringDescriptor(), 0, 0);
+    }
+
+    void TestApp::UpdateZoomScrollState()
+    {
+        OIV_CMD_ZoomScrollState_Request request;
+        request.innerMarginsX = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.x;
+        request.innerMarginsY = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.y;
+        request.outermarginsX = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.x;
+        request.outermarginsY = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.y;
+        request.SmallImageOffsetStyle = fSettings.settings.OIVSettings.ZoomScrollState.SmallImageOffsetStyle;
+        
+        ExecuteCommand(OIV_CMD_ZoomScrollState, &request, &CmdNull());
     }
 
   
@@ -189,6 +202,7 @@ namespace OIV
         using namespace placeholders;
         using namespace experimental;
         
+
         const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
         
         future <bool> asyncResult;
@@ -206,11 +220,19 @@ namespace OIV
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
+        // Update client size
         UpdateWindowSize(nullptr);
 
+        // wait for initial file to finish loading
         if (asyncResult.valid())
             asyncResult.wait();
         
+        // load settings
+        fSettings.Load();
+
+
+        UpdateZoomScrollState();
+
         // Load all files in the directory of the loaded file
         LoadFileInFolder(filePath);
         

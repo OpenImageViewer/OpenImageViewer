@@ -1,5 +1,9 @@
+#pragma once
 #include <windows.h>
 #include <Shlobj.h>
+#include "StringUtility.h"
+#include "Utility.h"
+
 namespace LLUtils
 {
 
@@ -43,7 +47,7 @@ namespace LLUtils
             {
                 string_type result = szPath;
                 result += TEXT("\\OIV");
-                Utility::EnsureDirectory(result);
+                LLUtils::Utility::EnsureDirectory(result);
                 return result;
             }
 

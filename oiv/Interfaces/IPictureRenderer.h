@@ -28,5 +28,6 @@ namespace OIV
         virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
         virtual ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) = 0;
         virtual ~IPictureRenderer() {}
+        virtual ResultCode SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request* zoom_scroll_state) = 0;
     };
 }

@@ -4,6 +4,7 @@
 #include <Utility.h>
 #include "AutoScroll.h"
 #include "FileLoadEntry.h"
+#include "UserSettings.h"
 
 namespace OIV
 {
@@ -16,6 +17,7 @@ namespace OIV
         void DisplayImage(ImageHandle image_handle);
         void UpdateTitle();
         void UpdateStatusBar();
+        void UpdateZoomScrollState();
         void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
@@ -75,6 +77,8 @@ namespace OIV
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;
+        UserSettings fSettings;
+
         
     };
 }

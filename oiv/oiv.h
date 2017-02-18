@@ -39,6 +39,7 @@ namespace OIV
         int GetNumTexelsInCanvas(double &x, double &y) override;
         int SetClientSize(uint16_t width, uint16_t height) override;
         ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) override;
+        ResultCode SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request* zoom_scroll_state) override;
 #pragma endregion
 
 #pragma region //-------------Private methods------------------

@@ -13,9 +13,14 @@ namespace LLUtils
         {
             using namespace std;
             ifstream t(filePath);
-            stringstream buffer;
-            buffer << t.rdbuf();
-            return buffer.str();
+            if (t.is_open())
+            {
+                stringstream buffer;
+                buffer << t.rdbuf();
+                return buffer.str();
+            }
+            else
+                return std::string();
         }
 
         static void ReadAllBytes(std::wstring filePath,std::size_t& size, uint8_t*& buffer)

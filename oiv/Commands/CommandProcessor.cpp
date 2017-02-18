@@ -15,6 +15,7 @@
 #include "Handlers/CommandHandlerAxisAlignedTransform.h"
 #include "Handlers/CommandHandlerUnloadFile.h"
 #include "oiv.h"
+#include "Handlers/CommandHandlerZoomScrollState.h"
 
 
 namespace OIV
@@ -37,6 +38,7 @@ namespace OIV
         , std::make_pair(OIV_CMD_Destroy,new CommandHandlerDestroy())
         , std::make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
         , std::make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
+        , std::make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
     };
 
 	ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)

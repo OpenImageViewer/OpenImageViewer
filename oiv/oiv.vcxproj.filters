@@ -51,6 +51,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

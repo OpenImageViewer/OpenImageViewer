@@ -39,6 +39,7 @@ extern "C"
         , CMD_GetNumTexelsInCanvas
         , OIV_CMD_Destroy
         , OIV_CMD_AxisAlignedTransform
+        , OIV_CMD_ZoomScrollState
     };
 
     
@@ -83,6 +84,16 @@ extern "C"
     {
 
     };
+
+    struct OIV_CMD_ZoomScrollState_Request
+    {
+        double innerMarginsX;
+        double innerMarginsY;
+        double outermarginsX;
+        double outermarginsY;
+        uint8_t SmallImageOffsetStyle;
+    };
+
 
     struct OIV_CMDAxisalignedTransformRequest
     {

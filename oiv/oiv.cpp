@@ -364,6 +364,16 @@ namespace OIV
         }
         return RC_UknownError;
     }
+    ResultCode OIV::SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request * zoom_scroll_state)
+    {
+        fScrollState.SetInnerMargins(LLUtils::PointF64(zoom_scroll_state->innerMarginsX, zoom_scroll_state->innerMarginsY));
+        fScrollState.SetOuterMargins(LLUtils::PointF64(zoom_scroll_state->outermarginsX, zoom_scroll_state->outermarginsY));
+        fScrollState.SetSmallImageOffsetStyle(zoom_scroll_state->SmallImageOffsetStyle);
+            
+
+        return ResultCode::RC_Success;
+        
+    }
 #pragma endregion
 
 }

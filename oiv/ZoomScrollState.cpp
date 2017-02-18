@@ -109,9 +109,8 @@ namespace OIV
     {
         LLUtils::PointF64 uvScale = GetARFixedUVScale();
 
-        LLUtils::PointF64 marginLarge = FixAR(fMarginsOuterbounds, false);
+        LLUtils::PointF64 marginLarge = fMarginsOuterbounds;
         LLUtils::PointF64 marginSmall = FixAR(fMarginsInnerBounds, false);
-        
         
         fUVOffset.x = ResolveOffset(offset.x, uvScale.x, marginLarge.x, marginSmall.x);
         fUVOffset.y = ResolveOffset(offset.y, uvScale.y, marginLarge.y, marginSmall.y);
@@ -150,6 +149,21 @@ namespace OIV
     LLUtils::PointF64 ZoomScrollState::GetNumTexelsInCanvas() const
     {
         return GetImageSize() * GetARFixedUVScale();
+    }
+
+    void ZoomScrollState::SetInnerMargins(const LLUtils::PointF64 & point)
+    {
+        fMarginsInnerBounds = point;
+    }
+
+    void ZoomScrollState::SetOuterMargins(const LLUtils::PointF64 & point)
+    {
+        fMarginsOuterbounds = point;
+    }
+
+    void ZoomScrollState::SetSmallImageOffsetStyle(const uint8_t small_image_offset_style)
+    {
+        fSmallImageOffsetStyle = (SmallImageOffsetStyle)small_image_offset_style;
     }
 
     LLUtils::PointF64 ZoomScrollState::GetARFixedUVScale() const

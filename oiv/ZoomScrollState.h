@@ -47,7 +47,9 @@ namespace OIV
         LLUtils::PointF64 GetARFixedUVScale() const;
         LLUtils::PointF64 ClientPosToTexel(LLUtils::PointI32 pos) const;
         LLUtils::PointF64 GetNumTexelsInCanvas() const;
-
+        void SetInnerMargins(const LLUtils::PointF64& point);
+        void SetOuterMargins(const LLUtils::PointF64& point);
+        void SetSmallImageOffsetStyle(const uint8_t small_image_offset_style);
     private:
         // private queries
         LLUtils::PointF64 GetScreenSpaceOrigin() const;
