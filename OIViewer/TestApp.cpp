@@ -104,8 +104,11 @@ namespace OIV
             FinalizeImageLoad();
         else
         {
-            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, 0, 0);
+            // Wait for the main window to get initialized.
+            std::unique_lock<std::mutex> ul(fMutexWindowCreation);
+            
             // send message to main thread.
+            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, 0, 0);
         }
     }
 
@@ -202,18 +205,26 @@ namespace OIV
         using namespace placeholders;
         using namespace experimental;
         
-
         const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
         
         future <bool> asyncResult;
+        
+        
+        if (isInitialFile == true)
+        {
+            fMutexWindowCreation.lock();
+            // if initial file is provided, load asynchronously.
+            asyncResult = async(launch::async, &TestApp::LoadFile, this, filePath, false);
+        }
+        
+        // initialize the windowing system of the window
+        fWindow.Create(GetModuleHandle(nullptr), SW_SHOW);
+        fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
+
 
         if (isInitialFile == true)
-            asyncResult  = async(launch::async, &TestApp::LoadFile, this, filePath, false);
-            
-        // initialize the windowing system of the window
-        HINSTANCE moduleHanle = GetModuleHandle(nullptr);
-        fWindow.Create(moduleHanle, SW_SHOW);
-        fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this,_1));
+            fMutexWindowCreation.unlock();
+        
         
         // Init OIV renderer
         CmdDataInit init;

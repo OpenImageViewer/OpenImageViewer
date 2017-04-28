@@ -1,4 +1,7 @@
 #pragma once
+
+#include <mutex>
+
 #include "win32/Win32Window.h"
 #include "API/defs.h"
 #include <Utility.h>
@@ -73,6 +76,7 @@ namespace OIV
         double fIsGridEnabled = false;
         FileLoadEntry fOpenedFile;
         DWORD fMainThreadID = GetCurrentThreadId();
+        std::mutex fMutexWindowCreation;
         
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
