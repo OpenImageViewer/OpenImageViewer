@@ -1,24 +1,73 @@
-# OIV
+# [O]pen [I]mage [V]iewer
 
-OpenImageViewer is a free, open source image viewer, which supports multiple platforms. You can use it for viewing all common image formats including RAW and psd images.
-OIV is available for Windows and Linux and in the future other OSes such as Mac, FreeBSD and maybe event OS/2.
-If you want to report any bugs or request new features please use the Issues button above.
+**OIV** is an hardware accelerated blazingly fast open code c++17 compliant cross platform 'C' library and application for viewing and manipulating images.  
+It is a tool for both home users and professionals and it's designed for flexibility, user experience and performance.  
+No external dependencies are needed, it relies solely on the CRT (excluding embedded image codecs).
 
-## OIV features
-1. Handle HUGE files (try to load an 80MP image and you will understand what we are taking about)
-2. Instantly switch between images
-3. Image manipulation methods for adjusting brightness, contrast, saturation, hue, gamma, exposure
+**OIV** is:  
+1. Independent c++ Image codec library.  
+2. C API image viewing engine.  
+3. Image viewer - windows only.    
 
-## TODO
-### UX
-1. semi-transparent widgets that display additional information such as thumbnails, metadata or histogram
-2. Support the ability to browse images in zip or MS Office files which can be extracted to a directory
-3. Metadata stored with the image can be displayed and you can add notes to images.
-4. Tthumbnail preview of the current folder
-5. File explorer panel which allows switching between folders
-6. Within a directory, apply a file filter, so that only images are displayed whose filenames have a certain string or match a regular expression
-7. Pseudo color function which allows creating false color images
-8. Synchronization of multiple instances. With this feature you can easily compare images by zooming and/or panning at the exactly same position or even by overlaying them with different opacities.
+## Features
+* Supports many image formats.
+* Fast initial image load.
+* OpenGL and Direct3D11 as a back bone for displaying images.
+* Handles large files, up to 256 mega pixels (16 mega pixels per dimension).
+* **Infinite panning**, image keeps panning even when the mouse cursor is at the edge of the desktop working area.
+* **Custom pan limits** - pan the image outside/inside the display area, this allows to center on the monitor any area of the image on any zoom level.
+* Custom zoom limits. 
+* Pixel grid.
+* **Multi full screen** - image spans across all monitors.
+* **Fine panning** - image panning is bound only to *screen space* - *image space panning* could be less than 1 pixel.  
+* Exif support.
+* Full Image information (pixel format, transparency, size in memory, etc.)
 
-##License
-OIV is licensed under the OpenImageViewer License.
+## Todo
+* Complete CMake and compatibility with g++, Linux and MacOS.
+* Implement Metal, Vulkan and Direct3D12 renderers.
+* Add GPU support for Lanczos re-sampling.  
+* Support for images larger than 256 mega pixels.
+* Add image color transformations interface for adjusting brightness, contrast, saturation, etc.
+* Remove freeimage as a fallback Codec and implement specialized codecs.
+* Show and preview sub images (DDS mipmaps, PSD layers, etc.).
+* Play animated images.
+* Extract various types of meta data.
+
+--------------------------
+
+## Build
+### Windows
+#### Requirements
+* Windows Vista/7/8/8.1/10
+* Microsoft build tools 2015 - download from here: https://www.microsoft.com/en-us/download/details.aspx?id=48159  
+
+#### Instructions
+**1. Get the source code:**
+Clone the repository by running the command: git clone https://github.com/OpenImageViewer/OIV
+
+**2. Embedded Codec dependencies:**
+ Modify "ImageCodec\ImageLoader\Source\BuildConfig.h" to choose which codecs are statically embedded into the image loader.  
+Embedded codecs are optional and they all may be disabled.  
+Get the desired codec dependencies and add it to the relevant project.  
+            
+CodecJPG - libjpeg-turbo https://sourceforge.net/projects/libjpeg-turbo/  
+CodecPNG - libpng http://www.libpng.org/pub/png/libpng.html  
+CodecDDS - NVIDIA dds loader fork: https://github.com/paroj/nv_dds  
+CodecPSD - libpsd fork:  https://github.com/TheNicker/libpsd  
+CodecFreeImage - http://freeimage.sourceforge.net/  
+
+
+  **3. Build the project** by running the command: "C:\Program Files (x86)\MSBuild\14.0\Bin" oiv.sln
+
+### Linux
+coming soon ...
+
+### MacOS
+coming soon ...
+
+
+-----------------------------
+
+## License
+OIV is licensed under the [OpenImageViewer License](LICENSE.md).
