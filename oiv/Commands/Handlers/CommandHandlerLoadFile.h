@@ -25,7 +25,7 @@ namespace OIV
                         dataLoadFile->buffer
                         , dataLoadFile->length
                         , dataLoadFile->extension
-                        , dataLoadFile->flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension
+                        , dataLoadFile->flags
                         , handle));
 
 

@@ -160,8 +160,9 @@ extern "C"
     
     enum OIV_CMD_LoadFile_Flags
     {
-        None,
-        OnlyRegisteredExtension = 1 << 0
+          None                    = 0 << 1
+        , OnlyRegisteredExtension = 1 << 0
+        , Load_Exif_Data          = 1 << 1
     };
 
     struct OIV_CMD_LoadFile_Request
@@ -197,9 +198,9 @@ extern "C"
     ////
     enum OIV_CMD_DisplayImage_Flags
     {
-          DF_None
+          DF_None                    = 0 << 0
         , DF_ApplyExifTransformation = 1 << 0
-        , DF_ResetScrollState = 2 << 0
+        , DF_ResetScrollState        = 2 << 0
     };
 
     struct OIV_CMD_DisplayImage_Request

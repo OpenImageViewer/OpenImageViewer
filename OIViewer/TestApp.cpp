@@ -56,7 +56,8 @@ namespace OIV
         OIV_CMD_DisplayImage_Request displayRequest = {};
 
         displayRequest.handle = image_handle;
-        displayRequest.displayFlags = OIV_CMD_DisplayImage_Flags::DF_ResetScrollState;
+        displayRequest.displayFlags = static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ResetScrollState | OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation);
+        
         bool success = ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull()) == true;
     }
 
@@ -147,7 +148,11 @@ namespace OIV
         loadRequest.length = size;
         std::string fileExtension = extension;
         strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::EXTENSION_SIZE, fileExtension.c_str());
-        loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(loadRequest.flags | (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0));
+        loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(
+              (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0)
+            | OIV_CMD_LoadFile_Flags::Load_Exif_Data);
+
+
         StopWatch stopWatch(true);
         bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
         if (success)

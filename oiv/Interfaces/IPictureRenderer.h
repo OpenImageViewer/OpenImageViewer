@@ -10,7 +10,7 @@ namespace OIV
     public:
         virtual double Zoom(double percentage,int x, int y) = 0;
         virtual int Pan(double x, double y) = 0;
-        virtual int LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension, ImageHandle& handle) = 0;
+        virtual int LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) = 0;
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;
         virtual ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) = 0;
 

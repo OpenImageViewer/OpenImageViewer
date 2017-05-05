@@ -136,45 +136,26 @@ namespace OIV
     }
 
 
-    //int OIV::DisplayImage(ImageHandle handle)
-    //{
-    //    fDisplayedImage = fOpenedImage;
-
-    //    using namespace easyexif;
-    //    EXIFInfo exifInfo;
-
-    //    if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-    //        fDisplayedImage = IMUtil::ImageUtil::Transform(
-    //            static_cast<IMUtil::AxisAlignedRTransform>(ResolveExifRotation(exifInfo.Orientation))
-    //            , fDisplayedImage);
-
-    //    fDisplayedImage = IMUtil::ImageUtil::Convert(fDisplayedImage, TF_I_R8_G8_B8_A8);
-
-    //    if (fDisplayedImage != nullptr)
-    //    {
-    //        if (fRenderer->SetImage(fDisplayedImage) == RC_Success)
-    //        {
-    //            fScrollState.Reset(true);
-    //            resultCode = RC_Success;
-    //        }
-    //        else
-    //        {
-    //            resultCode = RC_PixelFormatConversionFailed;
-    //        }
-    //    }
-    //}
-
-
 #pragma region IPictureViewer implementation
     // IPictureViewr implementation
-    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension, ImageHandle& handle)
+    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
         using namespace IMCodec;
-        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
+        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0));
 
         if (image != nullptr)
         {
+            if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data)
+            {
+                easyexif::EXIFInfo exifInfo;
+                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
+                {
+                    const_cast<ImageData&>(image->GetData()).exifOrientation = exifInfo.Orientation;
+                }
+            }
+                
             handle = fImageManager.AddImage(image);
+
             return RC_Success;
         }
         else
