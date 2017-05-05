@@ -77,11 +77,12 @@ namespace OIV
     void TestApp::UpdateZoomScrollState()
     {
         OIV_CMD_ZoomScrollState_Request request;
-        request.innerMarginsX = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.x;
-        request.innerMarginsY = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.y;
-        request.outermarginsX = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.x;
-        request.outermarginsY = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.y;
-        request.SmallImageOffsetStyle = fSettings.settings.OIVSettings.ZoomScrollState.SmallImageOffsetStyle;
+        const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
+        request.innerMarginsX = settings.zoomScrollState.InnnerMargins.x;
+        request.innerMarginsY = settings.zoomScrollState.InnnerMargins.y;
+        request.outermarginsX = settings.zoomScrollState.OuterMargins.x;
+        request.outermarginsY = settings.zoomScrollState.OuterMargins.y;
+        request.SmallImageOffsetStyle = settings.zoomScrollState.smallImageOffsetStyle;
         
         ExecuteCommand(OIV_CMD_ZoomScrollState, &request, &CmdNull());
     }

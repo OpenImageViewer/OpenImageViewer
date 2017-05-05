@@ -191,10 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AutoScroll.h" />
-    <ClInclude Include="External\rapidxml\rapidxml.hpp" />
-    <ClInclude Include="External\rapidxml\rapidxml_iterators.hpp" />
-    <ClInclude Include="External\rapidxml\rapidxml_print.hpp" />
-    <ClInclude Include="External\rapidxml\rapidxml_utils.hpp" />
+    <ClInclude Include="BuildConfig.h" />
     <ClInclude Include="FileLoadEntry.h" />
     <ClInclude Include="FullScreenState.h" />
     <ClInclude Include="TestApp.h" />

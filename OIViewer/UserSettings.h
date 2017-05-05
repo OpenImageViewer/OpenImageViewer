@@ -1,50 +1,100 @@
 #pragma once
-#include "External/rapidxml/rapidxml.hpp"
-#include <FileHelper.h>
-#include <unordered_map>
+#include "BuildConfig.h"
+
+#if OIV_VIEWER_BUILD_ESJ == 1
+    #include <json_writer.h>
+    #include <json_reader.h>
+#else
+
+// define empty stubs 
+namespace JSON
+{
+    class Adapter{};
+    class Class
+    {
+    public:
+        Class(Adapter, char*) {}
+        
+    };
+}
+
+#define JSON_E()
+    
+#endif
+
 #include <PlatformUtility.h>
+
+
 
 namespace OIV
 {
-    typedef rapidxml::xml_node<> XmlNode;
-
-
-    struct UserSettingsStructure
+    ///*
+    namespace Serialization
     {
-        struct
+        struct Point
         {
-            struct
+            double x;
+            double y;
+
+            void serialize(JSON::Adapter& adapter)
             {
-                struct
-                {
-                    double x = 0.25;
-                    double y = 0.25;
-                } OuterMargins;
-                struct
-                {
-                    double x = 0.1;
-                    double y = 0.1;
-                } InnerMargins;
-                
-                int SmallImageOffsetStyle = 0;
-            } ZoomScrollState;
-        } OIVSettings;
-    };
+                // this pattern is required 
+                JSON::Class root(adapter, "Point");
+                JSON_E(adapter, x);
+                JSON_E(adapter, y);
+            }
+        };
+
+        struct ZoomScrollState
+        {
+            Point OuterMargins = { 0.25,0.25 };
+            Point InnnerMargins = { 0.1,0.1 };
+            int smallImageOffsetStyle = 0;
+
+            void serialize(JSON::Adapter& adapter)
+            {
+                // this pattern is required 
+                JSON::Class root(adapter, "ZoomScrollState");
+                JSON_E(adapter, smallImageOffsetStyle);
+                JSON_E(adapter, OuterMargins);
+                JSON_E(adapter, InnnerMargins);
+            }
+        };
+
+
+
+
+        
+        struct UserSettingsData
+        {
+            ZoomScrollState zoomScrollState;
+            void serialize(JSON::Adapter& adapter)
+            {
+                // this pattern is required 
+                JSON::Class root(adapter, "OIVViewerettings");
+                JSON_E(adapter, zoomScrollState);
+            }
+        };
+
+    }
+
+   
+
+
+
 
     class  UserSettings
     {
     public:
-        typedef rapidxml::xml_node<> XmlNode;
-        typedef std::unordered_map<std::string, XmlNode*> MapXmlPathToNode;
-        UserSettingsStructure settings;
-        MapXmlPathToNode fMapXmlPathToNode;
-        rapidxml::xml_document<> fDoc;
-        XmlNode* fRootNode = nullptr;
-        XmlNode* GetNode(std::string xmlPath);
-        double GetDouble(std::string path);
+        Serialization::UserSettingsData fSettingsData;
 
-        void SetDouble(std::string path, double num);
+        Serialization::UserSettingsData& getUserSettings();
 
+        std::wstring GetSettingsPath();
+        void Save();
         void Load();
+        
+
+        
     };
 }
