@@ -194,6 +194,7 @@
     <ClInclude Include="BuildConfig.h" />
     <ClInclude Include="FileLoadEntry.h" />
     <ClInclude Include="FullScreenState.h" />
+    <ClInclude Include="Helpers\FileSystemHelper.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="win32\UserMessages.h" />

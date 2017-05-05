@@ -21,6 +21,7 @@
 #include <PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
+#include "Helpers/FileSystemHelper.h"
 
 namespace OIV
 {
@@ -168,35 +169,20 @@ namespace OIV
     
     
 
-    void TestApp::LoadFileInFolder(std::wstring filePath)
+    void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
+        using namespace std::experimental::filesystem;
         fListFiles.clear();
         fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         
-        std::experimental::filesystem::path workingPath  = filePath;
-        std::experimental::filesystem::path fullFilePath = filePath;
+        std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
-        workingPath = workingPath.parent_path();
-        
-        if (workingPath.empty() == true)
-        {
-            TCHAR path[MAX_PATH];
-            if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
-            {
-                workingPath = path;
-                fullFilePath = workingPath / filePath;
-            }
-        }
+        LLUtils::PlatformUtility::find_files(absoluteFolderPath, fListFiles);
+        LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), absoluteFilePath);
+        if (it != fListFiles.end())
+            fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
-        if (workingPath.empty() == false)
-        {
-            LLUtils::PlatformUtility::find_files(workingPath.wstring(), fListFiles);
-            LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
-            if (it != fListFiles.end())
-                fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-
-            UpdateFileInddex();
-        }
+        UpdateFileInddex();
     }
 
     void TestApp::OnScroll(LLUtils::PointI32 panAmount)
@@ -205,12 +191,14 @@ namespace OIV
     }
 
 
-    void TestApp::Run(std::wstring filePath)
+    void TestApp::Run(std::wstring relativeFilePath)
     {
         using namespace std;
         using namespace placeholders;
         using namespace experimental;
         
+        wstring filePath = FileSystemHelper::ResolveFullPath(relativeFilePath);
+
         const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
         
         future <bool> asyncResult;
@@ -251,7 +239,8 @@ namespace OIV
         UpdateZoomScrollState();
 
         // Load all files in the directory of the loaded file
-        LoadFileInFolder(filePath);
+        if (filePath.empty() == false)
+            LoadFileInFolder(filePath);
         
         Win32Helper::MessageLoop();
 
