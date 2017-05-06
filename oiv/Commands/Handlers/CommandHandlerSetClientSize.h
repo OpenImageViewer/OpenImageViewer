@@ -18,7 +18,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const CmdSetClientSizeRequest* req = reinterpret_cast<const CmdSetClientSizeRequest*>(request);
-            if (CommandProcessor::sPictureRenderer->SetClientSize(req->width, req->height))
+            if (ApiGlobal::sPictureRenderer->SetClientSize(req->width, req->height))
             {
                 result = RC_UknownError;
             }

@@ -20,33 +20,46 @@
 
 namespace OIV
 {
-    std::unique_ptr<IPictureRenderer> CommandProcessor::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
-    CommandProcessor::MapCommanderHandler CommandProcessor::sCommandHandlers =
-
+    CommandProcessor::CommandProcessor()
     {
-          std::make_pair(CE_Init,new CommandHandlerInit())
-        , std::make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
-        , std::make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
-        , std::make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
-        , std::make_pair(CE_Zoom,new CommandHandlerZoom())
-        , std::make_pair(CE_Pan,new CommandHandlerPan())
-        , std::make_pair(CE_Refresh,new CommandHandlerRefresh())
-        , std::make_pair(CE_TexelAtMousePos,new CommandHandlerTexelAtMousePos())
-        , std::make_pair(CE_TexelGrid,new CommandHandlerTexelGrid())
-        , std::make_pair(CMD_GetNumTexelsInCanvas,new CommandHandlerNumTexelsInCanvas())
-        , std::make_pair(CMD_SetClientSize,new CommandHandlerSetClientSize())
-        , std::make_pair(OIV_CMD_Destroy,new CommandHandlerDestroy())
-        , std::make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
-        , std::make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
-        , std::make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
-    };
-
-	ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
-    {
-        auto pair = sCommandHandlers.find(command);
-        return pair != sCommandHandlers.end() ? pair->second->Execute(requestData, requestSize, responseData, responseSize) : RC_UnknownCommand;
+        using namespace std;
+        fCommandHandlers =
+        {
+              make_pair(CE_Init,new CommandHandlerInit())
+            , make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
+            , make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
+            , make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
+            , make_pair(CE_Zoom,new CommandHandlerZoom())
+            , make_pair(CE_Pan,new CommandHandlerPan())
+            , make_pair(CE_Refresh,new CommandHandlerRefresh())
+            , make_pair(CE_TexelAtMousePos,new CommandHandlerTexelAtMousePos())
+            , make_pair(CE_TexelGrid,new CommandHandlerTexelGrid())
+            , make_pair(CMD_GetNumTexelsInCanvas,new CommandHandlerNumTexelsInCanvas())
+            , make_pair(CMD_SetClientSize,new CommandHandlerSetClientSize())
+            , make_pair(OIV_CMD_Destroy,new CommandHandlerDestroy())
+            , make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
+            , make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
+            , make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
+        };
     }
 
+    CommandProcessor::~CommandProcessor()
+    {
+        for (auto &pair : fCommandHandlers)
+            delete pair.second;
+    }
+ 
+
+    ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
+    {
+        auto pair = fCommandHandlers.find(command);
+        return pair != fCommandHandlers.end() ? pair->second->Execute(requestData, requestSize, responseData, responseSize) : RC_UnknownCommand;
+    }
+
+   /* bool CommandProcessor::IsInitialized() const
+    {
+        return fPictureRenderer != nullptr;
+    }*/
 
     /*  case CE_GetFileInformation:
 

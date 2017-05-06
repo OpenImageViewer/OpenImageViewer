@@ -2,6 +2,7 @@
 #include "../CommandHandler.h"
 #include <API/defs.h>
 #include "Commands/CommandProcessor.h"
+#include "ApiGlobal.h"
 
 namespace OIV
 {
@@ -21,7 +22,7 @@ namespace OIV
             OIV_CMD_LoadFile_Request* dataLoadFile = const_cast<OIV_CMD_LoadFile_Request*>(reinterpret_cast<const OIV_CMD_LoadFile_Request*>(request));
             
                 result = static_cast<ResultCode>(
-                    CommandProcessor::sPictureRenderer->LoadFile(
+                    ApiGlobal::sPictureRenderer->LoadFile(
                         dataLoadFile->buffer
                         , dataLoadFile->length
                         , dataLoadFile->extension
@@ -33,7 +34,7 @@ namespace OIV
                 if (result == RC_Success &&  responseSize > 1)
                 {
                     OIV_CMD_LoadFile_Response* loadResponse = reinterpret_cast<OIV_CMD_LoadFile_Response*>(response);
-                    IMCodec::Image* image = CommandProcessor::sPictureRenderer->GetImage(handle);
+                    IMCodec::Image* image = ApiGlobal::sPictureRenderer->GetImage(handle);
                     loadResponse->width = static_cast<uint32_t>(image->GetWidth());
                     loadResponse->height = static_cast<uint32_t>(image->GetHeight());
                     loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());

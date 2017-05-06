@@ -11,7 +11,7 @@ namespace OIV
     protected:
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
         {
-            CommandProcessor::sPictureRenderer.reset();
+            ApiGlobal::sPictureRenderer.reset();
             return RC_Success;
         }
     };

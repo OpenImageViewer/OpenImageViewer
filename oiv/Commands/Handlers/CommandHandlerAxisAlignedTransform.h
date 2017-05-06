@@ -21,7 +21,7 @@ namespace OIV
             ResultCode result = RC_UknownError;
 
             const OIV_CMDAxisalignedTransformRequest* req = reinterpret_cast<const OIV_CMDAxisalignedTransformRequest*>(request);
-            result = CommandProcessor::sPictureRenderer->AxisAlignTrasnform(req->transform);
+            result = ApiGlobal::sPictureRenderer->AxisAlignTrasnform(req->transform);
 
           
 

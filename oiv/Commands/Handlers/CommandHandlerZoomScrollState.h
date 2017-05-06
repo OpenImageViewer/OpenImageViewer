@@ -3,7 +3,7 @@
 #pragma once
 #include "../CommandHandler.h"
 #include <API/defs.h>
-#include "Commands/CommandProcessor.h"
+#include "ApiGlobal.h"
 
 namespace OIV
 {
@@ -20,7 +20,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const OIV_CMD_ZoomScrollState_Request* zoomScrollState = reinterpret_cast<const OIV_CMD_ZoomScrollState_Request*>(request);
-            result = CommandProcessor::sPictureRenderer->SetZoomScrollState(zoomScrollState);
+            result = ApiGlobal::sPictureRenderer->SetZoomScrollState(zoomScrollState);
 
             return result;
         }

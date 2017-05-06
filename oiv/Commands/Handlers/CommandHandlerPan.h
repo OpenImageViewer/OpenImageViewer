@@ -19,7 +19,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const CmdDataPan* dataPan = reinterpret_cast<const CmdDataPan*>(request);
-            result = (ResultCode)CommandProcessor::sPictureRenderer->Pan(dataPan->x, dataPan->y);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->Pan(dataPan->x, dataPan->y);
 
             return result;
         }

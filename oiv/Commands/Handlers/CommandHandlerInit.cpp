@@ -1,6 +1,7 @@
 #include "CommandHandlerInit.h"
 #include "Commands/CommandProcessor.h"
 #include "oiv.h"
+#include "ApiGlobal.h"
 
 
 namespace OIV
@@ -9,15 +10,15 @@ namespace OIV
     {
 
         ResultCode result = RC_UknownError;
-        //if (CommandProcessor::sPictureRenderer == nullptr)
+        //if (ApiGlobal::sPictureRenderer == nullptr)
         {
-            //CommandProcessor::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
+            //ApiGlobal::sPictureRenderer = std::unique_ptr<IPictureRenderer>(new OIV());
             // TODO: add width and height.
             //sPictureRenderer->SetParentParamaters()
 
             const CmdDataInit* dataInit = reinterpret_cast<const CmdDataInit*>(request);
-            CommandProcessor::sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
-            CommandProcessor::sPictureRenderer->Init();
+            ApiGlobal::sPictureRenderer->SetParent(static_cast<std::size_t>(dataInit->parentHandle));
+            ApiGlobal::sPictureRenderer->Init();
             result = RC_Success;
 
         }

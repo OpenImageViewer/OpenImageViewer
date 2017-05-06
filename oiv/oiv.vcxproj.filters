@@ -11,6 +11,7 @@
     <ClCompile Include="Commands\CommandProcessor.cpp" />
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
     <ClCompile Include="ImageManager.cpp" />
+    <ClCompile Include="ApiGlobal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -52,6 +53,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
+    <ClInclude Include="ApiGlobal.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

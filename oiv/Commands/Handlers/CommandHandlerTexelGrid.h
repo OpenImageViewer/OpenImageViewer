@@ -20,7 +20,7 @@ namespace OIV
 
             const CmdRequestTexelGrid* req= reinterpret_cast<const CmdRequestTexelGrid*>(request);
 
-            result = (ResultCode)CommandProcessor::sPictureRenderer->SetTexelGrid(req->gridSize);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->SetTexelGrid(req->gridSize);
             
             return result;
         }

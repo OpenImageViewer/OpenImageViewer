@@ -22,7 +22,7 @@ namespace OIV
 
 
             result = static_cast<ResultCode>(
-                CommandProcessor::sPictureRenderer->UnloadFile(
+                ApiGlobal::sPictureRenderer->UnloadFile(
                     req->handle
                 ));
 

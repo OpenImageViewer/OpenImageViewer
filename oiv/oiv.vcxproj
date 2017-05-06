@@ -189,6 +189,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ApiGlobal.cpp" />
     <ClCompile Include="APIImpl.cpp" />
     <ClCompile Include="API\functions.cpp" />
     <ClCompile Include="Commands\CommandProcessor.cpp" />
@@ -199,6 +200,7 @@
     <ClCompile Include="ZoomScrollState.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ApiGlobal.h" />
     <ClInclude Include="APIImpl.h" />
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
