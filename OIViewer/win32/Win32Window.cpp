@@ -241,27 +241,24 @@ namespace OIV
                 break;
             case WM_INPUT:
             {
-                LPBYTE lpb;
                 UINT dwSize;
-                
                 GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
                 
-                lpb = new BYTE[dwSize];
+                std::unique_ptr<BYTE> lpb = std::unique_ptr<BYTE>(new BYTE[dwSize]);
+                
 
                 if (lpb == nullptr)
                     return 0;
 
                 if (GetRawInputData((HRAWINPUT)lParam,
                     RID_INPUT,
-                    lpb,
+                    lpb.get(),
                     &dwSize,
                     sizeof(RAWINPUTHEADER)) != dwSize)
                 {
                     throw std::runtime_error("Unknown error");
                 }
-                window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb));
-                
-             
+                window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.get()));
             }
                 break;
             case WM_SIZE:

@@ -40,11 +40,12 @@ namespace OIV
 
     TestApp::TestApp() 
     {
-        new MonitorInfo();
+        
     }
 
     TestApp::~TestApp()
     {
+        
     }
 
     HWND TestApp::GetWindowHandle() const
