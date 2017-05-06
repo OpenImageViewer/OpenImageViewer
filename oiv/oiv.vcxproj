@@ -66,10 +66,12 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\oiv.props" />
+    <Import Project="..\release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\oiv.props" />
+    <Import Project="..\release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -171,20 +173,14 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;legacy_stdio_definitions.lib;D3D11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
