@@ -71,9 +71,6 @@
     <ClInclude Include="FullScreenState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileLoadEntry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="win32\UserMessages.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -84,6 +81,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Helpers\FileSystemHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageDescriptor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

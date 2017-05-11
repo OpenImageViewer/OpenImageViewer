@@ -66,7 +66,7 @@ namespace OIV
     void TestApp::UpdateTitle()
     {
         std::wstringstream ss;
-        ss << fOpenedFile.fileName << L" - OpenImageViewer";
+        ss << fOpenedImage.GetName() << L" - OpenImageViewer";
         HWND handle = GetWindowHandle();
         SetWindowTextW(handle, ss.str().c_str());   
     }
@@ -74,7 +74,7 @@ namespace OIV
 
     void TestApp::UpdateStatusBar()
     {
-        fWindow.SetStatusBarText(fOpenedFile.GetStringDescriptor(), 0, 0);
+        fWindow.SetStatusBarText(fOpenedImage.GetDescription(), 0, 0);
     }
 
     void TestApp::UpdateZoomScrollState()
@@ -93,8 +93,18 @@ namespace OIV
   
     void TestApp::FinalizeImageLoad()
     {
-        DisplayImage(fOpenedFile.imageHandle);
-        // Enter this function only from themain thread.
+        // Enter this function only from the main thread.
+        assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
+            GetCurrentThreadId() == fMainThreadID);
+        
+        LLUtils::StopWatch stopWatch(true);
+        DisplayImage(fImageBeingOpened.imageHandle);
+        fImageBeingOpened.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+
+        fOpenedImage = fImageBeingOpened;
+        fImageBeingOpened = ImageDescriptor();
+
         UpdateTitle();
         UpdateStatusBar();
         UpdateFileInddex();
@@ -105,7 +115,9 @@ namespace OIV
     void TestApp::NotifyImageLoaded()
     {
         if (GetCurrentThreadId() == fMainThreadID)
+        {
             FinalizeImageLoad();
+        }
         else
         {
             // Wait for the main window to get initialized.
@@ -118,7 +130,9 @@ namespace OIV
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
-        fOpenedFile.fileName = filePath;
+        fImageBeingOpened = ImageDescriptor();
+        fImageBeingOpened.fileName = filePath;
+        fImageBeingOpened.source = ImageSource::IS_File;
         using namespace LLUtils;
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
@@ -130,13 +144,12 @@ namespace OIV
 
     void TestApp::UnloadFile()
     {
-        
         OIV_CMD_UnloadFile_Request unloadRequest = {};
-        if (fOpenedFile.imageHandle != ImageNullHandle)
+        if (fOpenedImage.imageHandle != ImageNullHandle)
         {
-            unloadRequest.handle = fOpenedFile.loadResponse.handle;
+            unloadRequest.handle = fOpenedImage.imageHandle;
             ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &CmdNull());
-            fOpenedFile.imageHandle = ImageNullHandle;
+            fOpenedImage.imageHandle = ImageNullHandle;
         }
     }
 
@@ -155,14 +168,15 @@ namespace OIV
             | OIV_CMD_LoadFile_Flags::Load_Exif_Data);
 
 
-        StopWatch stopWatch(true);
         bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
         if (success)
         {
             UnloadFile();
-            fOpenedFile.totalLoadTime = stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
-            fOpenedFile.loadResponse = loadResponse;
-            fOpenedFile.imageHandle = loadResponse.handle;
+            fImageBeingOpened.width = loadResponse.width;
+            fImageBeingOpened.height = loadResponse.height;
+            fImageBeingOpened.loadTime = loadResponse.loadTime;
+            fImageBeingOpened.imageHandle = loadResponse.handle;
+            fImageBeingOpened.bpp = loadResponse.bpp;
             NotifyImageLoaded();
         }
         return success;
@@ -453,7 +467,7 @@ namespace OIV
         case 'P':
         {
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedFile.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
         }
         break;
 

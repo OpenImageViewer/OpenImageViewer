@@ -6,7 +6,7 @@
 #include "API/defs.h"
 #include <Utility.h>
 #include "AutoScroll.h"
-#include "FileLoadEntry.h"
+#include "ImageDescriptor.h"
 #include "UserSettings.h"
 
 namespace OIV
@@ -74,7 +74,8 @@ namespace OIV
         int fKeyboardPanSpeed = 100;
         double fKeyboardZoomSpeed = 0.1;
         double fIsGridEnabled = false;
-        FileLoadEntry fOpenedFile;
+        ImageDescriptor fImageBeingOpened;
+        ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         

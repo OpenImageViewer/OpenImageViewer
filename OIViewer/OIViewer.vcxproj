@@ -177,7 +177,7 @@
   <ItemGroup>
     <ClInclude Include="AutoScroll.h" />
     <ClInclude Include="BuildConfig.h" />
-    <ClInclude Include="FileLoadEntry.h" />
+    <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="FullScreenState.h" />
     <ClInclude Include="Helpers\FileSystemHelper.h" />
     <ClInclude Include="TestApp.h" />
