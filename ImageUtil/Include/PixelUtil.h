@@ -86,7 +86,7 @@ namespace IMUtil
 
             for (size_t i = start; i < end; i++)
             {
-                dst[i] = 0xFF << 24 | (src[i].Z << 16) | (src[i].Y << 8) | (src[i].X << 0);
+                dst[i] = 0xFF << 24 | (src[i].Z << 0) | (src[i].Y << 8) | (src[i].X << 16);
             }
         }
 
