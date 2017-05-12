@@ -18,7 +18,7 @@ namespace JSON
     };
 }
 
-#define JSON_E()
+#define JSON_E(X,Y)
     
 #endif
 
