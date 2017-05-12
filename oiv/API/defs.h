@@ -3,8 +3,10 @@
 #include <cwchar>
 #include <cstdint>
 
+#ifdef __cplusplus
 extern "C"
 {
+#endif
 
 #ifdef UNICODE
     typedef wchar_t OIVCHAR;
@@ -245,4 +247,7 @@ extern "C"
 
 #pragma pack() 
 
+#ifdef __cplusplus
 }
+#endif
+
