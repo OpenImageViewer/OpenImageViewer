@@ -38,6 +38,8 @@ namespace OIV
         void UpdateWindowSize(const Win32::EventWinMessage* winMessage);
 #pragma region Win32 event handling
         void TransformImage(OIV_AxisAlignedRTransform transform);
+        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
+        void PasteFromClipBoard();
         void handleKeyInput(const Win32::EventWinMessage* evnt);
 
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);

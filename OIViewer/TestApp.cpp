@@ -5,7 +5,6 @@
 #include <future>
 #include <cassert>
 
-
 #include "TestApp.h"
 #include "FileMapping.h"
 #include "StringUtility.h"
@@ -388,7 +387,10 @@ namespace OIV
         switch (evnt->message.wParam)
         {
         case 'V':
-            TransformImage(AAT_FlipVertical);
+            if (IsControl == true)
+                PasteFromClipBoard();
+            else
+                TransformImage(AAT_FlipVertical);
             break;
         case 'H':
             TransformImage(AAT_FlipHorizontal);
@@ -540,6 +542,91 @@ namespace OIV
     {
         ExecuteCommand(OIV_CMD_AxisAlignedTransform,
             &OIV_CMDAxisalignedTransformRequest{ transform }, &CmdNull());
+    }
+
+    void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
+    {
+        using namespace LLUtils;
+        
+        OIV_CMD_LoadRaw_Response loadResponse;
+        OIV_CMD_LoadRaw_Request loadRequest = {};
+        loadRequest.buffer = const_cast<uint8_t*>(buffer);
+        loadRequest.width = width;
+        loadRequest.height = height;
+        loadRequest.texelFormat = texelFormat;
+        loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
+        
+        
+        bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse) == true;
+        if (success)
+        {
+            UnloadFile();
+            fImageBeingOpened = ImageDescriptor();
+            fImageBeingOpened.width = loadRequest.width;
+            fImageBeingOpened.height = loadRequest.height;
+            fImageBeingOpened.loadTime = loadResponse.loadTime;
+            fImageBeingOpened.source = ImageSource::IS_Clipboard;
+            OIV_Util_GetBPPFromTexelFormat(texelFormat, &fImageBeingOpened.bpp);
+            fImageBeingOpened.imageHandle = loadResponse.handle;
+            NotifyImageLoaded();
+        }
+
+        //return success;
+
+    }
+
+    void TestApp::PasteFromClipBoard()
+    {
+#pragma pack(1)
+        typedef struct
+        {
+            std::uint32_t biSize;
+            std::int32_t  biWidth;
+            std::int32_t  biHeight;
+            std::uint16_t  biPlanes;
+            std::uint16_t  biBitCount;
+            std::uint32_t biCompression;
+            std::uint32_t biSizeImage;
+            std::int32_t  biXPelsPerMeter;
+            std::int32_t  biYPelsPerMeter;
+            std::uint32_t biClrUsed;
+            std::uint32_t biClrImportant;
+        } DIB;
+      
+#pragma pack() 
+
+        if (IsClipboardFormatAvailable(CF_BITMAP) || IsClipboardFormatAvailable(CF_DIB) || IsClipboardFormatAvailable(CF_DIBV5))
+        {
+            if (OpenClipboard(NULL))
+            {
+                HANDLE hClipboard = GetClipboardData(CF_DIB);
+
+                if (!hClipboard)
+                {
+                    hClipboard = GetClipboardData(CF_DIBV5);
+                }
+
+                if (hClipboard != NULL && hClipboard != INVALID_HANDLE_VALUE)
+                {
+                    void* dib = GlobalLock(hClipboard);
+
+                    if (dib)
+                    {
+                        DIB *info = reinterpret_cast<DIB*>(dib);
+                        
+                        uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
+                        LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
+                                , info->biWidth
+                                , info->biHeight
+                                , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+
+                        GlobalUnlock(dib);
+                    }
+                }
+
+                CloseClipboard();
+            }
+        }
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
