@@ -164,6 +164,36 @@ namespace OIV
         }
     }
 
+    ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
+    {
+        using namespace IMCodec;
+        
+        ImageData data;
+        data.LoadTime = 0;
+        ImageProperies props;
+        props.Height = loadRawRequest.height;
+        props.Width = loadRawRequest.width;
+        props.NumSubImages = 0;
+        props.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.RowPitchInBytes = loadRawRequest.width * IMCodec::GetTexelFormatSize(props.TexelFormatDecompressed) / 8;
+
+        const std::size_t buferSize = props.RowPitchInBytes * props.Height;
+        props.ImageBuffer = new uint8_t[buferSize];
+
+
+        memcpy(props.ImageBuffer, loadRawRequest.buffer, buferSize);
+
+        ImageSharedPtr image = ImageSharedPtr(new Image(props, data));
+        image = IMUtil::ImageUtil::Transform(
+            static_cast<IMUtil::AxisAlignedRTransform>(loadRawRequest.transformation), image);
+
+        handle = fImageManager.AddImage(image);
+        return RC_Success;
+
+        
+    }
+
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
     {
         return IMUtil::ImageUtil::Transform(

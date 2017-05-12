@@ -26,6 +26,7 @@ namespace OIV
         int Pan(double x, double y) override;
         ResultCode UnloadFile(const ImageHandle handle) override;
         int LoadFile(void* buffer, std::size_t size, char* extension , OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) override;
+        ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) override;
         ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) override;
         int Init() override;
         int SetParent(std::size_t handle) override;

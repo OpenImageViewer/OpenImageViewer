@@ -19,7 +19,7 @@ namespace OIV
         std::wstring fileName;
         uint32_t width = 0;
         uint32_t height = 0;
-        uint32_t bpp = 0;
+        uint8_t bpp = 0;
         double loadTime = 0.0;
         LLUtils::StopWatch::time_type_real displayTime = 0.0;
         

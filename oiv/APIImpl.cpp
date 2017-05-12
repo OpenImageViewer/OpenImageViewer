@@ -9,5 +9,15 @@ namespace OIV
     {
         return ApiGlobal::sCommandProcessor.ProcessCommand(static_cast<CommandExecute>(command), requestSize, requestData, responseSize, responseData);
     }
+
+    namespace Util
+    {
+        
+        ResultCode GetBPPFromTexelFormat_impl(OIV_TexelFormat in_texelFormat, uint8_t* out_bpp)
+        {
+            *out_bpp = IMCodec::GetTexelFormatSize(static_cast<IMCodec::TexelFormat>(in_texelFormat));
+            return RC_Success;
+        }
+    }
 }
 

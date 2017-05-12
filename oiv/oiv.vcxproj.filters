@@ -54,6 +54,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="ApiGlobal.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

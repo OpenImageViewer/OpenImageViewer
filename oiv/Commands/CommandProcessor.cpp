@@ -16,6 +16,7 @@
 #include "Handlers/CommandHandlerUnloadFile.h"
 #include "oiv.h"
 #include "Handlers/CommandHandlerZoomScrollState.h"
+#include "Handlers/CommandHandlerLoadRaw.h"
 
 
 namespace OIV
@@ -27,6 +28,7 @@ namespace OIV
         {
               make_pair(CE_Init,new CommandHandlerInit())
             , make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
+            , make_pair(OIV_CMD_LoadRaw,new CommandHandlerLoadRaw())
             , make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
             , make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
             , make_pair(CE_Zoom,new CommandHandlerZoom())
