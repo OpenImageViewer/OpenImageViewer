@@ -3,9 +3,17 @@
   <ItemGroup>
     <ClInclude Include="D3D11Renderer.h" />
     <ClInclude Include="OIVD3D11RendererFactory.h" />
+    <ClInclude Include="D3D11Shader.h" />
+    <ClInclude Include="D3D11Device.h" />
+    <ClInclude Include="D3D11Common.h" />
+    <ClInclude Include="D3D11FragmentShader.h" />
+    <ClInclude Include="D3D11VertexShader.h" />
+    <ClInclude Include="D3D11Error.h" />
+    <ClInclude Include="D3D11Blob.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="OIVD3D11RendererFactory.cpp" />
     <ClCompile Include="D3D11Renderer.cpp" />
+    <ClCompile Include="D3D11Shader.cpp" />
   </ItemGroup>
 </Project>

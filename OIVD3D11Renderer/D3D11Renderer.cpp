@@ -1,17 +1,19 @@
-#include "D3D11Renderer.h"
+
+#include <filesystem>
 #include <d3dcommon.h>
 #include <d3d11.h>
-#include <d3dcompiler.h>
-#include <filesystem>
-
-#include <Utility.h>
+//#include <Utility.h>
 #include <PlatformUtility.h>
 #include <FileHelper.h>
+#include "D3D11Renderer.h"
+#include "D3D11Common.h"
+#include "D3D11VertexShader.h"
+#include "D3D11FragmentShader.h"
+
 
 namespace OIV
 {
  
-#define SAFE_RELEASE(x) {if (x) {x->Release(); x = nullptr; } }
 
     D3D11Renderer::D3D11Renderer()
     {
@@ -19,29 +21,15 @@ namespace OIV
         fViewport.MaxDepth = 1;
         fShaderParameters.uvScale[0] = 10000;
         fShaderParameters.uvScale[1] = 10000;
-        fShowDeviceErrors = false;
-    }
-
-    void D3D11Renderer::HandleCompileError(ID3DBlob* errors) const
-    {
-        using namespace std;
-        if (errors == nullptr)
-            HandleError("Direct3D11 raised a logic error.\nReason: misuse of error handling - no error");
-
-        std::size_t size = errors->GetBufferSize();
-        unique_ptr<char> errorString = unique_ptr<char>(new char[size]);
-        memcpy(errorString.get(), errors->GetBufferPointer(), size);
-    
-        string errorMessage = string("Direct3D11 Can not compile GPU program.\nreason: ") + errorString.get();
-        
-        HandleError(errorMessage);
     }
 
     void D3D11Renderer::SetDevicestate()
     {
+        ID3D11DeviceContext* d3dContext = fDevice->GetContext();
         //Set GPU programs.
-        d3dContext->VSSetShader(fVertexShader, nullptr, 0);
-        d3dContext->PSSetShader(fFragmentShader, nullptr, 0);
+        fImageVertexShader->Use();
+        fImageFragmentShader->Use();
+      
         d3dContext->IASetInputLayout(fInputLayout);
 
         // Set fragment program constant buffer.
@@ -62,6 +50,12 @@ namespace OIV
 
     void D3D11Renderer::ResizeBackBuffer(int x, int y)
     {
+        IDXGISwapChain* d3dSwapChain = fDevice->GetSwapChain();
+        ID3D11DeviceContext* d3dContext = fDevice->GetContext();
+        ID3D11Device* d3dDevice = fDevice->GetdDevice();
+        
+            
+
         SAFE_RELEASE(fRenderTargetView);
         d3dSwapChain->ResizeBuffers(1, x, y, DXGI_FORMAT_UNKNOWN, static_cast<UINT>(0));
         ID3D11Texture2D* backbuffer = nullptr;
@@ -77,124 +71,17 @@ namespace OIV
     void D3D11Renderer::CompileShaders()
     {
         using namespace std;
-        //Create shader/*
         wstring executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        
-        wstring vertexShaderPath = executableDirPath   + L"/Resources/programs/quad_vp.shader";
+        wstring vertexShaderPath = executableDirPath + L"/Resources/programs/quad_vp.shader";
         wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_fp.shader";
         string vertexSource = LLUtils::File::ReadAllText(vertexShaderPath);
         string fragmentSource = LLUtils::File::ReadAllText(fragmentShaderPath);
 
         if (vertexSource.empty() == true || fragmentSource.empty() == true)
-            HandleError("Direct3D11 could not locate the GPU programs");
+            D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
 
-        D3D_SHADER_MACRO macros[2];
-        macros[0].Definition = "1";
-        macros[0].Name = "HLSL";
-
-        macros[1].Definition = nullptr;
-        macros[1].Name = nullptr;
-
-        ID3DBlob* microCode = nullptr;
-        ID3DBlob* errors = nullptr;
-        HRESULT res;
-
-
-        res =
-            D3DCompile(
-                static_cast<const void*>(vertexSource.c_str())
-                , vertexSource.length()
-                , nullptr /*source name*/
-                , &macros[0]
-                , nullptr
-                , "main"
-                , "vs_4_0"
-                , D3DCOMPILE_OPTIMIZATION_LEVEL3
-                , 0
-                , &microCode
-                , &errors
-            );
-
-        if (SUCCEEDED(res) == false)
-            HandleCompileError(errors);
-
-        fVertexShaderData = Blob(microCode);
-        SAFE_RELEASE(microCode);
-        SAFE_RELEASE(errors);
-            
-      
-
-
-        res =
-            D3DCompile(
-                static_cast<const void*>(fragmentSource.c_str())
-                , fragmentSource.length()
-                , nullptr /*source name*/
-                , &macros[0]
-                , nullptr
-                , "main"
-                , "ps_4_0"
-                , D3DCOMPILE_OPTIMIZATION_LEVEL3
-                , 0
-                , &microCode
-                , &errors
-            );
-
-        if (SUCCEEDED(res) == false)
-            HandleCompileError(errors);
-
-        fFragmentShaderData =  Blob(microCode);
-        SAFE_RELEASE(errors);
-        SAFE_RELEASE(microCode);
-        
-    }
-
-    void D3D11Renderer::CreateDevice(HWND windowHandle)
-    {
-        D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1 };
-        D3D_FEATURE_LEVEL obtainedLevel;
-
-
-        DXGI_SWAP_CHAIN_DESC scd = { 0 };
-
-        scd.BufferCount = 1;
-        scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        scd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-        scd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-        scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-
-        scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-        scd.OutputWindow = windowHandle;
-        scd.SampleDesc.Count = 1;
-        scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        scd.Windowed = true;
-        scd.BufferDesc.Width = 1280;
-        scd.BufferDesc.Height = 800;
-        scd.BufferDesc.RefreshRate.Numerator = 0;
-        scd.BufferDesc.RefreshRate.Denominator = 1;
-
-        UINT createFlags = 0;
-        createFlags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
-
-#ifdef _DEBUG
-        createFlags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-
-        HRESULT res =
-            D3D11CreateDeviceAndSwapChain(
-                nullptr,
-                D3D_DRIVER_TYPE_HARDWARE,
-                nullptr,
-                createFlags,
-                requestedLevels,
-                sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL),
-                D3D11_SDK_VERSION,
-                &scd,
-                &d3dSwapChain,
-                &d3dDevice,
-                &obtainedLevel,
-                &d3dContext);
+        fImageVertexShader->Load(vertexSource);
+        fImageFragmentShader->Load(fragmentSource);
     }
 
     void D3D11Renderer::CreateBuffers()
@@ -226,9 +113,9 @@ namespace OIV
         InitData.SysMemSlicePitch = 0;
 
         // Create the vertex buffer.
-        HRESULT res = d3dDevice->CreateBuffer(&bufferDesc, &InitData, &fVertexBuffer);
+        HRESULT res = fDevice->GetdDevice()->CreateBuffer(&bufferDesc, &InitData, &fVertexBuffer);
 
-        HandleDeviceError(res, "Could not create buffer");
+        D3D11Error::HandleDeviceError(res, "Could not create buffer");
 
         // create buffer input layout
 
@@ -237,7 +124,10 @@ namespace OIV
             { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
 
-    HandleDeviceError(d3dDevice->CreateInputLayout(ied, 1, fVertexShaderData.buffer , fVertexShaderData.size, &fInputLayout)
+    D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateInputLayout(ied
+        , 1
+            , fImageVertexShader->GetShaderData()->buffer
+            , fImageVertexShader->GetShaderData()->size, &fInputLayout)
     , "Could not crate Input layout");
 
         //******** Create constant buffer *********/
@@ -260,10 +150,10 @@ namespace OIV
 
 
             // Create the buffer.
-            res = d3dDevice->CreateBuffer(&cbDesc, &InitData,
+            res = fDevice->GetdDevice()->CreateBuffer(&cbDesc, &InitData,
                 &fConstantBuffer);
 
-            HandleDeviceError(res, "Can not create constant buffer");
+            D3D11Error::HandleDeviceError(res, "Can not create constant buffer");
 
 
         }
@@ -271,7 +161,9 @@ namespace OIV
         D3D11_SAMPLER_DESC sampler;
         CreateDefaultSamplerState(sampler);
         
-        d3dDevice->CreateSamplerState(&sampler, &fSamplerState);
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateSamplerState(&sampler, &fSamplerState),
+            "Could not create sampler state");
+        
         
         
     }
@@ -293,23 +185,21 @@ namespace OIV
 
     void D3D11Renderer::CreateShaders()
     {
+        fImageVertexShader = new D3D11VertexShader(fDevice);
+        fImageFragmentShader = new D3D11FragmentShader(fDevice);
+
         if (LoadShadersFromDisk() == false)
         {
             CompileShaders();
             SaveShadersToDisk();
         }
-
-
-        HandleDeviceError(d3dDevice->CreateVertexShader(fVertexShaderData.buffer, fVertexShaderData.size, nullptr, &fVertexShader)
-            , " could not create vertex shader from microcode");
-
-        HandleDeviceError(d3dDevice->CreatePixelShader(fFragmentShaderData.buffer, fFragmentShaderData.size, nullptr, &fFragmentShader)
-            , " could not create pixel shader from microcode");
     }
 
     int D3D11Renderer::Init(std::size_t container)
     {
-        CreateDevice(reinterpret_cast<HWND>(container));
+        fDevice = D3D11DeviceSharedPtr(new D3D11Device());
+        fDevice->Create(reinterpret_cast<HWND>(container));
+        
         ResizeBackBuffer(1280, 800);
         CreateShaders();
         CreateBuffers();
@@ -324,31 +214,7 @@ namespace OIV
         fIsParamsDirty = true;
 
         ResizeBackBuffer(x, y);
-        d3dContext->RSSetViewports(1, &fViewport);
-    }
-
-    void D3D11Renderer::HandleError(std::string errorMessage) const
-    {
-        if (fShowDeviceErrors)
-            MessageBoxA(static_cast<HWND>(0), errorMessage.c_str(), "Error", MB_OK);
-        else
-            throw std::logic_error(errorMessage);
-    }
-
-    void D3D11Renderer::HandleDeviceError(HRESULT result, std::string&& errorMessage) const
-    {
-        HandleDeviceError(result, errorMessage);
-    }
-
-    void D3D11Renderer::HandleDeviceError(HRESULT result, const std::string& errorMessage ) const
-    {
-        if (SUCCEEDED(result) == false)
-        {
-            std::string message = "Direct3D11 could complete the operation.";
-                if (errorMessage.empty() == false)
-                    message += "\n" + errorMessage;
-            HandleError(message);
-        }
+        fDevice->GetContext()->RSSetViewports(1, &fViewport);
     }
 
     int D3D11Renderer::SetViewParams(const ViewParameters & viewParams)
@@ -370,10 +236,10 @@ namespace OIV
         if (fIsParamsDirty)
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            HRESULT res = d3dContext->Map(fConstantBuffer, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mapped);
-            HandleDeviceError(res, "Can not map constant buffer");
+            HRESULT res = fDevice->GetContext()->Map(fConstantBuffer, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mapped);
+            D3D11Error::HandleDeviceError(res, "Can not map constant buffer");
             memcpy(mapped.pData, &fShaderParameters, sizeof(VS_CONSTANT_BUFFER));
-            d3dContext->Unmap(fConstantBuffer, static_cast<UINT>(0));
+            fDevice->GetContext()->Unmap(fConstantBuffer, static_cast<UINT>(0));
             fIsParamsDirty = false;
         }
     }
@@ -382,8 +248,9 @@ namespace OIV
     int D3D11Renderer::Redraw()
     {
         UpdateGpuParameters();
-        d3dContext->Draw(4, 0);
-        d3dSwapChain->Present(0, 0);
+        
+        fDevice->GetContext()->Draw(4, 0);
+        fDevice->GetSwapChain()->Present(0, 0);
         return 0;
     }
 
@@ -409,8 +276,8 @@ namespace OIV
         }
 
         SAFE_RELEASE(fSamplerState);
-        d3dDevice->CreateSamplerState(&desc, &fSamplerState);
-        d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), &fSamplerState);
+        fDevice->GetdDevice()->CreateSamplerState(&desc, &fSamplerState);
+        fDevice-> GetContext()->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), &fSamplerState);
 
         return 0;
     }
@@ -418,7 +285,7 @@ namespace OIV
     int D3D11Renderer::SetImage(const IMCodec::ImageSharedPtr image)
     {
         if (image->GetImageType() != IMCodec::TF_I_R8_G8_B8_A8)
-            HandleError("Direct3D11 renderer supports only RGBA pixel format");
+            D3D11Error::HandleError("Direct3D11 renderer supports only RGBA pixel format");
 
         DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -446,7 +313,7 @@ namespace OIV
                                                     , static_cast<UINT>(0) };
 
         
-        HandleDeviceError(d3dDevice->CreateTexture2D(&desc, &subResourceData, &fTexture)
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc, &subResourceData, &fTexture)
             , "Can not create texture");
 
         D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
@@ -459,10 +326,10 @@ namespace OIV
 
         
 
-        HandleDeviceError(d3dDevice->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView)
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView)
             , "Can not create 'Shader resource view'");
         
-        d3dContext->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
+        fDevice->GetContext()->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
 
         return 0;
     }
@@ -474,9 +341,13 @@ namespace OIV
         SAFE_RELEASE(fTexture);
         SAFE_RELEASE(fSamplerState);
 
-        // Destory GPU programs.
-        SAFE_RELEASE(fVertexShader);
-        SAFE_RELEASE(fFragmentShader);
+        //Destroy shaders
+
+        if (fImageVertexShader != nullptr)
+            delete fImageVertexShader;
+
+        if (fImageFragmentShader != nullptr)
+            delete fImageFragmentShader;
 
         // Destory buffers
         SAFE_RELEASE(fConstantBuffer);
@@ -485,11 +356,7 @@ namespace OIV
 
         // Destroy swap chain
         SAFE_RELEASE(fRenderTargetView);
-        SAFE_RELEASE(d3dSwapChain);
-
-        //Destroy device
-        SAFE_RELEASE(d3dContext);
-        SAFE_RELEASE(d3dDevice);
+    
     }
 
     D3D11Renderer::~D3D11Renderer()
@@ -506,8 +373,16 @@ namespace OIV
         std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
         try
         {
-            LLUtils::File::ReadAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
-            LLUtils::File::ReadAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+
+            BlobSharedPtr blob = BlobSharedPtr(new Blob());
+            LLUtils::File::ReadAllBytes(vertexShader, blob->size, blob->buffer);
+            fImageVertexShader->Load(blob);
+            BlobSharedPtr blob1 = BlobSharedPtr(new Blob());
+
+            LLUtils::File::ReadAllBytes(fragmentShader, blob1->size, blob1->buffer);
+            fImageFragmentShader->Load(blob1);
+            
+
             return true;
         }
         catch (...)
@@ -523,9 +398,10 @@ namespace OIV
         std::experimental::filesystem::path p = oivAppDataFolder;
         std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
         std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
-
-        LLUtils::File::WriteAllBytes(vertexShader, fVertexShaderData.size, fVertexShaderData.buffer);
-        LLUtils::File::WriteAllBytes(fragmentShader, fFragmentShaderData.size, fFragmentShaderData.buffer);
+        BlobSharedPtr blob = fImageVertexShader->GetShaderData();
+        LLUtils::File::WriteAllBytes(vertexShader, blob->size, blob->buffer);
+        blob = fImageFragmentShader->GetShaderData();
+        LLUtils::File::WriteAllBytes(fragmentShader, blob->size, blob->buffer);
         
     }
 }
