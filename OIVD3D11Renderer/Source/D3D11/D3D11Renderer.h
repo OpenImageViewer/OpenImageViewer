@@ -1,10 +1,10 @@
 #pragma once
-#include "../oiv/interfaces/IRenderer.h"
-#include "../oiv/API/defs.h"
+
 #include <d3d11.h>
 #include <Image.h>
 #include "D3D11Device.h"
 #include "D3D11Shader.h"
+#include "../../../OIVGLRenderer/OIVGLRendererFactory.h"
 
 namespace OIV
 {
@@ -21,39 +21,39 @@ namespace OIV
         int32_t uShowGrid;
     };
 
-    class D3D11Renderer : public IRenderer
+
+
+    class D3D11Renderer 
     {
     
      public:
         D3D11Renderer();
         ~D3D11Renderer();
-        
- #pragma region /****IRenderer Overrides************/
+
     public:
-        bool LoadShadersFromDisk();
-        void SaveShadersToDisk();
-        int Init(std::size_t container) override;
-        int SetViewParams(const ViewParameters& viewParams) override;
+        // TODO: remove IRenderer compliant methods by generalizing D3D11Renderer.
+        int Init(std::size_t container);
+        int SetViewParams(const ViewParameters& viewParams);
         void UpdateGpuParameters();
-        int Redraw() override;
-        int SetFilterLevel(OIV_Filter_type filterType) override;
-        int SetImage(const IMCodec::ImageSharedPtr image) override;
-        
-#pragma endregion
+        int Redraw();
+        int SetFilterLevel(OIV_Filter_type filterType);
+        int SetImage(const IMCodec::ImageSharedPtr image);
+
+  
 
  #pragma region //**** Private methods*****/
     private: 
+        bool LoadShadersFromDisk();
+        void SaveShadersToDisk();
         void ResizeBackBuffer(int x, int y);
         void CompileShaders();
         void CreateDefaultSamplerState(D3D11_SAMPLER_DESC& sampler);
         void CreateShaders();
+
         void CreateBuffers();
-        //void UpdateGpuParams();
         void renderOneFrame();
         void UpdateViewportSize(int x, int y);
-        //void PrepareResources();
         void Destroy();
-      
         void SetDevicestate();
 #pragma endregion
     private:

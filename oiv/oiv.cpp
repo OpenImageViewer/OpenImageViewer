@@ -10,7 +10,7 @@
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
-#include "../OIVD3D11Renderer/OIVD3D11RendererFactory.h"
+#include "../OIVD3D11Renderer/Include/OIVD3D11RendererFactory.h"
 #endif
 
 
