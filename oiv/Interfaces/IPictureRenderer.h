@@ -15,6 +15,8 @@ namespace OIV
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;
         virtual ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) = 0;
 
+        virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
+
         virtual int Init() = 0;
         virtual int SetParent(std::size_t handle) = 0;
         virtual int Refresh() = 0;

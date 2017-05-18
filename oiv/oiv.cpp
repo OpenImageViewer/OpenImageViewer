@@ -240,6 +240,13 @@ namespace OIV
         return result;
     }
 
+    ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)
+    {
+        fRenderer->SetSelectionRect({ { selectionRect.x0 ,selectionRect.y0 },{ selectionRect.x1 ,selectionRect.y1 } });
+        return RC_Success;
+        
+    }
+
     double OIV::Zoom(double percentage, int x, int y)
     {
         fScrollState.Zoom(percentage, x, y);

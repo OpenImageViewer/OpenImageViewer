@@ -28,7 +28,6 @@
     </ClInclude>
     <ClInclude Include="Logger.h" />
     <ClInclude Include="External\easyexif\exif.h" />
-    <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="Interfaces\IRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -55,6 +54,8 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="ApiGlobal.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
+    <ClInclude Include="Interfaces\IRendererDefs.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
@@ -72,6 +73,7 @@
     <None Include="Resources\scripts\quad.material">
       <Filter>Resources</Filter>
     </None>
+    <None Include="Resources\programs\quad_selection_fp.shader" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

@@ -217,6 +217,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
@@ -227,16 +228,17 @@
     <ClInclude Include="External\easyexif\exif.h" />
     <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />
+    <ClInclude Include="Interfaces\IRendererDefs.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Interfaces\IPictureRenderer.h" />
     <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="oiv.h" />
-    <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="ZoomScrollState.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CopyDlls.cmd" />
     <None Include="CopyResources.cmd" />
+    <None Include="Resources\programs\quad_selection_fp.shader" />
     <None Include="Resources\scripts\quad.material">
       <FileType>Document</FileType>
       <DeploymentContent>true</DeploymentContent>

@@ -8,6 +8,10 @@ namespace OIV
         fD3D11Renderer = std::unique_ptr<D3D11Renderer>(new D3D11Renderer());
     }
 
+    int OIVD3D11Renderer::SetSelectionRect(SelectionRect selectionRect)
+    {
+        return fD3D11Renderer->SetselectionRect(selectionRect);
+    }
     int OIVD3D11Renderer::Init(std::size_t container)
     {
         return fD3D11Renderer->Init(container);

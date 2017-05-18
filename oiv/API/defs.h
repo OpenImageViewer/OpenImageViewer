@@ -49,6 +49,7 @@ extern "C"
         , OIV_CMD_Destroy
         , OIV_CMD_AxisAlignedTransform
         , OIV_CMD_ZoomScrollState
+        , OIV_CMD_SetSelectionRect
     };
 
     
@@ -111,6 +112,16 @@ extern "C"
     {
 
     };
+
+    struct OIV_CMD_SetSelectionRect_Request
+    {
+        int32_t x0;
+        int32_t y0;
+        int32_t x1;
+        int32_t y1;
+    };
+
+
 
     struct OIV_CMD_LoadRaw_Request
     {

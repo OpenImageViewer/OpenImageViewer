@@ -10,6 +10,7 @@ namespace OIV
     {
     public:
         OIVD3D11Renderer();
+        
 #pragma region /****IRenderer Overrides************/
     public:
         int Init(std::size_t container) override;
@@ -17,6 +18,7 @@ namespace OIV
         void UpdateGpuParameters();
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filterType) override;
+        int SetSelectionRect(SelectionRect selectionRect) override;
         int SetImage(const IMCodec::ImageSharedPtr image) override;
 
 #pragma endregion

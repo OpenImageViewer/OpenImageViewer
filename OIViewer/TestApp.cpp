@@ -682,11 +682,56 @@ namespace OIV
 
         const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
+        const bool IsLeftCatured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::State::Pressed;
+        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Released;
         const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Pressed;
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed;
         const bool isMouseInsideWindowAndfocus = evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus();
+        
+        static bool isSelecting = false;
+
+        if (IsLeftPressed == true)
+        {
+            if (fDragStart.x == -1)
+            {
+                OIV_CMD_SetSelectionRect_Request selectionRect = { -1,-1,-1,-1};
+                bool success = ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &selectionRect, &CmdNull()) == true;
+                //Disable selection rect
+            }
+            fDragStart = evnt->window->GetMousePosition();
+            
+        }
+
+        else
+            if (IsLeftCatured == true)
+            {
+                LLUtils::PointI32 dragCurent = evnt->window->GetMousePosition();
+                if (isSelecting == true || dragCurent.DistanceSquared(fDragStart) > 225)
+                {
+                    isSelecting = true;
+                    LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
+                    LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
+
+                    OIV_CMD_SetSelectionRect_Request selectionRect = { p0.x,p0.y,p1.x,p1.y };
+
+                    bool success = ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &selectionRect, &CmdNull()) == true;
+                }
+
+
+            }
+
+        if (IsLeftReleased == true)
+        {
+            isSelecting = false;
+            fDragStart.x = -1;
+            fDragStart.y = -1;
+        }
+
+       
+        
+
         if (IsRightCatured == true)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)

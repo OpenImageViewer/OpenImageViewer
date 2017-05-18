@@ -44,4 +44,6 @@ namespace OIV
         IUnknown* fShader;
     };
 
+    typedef std::shared_ptr<D3D11Shader> D3D11ShaderUniquePtr;
+
 }

@@ -17,6 +17,7 @@
 #include "oiv.h"
 #include "Handlers/CommandHandlerZoomScrollState.h"
 #include "Handlers/CommandHandlerLoadRaw.h"
+#include "Handlers/CommandHandlerSetSelectionRect.h"
 
 
 namespace OIV
@@ -42,6 +43,7 @@ namespace OIV
             , make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
             , make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
             , make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
+            , make_pair(OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect())
         };
     }
 

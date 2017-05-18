@@ -87,6 +87,11 @@ int OIV::OIVGLRenderer::SetImage(const IMCodec::ImageSharedPtr image)
     return 0;
 }
 
+int OIV::OIVGLRenderer::SetSelectionRect(SelectionRect selectionRect)
+{
+    return 0;
+}
+
 void OIV::OIVGLRenderer::renderOneFrame()
 {
     UpdateGpuParams();

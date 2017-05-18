@@ -13,14 +13,12 @@
 
 namespace OIV
 {
- 
-
     D3D11Renderer::D3D11Renderer()
     {
         fViewport.MinDepth = 0;
         fViewport.MaxDepth = 1;
-        fShaderParameters.uvScale[0] = 10000;
-        fShaderParameters.uvScale[1] = 10000;
+        /*fShaderParameters.uvScale[0] = 10000;
+        fShaderParameters.uvScale[1] = 10000;*/
     }
 
     void D3D11Renderer::SetDevicestate()
@@ -32,8 +30,7 @@ namespace OIV
       
         d3dContext->IASetInputLayout(fInputLayout);
 
-        // Set fragment program constant buffer.
-        d3dContext->PSSetConstantBuffers(0, 1, &fConstantBuffer);
+        
         
         
         //Set quad vertex buffer
@@ -42,7 +39,9 @@ namespace OIV
         d3dContext->IASetVertexBuffers(0, 1, &fVertexBuffer, &stride, &offset);
         d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-        
+        float white[4] = { 1.0f,1.0f,1.0f,1.0f };
+
+        d3dContext->OMSetBlendState(fBlendState,white, static_cast<UINT>(0xFFFFFFFF));
         d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), &fSamplerState);
         
         d3dContext->RSSetViewports(1, &fViewport);
@@ -132,6 +131,7 @@ namespace OIV
 
         //******** Create constant buffer *********/
 
+    {
         // Fill in a buffer description.
         D3D11_BUFFER_DESC cbDesc;
         cbDesc.ByteWidth = sizeof(VS_CONSTANT_BUFFER) + (sizeof(VS_CONSTANT_BUFFER) % 16 == 0 ? 0 : 16 - sizeof(VS_CONSTANT_BUFFER) % 16);
@@ -141,35 +141,69 @@ namespace OIV
         cbDesc.MiscFlags = 0;
         cbDesc.StructureByteStride = 0;
 
-        {
-            // Fill in the subresource data.
-            D3D11_SUBRESOURCE_DATA InitData;
-            InitData.pSysMem = &fShaderParameters;
-            InitData.SysMemPitch = 0;
-            InitData.SysMemSlicePitch = 0;
+
+        // Fill in the subresource data.
+        /*D3D11_SUBRESOURCE_DATA InitData;
+        InitData.pSysMem = &fShaderParameters;
+        InitData.SysMemPitch = 0;
+        InitData.SysMemSlicePitch = 0;*/
+
+        fConstantBuffer = D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER>(new D3D11BufferBound<VS_CONSTANT_BUFFER>
+            (fDevice, cbDesc, nullptr));
+
+    }
 
 
-            // Create the buffer.
-            res = fDevice->GetdDevice()->CreateBuffer(&cbDesc, &InitData,
-                &fConstantBuffer);
+            //Create constant buffer for selection rect.
+    {
+        // Fill in a buffer description.
+        D3D11_BUFFER_DESC cbDesc;
+        cbDesc.ByteWidth = sizeof(VS_CONSTANT_BUFFER_SELECTIONRECT);
+        cbDesc.Usage = D3D11_USAGE_DYNAMIC;
+        cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbDesc.MiscFlags = 0;
+        cbDesc.StructureByteStride = 0;
 
-            D3D11Error::HandleDeviceError(res, "Can not create constant buffer");
 
+        // Fill in the subresource data.
+      /*  D3D11_SUBRESOURCE_DATA InitData;
+        InitData.pSysMem = &fShaderParametersSelectionRect;
+        InitData.SysMemPitch = 0;
+        InitData.SysMemSlicePitch = 0;*/
 
-        }
+        fBufferSelection = D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER_SELECTIONRECT> (
+            new D3D11BufferBound<VS_CONSTANT_BUFFER_SELECTIONRECT>(fDevice, cbDesc, nullptr));
+
+        // Mark cpu buffer as invalid selection rect.
+        fBufferSelection->GetBuffer().uSelectionRect[0] = -1;
+    }
+        
 
         D3D11_SAMPLER_DESC sampler;
-        CreateDefaultSamplerState(sampler);
-        
+        CreateD3D11DefaultSamplerState(sampler);
+
         D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateSamplerState(&sampler, &fSamplerState),
             "Could not create sampler state");
+
+        D3D11_BLEND_DESC blend;
+        CreateD3D11DefaultBlendState(blend);
+        
+        // modify to alpha blend.
+        blend.RenderTarget[0].BlendEnable = TRUE;
+        blend.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blend.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blend.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBlendState(&blend, &fBlendState),
+            "Could not create blend state");
         
         
         
     }
 
 
-    void D3D11Renderer::CreateDefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
+    void D3D11Renderer::CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
     {
         sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
         sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -185,14 +219,44 @@ namespace OIV
 
     void D3D11Renderer::CreateShaders()
     {
-        fImageVertexShader = new D3D11VertexShader(fDevice);
-        fImageFragmentShader = new D3D11FragmentShader(fDevice);
+        fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
+        fImageFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fSelectionFragmentShaer = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+
+        using namespace std;
+        wstring executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
+        wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_selection_fp.shader";
+        string fragmentSource = LLUtils::File::ReadAllText(fragmentShaderPath);
+
+        fSelectionFragmentShaer->Load(fragmentSource);
+        
+        
 
         if (LoadShadersFromDisk() == false)
         {
             CompileShaders();
             SaveShadersToDisk();
         }
+    }
+
+    void D3D11Renderer::CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend)
+    {
+        memset(&blend, 0, sizeof(blend));
+        D3D11_RENDER_TARGET_BLEND_DESC& rt0 = blend.RenderTarget[0];
+        blend.AlphaToCoverageEnable = FALSE;
+        blend.IndependentBlendEnable = FALSE;
+        rt0.BlendEnable = FALSE;
+        rt0.SrcBlend = D3D11_BLEND_ONE;
+        rt0.DestBlend = D3D11_BLEND_ZERO;
+        rt0.BlendOp	=D3D11_BLEND_OP_ADD;
+        rt0.SrcBlendAlpha=	D3D11_BLEND_ONE;
+        rt0.DestBlendAlpha=	D3D11_BLEND_ZERO;
+        rt0.BlendOpAlpha=	D3D11_BLEND_OP_ADD;
+        rt0.RenderTargetWriteMask=	D3D11_COLOR_WRITE_ENABLE_ALL;
+
+
+
+        
     }
 
     int D3D11Renderer::Init(std::size_t container)
@@ -209,8 +273,9 @@ namespace OIV
 
     void D3D11Renderer::UpdateViewportSize(int x, int y )
     {
-        fShaderParameters.uViewportSize[0] = fViewport.Width = static_cast<FLOAT>(x);
-        fShaderParameters.uViewportSize[1] = fViewport.Height = static_cast<FLOAT>(y);
+        
+        fConstantBuffer->GetBuffer().uViewportSize[0] = fViewport.Width = static_cast<FLOAT>(x);
+        fConstantBuffer->GetBuffer().uViewportSize[1] = fViewport.Height = static_cast<FLOAT>(y);
         fIsParamsDirty = true;
 
         ResizeBackBuffer(x, y);
@@ -220,12 +285,15 @@ namespace OIV
     int D3D11Renderer::SetViewParams(const ViewParameters & viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
-        fShaderParameters.uShowGrid = viewParams.showGrid;
-        fShaderParameters.uvScale[0] =  static_cast<float>(viewParams.uvscale.x);
-        fShaderParameters.uvScale[1] =  static_cast<float>(viewParams.uvscale.y);
-        fShaderParameters.uvOffset[0] = static_cast<float>(viewParams.uvOffset.x);
-        fShaderParameters.uvOffset[1] = static_cast<float>(viewParams.uvOffset.y);
-
+        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        
+        buffer.uShowGrid = viewParams.showGrid;
+        buffer.uvScale[0] =  static_cast<float>(viewParams.uvscale.x);
+        buffer.uvScale[1] =  static_cast<float>(viewParams.uvscale.y);
+        buffer.uvOffset[0] = static_cast<float>(viewParams.uvOffset.x);
+        buffer.uvOffset[1] = static_cast<float>(viewParams.uvOffset.y);
+        
+        //fConstantBuffer->Update();
         fIsParamsDirty = true;
         
         return 0;
@@ -235,11 +303,9 @@ namespace OIV
     {
         if (fIsParamsDirty)
         {
-            D3D11_MAPPED_SUBRESOURCE mapped;
-            HRESULT res = fDevice->GetContext()->Map(fConstantBuffer, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mapped);
-            D3D11Error::HandleDeviceError(res, "Can not map constant buffer");
-            memcpy(mapped.pData, &fShaderParameters, sizeof(VS_CONSTANT_BUFFER));
-            fDevice->GetContext()->Unmap(fConstantBuffer, static_cast<UINT>(0));
+            fConstantBuffer->Update();
+            //fConstantBuffer->Write(sizeof(fShaderParameters), reinterpret_cast<const uint8_t*>(&fShaderParameters)
+            //    , 0);
             fIsParamsDirty = false;
         }
     }
@@ -248,8 +314,23 @@ namespace OIV
     int D3D11Renderer::Redraw()
     {
         UpdateGpuParameters();
+        ID3D11DeviceContext* context = fDevice->GetContext();
+
+        //Draw image.
+        fConstantBuffer->Use(ShaderStage::SS_FragmentShader);
         
-        fDevice->GetContext()->Draw(4, 0);
+        fImageFragmentShader->Use();
+        context->Draw(4, 0);
+
+        //Draw selection rect.
+        if (fBufferSelection->GetBuffer().uSelectionRect[0] != -1)
+        {
+            fBufferSelection->Use(ShaderStage::SS_FragmentShader);
+            fSelectionFragmentShaer->Use();
+            context->Draw(4, 0);
+        }
+
+
         fDevice->GetSwapChain()->Present(0, 0);
         return 0;
     }
@@ -257,7 +338,7 @@ namespace OIV
     int D3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
     {
         D3D11_SAMPLER_DESC desc;
-        CreateDefaultSamplerState(desc);
+        CreateD3D11DefaultSamplerState(desc);
 
         switch (filterType)
         {
@@ -289,8 +370,9 @@ namespace OIV
 
         DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        fShaderParameters.uImageSize[0] = static_cast<float>(image->GetWidth());
-        fShaderParameters.uImageSize[1] = static_cast<float>(image->GetHeight());
+        
+        fConstantBuffer->GetBuffer().uImageSize[0] = static_cast<float>(image->GetWidth());
+        fConstantBuffer->GetBuffer().uImageSize[1] = static_cast<float>(image->GetHeight());
         fIsParamsDirty = true;
         
 
@@ -334,6 +416,24 @@ namespace OIV
         return 0;
     }
 
+    int D3D11Renderer::SetselectionRect(const SelectionRect& selection_rect)
+    {
+        fSelectionRect = selection_rect;
+        VS_CONSTANT_BUFFER_SELECTIONRECT& buffer = fBufferSelection->GetBuffer();
+        
+        buffer.uvViewportSize[0] = fConstantBuffer->GetBuffer().uViewportSize[0];
+        buffer.uvViewportSize[1] = fConstantBuffer->GetBuffer().uViewportSize[1];
+        buffer.uSelectionRect[0] = fSelectionRect.p0.x;
+        buffer.uSelectionRect[1] = fSelectionRect.p0.y;
+        buffer.uSelectionRect[2] = fSelectionRect.p1.x;
+        buffer.uSelectionRect[3] = fSelectionRect.p1.y;
+        fBufferSelection->Update();
+    
+      
+        Redraw();
+        return 0;
+    }
+
     void D3D11Renderer::Destroy()
     {
         // Destory image.
@@ -341,16 +441,8 @@ namespace OIV
         SAFE_RELEASE(fTexture);
         SAFE_RELEASE(fSamplerState);
 
-        //Destroy shaders
-
-        if (fImageVertexShader != nullptr)
-            delete fImageVertexShader;
-
-        if (fImageFragmentShader != nullptr)
-            delete fImageFragmentShader;
-
-        // Destory buffers
-        SAFE_RELEASE(fConstantBuffer);
+        SAFE_RELEASE(fBlendState);
+        
         SAFE_RELEASE(fInputLayout);
         SAFE_RELEASE(fVertexBuffer);
 
