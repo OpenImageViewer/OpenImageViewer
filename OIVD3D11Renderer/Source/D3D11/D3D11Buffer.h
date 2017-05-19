@@ -58,20 +58,10 @@ namespace OIV
         
     private:
 
-        uint32_t Align(uint32_t requestedSize, uint8_t alignment)
-        {
-            const uint32_t sizeModAlign = requestedSize % alignment;
-            return requestedSize + (sizeModAlign == 0 ? 0 : alignment - sizeModAlign);
-        }
-
-        
-
-
         void Create(const D3D11_SUBRESOURCE_DATA* initialData)
         {
-
             if (fBufferDesc.BindFlags == D3D11_BIND_CONSTANT_BUFFER)
-                fBufferDesc.ByteWidth = Align(fBufferDesc.ByteWidth, 16);
+                fBufferDesc.ByteWidth =  LLUtils::Utility::Align(fBufferDesc.ByteWidth,static_cast<UINT>(16));
 
 
                 D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBuffer(&fBufferDesc, initialData,
