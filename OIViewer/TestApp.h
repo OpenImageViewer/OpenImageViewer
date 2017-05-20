@@ -8,6 +8,7 @@
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
 #include "UserSettings.h"
+#include <Rect.h>
 
 namespace OIV
 {
@@ -17,7 +18,6 @@ namespace OIV
         TestApp();
         ~TestApp();
         HWND GetWindowHandle() const;
-        void DisplayImage(ImageHandle image_handle);
         void UpdateTitle();
         void UpdateStatusBar();
         void UpdateZoomScrollState();
@@ -49,16 +49,8 @@ namespace OIV
 
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
-        
-        void OnFileLoaded(std::wstring filePath);
-        
-        //void LoadFileAsync(std::wstring filePath, bool onlyRegisteredExtension);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
-        void UnloadFile();
-        bool FileLoaded(std::wstring filePath);
-        void UpdateFileInfo(const OIV_CMD_LoadFile_Response& load_response, const long double& totalLoadTime);
         void FinalizeImageLoad();
-        std::wstring BuildImageStringDesctriptor(const OIV_CMD_LoadFile_Response& loadresponse);
         void NotifyImageLoaded();
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
@@ -66,6 +58,7 @@ namespace OIV
         void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
+        void CropVisibleImage();
         
 
     private:
@@ -81,8 +74,7 @@ namespace OIV
         ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
-        
-        OIV_RECT_I fSelectionRect = { -1,-1,-1,-1 };
+        LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;

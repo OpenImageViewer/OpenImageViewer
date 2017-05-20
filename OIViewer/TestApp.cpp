@@ -22,6 +22,7 @@
 #include "UserSettings.h"
 #include "Helpers/FileSystemHelper.h"
 #include "OIVCommands.h"
+#include <Rect.h>
 
 namespace OIV
 {
@@ -44,16 +45,6 @@ namespace OIV
     HWND TestApp::GetWindowHandle() const
     {
         return fWindow.GetHandle();
-    }
-
-    void TestApp::DisplayImage(ImageHandle image_handle)
-    {
-        OIV_CMD_DisplayImage_Request displayRequest = {};
-
-        displayRequest.handle = image_handle;
-        displayRequest.displayFlags = static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ResetScrollState | OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation);
-        
-        ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
     }
 
     void TestApp::UpdateTitle()
@@ -90,17 +81,27 @@ namespace OIV
         assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
             GetCurrentThreadId() == fMainThreadID);
         
-        LLUtils::StopWatch stopWatch(true);
-        DisplayImage(fImageBeingOpened.imageHandle);
-        fImageBeingOpened.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-
+        ImageHandle oldImage = fOpenedImage.imageHandle;
 
         fOpenedImage = fImageBeingOpened;
         fImageBeingOpened = ImageDescriptor();
 
+
+        LLUtils::StopWatch stopWatch(true);
+
+         OIVCommands::DisplayImage(fOpenedImage.imageHandle
+             ,static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ResetScrollState | OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation));
+        
+         fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+        
+      
         UpdateTitle();
         UpdateStatusBar();
         UpdateFileInddex();
+
+        //Unload old image
+        OIVCommands::UnloadImage(oldImage);
     }
 
     void TestApp::NotifyImageLoaded()
@@ -132,17 +133,6 @@ namespace OIV
         return LoadFileFromBuffer((uint8_t*)buffer, size, extension, onlyRegisteredExtension);
     }
 
-    void TestApp::UnloadFile()
-    {
-        OIV_CMD_UnloadFile_Request unloadRequest = {};
-        if (fOpenedImage.imageHandle != ImageNullHandle)
-        {
-            unloadRequest.handle = fOpenedImage.imageHandle;
-            ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &CmdNull());
-            fOpenedImage.imageHandle = ImageNullHandle;
-        }
-    }
-
     bool TestApp::LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension)
     {
         using namespace LLUtils;
@@ -160,7 +150,6 @@ namespace OIV
         ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse);
         if (result == RC_Success)
         {
-            UnloadFile();
             fImageBeingOpened.width = loadResponse.width;
             fImageBeingOpened.height = loadResponse.height;
             fImageBeingOpened.loadTime = loadResponse.loadTime;
@@ -378,8 +367,10 @@ namespace OIV
         switch (evnt->message.wParam)
         {
         case 'C':
-            if (IsControl)
+            if (IsControl == true)
                 CopyVisibleToClipBoard();
+            else
+                CropVisibleImage();
             break;
         case 'V':
             if (IsControl == true)
@@ -554,7 +545,6 @@ namespace OIV
         ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);
         if (result == RC_Success)
         {
-            UnloadFile();
             fImageBeingOpened = ImageDescriptor();
             fImageBeingOpened.width = loadRequest.width;
             fImageBeingOpened.height = loadRequest.height;
@@ -608,23 +598,16 @@ namespace OIV
 
     void TestApp::CopyVisibleToClipBoard()
     {
-        OIV_CMD_WindowToImage_Request request;
-        OIV_CMD_WindowToImage_Response response;
-
-        request.rect = fSelectionRect;
-        ResultCode result = ExecuteCommand(OIV_CMD_WindowToimage, &request, &response);
+        LLUtils::RectF64 imageRect;
+        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
 
         if (result == RC_Success)
         {
-            OIV_CMD_CropImage_Request requestCropImage;
-            OIV_CMD_CropImage_Response responseCropImage;
-
-            requestCropImage.rect = { (int)response.rect.x0 ,(int)response.rect.y0, (int)response.rect.x1, (int)response.rect.y1 };
-            requestCropImage.imageHandle = ImageHandleDisplayed;
-
-            // 1. create a new cropped image 
-            ResultCode imageCreated = ExecuteCommand(OIV_CMD_CropImage, &requestCropImage, &responseCropImage);
-
+            LLUtils::RectI32 imageRectInt = {{ (int)imageRect.p0.x,(int)imageRect.p0.y}
+                ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+            
+            ImageHandle croppedHandle;
+            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
             if (result == RC_Success)
             {
 
@@ -634,22 +617,22 @@ namespace OIV
                     ~unloadImage()
                     {
                         if (handle != ImageNullHandle)
-                            OIVCommands::UnloadImage(handle) != RC_Success;
+                            OIVCommands::UnloadImage(handle);
                                 
                     }
-                } handle{ responseCropImage.imageHandle };
+                } handle{ croppedHandle};
 
 
                 //2. Flip the image vertically and convert it to BGRA for the clipboard.
-                result = OIVCommands::TransformImage(responseCropImage.imageHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
-                result = OIVCommands::ConvertImage(responseCropImage.imageHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+                result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
+                result = OIVCommands::ConvertImage(croppedHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
 
-                //3
+                //3. Get image pixel buffer and Copy to clipboard.
 
                 OIV_CMD_GetPixels_Request requestGetPixels;
                 OIV_CMD_GetPixels_Response responseGetPixels;
 
-                requestGetPixels.handle = responseCropImage.imageHandle;
+                requestGetPixels.handle = croppedHandle;
 
                 if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
                 {
@@ -665,11 +648,9 @@ namespace OIV
                             }
                         }
                     };
-
-                    
                    
 
-                    uint32_t width = responseGetPixels.width;// responseCropImage.width;
+                    uint32_t width = responseGetPixels.width;
                     uint32_t height = responseGetPixels.height;
                     uint8_t bpp;
                     OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
@@ -703,6 +684,30 @@ namespace OIV
 
             }
         }
+    }
+
+    void TestApp::CropVisibleImage()
+    {
+        LLUtils::RectF64 imageRect;
+        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
+
+        if (result == RC_Success)
+        {
+            LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y }
+            ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+
+            ImageHandle croppedHandle;
+            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
+            if (result == RC_Success)
+            {
+                fImageBeingOpened = fOpenedImage;
+                fImageBeingOpened.imageHandle = croppedHandle;
+                fImageBeingOpened.width = 7;
+                fImageBeingOpened.height= 7;
+                NotifyImageLoaded();
+            }
+        }
+
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
@@ -772,9 +777,9 @@ namespace OIV
         {
             if (fDragStart.x == -1)
             {
-                fSelectionRect = { -1,-1,-1,-1};
+                fSelectionRect = { {-1,-1},{-1,-1} };
 
-                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull()) == true;
+                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
                 //Disable selection rect
             }
             fDragStart = evnt->window->GetMousePosition();
@@ -791,9 +796,9 @@ namespace OIV
                     LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
                     LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
 
-                    fSelectionRect = { p0.x,p0.y,p1.x,p1.y };
+                    fSelectionRect = { p0,p1};
 
-                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull()) == true;
+                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
                 
                 }
 
