@@ -51,10 +51,7 @@ namespace OIV
 
 #pragma region //**** Private methods*****/
     private: 
-        bool LoadShadersFromDisk();
-        void SaveShadersToDisk();
         void ResizeBackBuffer(int x, int y);
-        void CompileShaders();
         void CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC& sampler);
         void CreateShaders();
 

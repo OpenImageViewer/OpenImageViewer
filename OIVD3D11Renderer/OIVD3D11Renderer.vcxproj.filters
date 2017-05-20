@@ -12,6 +12,7 @@
     <ClInclude Include="Include\OIVD3D11RendererFactory.h" />
     <ClInclude Include="Source\OIVD3D11Renderer.h" />
     <ClInclude Include="Source\D3D11\D3D11Buffer.h" />
+    <ClInclude Include="Source\D3D11\D3D11Utility.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\D3D11\D3D11Renderer.cpp" />

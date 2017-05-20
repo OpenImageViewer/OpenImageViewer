@@ -1,15 +1,13 @@
-
 #include <filesystem>
 #include <d3dcommon.h>
 #include <d3d11.h>
-//#include <Utility.h>
 #include <PlatformUtility.h>
 #include <FileHelper.h>
 #include "D3D11Renderer.h"
 #include "D3D11Common.h"
 #include "D3D11VertexShader.h"
 #include "D3D11FragmentShader.h"
-
+#include "D3D11Utility.h"
 
 namespace OIV
 {
@@ -30,9 +28,6 @@ namespace OIV
       
         d3dContext->IASetInputLayout(fInputLayout);
 
-        
-        
-        
         //Set quad vertex buffer
         UINT stride = 8;
         UINT offset = 0;
@@ -52,8 +47,7 @@ namespace OIV
         IDXGISwapChain* d3dSwapChain = fDevice->GetSwapChain();
         ID3D11DeviceContext* d3dContext = fDevice->GetContext();
         ID3D11Device* d3dDevice = fDevice->GetdDevice();
-        
-            
+      
 
         SAFE_RELEASE(fRenderTargetView);
         d3dSwapChain->ResizeBuffers(1, x, y, DXGI_FORMAT_UNKNOWN, static_cast<UINT>(0));
@@ -65,22 +59,6 @@ namespace OIV
         FLOAT white[4] = { 1,1,1,1 };
         d3dContext->OMSetRenderTargets(1, &fRenderTargetView, nullptr);
         d3dContext->ClearRenderTargetView(fRenderTargetView, white);
-    }
-
-    void D3D11Renderer::CompileShaders()
-    {
-        using namespace std;
-        wstring executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        wstring vertexShaderPath = executableDirPath + L"/Resources/programs/quad_vp.shader";
-        wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_fp.shader";
-        string vertexSource = LLUtils::File::ReadAllText(vertexShaderPath);
-        string fragmentSource = LLUtils::File::ReadAllText(fragmentShaderPath);
-
-        if (vertexSource.empty() == true || fragmentSource.empty() == true)
-            D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
-
-        fImageVertexShader->Load(vertexSource);
-        fImageFragmentShader->Load(fragmentSource);
     }
 
     void D3D11Renderer::CreateBuffers()
@@ -181,13 +159,13 @@ namespace OIV
         
 
         D3D11_SAMPLER_DESC sampler;
-        CreateD3D11DefaultSamplerState(sampler);
+        D3D11Utility::CreateD3D11DefaultSamplerState(sampler);
 
         D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateSamplerState(&sampler, &fSamplerState),
             "Could not create sampler state");
 
         D3D11_BLEND_DESC blend;
-        CreateD3D11DefaultBlendState(blend);
+        D3D11Utility::CreateD3D11DefaultBlendState(blend);
         
         // modify to alpha blend.
         blend.RenderTarget[0].BlendEnable = TRUE;
@@ -197,24 +175,6 @@ namespace OIV
 
         D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBlendState(&blend, &fBlendState),
             "Could not create blend state");
-        
-        
-        
-    }
-
-
-    void D3D11Renderer::CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
-    {
-        sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-        sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        sampler.MinLOD = -FLT_MAX;
-        sampler.MaxLOD = FLT_MAX;
-        sampler.MipLODBias = 0.0f;
-        sampler.MaxAnisotropy = 1;
-        sampler.ComparisonFunc = D3D11_COMPARISON_NEVER;
-        sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
     }
 
     void D3D11Renderer::CreateShaders()
@@ -224,39 +184,13 @@ namespace OIV
         fSelectionFragmentShaer = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
 
         using namespace std;
-        wstring executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        wstring fragmentShaderPath = executableDirPath + L"/Resources/programs/quad_selection_fp.shader";
-        string fragmentSource = LLUtils::File::ReadAllText(fragmentShaderPath);
-
-        fSelectionFragmentShaer->Load(fragmentSource);
+        using path = std::experimental::filesystem::path;
         
-        
-
-        if (LoadShadersFromDisk() == false)
-        {
-            CompileShaders();
-            SaveShadersToDisk();
-        }
-    }
-
-    void D3D11Renderer::CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend)
-    {
-        memset(&blend, 0, sizeof(blend));
-        D3D11_RENDER_TARGET_BLEND_DESC& rt0 = blend.RenderTarget[0];
-        blend.AlphaToCoverageEnable = FALSE;
-        blend.IndependentBlendEnable = FALSE;
-        rt0.BlendEnable = FALSE;
-        rt0.SrcBlend = D3D11_BLEND_ONE;
-        rt0.DestBlend = D3D11_BLEND_ZERO;
-        rt0.BlendOp	=D3D11_BLEND_OP_ADD;
-        rt0.SrcBlendAlpha=	D3D11_BLEND_ONE;
-        rt0.DestBlendAlpha=	D3D11_BLEND_ZERO;
-        rt0.BlendOpAlpha=	D3D11_BLEND_OP_ADD;
-        rt0.RenderTargetWriteMask=	D3D11_COLOR_WRITE_ENABLE_ALL;
-
-
-
-        
+        path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
+        path programsPath = executableDirPath / L"/Resources/programs";
+        D3D11Utility::LoadShader(fImageVertexShader, programsPath / L"quad_vp.shader");
+        D3D11Utility::LoadShader(fImageFragmentShader, programsPath / L"quad_fp.shader");
+        D3D11Utility::LoadShader(fSelectionFragmentShaer, programsPath / L"quad_selection_fp.shader");
     }
 
     int D3D11Renderer::Init(std::size_t container)
@@ -338,7 +272,7 @@ namespace OIV
     int D3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
     {
         D3D11_SAMPLER_DESC desc;
-        CreateD3D11DefaultSamplerState(desc);
+        D3D11Utility::CreateD3D11DefaultSamplerState(desc);
 
         switch (filterType)
         {
@@ -454,46 +388,5 @@ namespace OIV
     D3D11Renderer::~D3D11Renderer()
     {
         Destroy();
-    }
-
-    bool D3D11Renderer::LoadShadersFromDisk()
-    {
-        std::wstring oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
-
-        std::experimental::filesystem::path p = oivAppDataFolder;
-        std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
-        std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
-        try
-        {
-
-            BlobSharedPtr blob = BlobSharedPtr(new Blob());
-            LLUtils::File::ReadAllBytes(vertexShader, blob->size, blob->buffer);
-            fImageVertexShader->Load(blob);
-            BlobSharedPtr blob1 = BlobSharedPtr(new Blob());
-
-            LLUtils::File::ReadAllBytes(fragmentShader, blob1->size, blob1->buffer);
-            fImageFragmentShader->Load(blob1);
-            
-
-            return true;
-        }
-        catch (...)
-        { }
-
-        return false;
-    }
-
-    void D3D11Renderer::SaveShadersToDisk()
-    {
-        std::wstring oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
-        
-        std::experimental::filesystem::path p = oivAppDataFolder;
-        std::experimental::filesystem::path vertexShader = p / L"vertexShader.bin";
-        std::experimental::filesystem::path fragmentShader = p / L"fragmentShader.bin";
-        BlobSharedPtr blob = fImageVertexShader->GetShaderData();
-        LLUtils::File::WriteAllBytes(vertexShader, blob->size, blob->buffer);
-        blob = fImageFragmentShader->GetShaderData();
-        LLUtils::File::WriteAllBytes(fragmentShader, blob->size, blob->buffer);
-        
     }
 }
