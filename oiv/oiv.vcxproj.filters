@@ -56,6 +56,10 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
     <ClInclude Include="Interfaces\IRendererDefs.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerWindowToimage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

@@ -28,6 +28,10 @@ namespace OIV
         ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) override;
         ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) override;
         ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) override;
+        ResultCode WindowToImage(const OIV_CMD_WindowToImage_Request& request, OIV_CMD_WindowToImage_Response& response) override;
+        ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req) override;
+        ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) override;
+        ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) override;
         int Init() override;
         int SetParent(std::size_t handle) override;
         int Refresh() override;
@@ -39,7 +43,7 @@ namespace OIV
         int SetTexelGrid(double gridSize) override;
         int GetNumTexelsInCanvas(double &x, double &y) override;
         int SetClientSize(uint16_t width, uint16_t height) override;
-        ResultCode AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform) override;
+        ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request) override;
         ResultCode SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request* zoom_scroll_state) override;
 #pragma endregion
 

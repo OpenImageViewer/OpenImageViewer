@@ -12,7 +12,7 @@ namespace OIV
     protected:
         ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override
         {
-            return VERIFY_OPTIONAL_RESPONSE(OIV_CMD_LoadFile_Request, requestSize, OIV_CMD_LoadFile_Response, responseSize);
+            return VERIFY(OIV_CMD_LoadFile_Request, requestSize, OIV_CMD_LoadFile_Response, responseSize);
         }
 
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override

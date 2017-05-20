@@ -14,10 +14,13 @@
 #include "Handlers/CommandHandlerDestroy.h"
 #include "Handlers/CommandHandlerAxisAlignedTransform.h"
 #include "Handlers/CommandHandlerUnloadFile.h"
-#include "oiv.h"
 #include "Handlers/CommandHandlerZoomScrollState.h"
 #include "Handlers/CommandHandlerLoadRaw.h"
 #include "Handlers/CommandHandlerSetSelectionRect.h"
+#include "Handlers/CommandHandlerCropImage.h"
+#include "Handlers/CommandHandlerWindowToimage.h"
+#include "Handlers/CommandHandlerGetPixels.h"
+#include "Handlers/CommandHandlerConvertFormat.h"
 
 
 namespace OIV
@@ -44,6 +47,10 @@ namespace OIV
             , make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
             , make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
             , make_pair(OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect())
+            , make_pair(OIV_CMD_CropImage,new CommandHandlerCropImage())
+            , make_pair(OIV_CMD_WindowToimage,new CommandHandlerWindowToImage())
+            , make_pair(OIV_CMD_GetPixels,new CommandHandlerGetPixels())
+            , make_pair(OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat())
         };
     }
 

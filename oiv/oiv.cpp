@@ -242,9 +242,108 @@ namespace OIV
 
     ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)
     {
-        fRenderer->SetSelectionRect({ { selectionRect.x0 ,selectionRect.y0 },{ selectionRect.x1 ,selectionRect.y1 } });
+        fRenderer->SetSelectionRect({ { selectionRect.rect.x0 ,selectionRect.rect.y0 },{ selectionRect.rect.x1 ,selectionRect.rect.y1 } });
         return RC_Success;
+    }
+
+    ResultCode OIV::WindowToImage(const OIV_CMD_WindowToImage_Request& request, OIV_CMD_WindowToImage_Response& response)
+    {
+        if (fDisplayedImage != nullptr)
+        {
+            LLUtils::PointF64 p0 = fScrollState.ClientPosToTexel({ request.rect.x0, request.rect.y0 });
+            LLUtils::PointF64 p1 = fScrollState.ClientPosToTexel({ request.rect.x1, request.rect.y1 });
+
+            response.rect.x0 = p0.x;
+            response.rect.y0 = p0.y;
+            response.rect.x1 = p1.x;
+            response.rect.y1 = p1.y;
+            return RC_Success;
+        }
+
+        return RC_InvalidParameters;
         
+    }
+
+    ResultCode OIV::ConverFormat(const OIV_CMD_ConvertFormat_Request& req)
+    {
+        using namespace IMCodec;
+        ResultCode result = RC_Success;
+        if (req.handle > 0 )
+        {
+            ImageSharedPtr original = fImageManager.GetImage(req.handle);
+            if (original != nullptr)
+            {
+                ImageSharedPtr converted = IMUtil::ImageUtil::Convert(original, static_cast<TexelFormat>(req.format));
+                if (converted != nullptr)
+                    fImageManager.ReplaceImage(req.handle, converted);
+                else
+                    result = ResultCode::RC_BadConversion;
+            }
+            else
+                result = ResultCode::RC_ImageNotFound;
+            
+        }
+        return result;
+    }
+
+    ResultCode OIV::GetPixels(const OIV_CMD_GetPixels_Request & req,  OIV_CMD_GetPixels_Response & res)
+    {
+        IMCodec::ImageSharedPtr image = fImageManager.GetImage(req.handle);
+
+        if (image != nullptr)
+        {
+            res.width = image->GetWidth();
+            res.height = image->GetHeight();
+            res.rowPitch = image->GetRowPitchInBytes();
+            res.texelFormat = static_cast<OIV_TexelFormat>( image->GetImageType());
+            res.pixelBuffer = image->GetConstBuffer();
+            return RC_Success;
+        }
+
+        return RC_InvalidHandle;
+        
+    }
+
+    ResultCode OIV::CropImage(const OIV_CMD_CropImage_Request& request, OIV_CMD_CropImage_Response& response)
+    {
+        ResultCode result = RC_Success;
+        IMCodec::ImageSharedPtr imageToCrop;
+        if (request.imageHandle == ImageHandleDisplayed)
+        {
+            if (fDisplayedImage != nullptr)
+                imageToCrop = fDisplayedImage;
+        }
+        else
+        {
+            imageToCrop = fImageManager.GetImage(request.imageHandle);
+        }
+
+        if (imageToCrop == nullptr)
+        {
+            result = RC_ImageNotFound;
+        }
+        else
+        {
+            LLUtils::RectI32 imageRect = { { 0,0 } ,{ static_cast<int32_t> (imageToCrop->GetWidth())
+                , static_cast<int32_t> (imageToCrop->GetHeight()) } };
+
+            LLUtils::RectI32 subImageRect = { { request.rect.x0,request.rect.y0 },{ request.rect.x1,request.rect.y1 } };
+            LLUtils::RectI32 cuttedRect = subImageRect.Intersection(imageRect);
+            IMCodec::ImageSharedPtr subImage =
+                IMUtil::ImageUtil::GetSubImage(fDisplayedImage, cuttedRect);
+
+            if (subImage != nullptr)
+            {
+                ImageHandle handle = fImageManager.AddImage(subImage);
+                response.imageHandle = handle;
+                result = RC_Success;
+            }
+            else
+            {
+                result = RC_UknownError;
+            }
+        }
+        return result;
     }
 
     double OIV::Zoom(double percentage, int x, int y)
@@ -367,17 +466,27 @@ namespace OIV
         return 0;
     }
 
-    ResultCode OIV::AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform)
+    ResultCode OIV::AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request)
     {
-        if (GetDisplayImage() != nullptr)
+        
+        if (request.handle == ImageHandleDisplayed && GetDisplayImage() != nullptr)
         {
             IMCodec::ImageSharedPtr& image = fDisplayedImage;
             
-            image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(transform), image);
+            image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
             if (image != nullptr && fRenderer->SetImage(image) == RC_Success)
             {
                 fScrollState.Reset(true);
                 return RC_Success;
+            }
+        }
+        else
+        {
+            IMCodec::ImageSharedPtr image = fImageManager.GetImage(request.handle);
+            if (image != nullptr)
+            {
+                image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
+                fImageManager.ReplaceImage(request.handle, image);
             }
         }
         return RC_UknownError;

@@ -26,6 +26,8 @@ extern "C"
 
     typedef int16_t ImageHandle;
     const ImageHandle ImageNullHandle = -1;
+    const ImageHandle ImageHandleDisplayed = -2;
+
 
 
     enum CommandExecute
@@ -50,6 +52,11 @@ extern "C"
         , OIV_CMD_AxisAlignedTransform
         , OIV_CMD_ZoomScrollState
         , OIV_CMD_SetSelectionRect
+        , OIV_CMD_GetPixelBuffer
+        , OIV_CMD_WindowToimage
+        , OIV_CMD_CropImage
+        , OIV_CMD_GetPixels
+        , OIV_CMD_ConvertFormat
     };
 
     
@@ -70,9 +77,11 @@ extern "C"
         , RC_BadResponseSize
         , RC_RenderError
         , RC_InvalidImageHandle
+        , RC_InvalidHandle
+        , RC_BadConversion
+        , RC_ImageNotFound
         , RC_UknownError = 0xFF
         , RC_InternalError = 0xFF + 1,
-        
     };
 
     //-------Command Structs-------------------------
@@ -113,7 +122,7 @@ extern "C"
 
     };
 
-    struct OIV_CMD_SetSelectionRect_Request
+    struct OIV_RECT_I
     {
         int32_t x0;
         int32_t y0;
@@ -121,6 +130,61 @@ extern "C"
         int32_t y1;
     };
 
+    struct OIV_RECT_F
+    {
+        double x0;
+        double y0;
+        double x1;
+        double y1;
+    };
+
+    struct OIV_CMD_ConvertFormat_Request
+    {
+        ImageHandle handle;
+        OIV_TexelFormat format;
+    };
+
+    struct OIV_CMD_GetPixels_Request
+    {
+        ImageHandle handle;
+    };
+
+    struct OIV_CMD_GetPixels_Response
+    {
+        const uint8_t* pixelBuffer;
+        uint32_t width;
+        uint32_t height;
+        uint32_t rowPitch;
+        OIV_TexelFormat texelFormat;
+    };
+    
+
+    struct OIV_CMD_WindowToImage_Request
+    {
+        OIV_RECT_I rect;
+    };
+
+    struct OIV_CMD_WindowToImage_Response
+    {
+        OIV_RECT_F rect;
+    };
+
+
+    struct OIV_CMD_CropImage_Request
+    {
+        OIV_RECT_I rect;
+        ImageHandle imageHandle;
+    };
+
+    struct OIV_CMD_CropImage_Response
+    {
+        ImageHandle imageHandle;
+    };
+
+    struct OIV_CMD_SetSelectionRect_Request
+    {
+        OIV_RECT_I rect;
+    };
 
 
     struct OIV_CMD_LoadRaw_Request
@@ -151,9 +215,10 @@ extern "C"
     };
 
 
-    struct OIV_CMDAxisalignedTransformRequest
+    struct OIV_CMD_AxisAlignedTransform_Request
     {
         OIV_AxisAlignedRTransform transform;
+        ImageHandle handle;
     };
 
     struct CmdSetClientSizeRequest

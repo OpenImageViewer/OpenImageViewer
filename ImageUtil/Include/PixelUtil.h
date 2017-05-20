@@ -102,6 +102,21 @@ namespace IMUtil
             }
         }
 
+        static void RGBA32ToBGRA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            BitTexel32 * src = (BitTexel32*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = src[i].Z;
+                dst[i].Y = src[i].Y;
+                dst[i].Z = src[i].X;
+                dst[i].W = src[i].W;
+            }
+        }
+        
+
         static void BGRA32ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;

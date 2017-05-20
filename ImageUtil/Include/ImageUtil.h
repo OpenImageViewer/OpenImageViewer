@@ -1,7 +1,10 @@
 #pragma once
+
 #include <unordered_map>
 #include <Image.h>
 #include "PixelUtil.h"
+#include "../../LLUtils/Include/Rect.h"
+
 
 namespace IMUtil
 {
@@ -135,7 +138,7 @@ namespace IMUtil
 
             const uint8_t* oldBuffer = image->GetBuffer();
             normalizedImageProperties = image->GetProperties();
-            std::size_t targetRowPitch = image->GetBytesPerRowOfPixels();
+            uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
             uint8_t* newBuffer = new uint8_t[image->GetTotalSizeOfImageTexels()];
             normalizedImageProperties.ImageBuffer = newBuffer;
             for (std::size_t y = 0; y < image->GetHeight(); y++)
@@ -191,6 +194,42 @@ namespace IMUtil
 
             }
             return convertedImage;
+        }
+
+        static IMCodec::ImageSharedPtr GetSubImage(IMCodec::ImageSharedPtr sourceImage, LLUtils::RectI32 subimage)
+        {
+            LLUtils::RectI32 image = { { 0,0 } ,{ static_cast<int32_t> (sourceImage->GetWidth())
+                , static_cast<int32_t> (sourceImage->GetHeight()) } };
+            if (subimage.IsValid() && subimage.IsNonNegative() && subimage.IsInside(image))
+            {
+                const uint8_t* sourceBuffer = sourceImage->GetBuffer();
+
+                const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
+                uint8_t* destBuffer = new uint8_t[destBufferSize];
+
+                for (int32_t y = 0; y < subimage.GetHeight(); y++)
+                {
+                    for (int32_t x = 0; x < subimage.GetWidth(); x++)
+                    {
+                        const uint32_t idxDest = y * subimage.GetWidth() + x;
+                        const uint32_t idxSource = (y + subimage.p0.y)  * sourceImage->GetWidth() + (x + subimage.p0.x);
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest,sourceBuffer, idxSource);
+                    }
+                }
+
+                using namespace IMCodec;
+                ImageProperies props = sourceImage->GetProperties();
+
+                props.Height = subimage.GetHeight();
+                props.Width = subimage.GetWidth();
+                props.ImageBuffer = destBuffer;
+                props.RowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
+
+                ImageSharedPtr subImagePtr = ImageSharedPtr(new Image(props, ImageData()));
+
+                return subImagePtr;
+            }
+            return IMCodec::ImageSharedPtr();
         }
     };
 }

@@ -11,15 +11,15 @@ namespace IMCodec
 	public:
 		bool IsInitialized() const;
 
-        std::size_t Width =  std::numeric_limits<std::size_t>::max();
-        std::size_t Height = ::std::numeric_limits<std::size_t>::max();
-        std::size_t RowPitchInBytes = std::numeric_limits<std::size_t>::max();
+        uint32_t Width =  std::numeric_limits<uint32_t>::max();
+        uint32_t Height = ::std::numeric_limits<uint32_t>::max();
+        uint32_t RowPitchInBytes = std::numeric_limits<uint32_t>::max();
 		
         // The texel format of the image after decompression.
 	    TexelFormat TexelFormatDecompressed = TF_UNKNOWN;
         // The original texel format of the image.
         TexelFormat TexelFormatStorage = TF_UNKNOWN;
-        std::size_t NumSubImages = std::numeric_limits<std::size_t>::max();
+        uint32_t NumSubImages = std::numeric_limits<uint32_t>::max();
 		uint8_t* ImageBuffer = nullptr;
 	};
 

@@ -97,6 +97,7 @@
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -127,6 +128,7 @@
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -207,9 +209,12 @@
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
@@ -221,6 +226,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerWindowToimage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="Common\linux.h" />

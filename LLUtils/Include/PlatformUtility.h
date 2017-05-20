@@ -10,6 +10,43 @@ namespace LLUtils
     class PlatformUtility
     {
     public:
+
+        static HANDLE CreateDIB(uint32_t width, uint32_t height,uint16_t bpp, const uint8_t* buffer)
+        {
+            BITMAPINFOHEADER bi = { 0 };
+
+            bi.biSize = sizeof(BITMAPINFOHEADER);
+            bi.biWidth = width;
+            bi.biHeight = height;
+            bi.biPlanes = 1;              // must be 1
+            bi.biBitCount = bpp;          // from parameter
+            bi.biCompression = BI_RGB;
+          
+            DWORD dwBytesPerLine = LLUtils::Utility::Align((DWORD)bpp * width, (DWORD)(sizeof(DWORD) * 8)) / 8;
+            DWORD paletteSize = 0; // not supproted.
+            DWORD dwLen = bi.biSize + paletteSize + (dwBytesPerLine * height);
+
+            
+            HANDLE hDIB = GlobalAlloc(GHND, dwLen);
+
+            if (hDIB)
+            {
+                // lock memory and get pointer to it
+                void *dib = GlobalLock(hDIB);
+
+                *(BITMAPINFOHEADER*)(dib) = bi;
+
+                void* pixelData = (BITMAPINFOHEADER*)(dib)+1;
+
+                size_t size = bi.biWidth * bi.biHeight * (bi.biBitCount / 8);
+
+                memcpy(pixelData, buffer, size);
+                GlobalUnlock(hDIB);
+            }
+
+            return hDIB;
+        }
+
         static string_type GetExePath()
         {
             TCHAR ownPth[MAX_PATH];

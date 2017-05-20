@@ -21,20 +21,14 @@
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
 #include "Helpers/FileSystemHelper.h"
+#include "OIVCommands.h"
 
 namespace OIV
 {
     template <class T,class U>
-    bool TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
+    ResultCode TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
     {
-        ResultCode result = (ResultCode)OIV_Execute(command, sizeof(T), request, sizeof(U), response);
-
-        if (result != ResultCode::RC_Success && result != ResultCode::RC_FileNotSupported)
-            throw std::runtime_error("Could not execute command");
-
-        
-        return result == ResultCode::RC_Success;
-            
+        return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
     TestApp::TestApp() 
@@ -59,7 +53,7 @@ namespace OIV
         displayRequest.handle = image_handle;
         displayRequest.displayFlags = static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ResetScrollState | OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation);
         
-        bool success = ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull()) == true;
+        ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
     }
 
     void TestApp::UpdateTitle()
@@ -109,8 +103,6 @@ namespace OIV
         UpdateFileInddex();
     }
 
- 
-
     void TestApp::NotifyImageLoaded()
     {
         if (GetCurrentThreadId() == fMainThreadID)
@@ -140,7 +132,6 @@ namespace OIV
         return LoadFileFromBuffer((uint8_t*)buffer, size, extension, onlyRegisteredExtension);
     }
 
-
     void TestApp::UnloadFile()
     {
         OIV_CMD_UnloadFile_Request unloadRequest = {};
@@ -166,9 +157,8 @@ namespace OIV
               (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0)
             | OIV_CMD_LoadFile_Flags::Load_Exif_Data);
 
-
-        bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
-        if (success)
+        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse);
+        if (result == RC_Success)
         {
             UnloadFile();
             fImageBeingOpened.width = loadResponse.width;
@@ -178,7 +168,8 @@ namespace OIV
             fImageBeingOpened.bpp = loadResponse.bpp;
             NotifyImageLoaded();
         }
-        return success;
+
+        return result == RC_Success;
     }
     
     
@@ -362,7 +353,7 @@ namespace OIV
 
         filter.filterType = static_cast<OIV_Filter_type>( std::min(OIV_Filter_type::FT_Count - 1,
             std::max(static_cast<int>(OIV_Filter_type::FT_None), static_cast<int>(filterType)) ));
-        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()))
+        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()) == RC_Success)
             fFilterType = filter.filterType;
     }
 
@@ -371,7 +362,7 @@ namespace OIV
         CmdRequestTexelGrid grid;
         fIsGridEnabled = !fIsGridEnabled;
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
-        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()))
+        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
             
         }
@@ -380,12 +371,16 @@ namespace OIV
 
     void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        bool IsAlt = (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
+        bool IsAlt =  (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
         bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
         bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
 
         switch (evnt->message.wParam)
         {
+        case 'C':
+            if (IsControl)
+                CopyVisibleToClipBoard();
+            break;
         case 'V':
             if (IsControl == true)
                 PasteFromClipBoard();
@@ -495,7 +490,7 @@ namespace OIV
     {
         CmdGetNumTexelsInCanvasResponse response;
         
-        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response))
+        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response) == RC_Success)
         {
 
             std::wstringstream ss;
@@ -514,7 +509,7 @@ namespace OIV
         CmdResponseTexelAtMousePos response;
         request.x = p.x;
         request.y = p.y;
-        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response))
+        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response) == RC_Success)
         {
             std::wstringstream ss;
             ss << _T("Texel: ") 
@@ -540,8 +535,7 @@ namespace OIV
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
     {
-        ExecuteCommand(OIV_CMD_AxisAlignedTransform,
-            &OIV_CMDAxisalignedTransformRequest{ transform }, &CmdNull());
+        OIVCommands::TransformImage(ImageHandleDisplayed, transform);
     }
 
     void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
@@ -557,8 +551,8 @@ namespace OIV
         loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
         
         
-        bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse) == true;
-        if (success)
+        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);
+        if (result == RC_Success)
         {
             UnloadFile();
             fImageBeingOpened = ImageDescriptor();
@@ -577,23 +571,6 @@ namespace OIV
 
     void TestApp::PasteFromClipBoard()
     {
-#pragma pack(1)
-        typedef struct
-        {
-            std::uint32_t biSize;
-            std::int32_t  biWidth;
-            std::int32_t  biHeight;
-            std::uint16_t  biPlanes;
-            std::uint16_t  biBitCount;
-            std::uint32_t biCompression;
-            std::uint32_t biSizeImage;
-            std::int32_t  biXPelsPerMeter;
-            std::int32_t  biYPelsPerMeter;
-            std::uint32_t biClrUsed;
-            std::uint32_t biClrImportant;
-        } DIB;
-      
-#pragma pack() 
 
         if (IsClipboardFormatAvailable(CF_BITMAP) || IsClipboardFormatAvailable(CF_DIB) || IsClipboardFormatAvailable(CF_DIBV5))
         {
@@ -612,7 +589,7 @@ namespace OIV
 
                     if (dib)
                     {
-                        DIB *info = reinterpret_cast<DIB*>(dib);
+                        BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER*>(dib);
                         
                         uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
                         LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
@@ -625,6 +602,105 @@ namespace OIV
                 }
 
                 CloseClipboard();
+            }
+        }
+    }
+
+    void TestApp::CopyVisibleToClipBoard()
+    {
+        OIV_CMD_WindowToImage_Request request;
+        OIV_CMD_WindowToImage_Response response;
+
+        request.rect = fSelectionRect;
+        ResultCode result = ExecuteCommand(OIV_CMD_WindowToimage, &request, &response);
+
+        if (result == RC_Success)
+        {
+            OIV_CMD_CropImage_Request requestCropImage;
+            OIV_CMD_CropImage_Response responseCropImage;
+
+            requestCropImage.rect = { (int)response.rect.x0 ,(int)response.rect.y0, (int)response.rect.x1, (int)response.rect.y1 };
+            requestCropImage.imageHandle = ImageHandleDisplayed;
+
+            // 1. create a new cropped image 
+            ResultCode imageCreated = ExecuteCommand(OIV_CMD_CropImage, &requestCropImage, &responseCropImage);
+
+            if (result == RC_Success)
+            {
+
+                struct unloadImage
+                {
+                    ImageHandle handle;
+                    ~unloadImage()
+                    {
+                        if (handle != ImageNullHandle)
+                            OIVCommands::UnloadImage(handle) != RC_Success;
+                                
+                    }
+                } handle{ responseCropImage.imageHandle };
+
+
+                //2. Flip the image vertically and convert it to BGRA for the clipboard.
+                result = OIVCommands::TransformImage(responseCropImage.imageHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
+                result = OIVCommands::ConvertImage(responseCropImage.imageHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+
+                //3
+
+                OIV_CMD_GetPixels_Request requestGetPixels;
+                OIV_CMD_GetPixels_Response responseGetPixels;
+
+                requestGetPixels.handle = responseCropImage.imageHandle;
+
+                if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+                {
+                    struct hDibDelete
+                    {
+                        bool dlt;
+                        HANDLE mHande;
+                        ~hDibDelete()
+                        {
+                            if (dlt && mHande)
+                            {
+                                GlobalFree(mHande);
+                            }
+                        }
+                    };
+
+                    
+                   
+
+                    uint32_t width = responseGetPixels.width;// responseCropImage.width;
+                    uint32_t height = responseGetPixels.height;
+                    uint8_t bpp;
+                    OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
+
+                    HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
+
+                    hDibDelete deletor = { true,hDib };
+
+
+                    if (::OpenClipboard(nullptr))
+                    {
+                        if (SetClipboardData(CF_DIB, hDib) != nullptr)
+                        {
+                            //succeeded do not free hDib.
+                            deletor.dlt = false;
+                        }
+                        else
+                        {
+                            //Failed setting clipboard data.
+                            std::string error = LLUtils::PlatformUtility::GetLastErrorAsString();
+                            throw std::logic_error("Unable to set clipboard data.\n" + error);
+                        }
+                        if (CloseClipboard() == FALSE)
+                            throw std::logic_error("Unknown error");
+                    }
+                    else
+                    {
+                        throw std::logic_error("could not open clipboard");
+                    }
+                }
+
             }
         }
     }
@@ -696,8 +772,9 @@ namespace OIV
         {
             if (fDragStart.x == -1)
             {
-                OIV_CMD_SetSelectionRect_Request selectionRect = { -1,-1,-1,-1};
-                bool success = ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &selectionRect, &CmdNull()) == true;
+                fSelectionRect = { -1,-1,-1,-1};
+
+                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull()) == true;
                 //Disable selection rect
             }
             fDragStart = evnt->window->GetMousePosition();
@@ -714,9 +791,10 @@ namespace OIV
                     LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
                     LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
 
-                    OIV_CMD_SetSelectionRect_Request selectionRect = { p0.x,p0.y,p1.x,p1.y };
+                    fSelectionRect = { p0.x,p0.y,p1.x,p1.y };
 
-                    bool success = ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &selectionRect, &CmdNull()) == true;
+                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull()) == true;
+                
                 }
 
 

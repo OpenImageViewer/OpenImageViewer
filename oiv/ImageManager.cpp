@@ -68,4 +68,14 @@ namespace OIV
 
         return image;
     }
+
+    void ImageManager::ReplaceImage(ImageHandle handle, IMCodec::ImageSharedPtr image)
+    {
+        if (handle != ImageNullHandle)
+        {
+            auto it = fMapHandleToImage.find(handle);
+            if (it != fMapHandleToImage.end())
+                it->second = image;
+        }
+    }
 }

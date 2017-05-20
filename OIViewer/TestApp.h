@@ -37,9 +37,6 @@ namespace OIV
         void UpdateTexelPos();
         void UpdateWindowSize(const Win32::EventWinMessage* winMessage);
 #pragma region Win32 event handling
-        void TransformImage(OIV_AxisAlignedRTransform transform);
-        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
-        void PasteFromClipBoard();
         void handleKeyInput(const Win32::EventWinMessage* evnt);
 
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
@@ -48,7 +45,7 @@ namespace OIV
         bool HandleMessages(const Win32::Event* evnt);
 #pragma endregion Win32 event handling
         template<class T, class U>
-        bool ExecuteCommand(CommandExecute command, T * request, U * response);
+        ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
@@ -65,6 +62,10 @@ namespace OIV
         void NotifyImageLoaded();
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
+        void TransformImage(OIV_AxisAlignedRTransform transform);
+        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
+        void PasteFromClipBoard();
+        void CopyVisibleToClipBoard();
         
 
     private:
@@ -81,12 +82,11 @@ namespace OIV
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         
+        OIV_RECT_I fSelectionRect = { -1,-1,-1,-1 };
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;
         LLUtils::PointI32 fDragStart;
         UserSettings fSettings;
-
-        
     };
 }

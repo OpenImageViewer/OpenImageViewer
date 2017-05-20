@@ -30,18 +30,18 @@ namespace IMCodec
         uint8_t* GetBuffer() const { return fProperies.ImageBuffer; }
         const uint8_t* GetConstBuffer() const { return fProperies.ImageBuffer; }
 
-        std::size_t GetWidth() const { return fProperies.Width; }
-        std::size_t GetHeight() const { return fProperies.Height; }
-        std::size_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
-        std::size_t GetBitsPerTexel() const { return GetTexelFormatSize(fProperies.TexelFormatDecompressed); }
-        std::size_t GetBytesPerRowOfPixels() const { return GetWidth() * GetBytesPerTexel(); }
-        std::size_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
-        std::size_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
-        std::size_t GetSlicePitchInTexels() const { return GetRowPitchInTexels() * GetHeight(); }
-        std::size_t GetTotalPixels() const { return GetWidth() * GetHeight(); }
-        std::size_t GetTotalSizeOfImageTexels() const { return GetTotalPixels() *  GetBytesPerTexel(); }
-        std::size_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
-        std::size_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
+        uint32_t GetWidth() const { return fProperies.Width; }
+        uint32_t GetHeight() const { return fProperies.Height; }
+        uint32_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
+        uint32_t GetBitsPerTexel() const { return GetTexelFormatSize(fProperies.TexelFormatDecompressed); }
+        uint32_t GetBytesPerRowOfPixels() const { return GetWidth() * GetBytesPerTexel(); }
+        uint32_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
+        uint32_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
+        uint32_t GetSlicePitchInTexels() const { return GetRowPitchInTexels() * GetHeight(); }
+        uint32_t GetTotalPixels() const { return GetWidth() * GetHeight(); }
+        uint32_t GetTotalSizeOfImageTexels() const { return GetTotalPixels() *  GetBytesPerTexel(); }
+        uint32_t GetBytesPerTexel() const { return GetBitsPerTexel() / 8; }
+        uint32_t GetSizeInMemory() const { return GetRowPitchInBytes() * GetHeight(); }
 
         bool GetIsRowPitchNormalized() const { return GetRowPitchInBytes() == GetBytesPerRowOfPixels(); }
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }
