@@ -18,6 +18,10 @@
     #include "Codecs/CodecFreeImage/Include/CodecFreeImageFactory.h"
 #endif
 
+#if IMCODEC_BUILD_CODEC_TIFF == 1
+#include "Codecs/CodecTiff/Include/CodecTiffFactory.h"
+#endif
+
 
 
 
@@ -37,6 +41,9 @@ namespace IMCodec
 #endif
 #if IMCODEC_BUILD_CODEC_DDS == 1
         imageLoader->InstallPlugin(CodecDDSFactory::Create());
+#endif
+#if IMCODEC_BUILD_CODEC_TIFF == 1
+        imageLoader->InstallPlugin(CodecTiffFactory::Create());
 #endif
 #if IMCODEC_BUILD_CODEC_FREE_IMAGE == 1
         imageLoader->InstallPlugin(CodecFreeImageFactory::Create());

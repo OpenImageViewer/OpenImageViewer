@@ -211,7 +211,15 @@ namespace OIV
             if (applyExif)
                 image = ApplyExifRotation(image);
             
-            image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
+
+            if (image->GetImageType() == IMCodec::TF_F_X32)
+            {
+                image = IMUtil::ImageUtil::Normalize(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
+            }
+            else
+            {
+                image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
+            }
 
             if (image != nullptr)
             {

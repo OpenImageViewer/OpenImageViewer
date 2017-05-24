@@ -177,6 +177,9 @@
     <ProjectReference Include="..\Codecs\CodecPSD\CodecPSD.vcxproj">
       <Project>{d0ea563a-a39d-4402-9ee9-f4e427da4591}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\Codecs\CodecTiff\CodecTiff.vcxproj">
+      <Project>{d22358a3-4e82-4c28-9a38-24a1775d8be2}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -8,6 +8,10 @@
 
 namespace IMUtil
 {
+#define RGBA(R,G,B,A) (A << 24 | R << 16 | G << 8 | B ) 
+#define RGBA_GRAYSCALE(X) (RGBA(X,X,X,255))
+#define RGBA_To_GRAYSCALE_LUMA(R,G,B,A) (RGBA((int)(R * 0.2126), (int)(G * 0.7152) ,(int)(B * 0.0722) ,255))
+
     class ImageUtil
     {
     private:
@@ -230,6 +234,44 @@ namespace IMUtil
                 return subImagePtr;
             }
             return IMCodec::ImageSharedPtr();
+        }
+
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
+        {
+            //32 bit float implementation.
+
+            const float* sampleData = reinterpret_cast<const float*> (sourceImage->GetConstBuffer());
+
+            float min = std::numeric_limits<float>::max();
+            float max = std::numeric_limits<float>::min();
+            
+            uint32_t totalPixels = sourceImage->GetTotalPixels();
+            for (uint32_t i = 0 ; i < totalPixels ;i++)
+            {
+                float currentSample = sampleData[i];
+                min = std::min(min, currentSample);
+                max = std::max(max, currentSample);
+            }
+
+            IMCodec::ImageProperies props;
+            props = sourceImage->GetProperties();
+            props.TexelFormatDecompressed = IMCodec::TF_I_R8_G8_B8_A8;
+            props.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TF_I_R8_G8_B8_A8) / 8 * props.Width;
+            props.ImageBuffer = new uint8_t[props.RowPitchInBytes * props.Height];
+            
+            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.ImageBuffer);
+
+
+            float length = max - min;
+
+            for (uint32_t i = 0; i < totalPixels; i++)
+            {
+                const float currentSample = sampleData[i];
+                uint8_t grayValue = std::min(static_cast<uint8_t>( std::round ( (currentSample / length) * 255)),static_cast<uint8_t>( 255));
+                currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
+            }
+
+            return IMCodec::ImageSharedPtr(new IMCodec::Image(props,sourceImage->GetData()));
         }
     };
 }

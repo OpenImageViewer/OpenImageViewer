@@ -4,6 +4,7 @@
 #include <thread>
 #include <algorithm>
 #include "AxisAlignedTransform.h"
+#include "Int24.h"
 
 namespace IMUtil
 {
@@ -19,6 +20,29 @@ namespace IMUtil
 
         struct alignas(1) BitTexel32 : public BitTexel24 { uint8_t W; };
 
+#pragma pack(1)
+
+        struct alignas(1) BitTexel32Ex
+        {
+            union
+            {
+                uint32_t value;
+                struct
+                {
+                    uint8_t X;
+                    uint8_t Y;
+                    uint8_t Z;
+                    uint8_t W;
+                };
+                struct
+                {
+                    Int24 XYZ;
+                    uint8_t W;
+                };
+            };
+            
+        };
+#pragma pack()
 
         // A function to copy a same format texel from one place to another
         template <class BIT_TEXEL_TYPE>
