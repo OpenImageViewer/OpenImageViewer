@@ -151,14 +151,9 @@
     <ClInclude Include="..\Image\Include\TexelFormat.h" />
     <ClInclude Include="Include\DefaultPluginInstaller.h" />
     <ClInclude Include="Include\IImagePlugin.h" />
-    <ClInclude Include="Include\Image.h" />
     <ClInclude Include="Include\ImageLoader.h" />
-    <ClInclude Include="include\imageproperties.h" />
-    <ClInclude Include="Include\ImageType.h" />
     <ClInclude Include="Source\BuildConfig.h" />
     <ClInclude Include="Source\EmbeddedPluginInstaller.h" />
-    <ClInclude Include="Source\ImageProperties.h" />
-    <ClInclude Include="Source\ImageType.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\EmbeddedPluginInstaller.cpp" />
