@@ -66,8 +66,6 @@ namespace IMCodec
             
             tmsize_t stripSize = TIFFStripSize(tiff);
             
-            
-            
 
 
 
@@ -89,36 +87,35 @@ namespace IMCodec
                     {
                     case 16:
                         texelFormat = TF_F_X16;
-                        rowPitch = 2 * width;
-                        break;
+                    break;
                     case 24:
-                        //rowPitch = 2 * width;
-                        //texelFormat = TF_F_X24;
+                        texelFormat = TF_F_X24;
+                        throw std::logic_error("not implemented");
                         break;
                     case 32:
-                        rowPitch = 4 * width;
                         texelFormat = TF_F_X32;
-                        {
-                            
-                            //TODO: Add supports for non multiples of rowsPerStrip
-                            if (height % rowsPerStrip == 0)
-                            {
-                                decompressedBuffer = new uint8[height * rowPitch];
-                                uint8_t* currensPos = decompressedBuffer;
-
-                                int totalStrips = height / rowsPerStrip;
-
-                                for (int i =  0 ; i < totalStrips ; i++)
-                                {
-                                    TIFFReadRawStrip(tiff, i, currensPos, stripSize);
-                                    currensPos += stripSize;
-                                }
-                            }
-                        }
-
                         break;
-
+                    default:
+                        throw std::logic_error("unsupported format");
                     }
+
+                    rowPitch = stripSize / rowsPerStrip;
+                    
+                    //TODO: Add supports for non multiples of rowsPerStrip
+                    if (height % rowsPerStrip == 0)
+                    {
+                        decompressedBuffer = new uint8[height * rowPitch];
+                        uint8_t* currensPos = decompressedBuffer;
+
+                        int totalStrips = height / rowsPerStrip;
+
+                        for (int i = 0; i < totalStrips; i++)
+                        {
+                            TIFFReadRawStrip(tiff, i, currensPos, stripSize);
+                            currensPos += stripSize;
+                        }
+                    }
+
 
                     break;
                 }

@@ -212,14 +212,28 @@ namespace OIV
                 image = ApplyExifRotation(image);
             
 
-            if (image->GetImageType() == IMCodec::TF_F_X32)
+            // Texel format supported by the renderer is currently RGBA.
+            // support for other texel formats may save conversion.
+            const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::TF_I_R8_G8_B8_A8;
+
+            switch (image->GetImageType())
             {
-                image = IMUtil::ImageUtil::Normalize(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
+            case IMCodec::TF_F_X16:
+                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                break;
+
+            case IMCodec::TF_F_X24:
+                throw std::logic_error("not implemented");
+                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                break;
+
+            case IMCodec::TF_F_X32:
+                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat);
+                break;
+            default:
+                image = IMUtil::ImageUtil::Convert(image, targetTexelFormat);
             }
-            else
-            {
-                image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
-            }
+
 
             if (image != nullptr)
             {

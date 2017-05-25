@@ -4,6 +4,7 @@
 #include <Image.h>
 #include "PixelUtil.h"
 #include "../../LLUtils/Include/Rect.h"
+#include "half.hpp"
 
 
 namespace IMUtil
@@ -236,19 +237,20 @@ namespace IMUtil
             return IMCodec::ImageSharedPtr();
         }
 
+        template <class T>
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
         {
             //32 bit float implementation.
+            
+            const T* sampleData = reinterpret_cast<const T*> (sourceImage->GetConstBuffer());
 
-            const float* sampleData = reinterpret_cast<const float*> (sourceImage->GetConstBuffer());
-
-            float min = std::numeric_limits<float>::max();
-            float max = std::numeric_limits<float>::min();
+            T min = std::numeric_limits<T>::max();
+            T max = std::numeric_limits<T>::min();
             
             uint32_t totalPixels = sourceImage->GetTotalPixels();
             for (uint32_t i = 0 ; i < totalPixels ;i++)
             {
-                float currentSample = sampleData[i];
+                T currentSample = sampleData[i];
                 min = std::min(min, currentSample);
                 max = std::max(max, currentSample);
             }
@@ -266,7 +268,7 @@ namespace IMUtil
 
             for (uint32_t i = 0; i < totalPixels; i++)
             {
-                const float currentSample = sampleData[i];
+                const T currentSample = sampleData[i];
                 uint8_t grayValue = std::min(static_cast<uint8_t>( std::round ( (currentSample / length) * 255)),static_cast<uint8_t>( 255));
                 currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
             }

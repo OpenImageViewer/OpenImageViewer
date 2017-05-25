@@ -110,6 +110,7 @@ extern "C"
         , TF_I_X1
         , TF_I_X8
         , TF_F_X16
+        , TF_F_X24
         , TF_F_X32
         , TF_F_X64
         , TF_COUNT
