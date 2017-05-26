@@ -78,7 +78,7 @@ namespace OIV
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;
-        LLUtils::PointI32 fDragStart;
+        LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
     };
 }

@@ -7,6 +7,27 @@ namespace OIV
 {
     namespace Win32
     {
+
+        DWORD Win32WIndow::GetWindowStyles() const
+        {
+            DWORD currentStyles = GetWindowLong(fHandleWindow, GWL_STYLE);
+
+            currentStyles &= WS_MAXIMIZE;
+            currentStyles |= WS_VISIBLE;
+
+                
+            if (fFullSceenState != FSS_Windowed || fShowBorders == false)
+                return currentStyles;
+            else
+                return currentStyles
+                | WS_OVERLAPPED
+                | WS_CAPTION
+                | WS_SYSMENU
+                | WS_THICKFRAME
+                | WS_MINIMIZEBOX
+                | WS_MAXIMIZEBOX;
+        }
+
         HRESULT Win32WIndow::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
         {
             return ::SendMessage(fHandleWindow, msg, wParam, lparam);
@@ -19,17 +40,24 @@ namespace OIV
 
         void Win32WIndow::UpdateWindowStyles()
         {
-            HWND hwnd = fHandleWindow;
-            SetWindowLong(hwnd, GWL_STYLE,fWindowStyles);
-            SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+            DWORD current = GetWindowStyles();
+            if (current != fWindowStyles)
+            {
+                fWindowStyles = current;
+                HWND hwnd = fHandleWindow;
+                //Set styles
+                SetWindowLong(hwnd, GWL_STYLE, fWindowStyles);
+
+                //Refresh
+                SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+            }
         }
 
         void Win32WIndow::SetWindowed()
         {
             fFullSceenState = FSS_Windowed;
-            fWindowStyles |= WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
             UpdateWindowStyles();
             RestorePlacement();
         }
@@ -71,9 +99,6 @@ namespace OIV
             else
                 fFullSceenState = FSS_SingleScreen;
 
-            
-
-            fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW & ~WS_CLIPCHILDREN;
             UpdateWindowStyles();
             
             SetWindowPos(hwnd, HWND_TOP,
@@ -88,8 +113,6 @@ namespace OIV
         void Win32WIndow::ToggleFullScreen(bool multiMonitor)
         {
             HWND hwnd = fHandleWindow;
-            DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
-
 
             switch (fFullSceenState)
             {
@@ -216,34 +239,60 @@ namespace OIV
             return PtInRect(&GetClientRectangle(), GetMousePosition()) == TRUE;
         }
 
+        LRESULT Win32WIndow::ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            switch (message)
+            {
+            case WM_NCHITTEST:
+                return HTTRANSPARENT;
+            case WM_ERASEBKGND:
+                return 0;
+            default:
+                return DefWindowProc(hWnd, message, wParam, lParam);
+            }
+        }
+
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Win32WIndow* window = reinterpret_cast<Win32WIndow*>(GetProp(hWnd, _T("windowClass")));
 
-            bool defaultProc = false;
+            if (window != nullptr && window->GetHandleClient() == hWnd)
+                return window->ClientWndProc(hWnd, message, wParam, lParam);
+
+            LRESULT retValue = 0;
+            bool defaultProc = true;
             switch (message)
             {
+                // TODO: fix double click causing maximize.
+          /*  case WM_NCHITTEST:
+            {
+                if (Win32Helper::IsKeyPressed(VK_MENU) == false && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT)
+                    retValue = HTCAPTION;
+                else
+                    defaultProc = true;
+            }*/
+
             case WM_TIMER:
                 if (wParam == cTimerIDRawInputFlush)
-                     window->FlushInput(true);
-            
+                    window->FlushInput(true);
                 break;
 
             case WM_CREATE:
             {
                 CREATESTRUCT* s = (CREATESTRUCT*)lParam;
-                if (SetProp(hWnd, _T("windowClass"), s->lpCreateParams)  == 0)
+                if (SetProp(hWnd, _T("windowClass"), s->lpCreateParams) == 0)
                     std::exception("Unable to set window property");
             }
             case WM_ERASEBKGND:
+                defaultProc = false;
                 break;
             case WM_INPUT:
             {
                 UINT dwSize;
                 GetRawInputData((HRAWINPUT)lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-                
+
                 std::unique_ptr<BYTE> lpb = std::unique_ptr<BYTE>(new BYTE[dwSize]);
-                
+
 
                 if (lpb == nullptr)
                     return 0;
@@ -258,12 +307,11 @@ namespace OIV
                 }
                 window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.get()));
             }
-                break;
+            break;
             case WM_SIZE:
                 if (window->GetHandle() == hWnd)
                     window->HandleResize();
-                else
-                    defaultProc = true;
+
                 break;
             case WM_DESTROY:
                 if (window->GetHandle() == hWnd)
@@ -271,11 +319,6 @@ namespace OIV
                     window->DestroyResources();
                     PostQuitMessage(0);
                 }
-                else
-                    defaultProc = true;
-                break;
-            default:
-                defaultProc = true;
                 break;
             }
 
@@ -288,13 +331,9 @@ namespace OIV
                 winEvent.message.wParam = wParam;
                 winEvent.message.message = message;
                 window->RaiseEvent(winEvent);
-            
             }
 
-            if (defaultProc)
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            else
-                return 0;
+            return (defaultProc == false ? retValue : DefWindowProc(hWnd, message, wParam, lParam));
         }
 
         HWND Win32WIndow::DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts)
@@ -342,7 +381,7 @@ namespace OIV
             WNDCLASSEX wcex;
 
             wcex.cbSize = sizeof(WNDCLASSEX);
-            wcex.style = CS_HREDRAW | CS_VREDRAW;
+            wcex.style = 0;// CS_HREDRAW | CS_VREDRAW | CS_;
             wcex.lpfnWndProc = WndProc;
             wcex.cbClsExtra = 0;
             wcex.cbWndExtra = 0;
@@ -363,13 +402,12 @@ namespace OIV
 
                 return 1;
             }
-            fWindowStyles = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN;
-
+    
 
             fHandleWindow = CreateWindow(
                 szWindowClass,
                 szTitle,
-                fWindowStyles,
+                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                 CW_USEDEFAULT,
                 CW_USEDEFAULT,
                 1200,
@@ -381,8 +419,6 @@ namespace OIV
             );
 
 
-            fWindowStyles |= WS_VISIBLE;
-
             if (!fHandleWindow)
             {
                 MessageBox(nullptr,
@@ -392,8 +428,6 @@ namespace OIV
 
                 return 1;
             }
-         
-            
             fHandleStatusBar = DoCreateStatusBar(fHandleWindow,  12, hInstance, 3);
             ResizeStatusBar();
 
@@ -413,7 +447,6 @@ namespace OIV
                 this
             );
 
-       
 
             ShowWindow(fHandleClient, SW_SHOW);
 
@@ -522,20 +555,7 @@ namespace OIV
 
         void Win32WIndow::ShowBorders(bool show_borders)
         {
-            HWND hwnd = fHandleWindow;
             fShowBorders = show_borders;
-
-            DWORD dwStyle = GetWindowLong(hwnd, GWL_STYLE);
-            //if (dwStyle & WS_OVERLAPPEDWINDOW)
-            if (show_borders == false)
-            {
-                fWindowStyles = fWindowStyles & ~WS_OVERLAPPEDWINDOW;
-            }
-            else
-            {
-                fWindowStyles = fWindowStyles | WS_OVERLAPPEDWINDOW;
-            }
-
             fShowStatusBar = show_borders;
             RefreshWindow();
         }

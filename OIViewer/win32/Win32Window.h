@@ -20,6 +20,7 @@ namespace OIV
         {
         public:
 
+            DWORD GetWindowStyles() const;
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             bool IsFullScreen() const;
             void UpdateWindowStyles();
@@ -43,7 +44,7 @@ namespace OIV
             void ShowBorders(bool show_borders);
             bool IsInFocus() const;
             bool IsMouseCursorInClientRect() const;
-
+            LRESULT ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             void FlushInput(bool calledFromIdleTimer);
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
@@ -83,7 +84,7 @@ namespace OIV
             
             DragAndDropTarget* fDragAndDrop = nullptr;
             bool fShowStatusBar = true;
-            bool fShowBorders;
+            bool fShowBorders = true;
             
             RawInputMouseWindow fMouseState = RawInputMouseWindow(this);
             bool fInputFlushTimerEnabled = false;

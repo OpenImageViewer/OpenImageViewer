@@ -514,14 +514,11 @@ namespace OIV
 
     void TestApp::UpdateWindowSize(const Win32::EventWinMessage* winMessage)
     {
-        if (winMessage == nullptr || winMessage->window->GetHandleClient() == winMessage->message.hwnd)
-        {
             SIZE size = fWindow.GetClientSize();
             ExecuteCommand(CMD_SetClientSize,
                 &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
                 static_cast<uint16_t>(size.cy) }, &CmdNull());
             UpdateCanvasSize();
-        }
     }
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
@@ -715,7 +712,8 @@ namespace OIV
         const MSG& uMsg = evnt->message;
         switch (uMsg.message)
         {
-        case WM_WINDOWPOSCHANGED:
+        case WM_SIZE:
+        //case WM_WINDOWPOSCHANGED:
             UpdateWindowSize(evnt);
             break;
 
@@ -765,16 +763,59 @@ namespace OIV
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
         const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
-        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::ET_Pressed;
-        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::ET_Pressed;
-        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::ET_Pressed;
-        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::ET_DoublePressed;
+        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Released;
+        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Pressed;
+        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Pressed;
+        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
+        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
 
         const bool isMouseInsideWindowAndfocus = evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus();
         
+        static bool isSelecting = false;
 
-        if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false)
-            evnt->window->Move(evnt->DeltaX, evnt->DeltaY);
+        if (IsLeftPressed == true && Win32Helper::IsKeyPressed(VK_MENU))
+        {
+            if (fDragStart.x == -1)
+            {
+                fSelectionRect = { {-1,-1},{-1,-1} };
+
+                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
+                //Disable selection rect
+            }
+            fDragStart = evnt->window->GetMousePosition();
+            
+        }
+
+        else
+            if (IsLeftCaptured == true)
+            {
+                LLUtils::PointI32 dragCurent = evnt->window->GetMousePosition();
+                if (fDragStart.x != -1 && isSelecting == true || dragCurent.DistanceSquared(fDragStart) > 225)
+                {
+                    isSelecting = true;
+                    LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
+                    LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
+
+                    fSelectionRect = { p0,p1};
+
+                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
+                
+                }
+
+
+            }
+
+        if (IsLeftReleased == true)
+        {
+            isSelecting = false;
+            fDragStart.x = -1;
+            fDragStart.y = -1;
+        }
+
+       
+        
+        /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
+            evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/
 
         if (IsRightCatured == true)
         {
@@ -813,7 +854,6 @@ namespace OIV
 
     bool TestApp::HandleMessages(const Win32::Event* evnt1)
     {
-
         using namespace Win32;
         const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
 
@@ -830,8 +870,6 @@ namespace OIV
         if (rawInputEvent != nullptr)
             HandleRawInputMouse(rawInputEvent);
 
-
         return false;
-
     }
 }
