@@ -2,6 +2,7 @@
 #include  <windows.h>
 #include <vector>
 #include <StopWatch.h>
+#include "../Win32Helper.h"
 
 namespace OIV
 {
@@ -36,7 +37,7 @@ namespace OIV
             public:
             enum Button { Left,Right,Middle,Third, Forth, Fifth};
             enum State { NotSet, Down, Up };
-            enum EventType { ET_NotSet, ET_Pressed, ET_DoublePressed,  ET_Released };
+            enum EventType { ET_NotSet, ET_Pressed, ET_Clicked, ET_DoublePressed,  ET_Released };
 
             ///////////////////////
             // Button event            
@@ -45,11 +46,13 @@ namespace OIV
                 int64_t timeStamp;
                 Button button;
                 EventType eventType;
+                int32_t x;
+                int32_t y;
             };
             
             typedef std::vector<ButtonEvent> ListButtonEvent;
             ///////////////////////
-            uint16_t doubleClickTime = 250;
+            uint16_t dDoubleClickTime = 250;
 
          
         private:
@@ -66,7 +69,7 @@ namespace OIV
         public:
             MouseState()
             {
-                doubleClickTime = GetDoubleClickTime();
+                dDoubleClickTime = GetDoubleClickTime();
             }
             
             LONG GetX() const { return fDeltaX; }
@@ -83,6 +86,7 @@ namespace OIV
                 LLUtils::StopWatch::time_type_integer elpased = fTimer.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds);
                 fDeltaX += mouse.lLastX;
                 fDeltaY += mouse.lLastY;
+                POINT mousePos = Win32Helper::GetMouseCursorPosition();
                 if (mouse.ulButtons & 0x0400)
                     fwheel += static_cast<SHORT>(mouse.usButtonData) / WHEEL_DELTA;
                 for (int i = 0; i < Max_Buttons; i++)
@@ -93,24 +97,24 @@ namespace OIV
                     if (mouse.ulButtons & (1ul << (i * 2)))
                     {
                         SetButtonState(button, Down);
-                        fButtonActions.push_back({elpased, button, EventType::ET_Pressed });
+                        fButtonActions.push_back({elpased, button, EventType::ET_Pressed ,mousePos.x, mousePos.y });
 
-                        if (IsPressedTheLast(button, doubleClickTime))
+                        if (IsClicked(button, dDoubleClickTime, mousePos, 10 * 10))
                         {
-                            fButtonActions.push_back({ elpased, button, EventType::ET_DoublePressed });
+                            fButtonActions.push_back({ elpased, button, EventType::ET_DoublePressed, mousePos.x , mousePos.y });
                             ClearHistory(button);
                         }
                         else
                         {
-                            fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Pressed });
+                            fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Pressed, mousePos.x, mousePos.y });
                         }
                         
                     }
                     if (mouse.ulButtons & (2ul << (i * 2)))
                     {
                         SetButtonState(button, Up);
-                        fButtonActions.push_back({ elpased, button, EventType::ET_Released });
-                        fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Released});
+                        fButtonActions.push_back({ elpased, button, EventType::ET_Released, mousePos.x , mousePos.y });
+                        fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Released, mousePos.x , mousePos.y });
                     }
                 }
                 ClearHistory();
@@ -128,26 +132,33 @@ namespace OIV
             void ClearHistory()
             {
                 LLUtils::StopWatch::time_type_integer elpased = fTimer.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds);
-                while (fButtonActionsHistory.empty() == false && elpased - fButtonActionsHistory[0].timeStamp > doubleClickTime)
+                while (fButtonActionsHistory.empty() == false && elpased - fButtonActionsHistory[0].timeStamp > dDoubleClickTime)
                     fButtonActionsHistory.erase(fButtonActionsHistory.begin());
 
             }
 
-            bool IsPressedTheLast( Button button , uint64_t time)
+            bool IsClicked(Button button, uint64_t time = 1 << 31, POINT mousePos = { 0,0 }, uint32_t radiusSquared = 1 << 31)
             {
                 LLUtils::StopWatch::time_type_integer elpased = fTimer.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds);
                 int state = 0;
+                LLUtils::PointI32 origin = { mousePos.x,mousePos.y };
                 for (ButtonEvent evnt : fButtonActionsHistory)
                 {
                     if (evnt.button == button)
                     {
+                        
                         if (elpased - evnt.timeStamp < time)
                         {
                             if (evnt.eventType == ET_Pressed)
+                            {
+                                if (origin.DistanceSquared({ evnt.x, evnt.y }) < radiusSquared)
                                 state = 1;
+                            }
                             else if (evnt.eventType == ET_Released && state == 1)
-                                return true;
-
+                            {
+                                if (origin.DistanceSquared({ evnt.x , evnt.y }) < radiusSquared)
+                                    return true;
+                            }
                         }
                     }
                 }
