@@ -263,15 +263,24 @@ namespace OIV
             bool defaultProc = true;
             switch (message)
             {
-                // TODO: fix double click causing maximize.
-          /*  case WM_NCHITTEST:
+            case WM_NCHITTEST:
             {
-                if (Win32Helper::IsKeyPressed(VK_MENU) == false && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT)
+                
+                if (window->fMouseState.IsCaptured(MouseState::Button::Left) == true && Win32Helper::IsKeyPressed(VK_MENU) == false && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT)
+                {
+                    defaultProc = false;
                     retValue = HTCAPTION;
-                else
-                    defaultProc = true;
-            }*/
+                }
+            }
 
+            break;
+            case WM_NCLBUTTONDBLCLK:
+                //Enable double click only for the title bar.
+                if ( DefWindowProc(hWnd, WM_NCHITTEST, wParam, lParam) != wParam)
+                {
+                    defaultProc = false;
+                }
+                break;
             case WM_TIMER:
                 if (wParam == cTimerIDRawInputFlush)
                     window->FlushInput(true);
