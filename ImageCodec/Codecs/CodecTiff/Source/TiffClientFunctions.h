@@ -70,10 +70,6 @@ namespace IMCodec
 
     TIFF* ReadTiffFromMemory(tiff_bufferInfo& bufferInfo)
     {
-  //      std::size_t size = 0;
-//        uint8_t* buffer = nullptr;
-    //    LLUtils::File::ReadAllBytes(fileName, size, buffer);
-
         TIFF* tif = TIFFClientOpen("TifChannel", "r",
             reinterpret_cast<thandle_t>(&bufferInfo),
             tiff_read,
