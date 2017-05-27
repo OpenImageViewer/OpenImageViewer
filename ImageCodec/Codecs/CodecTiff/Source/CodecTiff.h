@@ -69,7 +69,10 @@ namespace IMCodec
                 {
                 case PHOTOMETRIC_RGB:
                     texelFormat = TF_I_R8_G8_B8_A8;
+                    //override target row pitch - always 32bpp
+                    rowPitch = width * 4;
                     decompressedBuffer = new uint8[height * rowPitch];
+                    
                     TIFFReadRGBAImage(tiff, width, height, reinterpret_cast<uint32*>(decompressedBuffer));
                     break;
                 case PHOTOMETRIC_MINISWHITE:
