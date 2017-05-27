@@ -274,7 +274,13 @@ namespace OIV
                     )
                 {
                     defaultProc = false;
-                    retValue = HTCAPTION;
+
+                    if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
+                        // Resize window.
+                        retValue = HTBOTTOMRIGHT;
+                    else
+                        // Drag window.
+                        retValue = HTCAPTION;
                 }
             }
 
