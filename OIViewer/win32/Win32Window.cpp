@@ -266,7 +266,12 @@ namespace OIV
             case WM_NCHITTEST:
             {
                 
-                if (window->fMouseState.IsCaptured(MouseState::Button::Left) == true && Win32Helper::IsKeyPressed(VK_MENU) == false && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT)
+                if (true 
+                    && window->fMouseState.IsCaptured(MouseState::Button::Left) == true 
+                    && Win32Helper::IsKeyPressed(VK_MENU) == false 
+                    && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT
+                    && window->IsFullScreen() == false
+                    )
                 {
                     defaultProc = false;
                     retValue = HTCAPTION;
