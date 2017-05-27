@@ -140,6 +140,10 @@ namespace OIV
     // IPictureViewr implementation
     int OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
+
+        if (buffer == nullptr || size == 0)
+            return RC_InvalidParameters;
+
         using namespace IMCodec;
         ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0));
 
