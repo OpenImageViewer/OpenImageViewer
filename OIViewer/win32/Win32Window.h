@@ -50,8 +50,9 @@ namespace OIV
             void SetInputFlushTimer(bool enable);
             void HandleRawInputMouse(const RAWMOUSE& mouse);
             void Move(const int16_t delta_x, const int16_t delta_y);
-
-
+            LRESULT GetCorner(const POINTS& tag_points) const;
+            LLUtils::PointI32 GetWindowSize() const;
+            
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             
             HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE

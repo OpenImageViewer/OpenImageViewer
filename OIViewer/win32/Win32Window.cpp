@@ -2,6 +2,7 @@
 #include "MonitorInfo.h"
 #include <tchar.h>
 #include "Win32Helper.h"
+#include <array>
 
 namespace OIV
 {
@@ -229,6 +230,45 @@ namespace OIV
             MoveWindow(fHandleWindow, rect.left + delta_x, rect.top + delta_y, rect.right - rect.left, rect.bottom - rect.top, false);
         }
 
+        LRESULT Win32WIndow::GetCorner(const POINTS& points) const
+        {
+            LRESULT corner = HTERROR;
+            POINT p = { points.x , points.y };
+            ScreenToClient(GetHandle(), &p);
+
+            const LLUtils::PointI32 point = p;
+            const LLUtils::PointI32 windowSize = GetWindowSize();
+            using ArrayDouble4 = std::array<double, 4>;
+            ArrayDouble4 distancesToCorners;
+
+            distancesToCorners[0] = point.DistanceSquared({ 0,0 }); // Top left
+            distancesToCorners[1] = point.DistanceSquared({ windowSize.x,0 }); // Top right
+            distancesToCorners[2] = point.DistanceSquared(windowSize); // Botom right
+            distancesToCorners[3] = point.DistanceSquared({ 0, windowSize.y }); // Bottom left
+            ArrayDouble4::const_iterator it_min = std::min_element(distancesToCorners.begin(), distancesToCorners.end());
+
+            int index = it_min - distancesToCorners.begin();
+            switch (index)
+            {
+            case 0:
+                corner = HTTOPLEFT;
+                break;
+            case 1:
+                corner = HTTOPRIGHT;
+                break;
+            case 2:
+                corner = HTBOTTOMRIGHT;
+                break;
+            case 3:
+                corner = HTBOTTOMLEFT;
+                break;
+            default:
+                throw std::logic_error("Unexepcted value");
+            }
+
+            return corner;
+        }
+
         bool Win32WIndow::IsInFocus() const
         {
             return GetFocus() == fHandleWindow;
@@ -252,6 +292,13 @@ namespace OIV
             }
         }
 
+        LLUtils::PointI32 Win32WIndow::GetWindowSize() const
+        {
+            RECT r;
+            GetWindowRect(fHandleWindow, &r);
+            return{ r.right - r.left, r.bottom - r.top };
+        }
+
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Win32WIndow* window = reinterpret_cast<Win32WIndow*>(GetProp(hWnd, _T("windowClass")));
@@ -265,7 +312,6 @@ namespace OIV
             {
             case WM_NCHITTEST:
             {
-                
                 if (true 
                     && window->fMouseState.IsCaptured(MouseState::Button::Left) == true 
                     && Win32Helper::IsKeyPressed(VK_MENU) == false 
@@ -274,10 +320,10 @@ namespace OIV
                     )
                 {
                     defaultProc = false;
-
+                    
                     if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
                         // Resize window.
-                        retValue = HTBOTTOMRIGHT;
+                        retValue = window->GetCorner(*(POINTS*)&lParam);
                     else
                         // Drag window.
                         retValue = HTCAPTION;
