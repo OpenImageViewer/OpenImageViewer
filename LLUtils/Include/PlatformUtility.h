@@ -4,6 +4,8 @@
 #include "StringUtility.h"
 #include "Utility.h"
 
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+
 namespace LLUtils
 {
 
@@ -11,7 +13,7 @@ namespace LLUtils
     {
     public:
 
-        static HANDLE CreateDIB(uint32_t width, uint32_t height,uint16_t bpp, const uint8_t* buffer)
+        static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const uint8_t* buffer)
         {
             BITMAPINFOHEADER bi = { 0 };
 
@@ -21,12 +23,12 @@ namespace LLUtils
             bi.biPlanes = 1;              // must be 1
             bi.biBitCount = bpp;          // from parameter
             bi.biCompression = BI_RGB;
-          
+
             DWORD dwBytesPerLine = LLUtils::Utility::Align((DWORD)bpp * width, (DWORD)(sizeof(DWORD) * 8)) / 8;
             DWORD paletteSize = 0; // not supproted.
             DWORD dwLen = bi.biSize + paletteSize + (dwBytesPerLine * height);
 
-            
+
             HANDLE hDIB = GlobalAlloc(GHND, dwLen);
 
             if (hDIB)
@@ -47,29 +49,38 @@ namespace LLUtils
             return hDIB;
         }
 
-        static string_type GetExePath()
+
+        static string_type GetModulePath(HMODULE hModule)
         {
             TCHAR ownPth[MAX_PATH];
 
-            // Will contain exe path
-            HMODULE hModule = GetModuleHandle(nullptr);
-            if (hModule != nullptr)
-            {
-                // When passing nullptr to GetModuleHandle, it returns handle of exe itself
-                GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0])));
+            if (hModule != nullptr && GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0]))) > 0)
 
-                // Use above module handle to get the path using GetModuleFileName()
-                return std::wstring(ownPth);
-            }
-
-            return string_type();
+                return string_type(ownPth);
+            else
+                return string_type();
         }
+
+        static string_type GetDllPath()
+        {
+            return GetModulePath((HINSTANCE)&__ImageBase);
+        }
+
+        static string_type GetDllFolder()
+        {
+            using namespace std::experimental;
+            return filesystem::path(GetDllPath()).parent_path().wstring();
+        }
+
+        static string_type GetExePath()
+        {
+            return GetModulePath(GetModuleHandle(nullptr));
+        }
+
         static string_type GetExeFolder()
         {
-            string_type filePath = PlatformUtility::GetExePath();
-            string_type::size_type idx = filePath.find_last_of(TEXT("\\"));
-            filePath.erase(idx, filePath.length() - idx);
-            return filePath;
+            using namespace std::experimental;
+            return filesystem::path(GetExePath()).parent_path().wstring();
         }
 
         static string_type GetAppDataFolder()
