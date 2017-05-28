@@ -366,6 +366,13 @@ namespace OIV
 
         switch (evnt->message.wParam)
         {
+        case 'N':
+            if (IsControl == true)
+            {
+                ShellExecute(nullptr, L"open", LLUtils::PlatformUtility::GetExePath().c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+
+            }
+            break;
         case 'C':
             if (IsControl == true)
                 CopyVisibleToClipBoard();
