@@ -236,12 +236,18 @@ namespace OIV
 
         UpdateZoomScrollState();
 
+        
+        if (isInitialFile == true)
+        {
+            // delay window visibliy till the initial file is displayed.        
+            fUpdateWindowOnInitialFileLoad = true;
+
+            // Update the window size manually since the window won't receive WM_SIZE till it's visible.
+            fWindow.RefreshWindow();
+        }
+
         // Update client size
         UpdateWindowSize();
-
-        // Show window when the initial file has loaded.        
-        if (isInitialFile == true)
-            fUpdateWindowOnInitialFileLoad = true; 
 
         // Wait for initial file to finish loading
         if (asyncResult.valid())
