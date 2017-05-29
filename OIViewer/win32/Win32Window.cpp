@@ -94,7 +94,8 @@ namespace OIV
 
             if (multiMonitor)
             {
-                rect = OIV::MonitorInfo::GetSingleton().getBoundingMonitorArea();
+                MonitorInfo::GetSingleton().Refresh();
+                rect = MonitorInfo::GetSingleton().getBoundingMonitorArea();
                 fFullSceenState = FSS_MultiScreen;
             }
             else
