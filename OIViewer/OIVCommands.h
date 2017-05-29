@@ -20,6 +20,11 @@ namespace OIV
             return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
         }
 
+        static ResultCode OIVCommands::Refresh()
+        {
+                return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
+        }
+
         static ResultCode OIVCommands::UnloadImage(ImageHandle handle)
         {
             if (handle != ImageNullHandle)

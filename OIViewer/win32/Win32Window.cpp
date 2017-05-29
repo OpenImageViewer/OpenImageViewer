@@ -299,6 +299,11 @@ namespace OIV
             return{ r.right - r.left, r.bottom - r.top };
         }
 
+        void Win32WIndow::Show(bool show) const
+        {
+            ShowWindow(fHandleWindow, show == true ?SW_SHOW : SW_HIDE);
+        }
+
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Win32WIndow* window = reinterpret_cast<Win32WIndow*>(GetProp(hWnd, _T("windowClass")));

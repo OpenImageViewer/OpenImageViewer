@@ -17,14 +17,15 @@ namespace OIV
     public:
         TestApp();
         ~TestApp();
+        void Init(std::wstring filePath);
+        void Run();
+        void Destroy();
         HWND GetWindowHandle() const;
         void UpdateTitle();
         void UpdateStatusBar();
         void UpdateZoomScrollState();
-        void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
-
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
@@ -35,7 +36,7 @@ namespace OIV
         void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
-        void UpdateWindowSize(const Win32::EventWinMessage* winMessage);
+        void UpdateWindowSize();
 #pragma region Win32 event handling
         void handleKeyInput(const Win32::EventWinMessage* evnt);
 
@@ -50,8 +51,8 @@ namespace OIV
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
-        void FinalizeImageLoad();
-        void NotifyImageLoaded();
+        void FinalizeImageLoad(ResultCode result);
+        void FinalizeImageLoadThreadSafe(ResultCode result);
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRTransform transform);
@@ -80,5 +81,6 @@ namespace OIV
         LLUtils::ListString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
+        bool fUpdateWindowOnInitialFileLoad = false;
     };
 }

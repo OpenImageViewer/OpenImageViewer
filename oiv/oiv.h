@@ -49,15 +49,12 @@ namespace OIV
 
 #pragma region //-------------Private methods------------------
         IRendererSharedPtr CreateBestRenderer();
-        //int DisplayImage(ImageHandle handle);
-        void HandleWindowResize();
         bool IsImageDisplayed() const;
         void UpdateGpuParams();
         OIV_AxisAlignedRTransform ResolveExifRotation(unsigned short exifRotation) const;
         IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image) const;
-        void LoadSettings();
         IMCodec::ImageSharedPtr GetDisplayImage() const;
-        IMCodec::ImageSharedPtr GetActiveImage() const;
+        void RefreshRenderer();
 #pragma endregion
 
 #pragma region //-------------Private member fields------------------
@@ -73,12 +70,11 @@ namespace OIV
         std::size_t fParent = 0;
         bool fIsRefresing = false;
         bool fShowGrid = false;
-        ImageHandle fActiveHandle = ImageNullHandle;
         IMCodec::ImageSharedPtr fDisplayedImage = nullptr;
         OIV_Filter_type fFilterLevel = OIV_Filter_type::FT_Linear;
 
         LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
-        
+        bool fIsViewDirty = true;
 #pragma endregion
     };
 }

@@ -319,9 +319,10 @@ extern "C"
     ////
     enum OIV_CMD_DisplayImage_Flags
     {
-          DF_None = 0 << 0
-        , DF_ApplyExifTransformation = 1 << 0
-        , DF_ResetScrollState = 2 << 0
+          DF_None                       = 0 << 0
+        , DF_ApplyExifTransformation    = 1 << 0
+        , DF_ResetScrollState           = 1 << 1
+        , DF_RefreshRenderer            = 1 << 2
     };
 
     struct OIV_CMD_DisplayImage_Request

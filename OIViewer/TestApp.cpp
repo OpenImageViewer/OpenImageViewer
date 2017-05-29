@@ -75,40 +75,54 @@ namespace OIV
     }
 
   
-    void TestApp::FinalizeImageLoad()
+    void TestApp::FinalizeImageLoad(ResultCode result)
     {
-        // Enter this function only from the main thread.
-        assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
-            GetCurrentThreadId() == fMainThreadID);
-        
-        ImageHandle oldImage = fOpenedImage.imageHandle;
+        if (result == RC_Success)
+        {
+            // Enter this function only from the main thread.
+            assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
+                GetCurrentThreadId() == fMainThreadID);
 
-        fOpenedImage = fImageBeingOpened;
-        fImageBeingOpened = ImageDescriptor();
+            ImageHandle oldImage = fOpenedImage.imageHandle;
+
+            fOpenedImage = fImageBeingOpened;
+            fImageBeingOpened = ImageDescriptor();
 
 
-        LLUtils::StopWatch stopWatch(true);
+            LLUtils::StopWatch stopWatch(true);
 
-         OIVCommands::DisplayImage(fOpenedImage.imageHandle
-             ,static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ResetScrollState | OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation));
-        
-         fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
-        
-      
-        UpdateTitle();
-        UpdateStatusBar();
-        UpdateFileInddex();
+            OIVCommands::DisplayImage(fOpenedImage.imageHandle
+                , static_cast<OIV_CMD_DisplayImage_Flags>(
+                     OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
+                   | OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer
+                   | OIV_CMD_DisplayImage_Flags::DF_ResetScrollState));
 
-        //Unload old image
-        OIVCommands::UnloadImage(oldImage);
+            fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+            UpdateTitle();
+            UpdateStatusBar();
+            UpdateFileInddex();
+
+            //Unload old image
+            OIVCommands::UnloadImage(oldImage);
+        }
+
+
+        if (fUpdateWindowOnInitialFileLoad == true)
+        {
+            //Show window on inital file load, whether success or failure.
+            fUpdateWindowOnInitialFileLoad = false;
+            fWindow.Show(true);
+        }
+
     }
 
-    void TestApp::NotifyImageLoaded()
+    void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
     {
         if (GetCurrentThreadId() == fMainThreadID)
         {
-            FinalizeImageLoad();
+            FinalizeImageLoad(result);
         }
         else
         {
@@ -116,7 +130,7 @@ namespace OIV
             std::unique_lock<std::mutex> ul(fMutexWindowCreation);
             
             // send message to main thread.
-            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, 0, 0);
+            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, result, 0);
         }
     }
 
@@ -155,8 +169,9 @@ namespace OIV
             fImageBeingOpened.loadTime = loadResponse.loadTime;
             fImageBeingOpened.imageHandle = loadResponse.handle;
             fImageBeingOpened.bpp = loadResponse.bpp;
-            NotifyImageLoaded();
+            
         }
+        FinalizeImageLoadThreadSafe(result);
 
         return result == RC_Success;
     }
@@ -185,7 +200,7 @@ namespace OIV
     }
 
 
-    void TestApp::Run(std::wstring relativeFilePath)
+    void TestApp::Init(std::wstring relativeFilePath)
     {
         using namespace std;
         using namespace placeholders;
@@ -206,7 +221,7 @@ namespace OIV
         }
         
         // initialize the windowing system of the window
-        fWindow.Create(GetModuleHandle(nullptr), SW_SHOW);
+        fWindow.Create(GetModuleHandle(nullptr), SW_HIDE);
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
 
 
@@ -219,30 +234,46 @@ namespace OIV
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
-        // Update client size
-        UpdateWindowSize(nullptr);
+        UpdateZoomScrollState();
 
-        // wait for initial file to finish loading
+        // Update client size
+        UpdateWindowSize();
+
+        // Show window when the initial file has loaded.        
+        if (isInitialFile == true)
+            fUpdateWindowOnInitialFileLoad = true; 
+
+        // Wait for initial file to finish loading
         if (asyncResult.valid())
             asyncResult.wait();
-        
+
+        //If there is no initial file, draw background and show window.
+        if (isInitialFile == false)
+        {
+            OIVCommands::Refresh();
+            fWindow.Show(true);
+        }
+
         // load settings
         fSettings.Load();
 
 
-        UpdateZoomScrollState();
-
         // Load all files in the directory of the loaded file
         if (filePath.empty() == false)
             LoadFileInFolder(filePath);
-        
-        Win32Helper::MessageLoop();
+    }
 
+
+    void TestApp::Destroy()
+    {
         // Destroy OIV when window is closed.
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
-
+    void TestApp::Run()
+    {
+        Win32Helper::MessageLoop();
+    }
 
     void TestApp::UpdateFileInddex()
     {
@@ -343,7 +374,10 @@ namespace OIV
         filter.filterType = static_cast<OIV_Filter_type>( std::min(OIV_Filter_type::FT_Count - 1,
             std::max(static_cast<int>(OIV_Filter_type::FT_None), static_cast<int>(filterType)) ));
         if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()) == RC_Success)
+        {
             fFilterType = filter.filterType;
+            OIVCommands::Refresh();
+        }
     }
 
     void TestApp::ToggleGrid()
@@ -353,7 +387,7 @@ namespace OIV
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
         if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
-            
+            OIVCommands::Refresh();
         }
         
     }
@@ -475,12 +509,14 @@ namespace OIV
         pan.x = horizontalPIxels;
         pan.y = verticalPixels;
         ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
+        OIVCommands::Refresh();
     }
 
     void TestApp::Zoom(double precentage, int zoomX , int zoomY )
     {
         CmdDataZoom zoom{ precentage,zoomX, zoomY };
         ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
+        OIVCommands::Refresh();
         UpdateCanvasSize();
     }
 
@@ -519,7 +555,7 @@ namespace OIV
     }
 
 
-    void TestApp::UpdateWindowSize(const Win32::EventWinMessage* winMessage)
+    void TestApp::UpdateWindowSize()
     {
             SIZE size = fWindow.GetClientSize();
             ExecuteCommand(CMD_SetClientSize,
@@ -556,8 +592,9 @@ namespace OIV
             fImageBeingOpened.source = ImageSource::IS_Clipboard;
             OIV_Util_GetBPPFromTexelFormat(texelFormat, &fImageBeingOpened.bpp);
             fImageBeingOpened.imageHandle = loadResponse.handle;
-            NotifyImageLoaded();
         }
+
+        FinalizeImageLoadThreadSafe(result);
 
         //return success;
 
@@ -708,9 +745,10 @@ namespace OIV
                 fImageBeingOpened.imageHandle = croppedHandle;
                 fImageBeingOpened.width = 7;
                 fImageBeingOpened.height= 7;
-                NotifyImageLoaded();
+                
             }
         }
+        FinalizeImageLoadThreadSafe(result);
 
     }
 
@@ -720,8 +758,8 @@ namespace OIV
         switch (uMsg.message)
         {
         case WM_SIZE:
-        //case WM_WINDOWPOSCHANGED:
-            UpdateWindowSize(evnt);
+            UpdateWindowSize();
+            OIVCommands::Refresh();
             break;
 
         case WM_TIMER:
@@ -729,7 +767,7 @@ namespace OIV
                 JumpFiles(1);
         break;
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
-            NotifyImageLoaded();
+            FinalizeImageLoadThreadSafe(static_cast<ResultCode>( evnt->message.wParam));
         break;
         
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:

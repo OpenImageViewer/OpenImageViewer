@@ -40,16 +40,20 @@ namespace OIV
     
     void OIV::NotifyDirty()
     {
-        Refresh();
+        const bool AutoRefreshWhenDirty = false;
+        fIsViewDirty = true;
+        if (AutoRefreshWhenDirty == true)
+            Refresh();
     }
 
     
 #pragma endregion 
    
-
-    IMCodec::ImageSharedPtr OIV::GetActiveImage() const
+ 
+    void OIV::RefreshRenderer()
     {
-        return fImageManager.GetImage(fActiveHandle);
+        UpdateGpuParams();
+        fRenderer->Redraw();
     }
 
     IMCodec::ImageSharedPtr OIV::GetDisplayImage() const
@@ -61,8 +65,13 @@ namespace OIV
     {
         LLUtils::PointF64 uvScaleFixed = fScrollState.GetARFixedUVScale();
         LLUtils::PointF64 uvOffset = fScrollState.GetOffset();
-        if (GetActiveImage() == nullptr)
-            uvScaleFixed = LLUtils::PointF64(1000000, 100000);
+        
+        if (GetDisplayImage() == nullptr)
+        {
+            // Place image out of the window space.
+            uvOffset = LLUtils::PointF64::One;
+            uvScaleFixed = LLUtils::PointF64::One;
+        }
         
         fViewParams.showGrid = fShowGrid;
         fViewParams.uViewportSize = GetClientSize();
@@ -72,17 +81,10 @@ namespace OIV
         fRenderer->SetViewParams(fViewParams);
     }
 
-    void OIV::HandleWindowResize()
-    {
-        if (IsImageDisplayed())
-            fScrollState.Refresh();
-    }
-
     bool OIV::IsImageDisplayed() const
     {
         return GetDisplayImage() != nullptr;
     }
-    
 
     OIV_AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
     {
@@ -243,10 +245,16 @@ namespace OIV
             {
                 if (fRenderer->SetImage(image) == RC_Success)
                 {
-                    const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
-                    fActiveHandle = handle;
                     fDisplayedImage = image;
-                    fScrollState.Reset(resetScrollState);
+
+                    const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
+                    const bool refreshRenderer = (display_flags & OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer) != 0;
+
+                    if (resetScrollState)
+                        fScrollState.Reset(resetScrollState);
+
+                    if (refreshRenderer)
+                        RefreshRenderer();
                 }
                 else
                 {
@@ -407,19 +415,13 @@ namespace OIV
         if (fIsRefresing == false)
         {
             fIsRefresing = true;
-            HandleWindowResize();
-            UpdateGpuParams();
-            fRenderer->Redraw();
+            fScrollState.Refresh();
+            RefreshRenderer();
             fIsRefresing = false;
         }
 
         return 0;
     }
-
- /*   IMCodec::Image* OIV::GetDisplayImage()
-    {
-        return fDisplayedImage.get();
-    }*/
 
     IMCodec::Image* OIV::GetImage(ImageHandle handle)
     {
@@ -431,7 +433,6 @@ namespace OIV
         if (filter_level >= FT_None && filter_level < FT_Count)
         {
             fRenderer->SetFilterLevel(filter_level);
-            Refresh();
             return RC_Success;
         }
 
@@ -473,7 +474,6 @@ namespace OIV
     int OIV::SetTexelGrid(double gridSize)
     {
         fShowGrid = gridSize > 0.0;
-        Refresh();
         return RC_Success;
     }
 
@@ -488,7 +488,6 @@ namespace OIV
     int OIV::SetClientSize(uint16_t width, uint16_t height)
     {
         fClientSize = { width, height };
-        Refresh();
         return 0;
     }
 
