@@ -814,7 +814,7 @@ namespace OIV
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
         const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
 
-        const bool isMouseInsideWindowAndfocus = evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus();
+        const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
         
         static bool isSelecting = false;
 
@@ -872,7 +872,7 @@ namespace OIV
 
         if (wheelDelta != 0)
         {
-            if (IsRightCatured || isMouseInsideWindowAndfocus)
+            if (IsRightCatured || isMouseUnderCursor)
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
@@ -884,7 +884,7 @@ namespace OIV
             }
         }
         
-        if (isMouseInsideWindowAndfocus)
+        if (isMouseUnderCursor)
         {
             if (IsMiddlePressed)
                 fAutoScroll.ToggleAutoScroll();

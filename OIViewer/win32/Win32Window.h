@@ -8,72 +8,62 @@
 #include "../FullScreenState.h"
 #include "RawInput/RawInputMouseWindow.h"
 #include "StopWatch.h"
+#include <wrl/client.h>
 
-
-// Global variables
 namespace OIV
 {
     namespace Win32
     {
-#define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p)=nullptr; } }
         class Win32WIndow
         {
-        public:
-
+        public: // constant methods
             DWORD GetWindowStyles() const;
-            HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             bool IsFullScreen() const;
-            void UpdateWindowStyles();
-            void SetWindowed();
-            void SavePlacement();
-            void RestorePlacement();
-            void RefreshWindow();
-            void SetFullScreen(bool multiMonitor);
-            void ToggleFullScreen(bool multiMonitor = false);
-
             HWND GetHandle() const;
             HWND GetHandleClient() const;
-
-            void AddEventListener(EventCallback callback);
-
-            void DestroyResources();
             SIZE GetClientSize() const;
             RECT GetClientRectangle() const;
+            bool IsInFocus() const;
+            bool IsMouseCursorInClientRect() const;
+            LRESULT GetCorner(const POINTS& tag_points) const;
+            LLUtils::PointI32 GetWindowSize() const;
+            void Show(bool show) const;
+            POINT GetMousePosition() const;
+            const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
+            bool IsUnderMouseCursor() const;
+
+        public: // methods
+            HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
+            void RefreshWindow();
+            void ToggleFullScreen(bool multiMonitor = false);
+            void AddEventListener(EventCallback callback);
+            void DestroyResources();
             void HandleResize();
             void ShowStatusBar(bool show);
             void ShowBorders(bool show_borders);
-            bool IsInFocus() const;
-            bool IsMouseCursorInClientRect() const;
-            LRESULT ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             void FlushInput(bool calledFromIdleTimer);
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
             void HandleRawInputMouse(const RAWMOUSE& mouse);
             void Move(const int16_t delta_x, const int16_t delta_y);
-            LRESULT GetCorner(const POINTS& tag_points) const;
-            LLUtils::PointI32 GetWindowSize() const;
-            void Show(bool show) const;
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-            
-            HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE
-                hinst, int cParts);
-
-            POINT GetMousePosition() const;
-
+            HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts);
             void SetStatusBarText(std::wstring message, int part, int type);
-
-            int WINAPI Create(HINSTANCE hInstance,
-                int nCmdShow);
-
-            const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
+            int WINAPI Create(HINSTANCE hInstance, int nCmdShow);
 
             friend DragAndDropTarget;
-        private:
+        private: // methods
+            void UpdateWindowStyles();
+            void SavePlacement();
+            void RestorePlacement();
+            void SetWindowed();
+            void SetFullScreen(bool multiMonitor);
+            LRESULT ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             void ResizeStatusBar();
             void RaiseEvent(const Event& evnt);
 
-        private: 
-            
+        private: // member fields
+
             DWORD fWindowStyles = 0;
             DWORD fWindowStylesClient = 0;
             HWND fHandleWindow = nullptr;
@@ -82,11 +72,9 @@ namespace OIV
             int fStatusWindowParts = 4;
             FullSceenState fFullSceenState = FSS_Windowed;
             WINDOWPLACEMENT fLastWindowPlacement = { 0 };
-            
-            DragAndDropTarget* fDragAndDrop = nullptr;
+            Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
             bool fShowStatusBar = true;
             bool fShowBorders = true;
-            
             RawInputMouseWindow fMouseState = RawInputMouseWindow(this);
             bool fInputFlushTimerEnabled = false;
             static const int cTimerIDRawInputFlush = 2500;

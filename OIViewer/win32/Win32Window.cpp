@@ -29,6 +29,11 @@ namespace OIV
                 | WS_MAXIMIZEBOX;
         }
 
+        bool Win32WIndow::IsUnderMouseCursor() const
+        {
+            return WindowFromPoint(Win32Helper::GetMouseCursorPosition()) == GetHandle() == true;
+        }
+
         HRESULT Win32WIndow::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
         {
             return ::SendMessage(fHandleWindow, msg, wParam, lparam);
@@ -153,7 +158,6 @@ namespace OIV
         void Win32WIndow::DestroyResources()
         {
             fDragAndDrop->Detach();
-            SAFE_RELEASE(fDragAndDrop);
         }
 #pragma region RawInput
 

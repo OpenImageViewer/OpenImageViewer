@@ -2,9 +2,9 @@
 
 #include "RawInputMouse.h"
 
+// RawInputMouseWindow extends MouseState in a way to allow mouse to be captured relative to a window.
 namespace OIV
 {
-
     namespace Win32
     {
         class Win32WIndow;
@@ -12,20 +12,11 @@ namespace OIV
         {
             Win32WIndow* fWin;
             bool  fCaptured[Max_Buttons] = { false };
-        public:
-            RawInputMouseWindow(Win32WIndow* win)
-            {
-                fWin = win;
-            }
-
+        protected:
             void SetButtonState(Button button, State state) override;
-            bool IsCaptured(Button button) const { return fCaptured[button] == true; }
-
-
+        public:
+            RawInputMouseWindow(Win32WIndow* win);
+            bool IsCaptured(Button button) const;
         };
-
-      
     }
 }
-
-
