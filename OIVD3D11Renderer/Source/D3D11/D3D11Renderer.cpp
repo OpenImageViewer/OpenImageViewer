@@ -355,8 +355,8 @@ namespace OIV
         fSelectionRect = selection_rect;
         VS_CONSTANT_BUFFER_SELECTIONRECT& buffer = fBufferSelection->GetBuffer();
         
-        buffer.uvViewportSize[0] = fConstantBuffer->GetBuffer().uViewportSize[0];
-        buffer.uvViewportSize[1] = fConstantBuffer->GetBuffer().uViewportSize[1];
+        buffer.uvViewportSize[0] = static_cast<int32_t>(fConstantBuffer->GetBuffer().uViewportSize[0]);
+        buffer.uvViewportSize[1] = static_cast<int32_t>(fConstantBuffer->GetBuffer().uViewportSize[1]);
         buffer.uSelectionRect[0] = fSelectionRect.p0.x;
         buffer.uSelectionRect[1] = fSelectionRect.p0.y;
         buffer.uSelectionRect[2] = fSelectionRect.p1.x;

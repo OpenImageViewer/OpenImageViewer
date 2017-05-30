@@ -425,7 +425,7 @@ namespace OIV
                 WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, // creates a visible child window
                 0, 0, 0, 0, // ignores size and position
                 hwndParent, // handle to parent window
-                (HMENU)idStatus, // child window identifier
+                reinterpret_cast<HMENU>(idStatus), // child window identifier
                 hinst, // handle to application instance
                 nullptr); // no window creation data
 
