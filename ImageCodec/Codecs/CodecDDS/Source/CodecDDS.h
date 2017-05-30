@@ -70,13 +70,14 @@ namespace IMCodec
                 out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.TexelFormatDecompressed) / 8;
                 success = true;
 
-                return success;
             }
 
             catch(...)
             {
               
             }
+
+            return success;
         }
     };
 }
