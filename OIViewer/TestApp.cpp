@@ -571,6 +571,7 @@ namespace OIV
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
     {
         OIVCommands::TransformImage(ImageHandleDisplayed, transform);
+        OIVCommands::Refresh();
     }
 
     void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
