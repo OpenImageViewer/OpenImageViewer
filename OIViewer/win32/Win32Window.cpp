@@ -13,16 +13,16 @@ namespace OIV
         {
             DWORD currentStyles = GetWindowLong(fHandleWindow, GWL_STYLE);
 
-            currentStyles &= WS_MAXIMIZE;
-            currentStyles |= WS_VISIBLE;
+            currentStyles &= (WS_MAXIMIZE | WS_VISIBLE);
+            currentStyles |= WS_CLIPCHILDREN;
 
                 
             if (fFullSceenState != FSS_Windowed || fShowBorders == false)
                 return currentStyles;
             else
                 return currentStyles
-                | WS_OVERLAPPED
-                | WS_CAPTION
+                | WS_BORDER
+                | WS_DLGFRAME
                 | WS_SYSMENU
                 | WS_THICKFRAME
                 | WS_MINIMIZEBOX

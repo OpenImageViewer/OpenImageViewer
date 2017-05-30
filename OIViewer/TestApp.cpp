@@ -95,7 +95,7 @@ namespace OIV
             OIVCommands::DisplayImage(fOpenedImage.imageHandle
                 , static_cast<OIV_CMD_DisplayImage_Flags>(
                      OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
-                   | OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer
+                   | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
                    | OIV_CMD_DisplayImage_Flags::DF_ResetScrollState));
 
             fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
@@ -108,14 +108,13 @@ namespace OIV
             OIVCommands::UnloadImage(oldImage);
         }
 
-
         if (fUpdateWindowOnInitialFileLoad == true)
         {
             //Show window on inital file load, whether success or failure.
             fUpdateWindowOnInitialFileLoad = false;
             fWindow.Show(true);
+            
         }
-
     }
 
     void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
@@ -236,14 +235,14 @@ namespace OIV
 
         UpdateZoomScrollState();
 
+        // Update the window size manually since the window won't receive WM_SIZE till it's visible.
+        fWindow.RefreshWindow();
+
         
         if (isInitialFile == true)
         {
-            // delay window visibliy till the initial file is displayed.        
+            // Delay window visibility till the initial file is displayed.
             fUpdateWindowOnInitialFileLoad = true;
-
-            // Update the window size manually since the window won't receive WM_SIZE till it's visible.
-            fWindow.RefreshWindow();
         }
 
         // Update client size
@@ -256,7 +255,6 @@ namespace OIV
         //If there is no initial file, draw background and show window.
         if (isInitialFile == false)
         {
-            OIVCommands::Refresh();
             fWindow.Show(true);
         }
 
