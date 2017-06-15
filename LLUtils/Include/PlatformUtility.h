@@ -3,6 +3,7 @@
 #include <Shlobj.h>
 #include "StringUtility.h"
 #include "Utility.h"
+#include <DbgHelp.h>
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
@@ -12,6 +13,48 @@ namespace LLUtils
     class PlatformUtility
     {
     public:
+        struct StackTraceEntry
+        {
+            std::string name;
+            uint64_t address;
+            std::string fileName;
+            uint32_t line;
+        };
+
+        using StackTrace = std::vector<StackTraceEntry>;
+
+        static StackTrace GetCallStack(int framesToSkip = 0)
+        {
+
+            unsigned int   i;
+            void         * stack[100];
+            unsigned short frames;
+            SYMBOL_INFO  * symbol;
+            HANDLE         process;
+
+            process = GetCurrentProcess();
+
+            SymInitialize(process, NULL, TRUE);
+
+            frames = CaptureStackBackTrace(framesToSkip, 100, stack, NULL);
+            symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
+            symbol->MaxNameLen = 255;
+            symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+            StackTrace stackTrace(frames);
+            for (i = 0; i < frames; i++)
+            {
+                SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol);
+                
+                IMAGEHLP_LINE64 line;
+                DWORD displacement;
+                SymGetLineFromAddr64(process, (DWORD64)(stack[i]), &displacement, &line);
+                stackTrace[i] = { symbol->Name, symbol->Address,line.FileName, line.LineNumber };
+            }
+
+            free(symbol);
+
+            return stackTrace;
+        }
 
         static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const uint8_t* buffer)
         {
