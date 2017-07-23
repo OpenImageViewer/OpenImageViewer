@@ -16,6 +16,6 @@
   </ItemDefinitionGroup>
   <ItemGroup />
     <PropertyGroup Label="Globals">
-        <OIVRootDir>E:\OpenImageViewer\</OIVRootDir>
+        <OIVRootDir>O:\OpenImageViewer\</OIVRootDir>
   </PropertyGroup>
 </Project>
