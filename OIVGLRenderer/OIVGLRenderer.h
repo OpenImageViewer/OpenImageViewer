@@ -38,6 +38,8 @@ namespace OIV
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filtertype) override;
         int SetImage(const IMCodec::ImageSharedPtr image) override;
+        int SetSelectionRect(SelectionRect selectionRect) override;
+        
     private:
         bool fIsParamsDirty;
         GLGpuProgramUniquePtr fProgram;

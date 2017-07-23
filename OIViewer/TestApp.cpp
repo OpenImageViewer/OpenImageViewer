@@ -5,7 +5,6 @@
 #include <future>
 #include <cassert>
 
-
 #include "TestApp.h"
 #include "FileMapping.h"
 #include "StringUtility.h"
@@ -21,29 +20,26 @@
 #include <PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
+#include "Helpers/FileSystemHelper.h"
+#include "OIVCommands.h"
+#include <Rect.h>
 
 namespace OIV
 {
     template <class T,class U>
-    bool TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
+    ResultCode TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
     {
-        ResultCode result = (ResultCode)OIV_Execute(command, sizeof(T), request, sizeof(U), response);
-
-        if (result != ResultCode::RC_Success && result != ResultCode::RC_FileNotSupported)
-            throw std::runtime_error("Could not execute command");
-
-        
-        return result == ResultCode::RC_Success;
-            
+        return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
     TestApp::TestApp() 
     {
-        new MonitorInfo();
+        
     }
 
     TestApp::~TestApp()
     {
+        
     }
 
     HWND TestApp::GetWindowHandle() const
@@ -51,19 +47,10 @@ namespace OIV
         return fWindow.GetHandle();
     }
 
-    void TestApp::DisplayImage(ImageHandle image_handle)
-    {
-        OIV_CMD_DisplayImage_Request displayRequest = {};
-
-        displayRequest.handle = image_handle;
-        displayRequest.displayFlags = OIV_CMD_DisplayImage_Flags::DF_ResetScrollState;
-        bool success = ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull()) == true;
-    }
-
     void TestApp::UpdateTitle()
     {
         std::wstringstream ss;
-        ss << fOpenedFile.fileName << L" - OpenImageViewer";
+        ss << fOpenedImage.GetName() << L" - OpenImageViewer";
         HWND handle = GetWindowHandle();
         SetWindowTextW(handle, ss.str().c_str());   
     }
@@ -71,69 +58,92 @@ namespace OIV
 
     void TestApp::UpdateStatusBar()
     {
-        fWindow.SetStatusBarText(fOpenedFile.GetStringDescriptor(), 0, 0);
+        fWindow.SetStatusBarText(fOpenedImage.GetDescription(), 0, 0);
     }
 
     void TestApp::UpdateZoomScrollState()
     {
         OIV_CMD_ZoomScrollState_Request request;
-        request.innerMarginsX = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.x;
-        request.innerMarginsY = fSettings.settings.OIVSettings.ZoomScrollState.InnerMargins.y;
-        request.outermarginsX = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.x;
-        request.outermarginsY = fSettings.settings.OIVSettings.ZoomScrollState.OuterMargins.y;
-        request.SmallImageOffsetStyle = fSettings.settings.OIVSettings.ZoomScrollState.SmallImageOffsetStyle;
+        const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
+        request.innerMarginsX = settings.zoomScrollState.InnnerMargins.x;
+        request.innerMarginsY = settings.zoomScrollState.InnnerMargins.y;
+        request.outermarginsX = settings.zoomScrollState.OuterMargins.x;
+        request.outermarginsY = settings.zoomScrollState.OuterMargins.y;
+        request.SmallImageOffsetStyle = settings.zoomScrollState.smallImageOffsetStyle;
         
         ExecuteCommand(OIV_CMD_ZoomScrollState, &request, &CmdNull());
     }
 
   
-    void TestApp::FinalizeImageLoad()
+    void TestApp::FinalizeImageLoad(ResultCode result)
     {
-        DisplayImage(fOpenedFile.imageHandle);
-        // Enter this function only from themain thread.
-        UpdateTitle();
-        UpdateStatusBar();
-        UpdateFileInddex();
+        if (result == RC_Success)
+        {
+            // Enter this function only from the main thread.
+            assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
+                GetCurrentThreadId() == fMainThreadID);
+
+            ImageHandle oldImage = fOpenedImage.imageHandle;
+
+            fOpenedImage = fImageBeingOpened;
+            fImageBeingOpened = ImageDescriptor();
+
+
+            LLUtils::StopWatch stopWatch(true);
+
+
+            OIVCommands::DisplayImage(fOpenedImage.imageHandle
+                , static_cast<OIV_CMD_DisplayImage_Flags>(
+                     OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
+                   | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
+                   | OIV_CMD_DisplayImage_Flags::DF_ResetScrollState));
+
+            fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+            UpdateTitle();
+            UpdateStatusBar();
+            UpdateFileInddex();
+
+            //Unload old image
+            OIVCommands::UnloadImage(oldImage);
+        }
+
+        if (fUpdateWindowOnInitialFileLoad == true)
+        {
+            //Show window on inital file load, whether success or failure.
+            fUpdateWindowOnInitialFileLoad = false;
+            fWindow.Show(true);
+            
+        }
     }
 
- 
-
-    void TestApp::NotifyImageLoaded()
+    void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
     {
         if (GetCurrentThreadId() == fMainThreadID)
-            FinalizeImageLoad();
+        {
+            FinalizeImageLoad(result);
+        }
         else
         {
             // Wait for the main window to get initialized.
             std::unique_lock<std::mutex> ul(fMutexWindowCreation);
             
             // send message to main thread.
-            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, 0, 0);
+            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, result, 0);
         }
     }
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
-        fOpenedFile.fileName = filePath;
+        fImageBeingOpened = ImageDescriptor();
+        fImageBeingOpened.fileName = filePath;
+        fImageBeingOpened.source = ImageSource::IS_File;
         using namespace LLUtils;
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
         std::size_t size = fileMapping.GetSize();
         std::string extension = StringUtility::ToAString(StringUtility::GetFileExtension(filePath));
         return LoadFileFromBuffer((uint8_t*)buffer, size, extension, onlyRegisteredExtension);
-    }
-
-
-    void TestApp::UnloadFile()
-    {
-        
-        OIV_CMD_UnloadFile_Request unloadRequest = {};
-        if (fOpenedFile.imageHandle != ImageNullHandle)
-        {
-            unloadRequest.handle = fOpenedFile.loadResponse.handle;
-            ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &CmdNull());
-            fOpenedFile.imageHandle = ImageNullHandle;
-        }
     }
 
     bool TestApp::LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension)
@@ -146,51 +156,41 @@ namespace OIV
         loadRequest.length = size;
         std::string fileExtension = extension;
         strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::EXTENSION_SIZE, fileExtension.c_str());
-        loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(loadRequest.flags | (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0));
-        StopWatch stopWatch(true);
-        bool success = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse) == true;
-        if (success)
+        loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(
+              (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0)
+            | OIV_CMD_LoadFile_Flags::Load_Exif_Data);
+
+        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse);
+        if (result == RC_Success)
         {
-            UnloadFile();
-            fOpenedFile.totalLoadTime = stopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
-            fOpenedFile.loadResponse = loadResponse;
-            fOpenedFile.imageHandle = loadResponse.handle;
-            NotifyImageLoaded();
+            fImageBeingOpened.width = loadResponse.width;
+            fImageBeingOpened.height = loadResponse.height;
+            fImageBeingOpened.loadTime = loadResponse.loadTime;
+            fImageBeingOpened.imageHandle = loadResponse.handle;
+            fImageBeingOpened.bpp = loadResponse.bpp;
+            
         }
-        return success;
+        FinalizeImageLoadThreadSafe(result);
+
+        return result == RC_Success;
     }
     
     
 
-    void TestApp::LoadFileInFolder(std::wstring filePath)
+    void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
+        using namespace std::experimental::filesystem;
         fListFiles.clear();
         fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         
-        std::experimental::filesystem::path workingPath  = filePath;
-        std::experimental::filesystem::path fullFilePath = filePath;
+        std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
-        workingPath = workingPath.parent_path();
-        
-        if (workingPath.empty() == true)
-        {
-            TCHAR path[MAX_PATH];
-            if (GetCurrentDirectory(MAX_PATH, reinterpret_cast<LPTSTR>(&path)) != 0)
-            {
-                workingPath = path;
-                fullFilePath = workingPath / filePath;
-            }
-        }
+        LLUtils::PlatformUtility::find_files(absoluteFolderPath, fListFiles);
+        LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), absoluteFilePath);
+        if (it != fListFiles.end())
+            fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
-        if (workingPath.empty() == false)
-        {
-            LLUtils::PlatformUtility::find_files(workingPath.wstring(), fListFiles);
-            LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fullFilePath.wstring());
-            if (it != fListFiles.end())
-                fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-
-            UpdateFileInddex();
-        }
+        UpdateFileInddex();
     }
 
     void TestApp::OnScroll(LLUtils::PointI32 panAmount)
@@ -199,12 +199,14 @@ namespace OIV
     }
 
 
-    void TestApp::Run(std::wstring filePath)
+    void TestApp::Init(std::wstring relativeFilePath)
     {
         using namespace std;
         using namespace placeholders;
         using namespace experimental;
         
+        wstring filePath = FileSystemHelper::ResolveFullPath(relativeFilePath);
+
         const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
         
         future <bool> asyncResult;
@@ -218,7 +220,7 @@ namespace OIV
         }
         
         // initialize the windowing system of the window
-        fWindow.Create(GetModuleHandle(nullptr), SW_SHOW);
+        fWindow.Create(GetModuleHandle(nullptr), SW_HIDE);
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
 
 
@@ -231,29 +233,51 @@ namespace OIV
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
-        // Update client size
-        UpdateWindowSize(nullptr);
+        UpdateZoomScrollState();
 
-        // wait for initial file to finish loading
+        // Update the window size manually since the window won't receive WM_SIZE till it's visible.
+        fWindow.RefreshWindow();
+
+        
+        if (isInitialFile == true)
+        {
+            // Delay window visibility till the initial file is displayed.
+            fUpdateWindowOnInitialFileLoad = true;
+        }
+
+        // Update client size
+        UpdateWindowSize();
+
+        // Wait for initial file to finish loading
         if (asyncResult.valid())
             asyncResult.wait();
-        
+
+        //If there is no initial file, draw background and show window.
+        if (isInitialFile == false)
+        {
+            fWindow.Show(true);
+        }
+
         // load settings
         fSettings.Load();
 
 
-        UpdateZoomScrollState();
-
         // Load all files in the directory of the loaded file
-        LoadFileInFolder(filePath);
-        
-        Win32Helper::MessageLoop();
+        if (filePath.empty() == false)
+            LoadFileInFolder(filePath);
+    }
 
+
+    void TestApp::Destroy()
+    {
         // Destroy OIV when window is closed.
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
-
+    void TestApp::Run()
+    {
+        Win32Helper::MessageLoop();
+    }
 
     void TestApp::UpdateFileInddex()
     {
@@ -353,8 +377,11 @@ namespace OIV
 
         filter.filterType = static_cast<OIV_Filter_type>( std::min(OIV_Filter_type::FT_Count - 1,
             std::max(static_cast<int>(OIV_Filter_type::FT_None), static_cast<int>(filterType)) ));
-        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()))
+        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()) == RC_Success)
+        {
             fFilterType = filter.filterType;
+            OIVCommands::Refresh();
+        }
     }
 
     void TestApp::ToggleGrid()
@@ -362,23 +389,39 @@ namespace OIV
         CmdRequestTexelGrid grid;
         fIsGridEnabled = !fIsGridEnabled;
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
-        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()))
+        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
-            
+            OIVCommands::Refresh();
         }
         
     }
 
     void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        bool IsAlt = (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
+        bool IsAlt =  (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
         bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
         bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
 
         switch (evnt->message.wParam)
         {
+        case 'N':
+            if (IsControl == true)
+            {
+                ShellExecute(nullptr, L"open", LLUtils::PlatformUtility::GetExePath().c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+
+            }
+            break;
+        case 'C':
+            if (IsControl == true)
+                CopyVisibleToClipBoard();
+            else
+                CropVisibleImage();
+            break;
         case 'V':
-            TransformImage(AAT_FlipVertical);
+            if (IsControl == true)
+                PasteFromClipBoard();
+            else
+                TransformImage(AAT_FlipVertical);
             break;
         case 'H':
             TransformImage(AAT_FlipHorizontal);
@@ -457,7 +500,7 @@ namespace OIV
         case 'P':
         {
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedFile.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
         }
         break;
 
@@ -470,12 +513,14 @@ namespace OIV
         pan.x = horizontalPIxels;
         pan.y = verticalPixels;
         ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
+        OIVCommands::Refresh();
     }
 
     void TestApp::Zoom(double precentage, int zoomX , int zoomY )
     {
         CmdDataZoom zoom{ precentage,zoomX, zoomY };
         ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
+        OIVCommands::Refresh();
         UpdateCanvasSize();
     }
 
@@ -483,7 +528,7 @@ namespace OIV
     {
         CmdGetNumTexelsInCanvasResponse response;
         
-        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response))
+        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response) == RC_Success)
         {
 
             std::wstringstream ss;
@@ -502,7 +547,7 @@ namespace OIV
         CmdResponseTexelAtMousePos response;
         request.x = p.x;
         request.y = p.y;
-        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response))
+        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response) == RC_Success)
         {
             std::wstringstream ss;
             ss << _T("Texel: ") 
@@ -514,22 +559,202 @@ namespace OIV
     }
 
 
-    void TestApp::UpdateWindowSize(const Win32::EventWinMessage* winMessage)
+    void TestApp::UpdateWindowSize()
     {
-        if (winMessage == nullptr || winMessage->window->GetHandleClient() == winMessage->message.hwnd)
-        {
             SIZE size = fWindow.GetClientSize();
             ExecuteCommand(CMD_SetClientSize,
                 &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
                 static_cast<uint16_t>(size.cy) }, &CmdNull());
             UpdateCanvasSize();
-        }
     }
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
     {
-        ExecuteCommand(OIV_CMD_AxisAlignedTransform,
-            &OIV_CMDAxisalignedTransformRequest{ transform }, &CmdNull());
+        OIVCommands::TransformImage(ImageHandleDisplayed, transform);
+        OIVCommands::Refresh();
+    }
+
+    void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
+    {
+        using namespace LLUtils;
+        
+        OIV_CMD_LoadRaw_Response loadResponse;
+        OIV_CMD_LoadRaw_Request loadRequest = {};
+        loadRequest.buffer = const_cast<uint8_t*>(buffer);
+        loadRequest.width = width;
+        loadRequest.height = height;
+        loadRequest.texelFormat = texelFormat;
+        loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
+        
+        
+        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);
+        if (result == RC_Success)
+        {
+            fImageBeingOpened = ImageDescriptor();
+            fImageBeingOpened.width = loadRequest.width;
+            fImageBeingOpened.height = loadRequest.height;
+            fImageBeingOpened.loadTime = loadResponse.loadTime;
+            fImageBeingOpened.source = ImageSource::IS_Clipboard;
+            OIV_Util_GetBPPFromTexelFormat(texelFormat, &fImageBeingOpened.bpp);
+            fImageBeingOpened.imageHandle = loadResponse.handle;
+        }
+
+        FinalizeImageLoadThreadSafe(result);
+
+        //return success;
+
+    }
+
+    void TestApp::PasteFromClipBoard()
+    {
+
+        if (IsClipboardFormatAvailable(CF_BITMAP) || IsClipboardFormatAvailable(CF_DIB) || IsClipboardFormatAvailable(CF_DIBV5))
+        {
+            if (OpenClipboard(NULL))
+            {
+                HANDLE hClipboard = GetClipboardData(CF_DIB);
+
+                if (!hClipboard)
+                {
+                    hClipboard = GetClipboardData(CF_DIBV5);
+                }
+
+                if (hClipboard != NULL && hClipboard != INVALID_HANDLE_VALUE)
+                {
+                    void* dib = GlobalLock(hClipboard);
+
+                    if (dib)
+                    {
+                        BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER*>(dib);
+                        
+                        uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
+                        LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
+                                , info->biWidth
+                                , info->biHeight
+                                , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+
+                        GlobalUnlock(dib);
+                    }
+                }
+
+                CloseClipboard();
+            }
+        }
+    }
+
+    void TestApp::CopyVisibleToClipBoard()
+    {
+        LLUtils::RectF64 imageRect;
+        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
+
+        if (result == RC_Success)
+        {
+            LLUtils::RectI32 imageRectInt = {{ (int)imageRect.p0.x,(int)imageRect.p0.y}
+                ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+            
+            ImageHandle croppedHandle;
+            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
+            if (result == RC_Success)
+            {
+
+                struct unloadImage
+                {
+                    ImageHandle handle;
+                    ~unloadImage()
+                    {
+                        if (handle != ImageNullHandle)
+                            OIVCommands::UnloadImage(handle);
+                                
+                    }
+                } handle{ croppedHandle};
+
+
+                //2. Flip the image vertically and convert it to BGRA for the clipboard.
+                result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
+                result = OIVCommands::ConvertImage(croppedHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+
+                //3. Get image pixel buffer and Copy to clipboard.
+
+                OIV_CMD_GetPixels_Request requestGetPixels;
+                OIV_CMD_GetPixels_Response responseGetPixels;
+
+                requestGetPixels.handle = croppedHandle;
+
+                if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+                {
+                    struct hDibDelete
+                    {
+                        bool dlt;
+                        HANDLE mHande;
+                        ~hDibDelete()
+                        {
+                            if (dlt && mHande)
+                            {
+                                GlobalFree(mHande);
+                            }
+                        }
+                    };
+                   
+
+                    uint32_t width = responseGetPixels.width;
+                    uint32_t height = responseGetPixels.height;
+                    uint8_t bpp;
+                    OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
+
+                    HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
+
+                    hDibDelete deletor = { true,hDib };
+
+
+                    if (::OpenClipboard(nullptr))
+                    {
+                        if (SetClipboardData(CF_DIB, hDib) != nullptr)
+                        {
+                            //succeeded do not free hDib.
+                            deletor.dlt = false;
+                        }
+                        else
+                        {
+                            //Failed setting clipboard data.
+                            std::string error = LLUtils::PlatformUtility::GetLastErrorAsString();
+                            throw std::logic_error("Unable to set clipboard data.\n" + error);
+                        }
+                        if (CloseClipboard() == FALSE)
+                            throw std::logic_error("Unknown error");
+                    }
+                    else
+                    {
+                        throw std::logic_error("could not open clipboard");
+                    }
+                }
+
+            }
+        }
+    }
+
+    void TestApp::CropVisibleImage()
+    {
+        LLUtils::RectF64 imageRect;
+        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
+
+        if (result == RC_Success)
+        {
+            LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y }
+            ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+
+            ImageHandle croppedHandle;
+            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
+            if (result == RC_Success)
+            {
+                fImageBeingOpened = fOpenedImage;
+                fImageBeingOpened.imageHandle = croppedHandle;
+                fImageBeingOpened.width = 7;
+                fImageBeingOpened.height= 7;
+                
+            }
+        }
+        FinalizeImageLoadThreadSafe(result);
+
     }
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
@@ -537,8 +762,9 @@ namespace OIV
         const MSG& uMsg = evnt->message;
         switch (uMsg.message)
         {
-        case WM_WINDOWPOSCHANGED:
-            UpdateWindowSize(evnt);
+        case WM_SIZE:
+            UpdateWindowSize();
+            OIVCommands::Refresh();
             break;
 
         case WM_TIMER:
@@ -546,7 +772,7 @@ namespace OIV
                 JumpFiles(1);
         break;
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
-            NotifyImageLoaded();
+            FinalizeImageLoadThreadSafe(static_cast<ResultCode>( evnt->message.wParam));
         break;
         
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
@@ -585,11 +811,62 @@ namespace OIV
 
         const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
+        const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
-        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::State::Pressed;
-        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::State::Pressed;
-        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::State::Pressed;
-        const bool isMouseInsideWindowAndfocus = evnt->window->IsMouseCursorInClientRect() && evnt->window->IsInFocus();
+        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Released;
+        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Pressed;
+        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Pressed;
+        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
+        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
+
+        const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
+        
+        static bool isSelecting = false;
+
+        if (IsLeftPressed == true && Win32Helper::IsKeyPressed(VK_MENU))
+        {
+            if (fDragStart.x == -1)
+            {
+                fSelectionRect = { {-1,-1},{-1,-1} };
+
+                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
+                //Disable selection rect
+            }
+            fDragStart = evnt->window->GetMousePosition();
+            
+        }
+
+        else
+            if (IsLeftCaptured == true)
+            {
+                LLUtils::PointI32 dragCurent = evnt->window->GetMousePosition();
+                if (fDragStart.x != -1 && isSelecting == true || dragCurent.DistanceSquared(fDragStart) > 225)
+                {
+                    isSelecting = true;
+                    LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
+                    LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
+
+                    fSelectionRect = { p0,p1};
+
+                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
+                
+                }
+
+
+            }
+
+        if (IsLeftReleased == true)
+        {
+            isSelecting = false;
+            fDragStart.x = -1;
+            fDragStart.y = -1;
+        }
+
+       
+        
+        /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
+            evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/
+
         if (IsRightCatured == true)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
@@ -597,9 +874,10 @@ namespace OIV
         }
 
         LONG wheelDelta = evnt->DeltaWheel;
+
         if (wheelDelta != 0)
         {
-            if (IsRightCatured || isMouseInsideWindowAndfocus)
+            if (IsRightCatured || isMouseUnderCursor)
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
@@ -611,24 +889,21 @@ namespace OIV
             }
         }
         
-        if (IsMiddlePressed && isMouseInsideWindowAndfocus)
+        if (isMouseUnderCursor)
         {
-            fAutoScroll.ToggleAutoScroll();
-        }
+            if (IsMiddlePressed)
+                fAutoScroll.ToggleAutoScroll();
 
-        if (     isMouseInsideWindowAndfocus 
-             && (IsRightPressed && IsLeftPressed)
-             || (IsRightPressed && IsLeftDown)
-             || (IsRightDown && IsLeftPressed))
-        {
-            ToggleFullScreen();
+            if (IsLeftDoubleClick)
+            {
+                ToggleFullScreen();
+            }
         }
 
     }
 
     bool TestApp::HandleMessages(const Win32::Event* evnt1)
     {
-
         using namespace Win32;
         const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
 
@@ -645,8 +920,6 @@ namespace OIV
         if (rawInputEvent != nullptr)
             HandleRawInputMouse(rawInputEvent);
 
-
         return false;
-
     }
 }

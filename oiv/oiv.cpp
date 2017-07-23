@@ -10,7 +10,7 @@
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
-#include "../OIVD3D11Renderer/OIVD3D11RendererFactory.h"
+#include "../OIVD3D11Renderer/Include/OIVD3D11RendererFactory.h"
 #endif
 
 
@@ -40,16 +40,20 @@ namespace OIV
     
     void OIV::NotifyDirty()
     {
-        Refresh();
+        const bool AutoRefreshWhenDirty = false;
+        fIsViewDirty = true;
+        if (AutoRefreshWhenDirty == true)
+            Refresh();
     }
 
     
 #pragma endregion 
    
-
-    IMCodec::ImageSharedPtr OIV::GetActiveImage() const
+ 
+    void OIV::RefreshRenderer()
     {
-        return fImageManager.GetImage(fActiveHandle);
+        UpdateGpuParams();
+        fRenderer->Redraw();
     }
 
     IMCodec::ImageSharedPtr OIV::GetDisplayImage() const
@@ -61,8 +65,13 @@ namespace OIV
     {
         LLUtils::PointF64 uvScaleFixed = fScrollState.GetARFixedUVScale();
         LLUtils::PointF64 uvOffset = fScrollState.GetOffset();
-        if (GetActiveImage() == nullptr)
-            uvScaleFixed = LLUtils::PointF64(1000000, 100000);
+        
+        if (GetDisplayImage() == nullptr)
+        {
+            // Place image out of the window space.
+            uvOffset = LLUtils::PointF64::One;
+            uvScaleFixed = LLUtils::PointF64::One;
+        }
         
         fViewParams.showGrid = fShowGrid;
         fViewParams.uViewportSize = GetClientSize();
@@ -72,17 +81,10 @@ namespace OIV
         fRenderer->SetViewParams(fViewParams);
     }
 
-    void OIV::HandleWindowResize()
-    {
-        if (IsImageDisplayed())
-            fScrollState.Refresh();
-    }
-
     bool OIV::IsImageDisplayed() const
     {
         return GetDisplayImage() != nullptr;
     }
-    
 
     OIV_AxisAlignedRTransform OIV::ResolveExifRotation(unsigned short exifRotation) const
     {
@@ -136,51 +138,66 @@ namespace OIV
     }
 
 
-    //int OIV::DisplayImage(ImageHandle handle)
-    //{
-    //    fDisplayedImage = fOpenedImage;
-
-    //    using namespace easyexif;
-    //    EXIFInfo exifInfo;
-
-    //    if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-    //        fDisplayedImage = IMUtil::ImageUtil::Transform(
-    //            static_cast<IMUtil::AxisAlignedRTransform>(ResolveExifRotation(exifInfo.Orientation))
-    //            , fDisplayedImage);
-
-    //    fDisplayedImage = IMUtil::ImageUtil::Convert(fDisplayedImage, TF_I_R8_G8_B8_A8);
-
-    //    if (fDisplayedImage != nullptr)
-    //    {
-    //        if (fRenderer->SetImage(fDisplayedImage) == RC_Success)
-    //        {
-    //            fScrollState.Reset(true);
-    //            resultCode = RC_Success;
-    //        }
-    //        else
-    //        {
-    //            resultCode = RC_PixelFormatConversionFailed;
-    //        }
-    //    }
-    //}
-
-
 #pragma region IPictureViewer implementation
     // IPictureViewr implementation
-    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension, ImageHandle& handle)
+    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
+
+        if (buffer == nullptr || size == 0)
+            return RC_InvalidParameters;
+
         using namespace IMCodec;
-        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, onlyRegisteredExtension));
+        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0));
 
         if (image != nullptr)
         {
+            if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data)
+            {
+                easyexif::EXIFInfo exifInfo;
+                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
+                {
+                    const_cast<ImageData&>(image->GetData()).exifOrientation = exifInfo.Orientation;
+                }
+            }
+                
             handle = fImageManager.AddImage(image);
+
             return RC_Success;
         }
         else
         {
             return RC_FileNotSupported;
         }
+    }
+
+    ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
+    {
+        using namespace IMCodec;
+        
+        ImageData data;
+        data.LoadTime = 0;
+        ImageProperies props;
+        props.Height = loadRawRequest.height;
+        props.Width = loadRawRequest.width;
+        props.NumSubImages = 0;
+        props.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.RowPitchInBytes = loadRawRequest.width * IMCodec::GetTexelFormatSize(props.TexelFormatDecompressed) / 8;
+
+        const std::size_t buferSize = props.RowPitchInBytes * props.Height;
+        props.ImageBuffer = new uint8_t[buferSize];
+
+
+        memcpy(props.ImageBuffer, loadRawRequest.buffer, buferSize);
+
+        ImageSharedPtr image = ImageSharedPtr(new Image(props, data));
+        image = IMUtil::ImageUtil::Transform(
+            static_cast<IMUtil::AxisAlignedRTransform>(loadRawRequest.transformation), image);
+
+        handle = fImageManager.AddImage(image);
+        return RC_Success;
+
+        
     }
 
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
@@ -200,16 +217,44 @@ namespace OIV
             if (applyExif)
                 image = ApplyExifRotation(image);
             
-            image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::TF_I_R8_G8_B8_A8);
+
+            // Texel format supported by the renderer is currently RGBA.
+            // support for other texel formats may save conversion.
+            const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::TF_I_R8_G8_B8_A8;
+
+            switch (image->GetImageType())
+            {
+            case IMCodec::TF_F_X16:
+                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                break;
+
+            case IMCodec::TF_F_X24:
+                throw std::logic_error("not implemented");
+                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                break;
+
+            case IMCodec::TF_F_X32:
+                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat);
+                break;
+            default:
+                image = IMUtil::ImageUtil::Convert(image, targetTexelFormat);
+            }
+
 
             if (image != nullptr)
             {
                 if (fRenderer->SetImage(image) == RC_Success)
                 {
-                    const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
-                    fActiveHandle = handle;
                     fDisplayedImage = image;
-                    fScrollState.Reset(resetScrollState);
+
+                    const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
+                    const bool refreshRenderer = (display_flags & OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer) != 0;
+
+                    if (resetScrollState)
+                        fScrollState.Reset(resetScrollState);
+
+                    if (refreshRenderer)
+                        RefreshRenderer();
                 }
                 else
                 {
@@ -226,6 +271,112 @@ namespace OIV
             result = RC_InvalidImageHandle;
         }
      
+        return result;
+    }
+
+    ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)
+    {
+        fRenderer->SetSelectionRect({ { selectionRect.rect.x0 ,selectionRect.rect.y0 },{ selectionRect.rect.x1 ,selectionRect.rect.y1 } });
+        return RC_Success;
+    }
+
+    ResultCode OIV::WindowToImage(const OIV_CMD_WindowToImage_Request& request, OIV_CMD_WindowToImage_Response& response)
+    {
+        if (fDisplayedImage != nullptr)
+        {
+            LLUtils::PointF64 p0 = fScrollState.ClientPosToTexel({ request.rect.x0, request.rect.y0 });
+            LLUtils::PointF64 p1 = fScrollState.ClientPosToTexel({ request.rect.x1, request.rect.y1 });
+
+            response.rect.x0 = p0.x;
+            response.rect.y0 = p0.y;
+            response.rect.x1 = p1.x;
+            response.rect.y1 = p1.y;
+            return RC_Success;
+        }
+
+        return RC_InvalidParameters;
+        
+    }
+
+    ResultCode OIV::ConverFormat(const OIV_CMD_ConvertFormat_Request& req)
+    {
+        using namespace IMCodec;
+        ResultCode result = RC_Success;
+        if (req.handle > 0 )
+        {
+            ImageSharedPtr original = fImageManager.GetImage(req.handle);
+            if (original != nullptr)
+            {
+                ImageSharedPtr converted = IMUtil::ImageUtil::Convert(original, static_cast<TexelFormat>(req.format));
+                if (converted != nullptr)
+                    fImageManager.ReplaceImage(req.handle, converted);
+                else
+                    result = ResultCode::RC_BadConversion;
+            }
+            else
+                result = ResultCode::RC_ImageNotFound;
+            
+        }
+        return result;
+    }
+
+    ResultCode OIV::GetPixels(const OIV_CMD_GetPixels_Request & req,  OIV_CMD_GetPixels_Response & res)
+    {
+        IMCodec::ImageSharedPtr image = fImageManager.GetImage(req.handle);
+
+        if (image != nullptr)
+        {
+            res.width = image->GetWidth();
+            res.height = image->GetHeight();
+            res.rowPitch = image->GetRowPitchInBytes();
+            res.texelFormat = static_cast<OIV_TexelFormat>( image->GetImageType());
+            res.pixelBuffer = image->GetConstBuffer();
+            return RC_Success;
+        }
+
+        return RC_InvalidHandle;
+        
+    }
+
+    ResultCode OIV::CropImage(const OIV_CMD_CropImage_Request& request, OIV_CMD_CropImage_Response& response)
+    {
+        ResultCode result = RC_Success;
+        IMCodec::ImageSharedPtr imageToCrop;
+        if (request.imageHandle == ImageHandleDisplayed)
+        {
+            if (fDisplayedImage != nullptr)
+                imageToCrop = fDisplayedImage;
+        }
+        else
+        {
+            imageToCrop = fImageManager.GetImage(request.imageHandle);
+        }
+
+        if (imageToCrop == nullptr)
+        {
+            result = RC_ImageNotFound;
+        }
+        else
+        {
+            LLUtils::RectI32 imageRect = { { 0,0 } ,{ static_cast<int32_t> (imageToCrop->GetWidth())
+                , static_cast<int32_t> (imageToCrop->GetHeight()) } };
+
+            LLUtils::RectI32 subImageRect = { { request.rect.x0,request.rect.y0 },{ request.rect.x1,request.rect.y1 } };
+            LLUtils::RectI32 cuttedRect = subImageRect.Intersection(imageRect);
+            IMCodec::ImageSharedPtr subImage =
+                IMUtil::ImageUtil::GetSubImage(fDisplayedImage, cuttedRect);
+
+            if (subImage != nullptr)
+            {
+                ImageHandle handle = fImageManager.AddImage(subImage);
+                response.imageHandle = handle;
+                result = RC_Success;
+            }
+            else
+            {
+                result = RC_UknownError;
+            }
+        }
         return result;
     }
 
@@ -264,19 +415,13 @@ namespace OIV
         if (fIsRefresing == false)
         {
             fIsRefresing = true;
-            HandleWindowResize();
-            UpdateGpuParams();
-            fRenderer->Redraw();
+            fScrollState.Refresh();
+            RefreshRenderer();
             fIsRefresing = false;
         }
 
         return 0;
     }
-
- /*   IMCodec::Image* OIV::GetDisplayImage()
-    {
-        return fDisplayedImage.get();
-    }*/
 
     IMCodec::Image* OIV::GetImage(ImageHandle handle)
     {
@@ -288,7 +433,6 @@ namespace OIV
         if (filter_level >= FT_None && filter_level < FT_Count)
         {
             fRenderer->SetFilterLevel(filter_level);
-            Refresh();
             return RC_Success;
         }
 
@@ -330,7 +474,6 @@ namespace OIV
     int OIV::SetTexelGrid(double gridSize)
     {
         fShowGrid = gridSize > 0.0;
-        Refresh();
         return RC_Success;
     }
 
@@ -345,21 +488,30 @@ namespace OIV
     int OIV::SetClientSize(uint16_t width, uint16_t height)
     {
         fClientSize = { width, height };
-        Refresh();
         return 0;
     }
 
-    ResultCode OIV::AxisAlignTrasnform(const OIV_AxisAlignedRTransform transform)
+    ResultCode OIV::AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request)
     {
-        if (GetDisplayImage() != nullptr)
+        
+        if (request.handle == ImageHandleDisplayed && GetDisplayImage() != nullptr)
         {
             IMCodec::ImageSharedPtr& image = fDisplayedImage;
             
-            image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(transform), image);
+            image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
             if (image != nullptr && fRenderer->SetImage(image) == RC_Success)
             {
                 fScrollState.Reset(true);
                 return RC_Success;
+            }
+        }
+        else
+        {
+            IMCodec::ImageSharedPtr image = fImageManager.GetImage(request.handle);
+            if (image != nullptr)
+            {
+                image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
+                fImageManager.ReplaceImage(request.handle, image);
             }
         }
         return RC_UknownError;

@@ -18,9 +18,11 @@ int mainFunction(int argc, const wchar_t** argv)
     }
 
     OIV::TestApp testApp;
-    testApp.Run(filePath);
+    testApp.Init(filePath);
+    testApp.Run();
+    testApp.Destroy();
+    
     return 0;
-
 }
 
 #ifdef WIN32

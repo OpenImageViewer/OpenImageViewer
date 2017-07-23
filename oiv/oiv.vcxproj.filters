@@ -11,6 +11,7 @@
     <ClCompile Include="Commands\CommandProcessor.cpp" />
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
     <ClCompile Include="ImageManager.cpp" />
+    <ClCompile Include="ApiGlobal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -27,7 +28,6 @@
     </ClInclude>
     <ClInclude Include="Logger.h" />
     <ClInclude Include="External\easyexif\exif.h" />
-    <ClInclude Include="ViewParameters.h" />
     <ClInclude Include="Interfaces\IRenderer.h">
       <Filter>Interfaces</Filter>
     </ClInclude>
@@ -52,6 +52,14 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
+    <ClInclude Include="ApiGlobal.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
+    <ClInclude Include="Interfaces\IRendererDefs.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerWindowToimage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">
@@ -69,6 +77,7 @@
     <None Include="Resources\scripts\quad.material">
       <Filter>Resources</Filter>
     </None>
+    <None Include="Resources\programs\quad_selection_fp.shader" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

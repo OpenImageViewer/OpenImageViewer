@@ -6,8 +6,9 @@
 #include "API/defs.h"
 #include <Utility.h>
 #include "AutoScroll.h"
-#include "FileLoadEntry.h"
+#include "ImageDescriptor.h"
 #include "UserSettings.h"
+#include <Rect.h>
 
 namespace OIV
 {
@@ -16,15 +17,15 @@ namespace OIV
     public:
         TestApp();
         ~TestApp();
+        void Init(std::wstring filePath);
+        void Run();
+        void Destroy();
         HWND GetWindowHandle() const;
-        void DisplayImage(ImageHandle image_handle);
         void UpdateTitle();
         void UpdateStatusBar();
         void UpdateZoomScrollState();
-        void Run(std::wstring filePath);
         void UpdateFileInddex();
         void JumpFiles(int step);
-
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
@@ -35,9 +36,8 @@ namespace OIV
         void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
-        void UpdateWindowSize(const Win32::EventWinMessage* winMessage);
+        void UpdateWindowSize();
 #pragma region Win32 event handling
-        void TransformImage(OIV_AxisAlignedRTransform transform);
         void handleKeyInput(const Win32::EventWinMessage* evnt);
 
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
@@ -46,23 +46,20 @@ namespace OIV
         bool HandleMessages(const Win32::Event* evnt);
 #pragma endregion Win32 event handling
         template<class T, class U>
-        bool ExecuteCommand(CommandExecute command, T * request, U * response);
+        ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
-        
-        void OnFileLoaded(std::wstring filePath);
-        
-        //void LoadFileAsync(std::wstring filePath, bool onlyRegisteredExtension);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
-        void UnloadFile();
-        bool FileLoaded(std::wstring filePath);
-        void UpdateFileInfo(const OIV_CMD_LoadFile_Response& load_response, const long double& totalLoadTime);
-        void FinalizeImageLoad();
-        std::wstring BuildImageStringDesctriptor(const OIV_CMD_LoadFile_Response& loadresponse);
-        void NotifyImageLoaded();
+        void FinalizeImageLoad(ResultCode result);
+        void FinalizeImageLoadThreadSafe(ResultCode result);
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         void LoadFileInFolder(std::wstring filePath);
+        void TransformImage(OIV_AxisAlignedRTransform transform);
+        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
+        void PasteFromClipBoard();
+        void CopyVisibleToClipBoard();
+        void CropVisibleImage();
         
 
     private:
@@ -74,15 +71,16 @@ namespace OIV
         int fKeyboardPanSpeed = 100;
         double fKeyboardZoomSpeed = 0.1;
         double fIsGridEnabled = false;
-        FileLoadEntry fOpenedFile;
+        ImageDescriptor fImageBeingOpened;
+        ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
-        
+        LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
         int cTimerID = 1500;
         LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
         LLUtils::ListString fListFiles;
+        LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
-
-        
+        bool fUpdateWindowOnInitialFileLoad = false;
     };
 }

@@ -21,7 +21,7 @@ namespace OIV
             ResultCode result = RC_Success;
 
             const OIV_CMD_Filter_Request* req = reinterpret_cast<const OIV_CMD_Filter_Request*>(request);
-            result = (ResultCode)CommandProcessor::sPictureRenderer->SetFilterLevel(req->filterType);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->SetFilterLevel(req->filterType);
             
 
             return result;

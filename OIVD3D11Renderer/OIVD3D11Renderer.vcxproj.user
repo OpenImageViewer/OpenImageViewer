@@ -8,4 +8,7 @@
     <LocalDebuggerCommandArguments>d:\PNG_transparency_demonstration_1-pixel.png</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup>
+    <ShowAllFiles>true</ShowAllFiles>
+  </PropertyGroup>
 </Project>

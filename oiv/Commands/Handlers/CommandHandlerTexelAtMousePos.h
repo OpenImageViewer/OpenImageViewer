@@ -21,7 +21,7 @@ namespace OIV
             const CmdRequestTexelAtMousePos* req = reinterpret_cast<const CmdRequestTexelAtMousePos*>(request);
             CmdResponseTexelAtMousePos* res = reinterpret_cast<CmdResponseTexelAtMousePos*>(response);
 
-            result = (ResultCode)CommandProcessor::sPictureRenderer->GetTexelAtMousePos(req->x, req->y, res->x, res->y);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->GetTexelAtMousePos(req->x, req->y, res->x, res->y);
 
             return result;
         }

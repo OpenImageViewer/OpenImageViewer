@@ -8,10 +8,10 @@ namespace OIV
     {
     private:
         static MonitorInfo sInstance;
+        MonitorInfo();
     public:
         static MonitorInfo& GetSingleton();
-
-        MonitorInfo();
+        
         void Refresh();
 
         unsigned short getMonitorSequentialNumberFromHMonitor(HMONITOR hMonitor, bool allowRefresh = false);

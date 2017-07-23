@@ -58,10 +58,10 @@ namespace IMCodec
                         out_properties.TexelFormatDecompressed = TF_I_X8;
                         break;
                     case 32:
-                        out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
+                        out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
                         break;
                     case 24:
-                        out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8;
+                        out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8;
                         break;
                     default:
                         out_properties.TexelFormatDecompressed = TF_UNKNOWN;

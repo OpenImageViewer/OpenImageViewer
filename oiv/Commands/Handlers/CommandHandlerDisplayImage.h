@@ -21,7 +21,7 @@ namespace OIV
             ResultCode result = RC_UknownError;
             const OIV_CMD_DisplayImage_Request* displayFile = reinterpret_cast<const OIV_CMD_DisplayImage_Request*>(request);
 
-            result =  CommandProcessor::sPictureRenderer->DisplayFile(
+            result =  ApiGlobal::sPictureRenderer->DisplayFile(
                       displayFile->handle
                     , displayFile->displayFlags
                 );

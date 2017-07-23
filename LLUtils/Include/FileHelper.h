@@ -23,6 +23,15 @@ namespace LLUtils
                 return std::string();
         }
 
+        static void WriteAllText(const std::wstring& filePath, const std::string& text)
+        {
+            using namespace std;
+            using namespace std::experimental;
+
+            ofstream file(filePath);
+            file << text;
+        }
+
         static void ReadAllBytes(std::wstring filePath,std::size_t& size, uint8_t*& buffer)
         {
             using namespace std;
@@ -41,10 +50,12 @@ namespace LLUtils
         {
             using namespace std;
             using namespace std::experimental;
+            filesystem::path parent = filesystem::path(filePath).parent_path();
+            if (filesystem::exists(parent) == false)
+                filesystem::create_directory(parent);
 
             ofstream file(filePath, std::ios::binary);
             file.write((char*)buffer, size);
         }
-
     };
 }

@@ -18,7 +18,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             CmdGetNumTexelsInCanvasResponse* res = reinterpret_cast<CmdGetNumTexelsInCanvasResponse*>(response);
-            result = (ResultCode)CommandProcessor::sPictureRenderer->GetNumTexelsInCanvas(res->width, res->height);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->GetNumTexelsInCanvas(res->width, res->height);
             return result;
         }
     };

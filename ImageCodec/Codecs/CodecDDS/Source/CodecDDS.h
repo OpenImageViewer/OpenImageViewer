@@ -42,18 +42,17 @@ namespace IMCodec
             membuf sbuf(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + size));
             
             CDDSImage image;
-            //image.load("D:\\pine04.dds",false);
-            image.load(istream(&sbuf) , false);
-            unsigned format = image.get_format();
-
-            
-            out_properties.Width = image.get_width();
-            out_properties.Height = image.get_height();
-            out_properties.NumSubImages = image.get_num_mipmaps();
-            out_properties.ImageBuffer = new uint8_t[image.get_size()]; 
-            memcpy(out_properties.ImageBuffer, static_cast<uint8_t*>(image), image.get_size());
-            switch (format)
+            try
             {
+                image.load(istream(&sbuf), false);
+                out_properties.Width = image.get_width();
+                out_properties.Height = image.get_height();
+                out_properties.NumSubImages = image.get_num_mipmaps();
+                out_properties.ImageBuffer = new uint8_t[image.get_size()];
+                memcpy(out_properties.ImageBuffer, static_cast<uint8_t*>(image), image.get_size());
+                unsigned format = image.get_format();
+                switch (format)
+                {
                 case GL_BGRA_EXT:
                     out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
                     break;
@@ -66,11 +65,18 @@ namespace IMCodec
                 case GL_RGBA:
                     out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
                     break;
+                }
+                //TODO: chech if need to extract row pitch from DDS.
+                out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.TexelFormatDecompressed) / 8;
+                success = true;
+
             }
-            //TODO: chech if need to extract row pitch from DDS.
-            out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.TexelFormatDecompressed) / 8;
-            success = true;
-            
+
+            catch(...)
+            {
+              
+            }
+
             return success;
         }
     };
