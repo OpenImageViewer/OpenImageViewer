@@ -15,4 +15,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
+    <PropertyGroup Label="Globals">
+        <OIVRootDir>O:\OpenImageViewer\</OIVRootDir>
+  </PropertyGroup>
 </Project>
