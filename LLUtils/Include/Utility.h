@@ -2,6 +2,7 @@
 #include <list>
 #include "StringUtility.h"
 #include <filesystem>
+#include <immintrin.h> // AVX2
 
 namespace LLUtils
 {
