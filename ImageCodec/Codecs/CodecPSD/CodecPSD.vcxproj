@@ -29,7 +29,6 @@
     <ProjectGuid>{D0EA563A-A39D-4402-9EE9-F4E427DA4591}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CodecPSD</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
