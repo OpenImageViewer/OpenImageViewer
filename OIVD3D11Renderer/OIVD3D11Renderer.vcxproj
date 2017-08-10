@@ -22,7 +22,6 @@
     <ProjectGuid>{C049ED5B-7B0B-4693-A0ED-AA4AFE1A1437}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>OIVD3D11Renderer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
