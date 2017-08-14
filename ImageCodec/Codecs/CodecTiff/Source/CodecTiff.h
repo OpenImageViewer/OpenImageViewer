@@ -25,6 +25,47 @@ namespace IMCodec
             return mPluginProperties;
         }
 
+        TexelFormat GetTexelFormat(uint16_t sampleFormat, uint16 bitsPerSample) const
+        {
+            TexelFormat texelFormat = TexelFormat::TF_UNKNOWN;
+            switch (sampleFormat)
+            {
+            case SAMPLEFORMAT_IEEEFP:
+
+                switch (bitsPerSample)
+                {
+                case 16:
+                    texelFormat = TF_F_X16;
+                    break;
+                case 24:
+                    texelFormat = TF_F_X24;
+                    throw std::logic_error("not implemented");
+                    break;
+                case 32:
+                    texelFormat = TF_F_X32;
+                    break;
+                default:
+                    throw std::logic_error("unsupported format");
+                }
+                break;
+
+
+            case SAMPLEFORMAT_UINT:
+                switch (bitsPerSample)
+                {
+                case 8:
+                    texelFormat = TF_I_X8;
+                    break;
+                default:
+                    throw std::logic_error("unsupported format");
+                }
+                break;
+            default:
+                throw std::logic_error("unsupported format");
+            }
+
+            return texelFormat;
+        }
         //Base abstract methods
         bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) override
         {
@@ -64,7 +105,7 @@ namespace IMCodec
                 uint32_t numberOfStripts = TIFFNumberOfStrips(tiff);
                 tmsize_t stripSize = TIFFStripSize(tiff);
                 rowPitch = TIFFScanlineSize(tiff);
-
+                
                 switch (photoMetric)
                 {
                 case PHOTOMETRIC_RGB:
@@ -77,42 +118,21 @@ namespace IMCodec
                     break;
                 case PHOTOMETRIC_MINISWHITE:
                 case PHOTOMETRIC_MINISBLACK:
-                {
-                    switch (sampleFormat)
+                    texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
+                    decompressedBuffer = new uint8[height * rowPitch];
+                    uint8_t* currensPos = decompressedBuffer;
+
+                    if (stripSize != rowPitch * rowsPerStrip)
+                        throw std::logic_error("Not implemented");
+
+                    for (int i = 0; i < numberOfStripts; i++)
                     {
-                    case SAMPLEFORMAT_IEEEFP:
-                        switch (bitsPerSample)
-                        {
-                        case 16:
-                            texelFormat = TF_F_X16;
-                            break;
-                        case 24:
-                            texelFormat = TF_F_X24;
-                            throw std::logic_error("not implemented");
-                            break;
-                        case 32:
-                            texelFormat = TF_F_X32;
-                            break;
-                        default:
-                            throw std::logic_error("unsupported format");
-                        }
-
-                        decompressedBuffer = new uint8[height * rowPitch];
-                        uint8_t* currensPos = decompressedBuffer;
-                        
-                        if (stripSize != rowPitch * rowsPerStrip)
-                            throw std::logic_error("Not implemented");
-
-                        for (int i = 0; i < numberOfStripts; i++)
-                        {
-                            TIFFReadRawStrip(tiff, i, currensPos, stripSize);
-                            currensPos += rowPitch * rowsPerStrip;
-                        }
-
-                        break;
+                        TIFFReadEncodedStrip(tiff, i, currensPos, stripSize);
+                        currensPos += rowPitch * rowsPerStrip;
                     }
+                    break;
 
-                }
+          
                 }
 
                 success = true;

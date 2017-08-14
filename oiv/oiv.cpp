@@ -236,6 +236,10 @@ namespace OIV
             case IMCodec::TF_F_X32:
                 image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat);
                 break;
+            case IMCodec::TF_I_X8:
+                image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat);
+                break;
+
             default:
                 image = IMUtil::ImageUtil::Convert(image, targetTexelFormat);
             }

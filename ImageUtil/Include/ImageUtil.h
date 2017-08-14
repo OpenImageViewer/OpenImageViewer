@@ -240,8 +240,6 @@ namespace IMUtil
         template <class T>
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
         {
-            //32 bit float implementation.
-            
             const T* sampleData = reinterpret_cast<const T*> (sourceImage->GetConstBuffer());
 
             T min = std::numeric_limits<T>::max();
