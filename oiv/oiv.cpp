@@ -211,6 +211,12 @@ namespace OIV
     {
         ResultCode result = RC_Success;
 
+        if (display_request.handle == ImageNullHandle)
+        {
+            fDisplayedImage.reset();
+            return result;
+        }
+
         IMCodec::ImageSharedPtr image = fImageManager.GetImage(display_request.handle);
         if (image != nullptr)
         {

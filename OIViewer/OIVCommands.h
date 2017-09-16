@@ -25,6 +25,14 @@ namespace OIV
                 return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
         }
 
+        static ResultCode OIVCommands::ClearImage()
+        {
+            OIV_CMD_DisplayImage_Request displayRequest = {};
+
+            displayRequest.handle = ImageNullHandle;
+            return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
+        }
+
         static ResultCode OIVCommands::UnloadImage(ImageHandle handle)
         {
             if (handle != ImageNullHandle)
