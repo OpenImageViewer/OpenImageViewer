@@ -28,14 +28,19 @@ namespace OIV
         {
 
             static std::wstring clipboard = L"[Clipboard]";
-
-            if (source == IS_File)
+            static std::wstring empty = L"";
+            switch (source)
+            {
+            case IS_File:
                 return  fileName;
-            else
+            case IS_Clipboard:
                 return clipboard;
+            case IS_None:
+                return empty;
+            default:
+                throw std::logic_error("Unexpected or corrupted value");
+            }
         }
-
-
 
         std::wstring GetDescription() const
         {
