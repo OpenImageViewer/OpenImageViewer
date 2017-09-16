@@ -74,6 +74,20 @@ namespace OIV
         ExecuteCommand(OIV_CMD_ZoomScrollState, &request, &CmdNull());
     }
 
+
+    void TestApp::DisplayOpenedImage(bool resetScrollState) const
+    {
+        if (fOpenedImage.imageHandle != ImageNullHandle)
+        {
+            OIVCommands::DisplayImage(fOpenedImage.imageHandle
+                , static_cast<OIV_CMD_DisplayImage_Flags>(
+                    OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
+                    | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
+                    | (resetScrollState ? OIV_CMD_DisplayImage_Flags::DF_ResetScrollState : 0))
+                , fUseRainbowNormalization ? OIV_PROP_Normalize_Mode::NM_Rainbow : OIV_PROP_Normalize_Mode::NM_Monochrome
+            );
+        }
+    }
   
     void TestApp::FinalizeImageLoad(ResultCode result)
     {
@@ -91,12 +105,7 @@ namespace OIV
 
             LLUtils::StopWatch stopWatch(true);
 
-
-            OIVCommands::DisplayImage(fOpenedImage.imageHandle
-                , static_cast<OIV_CMD_DisplayImage_Flags>(
-                     OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
-                   | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
-                   | OIV_CMD_DisplayImage_Flags::DF_ResetScrollState));
+            DisplayOpenedImage(true);
 
             fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
@@ -407,8 +416,15 @@ namespace OIV
         case 'N':
             if (IsControl == true)
             {
+                //Open new window
                 ShellExecute(nullptr, L"open", LLUtils::PlatformUtility::GetExePath().c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
 
+            }
+            else
+            {
+                // Change normalization mode
+                fUseRainbowNormalization = !fUseRainbowNormalization;
+                DisplayOpenedImage(false);
             }
             break;
         case 'C':

@@ -82,12 +82,16 @@ namespace OIV
             return result;
         }
 
-        static ResultCode OIVCommands::DisplayImage(ImageHandle image_handle, OIV_CMD_DisplayImage_Flags displayFlags)
+        static ResultCode OIVCommands::DisplayImage(ImageHandle image_handle
+                , OIV_CMD_DisplayImage_Flags displayFlags
+                , OIV_PROP_Normalize_Mode normalizationFlags = OIV_PROP_Normalize_Mode::NM_Default
+                )
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};
 
             displayRequest.handle = image_handle;
             displayRequest.displayFlags = displayFlags;
+            displayRequest.normalizeMode = normalizationFlags;
 
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }

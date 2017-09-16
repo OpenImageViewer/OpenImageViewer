@@ -5,11 +5,12 @@
 #include "PixelUtil.h"
 #include "../../LLUtils/Include/Rect.h"
 #include "half.hpp"
+#include "HSLRGB.h"
 
 
 namespace IMUtil
 {
-#define RGBA(R,G,B,A) (A << 24 | R << 16 | G << 8 | B ) 
+#define RGBA(R,G,B,A) (A << 24 | B << 16 | G << 8 | R ) 
 #define RGBA_GRAYSCALE(X) (RGBA(X,X,X,255))
 #define RGBA_To_GRAYSCALE_LUMA(R,G,B,A) (RGBA((int)(R * 0.2126), (int)(G * 0.7152) ,(int)(B * 0.0722) ,255))
 
@@ -29,8 +30,8 @@ namespace IMUtil
 
             ConvertKey(IMCodec::TexelFormat aSource, IMCodec::TexelFormat aTarget)
             {
-              source = aSource;
-              target = aTarget;
+                source = aSource;
+                target = aTarget;
             }
 
             bool operator==(const ConvertKey& rhs) const
@@ -218,7 +219,7 @@ namespace IMUtil
                     {
                         const uint32_t idxDest = y * subimage.GetWidth() + x;
                         const uint32_t idxSource = (y + subimage.p0.y)  * sourceImage->GetWidth() + (x + subimage.p0.x);
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest,sourceBuffer, idxSource);
+                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest, sourceBuffer, idxSource);
                     }
                 }
 
@@ -237,8 +238,15 @@ namespace IMUtil
             return IMCodec::ImageSharedPtr();
         }
 
+        enum NormalizeMode
+        {
+              NM_Default    = 0
+            , NM_GrayScale  = 1
+            , NM_RainBow    = 2
+        };
+
         template <class T>
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NM_Default)
         {
             const T* sampleData = reinterpret_cast<const T*> (sourceImage->GetConstBuffer());
 
@@ -267,10 +275,32 @@ namespace IMUtil
             for (uint32_t i = 0; i < totalPixels; i++)
             {
                 const T currentSample = sampleData[i];
-                uint8_t grayValue = std::min(static_cast<uint8_t>( std::round ( (currentSample / length) * 255)),static_cast<uint8_t>( 255));
-                currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
-            }
 
+                switch (normalizeMode)
+                {
+                case NM_Default:
+                case NM_GrayScale:
+                {
+                    uint8_t grayValue = std::min(static_cast<uint8_t>(std::round((currentSample / length) * 255)), static_cast<uint8_t>(255));
+                    currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
+                }
+                    break;
+
+                case NM_RainBow:
+                {
+                    RGB rgb = RGB(0, 0, 0);
+                    if (currentSample != 0)
+                    {
+                        int hue = static_cast<int>(((currentSample / length) * 300) + 240) % 360;
+                        rgb = HSLToRGB(HSL(hue, 0.5, 0.5));
+
+                    }
+                    currentTexel[i].value = RGBA(rgb.R, rgb.G, rgb.B, 255);
+                }
+                    break;
+                }
+             
+            }
             return IMCodec::ImageSharedPtr(new IMCodec::Image(props,sourceImage->GetData()));
         }
     };

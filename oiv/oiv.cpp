@@ -207,12 +207,15 @@ namespace OIV
             , image);
     }
 
-    ResultCode OIV::DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags)
+    ResultCode OIV::DisplayFile(const OIV_CMD_DisplayImage_Request& display_request)
     {
         ResultCode result = RC_Success;
-        IMCodec::ImageSharedPtr image = fImageManager.GetImage(handle);
+
+        IMCodec::ImageSharedPtr image = fImageManager.GetImage(display_request.handle);
         if (image != nullptr)
         {
+            OIV_CMD_DisplayImage_Flags display_flags = display_request.displayFlags;
+
             const bool applyExif = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation) != 0;
             if (applyExif)
                 image = ApplyExifRotation(image);
@@ -234,10 +237,10 @@ namespace OIV
                 break;
 
             case IMCodec::TF_F_X32:
-                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat);
+                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat,static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
                 break;
             case IMCodec::TF_I_X8:
-                image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat);
+                image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat, static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
                 break;
 
             default:

@@ -13,7 +13,7 @@ namespace OIV
         virtual int LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) = 0;
         virtual ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) = 0;
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;
-        virtual ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) = 0;
+        virtual ResultCode DisplayFile(const OIV_CMD_DisplayImage_Request& display_request) = 0;
 
         virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
 

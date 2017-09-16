@@ -325,11 +325,18 @@ extern "C"
         , DF_RefreshRenderer            = 1 << 2
     };
 
+    enum OIV_PROP_Normalize_Mode
+    {
+          NM_Default    = 0
+        , NM_Monochrome = 1
+        , NM_Rainbow    = 2
+    };
+
     struct OIV_CMD_DisplayImage_Request
     {
         ImageHandle handle;
         OIV_CMD_DisplayImage_Flags displayFlags;
-
+        OIV_PROP_Normalize_Mode normalizeMode;
     };
 
     /*struct OIV_CMD_DisplayImage_Response

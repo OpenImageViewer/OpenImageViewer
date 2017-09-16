@@ -147,6 +147,7 @@
   <ItemGroup>
     <ClInclude Include="Include\AxisAlignedTransform.h" />
     <ClInclude Include="Include\half.hpp" />
+    <ClInclude Include="Include\HSLRGB.h" />
     <ClInclude Include="Include\ImageUtil.h" />
     <ClInclude Include="Include\Int24.h" />
     <ClInclude Include="Include\PixelUtil.h" />

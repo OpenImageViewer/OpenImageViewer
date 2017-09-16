@@ -26,7 +26,7 @@ namespace OIV
         ResultCode UnloadFile(const ImageHandle handle) override;
         int LoadFile(void* buffer, std::size_t size, char* extension , OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) override;
         ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) override;
-        ResultCode DisplayFile(const ImageHandle handle, const OIV_CMD_DisplayImage_Flags display_flags) override;
+        ResultCode DisplayFile(const OIV_CMD_DisplayImage_Request& display_flags) override;
         ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) override;
         ResultCode WindowToImage(const OIV_CMD_WindowToImage_Request& request, OIV_CMD_WindowToImage_Response& response) override;
         ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req) override;

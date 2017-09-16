@@ -60,6 +60,7 @@ namespace OIV
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
+        void DisplayOpenedImage(bool resetScrollState) const;
         
 
     private:
@@ -82,5 +83,6 @@ namespace OIV
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
         bool fUpdateWindowOnInitialFileLoad = false;
+        bool fUseRainbowNormalization = false;
     };
 }
