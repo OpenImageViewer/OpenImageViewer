@@ -24,8 +24,8 @@ namespace OIV
         void UpdateTitle();
         void UpdateStatusBar();
         void UpdateZoomScrollState();
-        void UpdateFileInddex();
-        void JumpFiles(int step);
+        void UpdateUIFileIndex();
+        bool JumpFiles(int step);
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
@@ -51,16 +51,21 @@ namespace OIV
     private: //methods
         void OnScroll(LLUtils::PointI32 panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
+        void SetOpenImage(const ImageDescriptor& image_descriptor);
         void FinalizeImageLoad(ResultCode result);
         void FinalizeImageLoadThreadSafe(ResultCode result);
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
+        void ReloadFileInFolder();
+        void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRTransform transform);
         void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
-        void DisplayOpenedImage(bool resetScrollState) const;
+        void DisplayImage(ImageDescriptor& descriptor, bool resetScrollState) const;
+        void UnloadOpenedImaged();
+        void DeleteOpenedFile(bool permanently);
         
 
     private:

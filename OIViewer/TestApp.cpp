@@ -75,20 +75,77 @@ namespace OIV
     }
 
 
-    void TestApp::DisplayOpenedImage(bool resetScrollState) const
+    void TestApp::DisplayImage(ImageDescriptor& descriptor , bool resetScrollState) const
     {
-        if (fOpenedImage.imageHandle != ImageNullHandle)
+        if (descriptor.imageHandle != ImageNullHandle)
         {
-            OIVCommands::DisplayImage(fOpenedImage.imageHandle
+            LLUtils::StopWatch stopWatch(true);
+
+            OIVCommands::DisplayImage(descriptor.imageHandle
                 , static_cast<OIV_CMD_DisplayImage_Flags>(
                     OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
                     | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
                     | (resetScrollState ? OIV_CMD_DisplayImage_Flags::DF_ResetScrollState : 0))
                 , fUseRainbowNormalization ? OIV_PROP_Normalize_Mode::NM_Rainbow : OIV_PROP_Normalize_Mode::NM_Monochrome
             );
+
+            descriptor.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+
         }
     }
-  
+
+    void TestApp::UnloadOpenedImaged()
+    {
+        OIVCommands::UnloadImage(fOpenedImage.imageHandle);
+        OIVCommands::ClearImage();
+        OIVCommands::Refresh();
+        SetOpenImage(ImageDescriptor());
+    }
+
+    void TestApp::DeleteOpenedFile(bool permanently)
+    {
+
+        int stringLength = fOpenedImage.fileName.length();
+        std::unique_ptr<wchar_t> buffer = std::unique_ptr<wchar_t>(new wchar_t[stringLength + 2]);
+
+        memcpy(buffer.get(), fOpenedImage.fileName.c_str(), stringLength * sizeof(wchar_t));
+
+
+        buffer.get()[stringLength] = '\0';
+        buffer.get()[stringLength + 1] = '\0';
+
+
+        SHFILEOPSTRUCT file_op =
+        {
+            GetWindowHandle()                          // HWND            hwnd;
+            , FO_DELETE                                 // UINT            wFunc;
+            , buffer.get()                                  // PCZZWSTR        pFrom;
+            , nullptr                                   // PCZZWSTR        pTo;
+            , permanently ? 0 : FOF_ALLOWUNDO //FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT //FILEOP_FLAGS    fFlags;
+            , FALSE                                     // BOOL            fAnyOperationsAborted;
+            , nullptr                                   // LPVOID          hNameMappings;
+            , nullptr                                   // PCWSTR          lpszProgressTitle; // only used if FOF_SIMPLEPROGRESS
+        };
+
+
+        int currentIndex = fCurrentFileIndex;
+        int shResult = SHFileOperation(&file_op);
+
+
+        if (shResult == 0 && file_op.fAnyOperationsAborted == FALSE)
+        {
+            bool isLoaded = JumpFiles(1);
+            if (isLoaded == false)
+                isLoaded = JumpFiles(-1);
+
+            ReloadFileInFolder();
+
+            if (isLoaded == false)
+                UnloadOpenedImaged();
+        }
+    }
+
     void TestApp::FinalizeImageLoad(ResultCode result)
     {
         if (result == RC_Success)
@@ -99,19 +156,12 @@ namespace OIV
 
             ImageHandle oldImage = fOpenedImage.imageHandle;
 
-            fOpenedImage = fImageBeingOpened;
+            DisplayImage(fImageBeingOpened,true);
+            SetOpenImage(fImageBeingOpened);
             fImageBeingOpened = ImageDescriptor();
 
-
-            LLUtils::StopWatch stopWatch(true);
-
-            DisplayOpenedImage(true);
-
-            fOpenedImage.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-
-            UpdateTitle();
-            UpdateStatusBar();
-            UpdateFileInddex();
+            if (fUpdateWindowOnInitialFileLoad == false)
+                UpdateUIFileIndex();
 
             //Unload old image
             OIVCommands::UnloadImage(oldImage);
@@ -122,6 +172,8 @@ namespace OIV
             //Show window on inital file load, whether success or failure.
             fUpdateWindowOnInitialFileLoad = false;
             fWindow.Show(true);
+            // make 'Load file in folder' the last operation after the initial file has loaded.
+            LoadFileInFolder(fOpenedImage.fileName);
             
         }
     }
@@ -155,6 +207,13 @@ namespace OIV
         return LoadFileFromBuffer((uint8_t*)buffer, size, extension, onlyRegisteredExtension);
     }
 
+    void TestApp::SetOpenImage(const ImageDescriptor& image_descriptor)
+    {
+        fOpenedImage = image_descriptor;
+        UpdateTitle();
+        UpdateStatusBar();
+    }
+
     bool TestApp::LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension)
     {
         using namespace LLUtils;
@@ -186,20 +245,35 @@ namespace OIV
     
     
 
+    void TestApp::ReloadFileInFolder()
+    {
+        if (fOpenedImage.source == ImageSource::IS_File)
+            LoadFileInFolder(fOpenedImage.GetName());
+    }
+
+    void TestApp::UpdateOpenedFileIndex()
+    {
+        if (fOpenedImage.source == IS_File)
+        {
+            LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fOpenedImage.fileName);
+
+            if (it != fListFiles.end())
+                fCurrentFileIndex = std::distance(fListFiles.begin(), it);
+        }
+    }
+
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
         using namespace std::experimental::filesystem;
         fListFiles.clear();
         fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
-        
+
         std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
         LLUtils::PlatformUtility::find_files(absoluteFolderPath, fListFiles);
-        LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), absoluteFilePath);
-        if (it != fListFiles.end())
-            fCurrentFileIndex = std::distance(fListFiles.begin(), it);
 
-        UpdateFileInddex();
+        UpdateOpenedFileIndex();
+        UpdateUIFileIndex();
     }
 
     void TestApp::OnScroll(LLUtils::PointI32 panAmount)
@@ -269,11 +343,6 @@ namespace OIV
 
         // load settings
         fSettings.Load();
-
-
-        // Load all files in the directory of the loaded file
-        if (filePath.empty() == false)
-            LoadFileInFolder(filePath);
     }
 
 
@@ -288,11 +357,8 @@ namespace OIV
         Win32Helper::MessageLoop();
     }
 
-    void TestApp::UpdateFileInddex()
+    void TestApp::UpdateUIFileIndex()
     {
-        if (fListFiles.empty())
-            return;
-
         std::wstringstream ss;
         ss << L"File " << (fCurrentFileIndex == std::numeric_limits<LLUtils::ListString::size_type>::max() ? 
             0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
@@ -300,10 +366,10 @@ namespace OIV
         fWindow.SetStatusBarText(ss.str(), 1, 0);
     }
 
-    void TestApp::JumpFiles(int step)
+    bool TestApp::JumpFiles(int step)
     {
         if (fListFiles.empty())
-            return;
+            return false;
 
         LLUtils::ListString::size_type totalFiles = fListFiles.size();
         int32_t fileIndex = static_cast<int32_t>(fCurrentFileIndex);
@@ -348,11 +414,9 @@ namespace OIV
         {
             assert(fileIndex >= 0 && fileIndex < totalFiles);
             fCurrentFileIndex = static_cast<LLUtils::ListString::size_type>(fileIndex);
+            UpdateUIFileIndex();
         }
-
-
-        UpdateFileInddex();
-
+        return isLoaded;
     }
     
     void TestApp::ToggleFullScreen()
@@ -424,7 +488,7 @@ namespace OIV
             {
                 // Change normalization mode
                 fUseRainbowNormalization = !fUseRainbowNormalization;
-                DisplayOpenedImage(false);
+                DisplayImage(fOpenedImage, false);
             }
             break;
         case 'C':
@@ -509,6 +573,9 @@ namespace OIV
             //TODO: center and reset zoom
             break;
         case VK_DIVIDE:
+            break;
+        case VK_DELETE:
+            DeleteOpenedFile(IsShift);
             break;
         case 'G':
             ToggleGrid();
