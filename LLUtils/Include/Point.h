@@ -38,6 +38,12 @@ namespace LLUtils
             y = aY;
         }
 
+        Point(POINT_TYPE aT)
+        {
+            x = aT;
+            y = aT;
+        }
+
 #pragma region operations
         Point Abs() const
         {
@@ -174,6 +180,12 @@ namespace LLUtils
         {
             x = rhs.x;
             y = rhs.y;
+        }
+
+        Point(const SIZE& rhs)
+        {
+            x = rhs.cx;
+            y = rhs.cy;
         }
 #endif
 
