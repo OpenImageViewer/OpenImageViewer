@@ -1,5 +1,7 @@
 #pragma once
 #include "Point.h"
+#include "API/defs.h"
+
 namespace OIV
 {
 
@@ -14,30 +16,17 @@ namespace OIV
             virtual void NotifyDirty() = 0;
         };
 
-       
-        enum SmallImageOffsetStyle
-        {
-              SIS_Default
-            , SIS_LockCenterBothAxis
-            , SIS_LockCenterFitAxis
-            , SIS_NoLock
-        };
-       
-
-
         ZoomScrollState(Listener* listener) :
             
              fListener(listener)
             
         {
 
-
         }
 
         // commands
-        void Reset(bool refresh = false);
-        void Zoom(double amount,int x,int y);
-        void Pan(LLUtils::PointF64 amont);
+        void SetZoom(double zoom);
+        void SetOffset(LLUtils::PointF64 offset);
         void Refresh();
 
 
@@ -47,9 +36,7 @@ namespace OIV
         LLUtils::PointF64 GetARFixedUVScale() const;
         LLUtils::PointF64 ClientPosToTexel(LLUtils::PointI32 pos) const;
         LLUtils::PointF64 GetNumTexelsInCanvas() const;
-        void SetInnerMargins(const LLUtils::PointF64& point);
-        void SetOuterMargins(const LLUtils::PointF64& point);
-        void SetSmallImageOffsetStyle(const uint8_t small_image_offset_style);
+        LLUtils::PointF64 GetRealSizeScale() const;
     private:
         // private queries
         LLUtils::PointF64 GetScreenSpaceOrigin() const;
@@ -66,12 +53,8 @@ namespace OIV
 
         void SetScale(LLUtils::PointF64 scale);
         void SupressDirty(bool surpress);
-
-        void TranslateOffset(LLUtils::PointF64 offset);
-        void Center();
-        double ResolveOffset(double desiredOffset, double scale, double marginLarge, double marginSmall) const;
+        
         LLUtils::PointF64 FixAR(LLUtils::PointF64 val, bool increase);
-        void SetOffset(LLUtils::PointF64 offset);
         
     private: //member fields
         Listener* fListener = nullptr;
@@ -80,10 +63,8 @@ namespace OIV
         bool fSupressDirty = false;
         bool fDirtyQueued = false;
         bool fInverted = false;
-        SmallImageOffsetStyle fSmallImageOffsetStyle = SIS_Default;
-
-        LLUtils::PointF64 fMarginsOuterbounds = LLUtils::PointF64(0.25, 0.25);
-        LLUtils::PointF64 fMarginsInnerBounds = LLUtils::PointF64(0.1, 0.1);
-
+     
+        double fZoom = 1.0;
+        LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
     };
 }

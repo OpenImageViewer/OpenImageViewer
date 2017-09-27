@@ -47,17 +47,15 @@ namespace OIV
 
         struct ZoomScrollState
         {
-            Point OuterMargins = { 0.25,0.25 };
-            Point InnnerMargins = { 0.1,0.1 };
+            Point Margins = { 0.75,0.75 };
+            
             int smallImageOffsetStyle = 0;
 
             void serialize(JSON::Adapter& adapter)
             {
                 // this pattern is required 
                 JSON::Class root(adapter, "ZoomScrollState");
-                JSON_E(adapter, smallImageOffsetStyle);
-                JSON_E(adapter, OuterMargins);
-                JSON_E(adapter, InnnerMargins);
+                JSON_E(adapter, Margins);
             }
         };
 

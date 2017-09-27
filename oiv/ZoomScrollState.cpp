@@ -5,81 +5,12 @@
 
 namespace OIV
 {
-    void ZoomScrollState::TranslateOffset(LLUtils::PointF64 offset)
+
+    LLUtils::PointF64 ZoomScrollState::GetImageSize() const
     {
-        SetOffset(fUVOffset + offset);
+        return static_cast<LLUtils::PointF64>(fListener->GetImageSize());
     }
-
-
-    void ZoomScrollState::Center()
-    {
-        LLUtils::PointF64 uvscale = GetARFixedUVScale();
-        fUVOffset = -(uvscale - 1.0) * 0.5;
-    }
-    
-
-    double ZoomScrollState::ResolveOffset(double desiredOffset, double scale, double marginOuter, double marginInner) const
-    {
-        double offset;
-        if (scale < 1)
-        {
-            // Image is larger than window
-            double marginFactor = marginOuter * scale;
-            double maxOffset = 1.0 - scale + marginFactor;
-            offset = (std::max)(static_cast<double>(-marginFactor), (std::min)(maxOffset, desiredOffset));
-        }
-        else
-        {
-
-            switch (fSmallImageOffsetStyle)
-            {
-            
-            case SIS_LockCenterBothAxis:
-                offset = -(scale - 1) / 2;
-                break;
-            
-            case SIS_Default:
-            case SIS_NoLock:
-            {
-                double maxOffset = marginOuter;
-                double minOffset = -scale + (1.0 - marginOuter);
-                if (minOffset < maxOffset)
-                {
-                    offset = (std::min)((std::max)(desiredOffset, minOffset), maxOffset);
-                }
-                else
-                {
-                    //No room for margin - Keep in center
-                    offset = -(scale - 1) / 2;
-                }
-                break;
-            }
-            
-            case SIS_LockCenterFitAxis:
-            {
-                double marginFactor = marginInner * scale;
-                double maxOffset = -marginFactor;
-                double minOffset = -scale + 1.0 + marginFactor;
-                if (minOffset < maxOffset)
-                {
-                    offset = (std::min)((std::max)(desiredOffset, minOffset), maxOffset);
-                }
-                else
-                {
-                    //No room for margin - Keep in center
-                    offset = -(scale - 1) / 2;
-                }
-            }
-            break;
-            default:
-                throw std::logic_error("wrong or corrupted value");
-            }
-
-        }
-
-        return offset;
-    }
-
+  
     LLUtils::PointF64 ZoomScrollState::FixAR(LLUtils::PointF64 val, bool increase)
     {
         LLUtils::PointF64 windowSize = GetClientSize();
@@ -105,29 +36,14 @@ namespace OIV
         return result;
     }
 
-    void ZoomScrollState::SetOffset(LLUtils::PointF64 offset)
-    {
-        LLUtils::PointF64 uvScale = GetARFixedUVScale();
-
-        LLUtils::PointF64 marginLarge = fMarginsOuterbounds;
-        LLUtils::PointF64 marginSmall = FixAR(fMarginsInnerBounds, false);
-        
-        fUVOffset.x = ResolveOffset(offset.x, uvScale.x, marginLarge.x, marginSmall.x);
-        fUVOffset.y = ResolveOffset(offset.y, uvScale.y, marginLarge.y, marginSmall.y);
-        NotifyDirty();
-    }
-
+    
 
     LLUtils::PointF64 ZoomScrollState::GetScreenSpaceOrigin() const
     {
         return GetOffset() / GetARFixedUVScale() * static_cast<LLUtils::PointF64>( fListener->GetClientSize());
     }
 
-    LLUtils::PointF64 ZoomScrollState::GetImageSize() const
-    {
-        return static_cast<LLUtils::PointF64>(fListener->GetImageSize());
-    }
-
+   
     LLUtils::PointF64 ZoomScrollState::GetClientSize() const
     {
         return static_cast<LLUtils::PointF64>(fListener->GetClientSize());
@@ -151,20 +67,13 @@ namespace OIV
         return GetImageSize() * GetARFixedUVScale();
     }
 
-    void ZoomScrollState::SetInnerMargins(const LLUtils::PointF64 & point)
+    LLUtils::PointF64 ZoomScrollState::GetRealSizeScale() const
     {
-        fMarginsInnerBounds = point;
+        LLUtils::PointF64 ratio = GetClientSize() / GetImageSize();
+        return LLUtils::PointF64(std::min(ratio.x, ratio.y));
     }
 
-    void ZoomScrollState::SetOuterMargins(const LLUtils::PointF64 & point)
-    {
-        fMarginsOuterbounds = point;
-    }
-
-    void ZoomScrollState::SetSmallImageOffsetStyle(const uint8_t small_image_offset_style)
-    {
-        fSmallImageOffsetStyle = (SmallImageOffsetStyle)small_image_offset_style;
-    }
+   
 
     LLUtils::PointF64 ZoomScrollState::GetARFixedUVScale() const
     {
@@ -173,8 +82,8 @@ namespace OIV
         if (textureSize == LLUtils::PointF64::Zero)
             return fUVScale;
 
-        double textureAR = textureSize.x / textureSize.y;
-        double windowAR = windowSize.x / windowSize.y;
+        double textureAR = textureSize.x / std::max(textureSize.y, 0.1);
+        double windowAR = windowSize.x / std::max(windowSize.y, 0.1);
 
 
         LLUtils::PointF64 fixedUVScale = fUVScale;
@@ -193,17 +102,19 @@ namespace OIV
         RefreshScale();
         RefreshOffset();
         SupressDirty(false);
-
     }
 
     void ZoomScrollState::RefreshScale()
     {
-        SetScale(fUVScale);
+        fUVScale = GetRealSizeScale() / fZoom;
     }
 
     void ZoomScrollState::RefreshOffset()
     {
-        SetOffset(fUVOffset);
+        using namespace LLUtils;
+        //Center();
+        fUVOffset = -fOffset  / GetClientSize() * GetARFixedUVScale();
+        NotifyDirty();
     }
 
     void ZoomScrollState::NotifyDirty()
@@ -231,61 +142,17 @@ namespace OIV
         }
     }
 
-    void ZoomScrollState::Reset(bool refresh /*= false*/)
-    {
-        fUVOffset = LLUtils::PointF64::Zero;
-        fUVScale = LLUtils::PointF64::One;
 
-        Center();
-
-        if (refresh)
-            Refresh();
-    }
-
-    void ZoomScrollState::Zoom(double amount, int x, int y)
+    void ZoomScrollState::SetZoom(double amount)
     {
         using namespace LLUtils;
         if (amount == 0)
             return;
 
         SupressDirty(true);
-
-        PointF64 zoomPoint;
-        PointF64 windowSize = GetClientSize();
-
-        
-        zoomPoint.x = x >= 0 ? (static_cast<double>(x) / windowSize.x) : 0.5;
-        zoomPoint.y = y >= 0 ? (static_cast<double>(y) / windowSize.y) : 0.5;
-
-        
-        if (fInverted)
-        {
-            assert(zoomPoint.y <= 1.0);
-            zoomPoint.y = 1 - zoomPoint.y;
-        }
-
-
-        double currentZoom = 1 / GetScale().x;
-        
-        double targetZoom;
-
-        if (amount > 0)
-            targetZoom = currentZoom * (1 + amount);
-        else
-        if (amount < 0)
-            targetZoom = currentZoom *( 1.0 - (std::min)(-amount,0.95));
-
-        PointF64 uvNewScale = PointF64::One /  targetZoom;
-
-        PointF64 oldScaleFixed = GetARFixedUVScale();
-        SetScale(uvNewScale);
-        PointF64 newScaleFixed = GetARFixedUVScale();
-
-        PointF64 totalOffset = (oldScaleFixed - newScaleFixed);
-
-        //zoom around the zoom point
-        PointF64 offsetChange = totalOffset * zoomPoint;
-        TranslateOffset(offsetChange);
+        fZoom = amount;
+        RefreshScale();
+        RefreshOffset();
         SupressDirty(false);
     }
 
@@ -294,10 +161,10 @@ namespace OIV
         fInverted = inverted;
     }
 
-    void ZoomScrollState::Pan(LLUtils::PointF64 amount)
+    void ZoomScrollState::SetOffset(LLUtils::PointF64 amount)
     {
-        LLUtils::PointF64 panFactor = amount * GetARFixedUVScale() / GetClientSize();
-        panFactor.y *= fInverted ? -1 : 1;
-        TranslateOffset(panFactor);
+        fOffset = amount;
+        RefreshOffset();
+        NotifyDirty();
     }
 }

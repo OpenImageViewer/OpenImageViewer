@@ -89,5 +89,8 @@
     <ClInclude Include="OIVCommands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RecursiveDelayOp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

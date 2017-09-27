@@ -205,6 +205,15 @@ extern "C"
     };
 
 
+    enum OIV_PROP_Scale_Mode
+    {
+          SM_None = 0 << 0
+        , SM_FitToWindow = 1 << 0
+        , SM_OriginalSize = 1 << 1
+        , SM_LockScale = 1 << 2
+        , SM_KeepAspectRatio = 1 << 3
+    };
+
 
     struct OIV_CMD_ZoomScrollState_Request
     {
@@ -213,6 +222,7 @@ extern "C"
         double outermarginsX;
         double outermarginsY;
         uint8_t SmallImageOffsetStyle;
+        OIV_PROP_Scale_Mode scaleMode;
     };
 
 

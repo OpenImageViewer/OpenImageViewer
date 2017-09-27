@@ -140,7 +140,7 @@ namespace OIV
 
 #pragma region IPictureViewer implementation
     // IPictureViewr implementation
-    int OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
+    ResultCode OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
 
         if (buffer == nullptr || size == 0)
@@ -263,8 +263,8 @@ namespace OIV
                     const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
                     const bool refreshRenderer = (display_flags & OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer) != 0;
 
-                    if (resetScrollState)
-                        fScrollState.Reset(resetScrollState);
+                    //if (resetScrollState)
+                        //fScrollState.Reset(resetScrollState);
 
                     if (refreshRenderer)
                         RefreshRenderer();
@@ -393,16 +393,16 @@ namespace OIV
         return result;
     }
 
-    double OIV::Zoom(double percentage, int x, int y)
+    ResultCode OIV::Zoom(double zoom)
     {
-        fScrollState.Zoom(percentage, x, y);
-        return 0.0;
+        fScrollState.SetZoom(zoom);
+        return ResultCode::RC_Success;
     }
 
-    int OIV::Pan(double x, double y)
+    ResultCode OIV::Pan(double x, double y)
     {
-        fScrollState.Pan({ x, y });
-        return 0.0;
+        fScrollState.SetOffset({ x, y });
+        return ResultCode::RC_Success;
     }
 
     ResultCode OIV::UnloadFile(const ImageHandle handle)
@@ -514,7 +514,7 @@ namespace OIV
             image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
             if (image != nullptr && fRenderer->SetImage(image) == RC_Success)
             {
-                fScrollState.Reset(true);
+//                fScrollState.Reset(true);
                 return RC_Success;
             }
         }
@@ -531,10 +531,6 @@ namespace OIV
     }
     ResultCode OIV::SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request * zoom_scroll_state)
     {
-        fScrollState.SetInnerMargins(LLUtils::PointF64(zoom_scroll_state->innerMarginsX, zoom_scroll_state->innerMarginsY));
-        fScrollState.SetOuterMargins(LLUtils::PointF64(zoom_scroll_state->outermarginsX, zoom_scroll_state->outermarginsY));
-        fScrollState.SetSmallImageOffsetStyle(zoom_scroll_state->SmallImageOffsetStyle);
-            
 
         return ResultCode::RC_Success;
         

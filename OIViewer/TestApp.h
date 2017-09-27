@@ -9,6 +9,7 @@
 #include "ImageDescriptor.h"
 #include "UserSettings.h"
 #include <Rect.h>
+#include "RecursiveDelayOp.h"
 
 namespace OIV
 {
@@ -16,14 +17,28 @@ namespace OIV
     {
     public:
         TestApp();
+        
         ~TestApp();
         void Init(std::wstring filePath);
         void Run();
         void Destroy();
+   
+    private: //methods
+#pragma region Win32 event handling
+        void handleKeyInput(const Win32::EventWinMessage* evnt);
+        bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
+        bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
+        void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
+        bool HandleMessages(const Win32::Event* evnt);
+#pragma endregion Win32 event handling
+        
+        void PostInitOperations();
+        template<class T, class U>
+        ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
+        void OnRefresh();
         HWND GetWindowHandle() const;
         void UpdateTitle();
         void UpdateStatusBar();
-        void UpdateZoomScrollState();
         void UpdateUIFileIndex();
         bool JumpFiles(int step);
         void ToggleFullScreen();
@@ -31,24 +46,19 @@ namespace OIV
         void ToggleSlideShow();
         void SetFilterLevel(OIV_Filter_type filterType);
         void ToggleGrid();
-        
         void Pan(int horizontalPIxels, int verticalPixels);
-        void Zoom(double precentage, int zoomX = -1 , int zoomY = -1);
+        void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
+        void FitToClientArea();
+        LLUtils::PointF64 GetImageSize(bool visibleSize);
+        void UpdateUIZoom();
+        void SetZoom(double zoom, int x = -1, int y = -1);
         void UpdateCanvasSize();
         void UpdateTexelPos();
         void UpdateWindowSize();
-#pragma region Win32 event handling
-        void handleKeyInput(const Win32::EventWinMessage* evnt);
-
-        bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
-        bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
-        void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
-        bool HandleMessages(const Win32::Event* evnt);
-#pragma endregion Win32 event handling
-        template<class T, class U>
-        ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
-
-    private: //methods
+        void Center();
+        LLUtils::PointI32 ResolveOffset(const LLUtils::PointI32& point);
+        void SetOffset(LLUtils::PointI32 offset);
+        void SetOriginalSize();
         void OnScroll(LLUtils::PointI32 panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
         void SetOpenImage(const ImageDescriptor& image_descriptor);
@@ -63,20 +73,21 @@ namespace OIV
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
-        void DisplayImage(ImageDescriptor& descriptor, bool resetScrollState) const;
+        void DisplayImage(ImageDescriptor& descriptor, bool resetScrollState) ;
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
         
 
-    private:
+    private: // member fields
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
         OIV_Filter_type fFilterType = OIV_Filter_type::FT_Linear;
-        
+        RecrusiveDelayedOp fRefreshOperation;
         bool fIsSlideShowActive = false;
         int fKeyboardPanSpeed = 100;
         double fKeyboardZoomSpeed = 0.1;
         double fIsGridEnabled = false;
+        double fZoom = 1.0;
         ImageDescriptor fImageBeingOpened;
         ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
@@ -87,7 +98,9 @@ namespace OIV
         LLUtils::ListString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
-        bool fUpdateWindowOnInitialFileLoad = false;
+        bool fIsInitialLoad = false;
         bool fUseRainbowNormalization = false;
+        bool fFitToWindow = true;
+        LLUtils::PointI32 fOffset = LLUtils::PointI32::Zero;
     };
 }

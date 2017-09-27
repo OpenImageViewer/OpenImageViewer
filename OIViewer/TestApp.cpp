@@ -32,14 +32,21 @@ namespace OIV
         return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
-    TestApp::TestApp() 
+    TestApp::TestApp()
+        :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
     {
         
     }
 
+
     TestApp::~TestApp()
     {
         
+    }
+    
+    void TestApp::OnRefresh()
+    {
+        OIVCommands::Refresh();
     }
 
     HWND TestApp::GetWindowHandle() const
@@ -61,30 +68,19 @@ namespace OIV
         fWindow.SetStatusBarText(fOpenedImage.GetDescription(), 0, 0);
     }
 
-    void TestApp::UpdateZoomScrollState()
-    {
-        OIV_CMD_ZoomScrollState_Request request;
-        const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
-        request.innerMarginsX = settings.zoomScrollState.InnnerMargins.x;
-        request.innerMarginsY = settings.zoomScrollState.InnnerMargins.y;
-        request.outermarginsX = settings.zoomScrollState.OuterMargins.x;
-        request.outermarginsY = settings.zoomScrollState.OuterMargins.y;
-        request.SmallImageOffsetStyle = settings.zoomScrollState.smallImageOffsetStyle;
-        
-        ExecuteCommand(OIV_CMD_ZoomScrollState, &request, &CmdNull());
-    }
-
-
-    void TestApp::DisplayImage(ImageDescriptor& descriptor , bool resetScrollState) const
+    void TestApp::DisplayImage(ImageDescriptor& descriptor , bool resetScrollState) 
     {
         if (descriptor.imageHandle != ImageNullHandle)
         {
             LLUtils::StopWatch stopWatch(true);
 
+           
+
+
             OIVCommands::DisplayImage(descriptor.imageHandle
                 , static_cast<OIV_CMD_DisplayImage_Flags>(
                     OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation
-                    | (fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
+                    | 0 //(fUpdateWindowOnInitialFileLoad == false ? OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer : 0)
                     | (resetScrollState ? OIV_CMD_DisplayImage_Flags::DF_ResetScrollState : 0))
                 , fUseRainbowNormalization ? OIV_PROP_Normalize_Mode::NM_Rainbow : OIV_PROP_Normalize_Mode::NM_Monochrome
             );
@@ -92,6 +88,7 @@ namespace OIV
             descriptor.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
 
+            fRefreshOperation.Queue();
         }
     }
 
@@ -99,7 +96,7 @@ namespace OIV
     {
         OIVCommands::UnloadImage(fOpenedImage.imageHandle);
         OIVCommands::ClearImage();
-        OIVCommands::Refresh();
+        fRefreshOperation.Queue();
         SetOpenImage(ImageDescriptor());
     }
 
@@ -156,22 +153,27 @@ namespace OIV
 
             ImageHandle oldImage = fOpenedImage.imageHandle;
 
+            fRefreshOperation.Begin();
             DisplayImage(fImageBeingOpened,true);
             SetOpenImage(fImageBeingOpened);
+            FitToClientArea();
+            //Don't refresh on initial file, wait for WM_SIZE
+            fRefreshOperation.End(!fIsInitialLoad);
+            
             fImageBeingOpened = ImageDescriptor();
 
-            if (fUpdateWindowOnInitialFileLoad == false)
+            if (fIsInitialLoad == false)
                 UpdateUIFileIndex();
 
             //Unload old image
             OIVCommands::UnloadImage(oldImage);
         }
 
-        if (fUpdateWindowOnInitialFileLoad == true)
+        if (fIsInitialLoad == true)
         {
-            //Show window on inital file load, whether success or failure.
-            fUpdateWindowOnInitialFileLoad = false;
-            fWindow.Show(true);
+            fIsInitialLoad = false;
+            PostInitOperations();
+            
             // make 'Load file in folder' the last operation after the initial file has loaded.
             LoadFileInFolder(fOpenedImage.fileName);
             
@@ -316,35 +318,30 @@ namespace OIV
         init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
         ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
 
-        UpdateZoomScrollState();
-
         // Update the window size manually since the window won't receive WM_SIZE till it's visible.
         fWindow.RefreshWindow();
 
-        
-        if (isInitialFile == true)
-        {
-            // Delay window visibility till the initial file is displayed.
-            fUpdateWindowOnInitialFileLoad = true;
-        }
+        fIsInitialLoad = isInitialFile;
 
-        // Update client size
+        // Update oiv lib client size
         UpdateWindowSize();
 
         // Wait for initial file to finish loading
         if (asyncResult.valid())
             asyncResult.wait();
 
-        //If there is no initial file, draw background and show window.
+        //If there is no initial file, perform post init operations at the beginning
         if (isInitialFile == false)
-        {
-            fWindow.Show(true);
-        }
+            PostInitOperations();
 
+    }
+
+    void TestApp::PostInitOperations()
+    {
+        fWindow.Show(true);
         // load settings
         fSettings.Load();
     }
-
 
     void TestApp::Destroy()
     {
@@ -453,7 +450,7 @@ namespace OIV
         if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()) == RC_Success)
         {
             fFilterType = filter.filterType;
-            OIVCommands::Refresh();
+            fRefreshOperation.Queue();
         }
     }
 
@@ -464,7 +461,7 @@ namespace OIV
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
         if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
-            OIVCommands::Refresh();
+            fRefreshOperation.Queue();
         }
         
     }
@@ -567,12 +564,13 @@ namespace OIV
             Zoom(-fKeyboardZoomSpeed, -1, -1);
             break;
         case VK_NUMPAD5:
-            // TODO: center
+            Center();
             break;
         case VK_MULTIPLY:
-            //TODO: center and reset zoom
+            SetOriginalSize();
             break;
         case VK_DIVIDE:
+            FitToClientArea();
             break;
         case VK_DELETE:
             DeleteOpenedFile(IsShift);
@@ -590,21 +588,95 @@ namespace OIV
         }
     }
 
-    void TestApp::Pan(int horizontalPIxels, int verticalPixels )
+    void TestApp::SetOffset(LLUtils::PointI32 offset)
     {
-        CmdDataPan pan;
-        pan.x = horizontalPIxels;
-        pan.y = verticalPixels;
-        ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
-        OIVCommands::Refresh();
+        fOffset = ResolveOffset(offset);
+        OIVCommands::SetOffset(fOffset);
+        fRefreshOperation.Queue();
     }
 
-    void TestApp::Zoom(double precentage, int zoomX , int zoomY )
+    void TestApp::SetOriginalSize()
     {
-        CmdDataZoom zoom{ precentage,zoomX, zoomY };
-        ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
-        OIVCommands::Refresh();
+        SetZoom(1.0, -1, -1);
+        Center();
+    }
+
+    void TestApp::Pan(int horizontalPIxels, int verticalPixels )
+    {
+        using namespace LLUtils;
+        SetOffset(PointI32(horizontalPIxels, verticalPixels) + fOffset);
+
+
+    }
+
+    void TestApp::Zoom(double amount, int zoomX , int zoomY )
+    {
+        if (amount > 0)
+            amount = fZoom * (1 + amount);
+        else
+            if (amount < 0)
+                amount = fZoom  / ( 1 - amount);
+        
+        SetZoom(amount, zoomX, zoomY);
+      
+    }
+    
+    void TestApp::FitToClientArea()
+    {
+        using namespace LLUtils;
+        SIZE clientSize = fWindow.GetClientSize();
+        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / PointF64(fOpenedImage.width, fOpenedImage.height);
+        double zoom = std::min(ratio.x, ratio.y);
+        fRefreshOperation.Begin();
+        SetZoom(zoom, -1, -1);
+        Center();
+        fRefreshOperation.End();
+    }
+    LLUtils::PointF64 TestApp::GetImageSize(bool visibleSize)
+    {
+        LLUtils::PointF64 imageSize = LLUtils::PointF64(fOpenedImage.width , fOpenedImage.height);
+        if (visibleSize)
+            imageSize *= fZoom;
+        return imageSize;
+    }
+
+    void TestApp::UpdateUIZoom()
+    {
+        std::wstringstream ss;
+        ss << L"Scale: " << std::fixed << std::setprecision(1);
+        if (fZoom >= 1)
+            ss << "x" << fZoom;
+        else
+            ss << "1/" << 1 / fZoom;
+
+        fWindow.SetStatusBarText(ss.str(), 4, 0);
+    }
+
+    void TestApp::SetZoom(double amount, int x, int y)
+    {
+        using namespace LLUtils;
+
+        //////
+        PointF64 zoomPoint;
+        if (x < 0 || y < 0)
+            zoomPoint = GetImageSize(false) / 2;
+        else
+            zoomPoint = (PointF64(x, y) - static_cast<PointF64>(fOffset)) / fZoom;
+
+
+        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(false)) * (fZoom - amount) * GetImageSize(false));
+
+        fZoom = amount;
+        ///////
+
+        fRefreshOperation.Begin();
+        OIVCommands::SetZoom(fZoom, x, y);
+        SetOffset(fOffset + offset);
+        
+        fRefreshOperation.End();
+
         UpdateCanvasSize();
+        UpdateUIZoom();
     }
 
     void TestApp::UpdateCanvasSize()
@@ -649,6 +721,54 @@ namespace OIV
                 &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
                 static_cast<uint16_t>(size.cy) }, &CmdNull());
             UpdateCanvasSize();
+    }
+
+    void TestApp::Center()
+    {
+        using namespace LLUtils;
+        PointI32 offset = static_cast<PointI32>(PointF64(fWindow.GetClientSize()) - (PointF64(fOpenedImage.width, fOpenedImage.height) * fZoom)) / 2;
+        SetOffset(offset);
+    }
+
+    int CalculateOffset(int clientSize, int imageSize, int offset, double margin)
+    {
+        double fixedOffset = offset;
+        if (imageSize > clientSize)
+        {
+            if (offset > 0)
+                fixedOffset = std::min<double>(clientSize * margin, offset);
+
+
+            else if (offset < 0)
+                fixedOffset = std::max<double>(-imageSize + (clientSize  * ( 1- margin) ), offset);
+
+        }
+        else
+        {
+            if (offset < 0)
+            {
+                fixedOffset = std::max<double>(-imageSize *  margin, offset);
+            }
+
+            else if (offset > 0)
+            {
+                fixedOffset = std::min<double>(clientSize - imageSize * (1 - margin) , offset);
+            }
+        }
+        return static_cast<int>(fixedOffset);
+    }
+
+    LLUtils::PointI32 TestApp::ResolveOffset(const LLUtils::PointI32& point)
+    {
+        using namespace LLUtils;
+        PointF64 imageSize = GetImageSize(true);
+        PointF64 clientSize = fWindow.GetClientSize();
+        PointF64 offset = static_cast<PointF64>(point);
+        const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
+        
+        offset.x = CalculateOffset(clientSize.x, imageSize.x, offset.x, settings.zoomScrollState.Margins.x);
+        offset.y = CalculateOffset(clientSize.y, imageSize.y, offset.y, settings.zoomScrollState.Margins.x);
+        return static_cast<PointI32>(offset);
     }
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
@@ -847,7 +967,7 @@ namespace OIV
         {
         case WM_SIZE:
             UpdateWindowSize();
-            OIVCommands::Refresh();
+            fRefreshOperation.Queue();
             break;
 
         case WM_TIMER:
@@ -953,7 +1073,7 @@ namespace OIV
         if (IsRightCatured == true)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
-                Pan(-evnt->DeltaX, -evnt->DeltaY);
+                Pan(evnt->DeltaX, evnt->DeltaY);
         }
 
         LONG wheelDelta = evnt->DeltaWheel;

@@ -21,10 +21,10 @@ namespace OIV
     public:
 
 #pragma region //-------------IPictureListener implementation------------------
-        double Zoom(double percentage,int x,int y) override;
-        int Pan(double x, double y) override;
+        ResultCode Zoom(double percentage) override;
+        ResultCode Pan(double x, double y) override;
         ResultCode UnloadFile(const ImageHandle handle) override;
-        int LoadFile(void* buffer, std::size_t size, char* extension , OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) override;
+        ResultCode LoadFile(void* buffer, std::size_t size, char* extension , OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) override;
         ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) override;
         ResultCode DisplayFile(const OIV_CMD_DisplayImage_Request& display_flags) override;
         ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) override;

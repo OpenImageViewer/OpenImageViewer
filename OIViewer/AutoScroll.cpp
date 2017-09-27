@@ -16,7 +16,7 @@ namespace OIV
         fAutoScrollStopWatch.Stop();
         const long double elapsed = fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
         fAutoScrollStopWatch.Start();
-        ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(PointI32(fWindow->GetMousePosition()) - fAutoScrollPosition);
+        ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(fAutoScrollPosition - PointI32(fWindow->GetMousePosition()) );
 
         ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
         deltaAbs.x = deltaAbs.x < fAutoScrollDeadZone ? 0 : (deltaAbs.x - (fAutoScrollDeadZone - 1));

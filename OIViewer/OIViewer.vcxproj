@@ -91,7 +91,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <OmitFramePointers>true</OmitFramePointers>
@@ -110,7 +110,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
@@ -129,7 +129,7 @@
       </PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
@@ -149,7 +149,7 @@
       </PrecompiledHeader>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
@@ -180,6 +180,7 @@
     <ClInclude Include="FullScreenState.h" />
     <ClInclude Include="Helpers\FileSystemHelper.h" />
     <ClInclude Include="OIVCommands.h" />
+    <ClInclude Include="RecursiveDelayOp.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="win32\UserMessages.h" />

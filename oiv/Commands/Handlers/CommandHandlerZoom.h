@@ -19,7 +19,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const CmdDataZoom* dataZoom = reinterpret_cast<const CmdDataZoom*>(request);
-            result = (ResultCode)(int) ApiGlobal::sPictureRenderer->Zoom(dataZoom->amount, dataZoom->zoomX, dataZoom->zoomY);
+            result = (ResultCode)(int) ApiGlobal::sPictureRenderer->Zoom(dataZoom->amount);
 
             return result;
         }
