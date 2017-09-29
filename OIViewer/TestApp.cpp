@@ -546,16 +546,16 @@ namespace OIV
             SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(fFilterType) - 1));
             break;
         case VK_NUMPAD8:
-            Pan(0, -fKeyboardPanSpeed);
-            break;
-        case VK_NUMPAD2:
             Pan(0, fKeyboardPanSpeed);
             break;
+        case VK_NUMPAD2:
+            Pan(0, -fKeyboardPanSpeed);
+            break;
         case VK_NUMPAD4:
-            Pan(-fKeyboardPanSpeed, 0);
+            Pan(fKeyboardPanSpeed, 0);
             break;
         case VK_NUMPAD6:
-            Pan(fKeyboardPanSpeed, 0);
+            Pan(-fKeyboardPanSpeed, 0);
             break;
         case VK_ADD:
             Zoom(fKeyboardZoomSpeed, -1, -1);
@@ -670,7 +670,7 @@ namespace OIV
         ///////
 
         fRefreshOperation.Begin();
-        OIVCommands::SetZoom(fZoom, x, y);
+        OIVCommands::SetZoom(fZoom);
         SetOffset(fOffset + offset);
         
         fRefreshOperation.End();

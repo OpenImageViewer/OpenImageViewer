@@ -104,9 +104,9 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
-        static ResultCode SetZoom(double fZoom, int zoomX, int zoomY)
+        static ResultCode SetZoom(double fZoom)
         {
-            CmdDataZoom zoom{ fZoom,zoomX, zoomY };
+            CmdDataZoom zoom{ fZoom};
             return ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
         }
 
