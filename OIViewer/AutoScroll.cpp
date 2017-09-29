@@ -4,14 +4,13 @@
 
 namespace OIV
 {
-#pragma region AutoScroll
-    void AutoScroll::OnAutoScrollTimer(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
-    {
-        reinterpret_cast<Win32::Win32WIndow*>(dwUser)->SendMessage(Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, 0, 0);
-    }
-
     void AutoScroll::PerformAutoScroll(const Win32::EventWinMessage* evnt)
     {
+        ////There may be pending message 
+        //TODO: wait  for processing all messages after  kill timer
+        if (fAutoScrolling == false)
+            return;
+
         using namespace LLUtils;
         fAutoScrollStopWatch.Stop();
         const long double elapsed = fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
@@ -32,21 +31,42 @@ namespace OIV
         }
     }
 
+    VOID CALLBACK AutoScroll::OnScroll(
+        _In_ PVOID   lpParameter,
+        _In_ BOOLEAN TimerOrWaitFired
+    )
+    {
+        reinterpret_cast<Win32::Win32WIndow*>(lpParameter)->SendMessage(Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, 0, 0);
+    }
+
     void AutoScroll::ToggleAutoScroll()
     {
-        fAutoScrolling = !fAutoScrolling;
 
-        if (fAutoScrolling)
+        if (fAutoScrolling == false)
         {
-            fAutoScrollTimerID = timeSetEvent(fScrollTimeDelay, 0, OnAutoScrollTimer, reinterpret_cast<DWORD_PTR>(fWindow), TIME_PERIODIC);
+            if (
+            CreateTimerQueueTimer(
+                  &fAutoScrollTimerID
+                , nullptr//_In_opt_ HANDLE              TimerQueue,
+                , OnScroll//_In_     WAITORTIMERCALLBACK Callback,
+                , reinterpret_cast<PVOID>(fWindow) //_In_opt_ PVOID               Parameter,
+                , 0//_In_     DWORD               DueTime,
+                , fScrollTimeDelay//_In_     DWORD               Period,
+                , WT_EXECUTEINTIMERTHREAD//_In_     ULONG               Flags
+            ) == FALSE )
+            {
+                throw  std::exception("Could not create timer");
+            }
+
             fAutoScrollPosition = fWindow->GetMousePosition();
         }
         else
         {
-            timeKillEvent(fAutoScrollTimerID);
+            DeleteTimerQueueTimer(nullptr, fAutoScrollTimerID, nullptr);
+            fAutoScrollTimerID = nullptr;
             fAutoScrollPosition = LLUtils::PointI32::Zero;
         }
-    }
 
-#pragma endregion 
+        fAutoScrolling = !fAutoScrolling;
+    }
 }

@@ -21,9 +21,11 @@ namespace OIV
 
         void ToggleAutoScroll();
         void PerformAutoScroll(const Win32::EventWinMessage* evnt);
+
 #pragma region Private member methods
         private:
-        static void OnAutoScrollTimer(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2);
+        void UpdateCursorFromDeltaVector(LLUtils::PointF64 aDeltaVector);
+        static void OnScroll(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
 #pragma endregion
         
         typedef LLUtils::PointF64 ScrollPointType;
@@ -40,8 +42,7 @@ namespace OIV
         LLUtils::StopWatch fAutoScrollStopWatch;
         ScrollPointType fAutoScrollPanning = ScrollPointType::Zero;
         
-        
-        MMRESULT fAutoScrollTimerID = 0;
+        HANDLE fAutoScrollTimerID = nullptr;
         Win32::Win32WIndow* fWindow;
         OnScrollFunction fOnScroll;
         
