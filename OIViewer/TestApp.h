@@ -48,7 +48,7 @@ namespace OIV
         void ToggleGrid();
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
-        void FitToClientArea();
+        void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(bool visibleSize);
         void UpdateUIZoom();
         void SetZoom(double zoom, int x = -1, int y = -1);
@@ -100,7 +100,8 @@ namespace OIV
         UserSettings fSettings;
         bool fIsInitialLoad = false;
         bool fUseRainbowNormalization = false;
-        bool fFitToWindow = true;
         LLUtils::PointI32 fOffset = LLUtils::PointI32::Zero;
+        bool fIsOffsetLocked = false;
+        bool fIsLockFitToScreen = false;
     };
 }

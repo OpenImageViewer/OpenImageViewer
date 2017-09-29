@@ -156,7 +156,7 @@ namespace OIV
             fRefreshOperation.Begin();
             DisplayImage(fImageBeingOpened,true);
             SetOpenImage(fImageBeingOpened);
-            FitToClientArea();
+            FitToClientAreaAndCenter();
             //Don't refresh on initial file, wait for WM_SIZE
             fRefreshOperation.End(!fIsInitialLoad);
             
@@ -570,7 +570,7 @@ namespace OIV
             SetOriginalSize();
             break;
         case VK_DIVIDE:
-            FitToClientArea();
+            FitToClientAreaAndCenter();
             break;
         case VK_DELETE:
             DeleteOpenedFile(IsShift);
@@ -593,6 +593,8 @@ namespace OIV
         fOffset = ResolveOffset(offset);
         OIVCommands::SetOffset(fOffset);
         fRefreshOperation.Queue();
+        fIsOffsetLocked = false;
+        fIsLockFitToScreen = false;
     }
 
     void TestApp::SetOriginalSize()
@@ -621,7 +623,7 @@ namespace OIV
       
     }
     
-    void TestApp::FitToClientArea()
+    void TestApp::FitToClientAreaAndCenter()
     {
         using namespace LLUtils;
         SIZE clientSize = fWindow.GetClientSize();
@@ -630,6 +632,7 @@ namespace OIV
         fRefreshOperation.Begin();
         SetZoom(zoom, -1, -1);
         Center();
+        fIsLockFitToScreen = true;
         fRefreshOperation.End();
     }
     LLUtils::PointF64 TestApp::GetImageSize(bool visibleSize)
@@ -677,6 +680,8 @@ namespace OIV
 
         UpdateCanvasSize();
         UpdateUIZoom();
+
+        fIsLockFitToScreen = false;
     }
 
     void TestApp::UpdateCanvasSize()
@@ -716,11 +721,21 @@ namespace OIV
 
     void TestApp::UpdateWindowSize()
     {
-            SIZE size = fWindow.GetClientSize();
-            ExecuteCommand(CMD_SetClientSize,
-                &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
-                static_cast<uint16_t>(size.cy) }, &CmdNull());
-            UpdateCanvasSize();
+        SIZE size = fWindow.GetClientSize();
+        ExecuteCommand(CMD_SetClientSize,
+            &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
+            static_cast<uint16_t>(size.cy) }, &CmdNull());
+        UpdateCanvasSize();
+
+        fRefreshOperation.Begin();
+
+        if (fIsLockFitToScreen == true)
+            FitToClientAreaAndCenter();
+
+        else if (fIsOffsetLocked == true)
+            Center();
+
+        fRefreshOperation.End();
     }
 
     void TestApp::Center()
@@ -728,6 +743,7 @@ namespace OIV
         using namespace LLUtils;
         PointI32 offset = static_cast<PointI32>(PointF64(fWindow.GetClientSize()) - (PointF64(fOpenedImage.width, fOpenedImage.height) * fZoom)) / 2;
         SetOffset(offset);
+        fIsOffsetLocked = true;
     }
 
     int CalculateOffset(int clientSize, int imageSize, int offset, double margin)
