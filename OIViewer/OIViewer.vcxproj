@@ -177,6 +177,7 @@
     <ClInclude Include="Helpers\FileSystemHelper.h" />
     <ClInclude Include="OIVCommands.h" />
     <ClInclude Include="RecursiveDelayOp.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="win32\UserMessages.h" />
@@ -192,6 +193,12 @@
     <ProjectReference Include="..\oiv\oiv.vcxproj">
       <Project>{77c6d668-7536-4e2c-8730-54663facd39e}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="spyglass.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
