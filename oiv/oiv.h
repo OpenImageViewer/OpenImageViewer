@@ -32,6 +32,7 @@ namespace OIV
         ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req) override;
         ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) override;
         ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) override;
+        ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
         int Init() override;
         int SetParent(std::size_t handle) override;
         int Refresh() override;

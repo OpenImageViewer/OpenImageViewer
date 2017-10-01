@@ -20,7 +20,7 @@ namespace OIV
         int SetFilterLevel(OIV_Filter_type filterType) override;
         int SetSelectionRect(SelectionRect selectionRect) override;
         int SetImage(const IMCodec::ImageSharedPtr image) override;
-
+        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
 #pragma endregion
 
 

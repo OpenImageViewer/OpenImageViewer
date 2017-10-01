@@ -129,6 +129,10 @@ namespace OIV
         fConstantBuffer = D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER>(new D3D11BufferBound<VS_CONSTANT_BUFFER>
             (fDevice, cbDesc, nullptr));
 
+        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        buffer.exposure = 1.0;
+        buffer.gamma = 1.0;
+        buffer.offset = 0.0;
     }
 
 
@@ -366,6 +370,17 @@ namespace OIV
       
         Redraw();
         return 0;
+    }
+
+    int D3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    {
+        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        buffer.exposure = exposure.exposure;
+        buffer.offset = exposure.offset;
+        buffer.gamma = exposure.gamma;
+        fIsParamsDirty = true;
+        return 0;
+        
     }
 
     void D3D11Renderer::Destroy()

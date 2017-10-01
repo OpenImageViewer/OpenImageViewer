@@ -30,6 +30,10 @@ uniform float2 uvOffset;
 uniform float2 uImageSize;
 uniform float2 uViewportSize;
 uniform int uShowGrid;
+uniform float uExposure;
+uniform float uOffset;
+uniform float uGamma;
+
 
 float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 {
@@ -113,6 +117,7 @@ void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4
 void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texel)
 {
     float4 sampledTexel = SampleTexture(texture_1,uv);
+    sampledTexel.xyz =  pow(sampledTexel.xyz * uExposure  + uOffset, 1 / uGamma);
     float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }

@@ -27,6 +27,9 @@ namespace OIV
         float uImageSize[2];
         float uViewportSize[2];
         int32_t uShowGrid;
+        float exposure;
+        float offset;
+        float gamma;
     };
 #pragma pack()
 
@@ -47,6 +50,7 @@ namespace OIV
         int SetFilterLevel(OIV_Filter_type filterType);
         int SetImage(const IMCodec::ImageSharedPtr image);
         int SetselectionRect(const SelectionRect& selection_rect);
+        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
 
 
 #pragma region //**** Private methods*****/

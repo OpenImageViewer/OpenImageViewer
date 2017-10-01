@@ -21,6 +21,7 @@
 #include "Handlers/CommandHandlerWindowToimage.h"
 #include "Handlers/CommandHandlerGetPixels.h"
 #include "Handlers/CommandHandlerConvertFormat.h"
+#include "Handlers/CommandHandlerColorExposure.h"
 
 
 namespace OIV
@@ -51,6 +52,7 @@ namespace OIV
             , make_pair(OIV_CMD_WindowToimage,new CommandHandlerWindowToImage())
             , make_pair(OIV_CMD_GetPixels,new CommandHandlerGetPixels())
             , make_pair(OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat())
+            , make_pair(OIV_CMD_ColorExposure,new CommandHandlerColorExposure())
         };
     }
 

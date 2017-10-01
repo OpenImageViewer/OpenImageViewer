@@ -48,7 +48,7 @@ namespace OIV
 
             //Try cache first;
             filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename()).replace_extension(L"bin");
-
+#ifdef DEBUG
             if (std::experimental::filesystem::exists(cachePath))
             {
                 //Load from cache 
@@ -56,7 +56,10 @@ namespace OIV
                 LLUtils::File::ReadAllBytes(cachePath, blob->size, blob->buffer);
                 shader->Load(blob);
             }
-            else if (std::experimental::filesystem::exists(shaderPath))
+            else 
+#endif
+
+            if (std::experimental::filesystem::exists(shaderPath))
             {
                 std::string shaderSource = LLUtils::File::ReadAllText(shaderPath);
                 // compile source and save cache

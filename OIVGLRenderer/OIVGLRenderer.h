@@ -39,6 +39,7 @@ namespace OIV
         int SetFilterLevel(OIV_Filter_type filtertype) override;
         int SetImage(const IMCodec::ImageSharedPtr image) override;
         int SetSelectionRect(SelectionRect selectionRect) override;
+        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
         
     private:
         bool fIsParamsDirty;

@@ -36,5 +36,6 @@ namespace OIV
         virtual ResultCode WindowToImage(const OIV_CMD_WindowToImage_Request& req, OIV_CMD_WindowToImage_Response& oiv_cmd_window_to_image_response) = 0;
         virtual ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) = 0;
         virtual ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req) = 0;
+        virtual ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) = 0;
     };
 }

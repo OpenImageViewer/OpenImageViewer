@@ -92,6 +92,11 @@ int OIV::OIVGLRenderer::SetSelectionRect(SelectionRect selectionRect)
     return 0;
 }
 
+int OIV::OIVGLRenderer::SetExposure(const OIV_CMD_ColorExposure_Request & exposure)
+{
+    return 0;
+}
+
 void OIV::OIVGLRenderer::renderOneFrame()
 {
     UpdateGpuParams();

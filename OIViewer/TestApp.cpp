@@ -349,6 +349,29 @@ namespace OIV
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
+    void TestApp::UpdateExposure()
+    {
+        ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
+        fRefreshOperation.Queue();
+    }
+
+    void TestApp::ToggleColorCorrection()
+    {
+        OIV_CMD_ColorExposure_Request exposure = fLastColorExposure;
+        if (fColorExposure.exposure == 1.0 
+            && fColorExposure.gamma == 1.0
+            && fColorExposure.offset == 0.0)
+        {
+            std::swap(fLastColorExposure, fColorExposure);
+        }
+        else
+        {
+            std::swap(fLastColorExposure, fColorExposure);
+            fColorExposure = { 1.0,0.0,1.0 };
+        }
+        UpdateExposure();
+    }
+
     void TestApp::Run()
     {
         Win32Helper::MessageLoop();
@@ -491,6 +514,10 @@ namespace OIV
         case 'C':
             if (IsControl == true)
                 CopyVisibleToClipBoard();
+            else if (IsAlt == true)
+            {
+                ToggleColorCorrection();
+            }
             else
                 CropVisibleImage();
             break;
@@ -517,21 +544,50 @@ namespace OIV
         case 'F':
             ToggleFullScreen();
             break;
+        case VK_NEXT:
+            if (IsAlt)
+            {
+                fColorExposure.gamma /= 1.05;
+                UpdateExposure();
+            }
+            else
+                JumpFiles(1);
+            break;
+
         case VK_DOWN:
         case VK_RIGHT:
-        case VK_NEXT:
             JumpFiles(1);
             break;
         case VK_UP:
         case VK_LEFT:
-        case VK_PRIOR:
             JumpFiles(-1);
             break;
+        case VK_PRIOR:
+            if (IsAlt)
+            {
+                fColorExposure.gamma *= 1.05;
+                UpdateExposure();
+            }
+            else
+                JumpFiles(1);
+            break;
         case VK_HOME:
-            JumpFiles(std::numeric_limits<int>::min());
+            if (IsAlt)
+            {
+                fColorExposure.offset += 0.02;
+                UpdateExposure();
+            }
+            else
+                JumpFiles(std::numeric_limits<int>::min());
             break;
         case VK_END:
-            JumpFiles(std::numeric_limits<int>::max());
+            if (IsAlt)
+            {
+                fColorExposure.offset -= 0.02;
+                UpdateExposure();
+            }
+            else
+                JumpFiles(std::numeric_limits<int>::max());
             break;
         case VK_SPACE:
             ToggleSlideShow();
@@ -572,8 +628,21 @@ namespace OIV
         case VK_DIVIDE:
             FitToClientAreaAndCenter();
             break;
+        case VK_INSERT:
+            if (IsAlt)
+            {
+                fColorExposure.exposure *= 1.05;
+                UpdateExposure();
+            }
+            break;;
         case VK_DELETE:
-            DeleteOpenedFile(IsShift);
+            if (IsAlt)
+            {
+                fColorExposure.exposure /= 1.05;
+                UpdateExposure();
+            }
+            else
+                DeleteOpenedFile(IsShift);
             break;
         case 'G':
             ToggleGrid();

@@ -41,4 +41,9 @@ namespace OIV
     {
          return fD3D11Renderer->SetImage(image);
     }
+
+    int OIVD3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    {
+        return fD3D11Renderer->SetExposure(exposure);
+    }
 }

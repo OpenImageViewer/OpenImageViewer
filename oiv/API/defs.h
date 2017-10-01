@@ -57,6 +57,7 @@ extern "C"
         , OIV_CMD_CropImage
         , OIV_CMD_GetPixels
         , OIV_CMD_ConvertFormat
+        , OIV_CMD_ColorExposure
     };
 
     
@@ -170,6 +171,13 @@ extern "C"
         OIV_RECT_F rect;
     };
 
+
+    struct OIV_CMD_ColorExposure_Request
+    {
+        double exposure;
+        double offset;
+        double gamma;
+    };
 
     struct OIV_CMD_CropImage_Request
     {

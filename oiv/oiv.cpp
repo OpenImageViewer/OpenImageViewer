@@ -393,6 +393,12 @@ namespace OIV
         return result;
     }
 
+    ResultCode OIV::SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    {
+        fRenderer->SetExposure(exposure);
+        return RC_Success;
+    }
+
     ResultCode OIV::Zoom(double zoom)
     {
         fScrollState.SetZoom(zoom);
