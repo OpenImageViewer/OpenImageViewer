@@ -58,6 +58,7 @@ extern "C"
         , OIV_CMD_GetPixels
         , OIV_CMD_ConvertFormat
         , OIV_CMD_ColorExposure
+        , OIV_CMD_TexelInfo
     };
 
     
@@ -138,6 +139,21 @@ extern "C"
         double y0;
         double x1;
         double y1;
+    };
+
+    struct OIV_CMD_TexelInfo_Request
+    {
+        ImageHandle handle;
+        int32_t x;
+        int32_t y;
+    };
+
+
+    struct OIV_CMD_TexelInfo_Response
+    {
+        OIV_TexelFormat type;
+        uint8_t size;
+        uint8_t buffer[32];
     };
 
     struct OIV_CMD_ConvertFormat_Request

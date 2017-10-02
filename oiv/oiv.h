@@ -33,6 +33,7 @@ namespace OIV
         ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) override;
         ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) override;
         ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
+        ResultCode GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse) override;
         int Init() override;
         int SetParent(std::size_t handle) override;
         int Refresh() override;

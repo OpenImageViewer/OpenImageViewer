@@ -7,6 +7,7 @@
 #include <ImageLoader.h>
 #include <ImageUtil.h>
 #include "Configuration.h"
+#include "API/functions.h"
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
@@ -399,6 +400,30 @@ namespace OIV
         return RC_Success;
     }
 
+    ResultCode OIV::GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse)
+    {
+        
+        IMCodec::Image*  image = GetImage(texel_request.handle);
+        if (image != nullptr)
+        {
+            if (texel_request.x >= 0
+                && texel_request.x < image->GetWidth()
+                && texel_request.y >= 0
+                && texel_request.y < image->GetHeight())
+            {
+                texelresponse.type = (OIV_TexelFormat)image->GetImageType();
+                OIV_Util_GetBPPFromTexelFormat(texelresponse.type, &texelresponse.size);
+                memcpy(texelresponse.buffer, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size);
+                    
+                return RC_Success;
+            }
+            else return RC_UknownError;
+        }
+
+        return RC_ImageNotFound;
+        
+    }
+
     ResultCode OIV::Zoom(double zoom)
     {
         fScrollState.SetZoom(zoom);
@@ -444,7 +469,10 @@ namespace OIV
 
     IMCodec::Image* OIV::GetImage(ImageHandle handle)
     {
-        return fImageManager.GetImage(handle).get();
+        if (handle == ImageHandleDisplayed)
+            return fDisplayedImage.get();
+        else 
+            return fImageManager.GetImage(handle).get();
     }
 
     int OIV::SetFilterLevel(OIV_Filter_type filter_level)

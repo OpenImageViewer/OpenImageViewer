@@ -225,6 +225,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerTexelInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerWindowToimage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />

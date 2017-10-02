@@ -23,6 +23,7 @@
 #include "Helpers/FileSystemHelper.h"
 #include "OIVCommands.h"
 #include <Rect.h>
+#include "Helpers/OIVHelper.h"
 
 namespace OIV
 {
@@ -784,6 +785,13 @@ namespace OIV
                << _T(" X ") 
                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.y;
             fWindow.SetStatusBarText(ss.str(), 2, 0);
+
+
+            OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle,response.x,response.y};
+            OIV_CMD_TexelInfo_Response  texelInfoResponse;
+
+            if (ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
+                    fWindow.SetStatusBarText(OIVHelper::ParseTexelValue(texelInfoResponse), 5, 0);
         }
     }
 

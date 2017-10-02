@@ -27,6 +27,7 @@ namespace IMCodec
         const ImageData& GetData() const { return fImageData; }
 
         // Query methods
+        uint8_t* GetBufferAt(int32_t x, int32_t y) const { return &fProperies.ImageBuffer[y * GetRowPitchInBytes() + x * GetBytesPerTexel()]; }
         uint8_t* GetBuffer() const { return fProperies.ImageBuffer; }
         const uint8_t* GetConstBuffer() const { return fProperies.ImageBuffer; }
 

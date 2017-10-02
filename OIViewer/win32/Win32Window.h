@@ -69,7 +69,7 @@ namespace OIV
             HWND fHandleWindow = nullptr;
             HWND fHandleClient = nullptr;
             HWND fHandleStatusBar = nullptr;
-            int fStatusWindowParts = 5;
+            int fStatusWindowParts = 6;
             FullSceenState fFullSceenState = FSS_Windowed;
             WINDOWPLACEMENT fLastWindowPlacement = { 0 };
             Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
