@@ -725,22 +725,23 @@ namespace OIV
         fWindow.SetStatusBarText(ss.str(), 4, 0);
     }
 
-    void TestApp::SetZoom(double amount, int x, int y)
+    void TestApp::SetZoom(double zoomValue, int clientX, int clientY)
     {
         using namespace LLUtils;
 
-        //////
         PointF64 zoomPoint;
-        if (x < 0 || y < 0)
-            zoomPoint = GetImageSize(false) / 2;
-        else
-            zoomPoint = (PointF64(x, y) - static_cast<PointF64>(fOffset)) / fZoom;
+        PointF64 clientSize = static_cast<PointF64>(fWindow.GetClientSize());
+        
+        if (clientX < 0)
+            clientX = clientSize.x / 2.0;
 
+        if (clientY < 0 )
+            clientY = clientSize.y / 2.0;
 
-        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(false)) * (fZoom - amount) * GetImageSize(false));
+        zoomPoint = (PointF64(clientX, clientY) - static_cast<PointF64>(fOffset)) / fZoom;
+        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(false)) * (fZoom - zoomValue) * GetImageSize(false));
+        fZoom = zoomValue;
 
-        fZoom = amount;
-        ///////
 
         fRefreshOperation.Begin();
         OIVCommands::SetZoom(fZoom);
@@ -1178,7 +1179,7 @@ namespace OIV
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
                 if (IsRightCatured)
-                    //  Zoom to center if currently panning.
+                    //  Zoom to center of the client area if currently panning.
                     Zoom(wheelDelta * 0.2);
                 else
                     Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
