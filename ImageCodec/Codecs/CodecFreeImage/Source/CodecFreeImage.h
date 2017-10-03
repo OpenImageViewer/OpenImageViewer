@@ -58,6 +58,19 @@ namespace IMCodec
                         out_properties.TexelFormatDecompressed = TF_I_X8;
                         break;
                     case 32:
+                        if (format == FIF_BMP)
+                        {
+                            // Hack: BMP isn't read with an alpha channel.
+                            uint32_t* line = (uint32_t*)out_properties.ImageBuffer;
+                            for (uint32_t y = 0; y < out_properties.Height; y++)
+                            {
+                                for (uint32_t x = 0; x < out_properties.Width; x++)
+                                    line[x] = line[x] | 0xFF000000;
+
+                                line = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(line) + out_properties.RowPitchInBytes);
+
+                            }
+                        }
                         out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
                         break;
                     case 24:
