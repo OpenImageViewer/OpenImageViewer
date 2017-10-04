@@ -209,5 +209,25 @@ namespace LLUtils
 
             return message;
         }
+
+        static void CopyTextToClipBoard(const std::wstring& text)
+        {
+            if (OpenClipboard(nullptr) != FALSE)
+            {
+                size_t sizeOfCharType = sizeof(std::wstring::value_type);
+                size_t sizeInBytes = (text.size() + 1) * sizeOfCharType;
+                HGLOBAL hg = GlobalAlloc(GMEM_MOVEABLE, sizeInBytes);
+                if (hg != nullptr)
+                {
+                    memcpy(GlobalLock(hg), text.c_str(), sizeInBytes);
+                    GlobalUnlock(hg);
+                    if (SetClipboardData(CF_UNICODETEXT, hg) == nullptr)
+                        GlobalFree(hg);
+                }
+
+                CloseClipboard();
+            }
+
+        }
     };
 }

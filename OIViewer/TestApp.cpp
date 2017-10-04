@@ -514,7 +514,12 @@ namespace OIV
             break;
         case 'C':
             if (IsControl == true)
-                CopyVisibleToClipBoard();
+            {
+                if (IsShift && fOpenedImage.source == IS_File)
+                    LLUtils::PlatformUtility::CopyTextToClipBoard(fOpenedImage.fileName);
+                else
+                    CopyVisibleToClipBoard();
+            }
             else if (IsAlt == true)
             {
                 ToggleColorCorrection();
