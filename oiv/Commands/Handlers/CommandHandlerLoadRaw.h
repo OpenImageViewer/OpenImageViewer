@@ -29,7 +29,7 @@ namespace OIV
             if (result == RC_Success &&  responseSize > 1)
             {
                 OIV_CMD_LoadRaw_Response* loadResponse = reinterpret_cast<OIV_CMD_LoadRaw_Response*>(response);
-                IMCodec::Image* image = ApiGlobal::sPictureRenderer->GetImage(handle);
+                IMCodec::ImageSharedPtr image = ApiGlobal::sPictureRenderer->GetImage(handle);
                 loadResponse->loadTime = image->GetData().LoadTime;
                 loadResponse->handle = handle;
             }

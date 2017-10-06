@@ -34,7 +34,7 @@ namespace OIV
                 if (result == RC_Success &&  responseSize > 1)
                 {
                     OIV_CMD_LoadFile_Response* loadResponse = reinterpret_cast<OIV_CMD_LoadFile_Response*>(response);
-                    IMCodec::Image* image = ApiGlobal::sPictureRenderer->GetImage(handle);
+                    IMCodec::ImageSharedPtr image = ApiGlobal::sPictureRenderer->GetImage(handle);
                     loadResponse->width = static_cast<uint32_t>(image->GetWidth());
                     loadResponse->height = static_cast<uint32_t>(image->GetHeight());
                     loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());

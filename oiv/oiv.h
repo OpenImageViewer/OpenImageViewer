@@ -38,9 +38,9 @@ namespace OIV
         int SetParent(std::size_t handle) override;
         int Refresh() override;
         
-        IMCodec::Image* GetImage(ImageHandle handle) override;
+        IMCodec::ImageSharedPtr GetImage(ImageHandle handle) override;
         int SetFilterLevel(OIV_Filter_type filter_level) override;
-        int GetFileInformation(QryFileInformation& information) override;
+        ResultCode GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& information) override;
         int GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY) override;
         int SetTexelGrid(double gridSize) override;
         int GetNumTexelsInCanvas(double &x, double &y) override;

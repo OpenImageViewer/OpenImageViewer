@@ -355,17 +355,7 @@ namespace OIV
     ResultCode OIV::CropImage(const OIV_CMD_CropImage_Request& request, OIV_CMD_CropImage_Response& response)
     {
         ResultCode result = RC_Success;
-        IMCodec::ImageSharedPtr imageToCrop;
-        if (request.imageHandle == ImageHandleDisplayed)
-        {
-            if (fDisplayedImage != nullptr)
-                imageToCrop = fDisplayedImage;
-        }
-        else
-        {
-            imageToCrop = fImageManager.GetImage(request.imageHandle);
-        }
-
+        IMCodec::ImageSharedPtr imageToCrop = GetImage(request.imageHandle);
         if (imageToCrop == nullptr)
         {
             result = RC_ImageNotFound;
@@ -378,7 +368,7 @@ namespace OIV
             LLUtils::RectI32 subImageRect = { { request.rect.x0,request.rect.y0 },{ request.rect.x1,request.rect.y1 } };
             LLUtils::RectI32 cuttedRect = subImageRect.Intersection(imageRect);
             IMCodec::ImageSharedPtr subImage =
-                IMUtil::ImageUtil::GetSubImage(fDisplayedImage, cuttedRect);
+                IMUtil::ImageUtil::GetSubImage(imageToCrop, cuttedRect);
 
             if (subImage != nullptr)
             {
@@ -403,7 +393,7 @@ namespace OIV
     ResultCode OIV::GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse)
     {
         
-        IMCodec::Image*  image = GetImage(texel_request.handle);
+        IMCodec::ImageSharedPtr  image = GetImage(texel_request.handle);
         if (image != nullptr)
         {
             if (texel_request.x >= 0
@@ -467,12 +457,12 @@ namespace OIV
         return 0;
     }
 
-    IMCodec::Image* OIV::GetImage(ImageHandle handle)
+    IMCodec::ImageSharedPtr OIV::GetImage(ImageHandle handle)
     {
         if (handle == ImageHandleDisplayed)
-            return fDisplayedImage.get();
-        else 
-            return fImageManager.GetImage(handle).get();
+            return fDisplayedImage;
+        else
+            return fImageManager.GetImage(handle);
     }
 
     int OIV::SetFilterLevel(OIV_Filter_type filter_level)
@@ -486,28 +476,22 @@ namespace OIV
         return RC_WrongParameters;
     }
 
-    int OIV::GetFileInformation(QryFileInformation& information)
+    ResultCode OIV::GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& info)
     {
+        using namespace  IMCodec;
+        ImageSharedPtr image = GetImage(handle);
 
-        //TODO: restore implementation and add image handle
-        //if (IsImageLoaded())
+        if (image != nullptr)
         {
-
-          /*  information.bitsPerPixel = GetOpenedImage()->GetBitsPerTexel();
-            information.height = GetOpenedImage()->GetHeight();
-            information.width = GetOpenedImage()->GetWidth();
-            information.numMipMaps = 0;
-            information.rowPitchInBytes = GetOpenedImage()->GetRowPitchInBytes();
-            information.hasTransparency = 1;
-            information.imageDataSize = 0;
-            information.numChannels = 0;
-*/
+            info.width = image->GetWidth();
+            info.height = image->GetHeight();
+            info.rowPitchInBytes = image->GetRowPitchInBytes();
+            info.bitsPerPixel = image->GetBitsPerTexel();
+            info.NumSubImages = image->GetNumSubImages();
             return RC_Success;
         }
-  /*      else
-        {
-            return 1;
-        }*/
+
+        return RC_InvalidImageHandle;
     }
 
     int OIV::GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY)

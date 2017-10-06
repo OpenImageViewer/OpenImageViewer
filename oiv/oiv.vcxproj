@@ -220,6 +220,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerNumTexelsInCanvas.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />

@@ -62,6 +62,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerColorExposure.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelInfo.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

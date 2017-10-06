@@ -23,6 +23,7 @@
 #include "Handlers/CommandHandlerConvertFormat.h"
 #include "Handlers/CommandHandlerColorExposure.h"
 #include "Handlers/CommandHandlerTexelInfo.h"
+#include "Handlers/CommandHandlerQueryImageInfo.h"
 
 
 namespace OIV
@@ -55,6 +56,7 @@ namespace OIV
             , make_pair(OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat())
             , make_pair(OIV_CMD_ColorExposure,new CommandHandlerColorExposure())
             , make_pair(OIV_CMD_TexelInfo,new CommandHandlerTexelInfo())
+            , make_pair(OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo())
         };
     }
 
@@ -70,27 +72,4 @@ namespace OIV
         auto pair = fCommandHandlers.find(command);
         return pair != fCommandHandlers.end() ? pair->second->Execute(requestData, requestSize, responseData, responseSize) : RC_UnknownCommand;
     }
-
-   /* bool CommandProcessor::IsInitialized() const
-    {
-        return fPictureRenderer != nullptr;
-    }*/
-
-    /*  case CE_GetFileInformation:
-
-    if (responseSize == sizeof(QryFileInformation))
-    {
-    QryFileInformation fileInfo;
-    memset(&fileInfo, 0, sizeof(fileInfo));
-
-    if (sPictureRenderer->GetFileInformation(fileInfo) != 0)
-    result = ResultCode::RC_WrongDataSize;
-    else
-    {
-    QryFileInformation* data = reinterpret_cast<QryFileInformation*>(responseData);
-    *reinterpret_cast<QryFileInformation*>(responseData) = fileInfo;
-    }
-    }
-    break;*/
-
 }

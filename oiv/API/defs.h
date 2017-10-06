@@ -43,7 +43,7 @@ extern "C"
         , CE_Pan
         , CE_FilterLevel
         , CE_Refresh
-        , CE_GetFileInformation
+        , OIV_CMD_QueryImageInfo
         , CE_TexelAtMousePos
         , CE_TexelGrid
         , CMD_SetClientSize
@@ -387,21 +387,20 @@ extern "C"
         std::size_t parentHandle;
     };
 
-  
-
-    //-------Query Structs-------------------------
-
-
-    struct QryFileInformation
+    struct OIV_CMD_QueryImageInfo_Request
     {
-        std::size_t width;
-        std::size_t height;
-        std::size_t bitsPerPixel;
-        std::size_t numMipMaps;
-        std::size_t numChannels;
-        std::size_t imageDataSize;
-        std::size_t rowPitchInBytes;
-        std::size_t hasTransparency;
+        ImageHandle handle;
+    };
+
+
+    struct OIV_CMD_QueryImageInfo_Response
+    {
+        uint32_t RowPitchInBytes;
+        uint32_t width;
+        uint32_t height;
+        uint32_t rowPitchInBytes;
+        uint32_t bitsPerPixel;
+        uint32_t NumSubImages;
     };
 
 #pragma pack() 

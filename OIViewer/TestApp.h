@@ -13,6 +13,14 @@
 
 namespace OIV
 {
+    enum ImageSizeType
+    {
+          IST_Original
+        , IST_Transformed
+        , IST_Visible
+    };
+
+
     class TestApp
     {
     public:
@@ -49,7 +57,7 @@ namespace OIV
         void Pan(int horizontalPIxels, int verticalPixels);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
         void FitToClientAreaAndCenter();
-        LLUtils::PointF64 GetImageSize(bool visibleSize);
+        LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void UpdateUIZoom();
         void SetZoom(double zoom, int x = -1, int y = -1);
         void UpdateCanvasSize();
@@ -108,5 +116,6 @@ namespace OIV
         bool fIsLockFitToScreen = false;
         OIV_CMD_ColorExposure_Request fColorExposure = { 1.0, 0.0, 1.0 };
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
+        OIV_CMD_QueryImageInfo_Response fVisibleFileInfo = {};
     };
 }

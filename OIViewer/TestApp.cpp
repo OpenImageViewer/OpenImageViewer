@@ -88,8 +88,8 @@ namespace OIV
 
             descriptor.displayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
-
             fRefreshOperation.Queue();
+            UpdateVisibleImageInfo();
         }
     }
 
@@ -116,14 +116,14 @@ namespace OIV
 
         SHFILEOPSTRUCT file_op =
         {
-            GetWindowHandle()                          // HWND            hwnd;
-            , FO_DELETE                                 // UINT            wFunc;
-            , buffer.get()                                  // PCZZWSTR        pFrom;
-            , nullptr                                   // PCZZWSTR        pTo;
-            , permanently ? 0 : FOF_ALLOWUNDO //FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT //FILEOP_FLAGS    fFlags;
-            , FALSE                                     // BOOL            fAnyOperationsAborted;
-            , nullptr                                   // LPVOID          hNameMappings;
-            , nullptr                                   // PCWSTR          lpszProgressTitle; // only used if FOF_SIMPLEPROGRESS
+              GetWindowHandle()
+            , FO_DELETE
+            , buffer.get()
+            , nullptr
+            , static_cast<FILEOP_FLAGS>(permanently ? 0 : FOF_ALLOWUNDO)
+            , FALSE
+            , nullptr
+            , nullptr
         };
 
 
@@ -174,10 +174,6 @@ namespace OIV
         {
             fIsInitialLoad = false;
             PostInitOperations();
-            
-            // make 'Load file in folder' the last operation after the initial file has loaded.
-            LoadFileInFolder(fOpenedImage.fileName);
-            
         }
     }
 
@@ -342,6 +338,11 @@ namespace OIV
         fWindow.Show(true);
         // load settings
         fSettings.Load();
+
+        //If a file has been succesfuly loaded, index all the file in the folder
+        if (fOpenedImage.source ==  IS_File)
+            LoadFileInFolder(fOpenedImage.fileName);
+
     }
 
     void TestApp::Destroy()
@@ -702,7 +703,7 @@ namespace OIV
     {
         using namespace LLUtils;
         SIZE clientSize = fWindow.GetClientSize();
-        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / PointF64(fOpenedImage.width, fOpenedImage.height);
+        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(IST_Transformed);
         double zoom = std::min(ratio.x, ratio.y);
         fRefreshOperation.Begin();
         SetZoom(zoom, -1, -1);
@@ -710,13 +711,22 @@ namespace OIV
         fIsLockFitToScreen = true;
         fRefreshOperation.End();
     }
-    LLUtils::PointF64 TestApp::GetImageSize(bool visibleSize)
+    
+    LLUtils::PointF64 TestApp::GetImageSize(ImageSizeType imageSizeType)
     {
-        LLUtils::PointF64 imageSize = LLUtils::PointF64(fOpenedImage.width , fOpenedImage.height);
-        if (visibleSize)
-            imageSize *= fZoom;
-        return imageSize;
+        switch (imageSizeType)
+        {
+        case IST_Original:
+            return LLUtils::PointF64(fOpenedImage.width, fOpenedImage.height);
+        case IST_Transformed:
+            return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height);
+        case IST_Visible:
+            return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * fZoom;
+        default:
+            throw std::logic_error("Unexpected or corrupted value");
+        }
     }
+   
 
     void TestApp::UpdateUIZoom()
     {
@@ -744,7 +754,7 @@ namespace OIV
             clientY = clientSize.y / 2.0;
 
         zoomPoint = (PointF64(clientX, clientY) - static_cast<PointF64>(fOffset)) / fZoom;
-        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(false)) * (fZoom - zoomValue) * GetImageSize(false));
+        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(IST_Original)) * (fZoom - zoomValue) * GetImageSize(IST_Original));
         fZoom = zoomValue;
 
 
@@ -793,7 +803,9 @@ namespace OIV
             fWindow.SetStatusBarText(ss.str(), 2, 0);
 
 
-            OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle,response.x,response.y};
+            OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle
+                ,static_cast<int32_t>(response.x)
+                ,static_cast<int32_t>(response.y)};
             OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
             if (ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
@@ -824,7 +836,7 @@ namespace OIV
     void TestApp::Center()
     {
         using namespace LLUtils;
-        PointI32 offset = static_cast<PointI32>(PointF64(fWindow.GetClientSize()) - (PointF64(fOpenedImage.width, fOpenedImage.height) * fZoom)) / 2;
+        PointI32 offset = static_cast<PointI32>(PointF64(fWindow.GetClientSize()) - GetImageSize(IST_Visible)) / 2;
         SetOffset(offset);
         fIsOffsetLocked = true;
     }
@@ -860,7 +872,7 @@ namespace OIV
     LLUtils::PointI32 TestApp::ResolveOffset(const LLUtils::PointI32& point)
     {
         using namespace LLUtils;
-        PointF64 imageSize = GetImageSize(true);
+        PointF64 imageSize = GetImageSize(IST_Visible);
         PointF64 clientSize = fWindow.GetClientSize();
         PointF64 offset = static_cast<PointF64>(point);
         const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
@@ -872,8 +884,24 @@ namespace OIV
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
     {
+        fRefreshOperation.Begin();
+        
         OIVCommands::TransformImage(ImageHandleDisplayed, transform);
-        OIVCommands::Refresh();
+        UpdateVisibleImageInfo();
+        
+        if (fIsLockFitToScreen)
+            FitToClientAreaAndCenter();
+        else
+            Center();
+
+        fRefreshOperation.End();
+    }
+
+    void TestApp::UpdateVisibleImageInfo()
+    {
+        OIV_CMD_QueryImageInfo_Request loadRequest;
+        loadRequest.handle = ImageHandleDisplayed;
+        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
     }
 
     void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
