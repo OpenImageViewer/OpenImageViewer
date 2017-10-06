@@ -23,12 +23,12 @@ namespace LLUtils
                 return std::string();
         }
 
-        static void WriteAllText(const std::wstring& filePath, const std::string& text)
+        static void WriteAllText(const std::wstring& filePath, const std::string& text, bool append = false)
         {
             using namespace std;
             using namespace std::experimental;
 
-            ofstream file(filePath);
+            ofstream file(filePath, append ? std::ios_base::app : std::ios_base::out);
             file << text;
         }
 
