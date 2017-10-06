@@ -229,5 +229,32 @@ namespace LLUtils
             }
 
         }
+
+        static void nanosleep(uint64_t ns) 
+        {
+            class NanoSleep
+            {
+            public:
+                void Wait(uint64_t ns)
+                {
+                    mLargeIntener.QuadPart = -(ns / 100); // std::max<int64_t>(100, ns) / 100;
+                    if (!SetWaitableTimer(mTimer, &mLargeIntener, 0, nullptr, nullptr, FALSE))
+                        throw std::logic_error("Error, could not set timer");
+
+                    WaitForSingleObject(mTimer, INFINITE);
+                }
+                ~NanoSleep()
+                {
+                    CloseHandle(mTimer);
+                }
+
+            private:
+                HANDLE mTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+                LARGE_INTEGER mLargeIntener;
+            };
+            
+            static thread_local NanoSleep timer;
+            timer.Wait(ns);
+        }
     };
 }
