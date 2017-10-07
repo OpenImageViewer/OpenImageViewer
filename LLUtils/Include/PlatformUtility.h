@@ -237,7 +237,7 @@ namespace LLUtils
             public:
                 void Wait(uint64_t ns)
                 {
-                    mLargeIntener.QuadPart = -(ns / 100); // std::max<int64_t>(100, ns) / 100;
+                    mLargeIntener.QuadPart = -static_cast<LONGLONG>(ns / 100); // std::max<int64_t>(100, ns) / 100;
                     if (!SetWaitableTimer(mTimer, &mLargeIntener, 0, nullptr, nullptr, FALSE))
                         throw std::logic_error("Error, could not set timer");
 
