@@ -13,11 +13,15 @@
     <ClInclude Include="Source\OIVD3D11Renderer.h" />
     <ClInclude Include="Source\D3D11\D3D11Buffer.h" />
     <ClInclude Include="Source\D3D11\D3D11Utility.h" />
+    <ClInclude Include="Source\D3D11\D3D11Texture.h" />
+    <ClInclude Include="Source\OIVD3DHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\D3D11\D3D11Renderer.cpp" />
     <ClCompile Include="Source\D3D11\D3D11Shader.cpp" />
     <ClCompile Include="Source\OIVD3D11RendererFactory.cpp" />
     <ClCompile Include="Source\OIVD3D11Renderer.cpp" />
+    <ClCompile Include="Source\OIVD3DHelper.cpp" />
+    <ClCompile Include="Source\D3D11\D3D11Texture.cpp" />
   </ItemGroup>
 </Project>

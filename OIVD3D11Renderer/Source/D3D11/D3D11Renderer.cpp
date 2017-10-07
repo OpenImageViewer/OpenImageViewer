@@ -8,6 +8,7 @@
 #include "D3D11VertexShader.h"
 #include "D3D11FragmentShader.h"
 #include "D3D11Utility.h"
+#include "../OIVD3DHelper.h"
 
 namespace OIV
 {
@@ -258,6 +259,8 @@ namespace OIV
         fConstantBuffer->Use(ShaderStage::SS_FragmentShader);
         
         fImageFragmentShader->Use();
+        if (fImageEntries[0].texture != nullptr)
+            fImageEntries[0].texture->Use();
         context->Draw(4, 0);
 
         //Draw selection rect.
@@ -303,53 +306,13 @@ namespace OIV
 
     int D3D11Renderer::SetImage(const IMCodec::ImageSharedPtr image)
     {
-        if (image->GetImageType() != IMCodec::TF_I_R8_G8_B8_A8)
-            D3D11Error::HandleError("Direct3D11 renderer supports only RGBA pixel format");
-
-        DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        ImageEntry& entry = fImageEntries[0];
+        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image);
 
         
         fConstantBuffer->GetBuffer().uImageSize[0] = static_cast<float>(image->GetWidth());
         fConstantBuffer->GetBuffer().uImageSize[1] = static_cast<float>(image->GetHeight());
         fIsParamsDirty = true;
-        
-
-        SAFE_RELEASE(fTextureShaderResourceView);
-        SAFE_RELEASE(fTexture);
-
-        D3D11_TEXTURE2D_DESC desc = { 0 };
-        desc.Width = static_cast<UINT>(image->GetWidth());
-        desc.Height = static_cast<UINT>(image->GetHeight());
-        desc.MipLevels = desc.ArraySize = 1;
-        desc.Format = textureFormat;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_IMMUTABLE;
-        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = static_cast<UINT>(0);
-        desc.MiscFlags = 0;
-        const D3D11_SUBRESOURCE_DATA subResourceData = {
-                                                      (image->GetBuffer())
-                                                    , static_cast<UINT>(image->GetRowPitchInBytes())
-                                                    , static_cast<UINT>(0) };
-
-        
-        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc, &subResourceData, &fTexture)
-            , "Can not create texture");
-
-        D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
-        memset(&viewDesc, 0, sizeof viewDesc);
-
-        viewDesc.Format = textureFormat;
-        viewDesc.Texture2D.MostDetailedMip = 0;
-        viewDesc.Texture2D.MipLevels = 1;
-        viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-
-        
-
-        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView)
-            , "Can not create 'Shader resource view'");
-        
-        fDevice->GetContext()->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
 
         return 0;
     }
@@ -375,9 +338,9 @@ namespace OIV
     int D3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
     {
         VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
-        buffer.exposure = exposure.exposure;
-        buffer.offset = exposure.offset;
-        buffer.gamma = exposure.gamma;
+        buffer.exposure = static_cast<float>(exposure.exposure);
+        buffer.offset = static_cast<float>(exposure.offset);
+        buffer.gamma = static_cast<float>(exposure.gamma);
         fIsParamsDirty = true;
         return 0;
         
@@ -385,13 +348,8 @@ namespace OIV
 
     void D3D11Renderer::Destroy()
     {
-        // Destory image.
-        SAFE_RELEASE(fTextureShaderResourceView);
-        SAFE_RELEASE(fTexture);
         SAFE_RELEASE(fSamplerState);
-
         SAFE_RELEASE(fBlendState);
-        
         SAFE_RELEASE(fInputLayout);
         SAFE_RELEASE(fVertexBuffer);
 

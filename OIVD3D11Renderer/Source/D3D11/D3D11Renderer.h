@@ -4,8 +4,10 @@
 #include <Image.h>
 #include "D3D11Device.h"
 #include "D3D11Shader.h"
-#include "../../../OIVGLRenderer/OIVGLRendererFactory.h"
 #include "D3D11Buffer.h"
+#include "D3D11Texture.h"
+#include <API/defs.h>
+#include <interfaces/IrendererDefs.h>
 
 namespace OIV
 {
@@ -33,6 +35,11 @@ namespace OIV
     };
 #pragma pack()
 
+
+    struct ImageEntry
+    {
+        D3D11TextureSharedPtr texture;
+    };
 
     class D3D11Renderer 
     {
@@ -74,17 +81,16 @@ namespace OIV
         D3D11ShaderUniquePtr fSelectionFragmentShaer;
         bool fIsParamsDirty = true;
         SelectionRect fSelectionRect;
+        std::vector<ImageEntry> fImageEntries = std::vector<ImageEntry>(100);
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport = {0};
         D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER_SELECTIONRECT> fBufferSelection;
         D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER> fConstantBuffer;
 
-        ID3D11Texture2D *fTexture = nullptr;
         ID3D11Buffer* fVertexBuffer = nullptr;
         ID3D11InputLayout* fInputLayout = nullptr;
         ID3D11RenderTargetView* fRenderTargetView = nullptr;
-        ID3D11ShaderResourceView* fTextureShaderResourceView = nullptr;
         ID3D11SamplerState*  fSamplerState = nullptr;
         ID3D11BlendState* fBlendState = nullptr;
 
