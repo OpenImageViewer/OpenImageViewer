@@ -61,20 +61,7 @@ namespace OIV
 
             return ExecuteCommand(CommandExecute::OIV_CMD_ConvertFormat, &request, &CmdNull());
         }
-
-        static ResultCode OIVCommands::GetImageCoordinates(const LLUtils::RectI32& windowCoordinates, LLUtils::RectF64& imageCoordinates)
-        {
-            OIV_CMD_WindowToImage_Request request;
-            OIV_CMD_WindowToImage_Response response;
-            request.rect = ToOIVRect(windowCoordinates);
-            ResultCode result = ExecuteCommand(OIV_CMD_WindowToimage, &request, &response);
-            if (result == RC_Success)
-            {
-                imageCoordinates = { {response.rect.x0,response.rect.y0 },{ response.rect.x1,response.rect.y1 } };
-            }
-            return result;
-        }
-
+        
 
         static ResultCode OIVCommands::CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
         {

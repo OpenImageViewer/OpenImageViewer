@@ -1,6 +1,5 @@
 #pragma once
 
-#include <d3d11.h>
 #include <Image.h>
 #include "D3D11Device.h"
 #include "D3D11Shader.h"
@@ -8,6 +7,7 @@
 #include "D3D11Texture.h"
 #include <API/defs.h>
 #include <interfaces/IrendererDefs.h>
+#include <map>
 
 namespace OIV
 {
@@ -22,12 +22,21 @@ namespace OIV
 
     
 
+    struct CONSTANT_BUFFER_IMAGE_SIMPLE
+    {
+        float uvViewportSize[2];
+        float uImageSize[2];
+        float uImageOffset[2];
+        float uScale[2];
+    };
+
+
     struct VS_CONSTANT_BUFFER
     {
-        float uvScale[2];
-        float uvOffset[2];
+        float uvViewportSize[2];
         float uImageSize[2];
-        float uViewportSize[2];
+        float uImageOffset[2];
+        float uScale[2];
         int32_t uShowGrid;
         float exposure;
         float offset;
@@ -36,29 +45,36 @@ namespace OIV
 #pragma pack()
 
 
+    enum ImageDisplayMode
+    {
+          IDM_Default
+        , IDM_ImageView
+        , IDM_Overlay
+    };
+
+
     struct ImageEntry
     {
         D3D11TextureSharedPtr texture;
+        ImageProperties properties;
     };
 
     class D3D11Renderer 
     {
     
-     public:
-        D3D11Renderer();
-        ~D3D11Renderer();
-
     public:
-        // TODO: remove IRenderer compliant methods by generalizing D3D11Renderer.
+         D3D11Renderer();
+    public:
         int Init(std::size_t container);
         int SetViewParams(const ViewParameters& viewParams);
         void UpdateGpuParameters();
         int Redraw();
         int SetFilterLevel(OIV_Filter_type filterType);
-        int SetImage(const IMCodec::ImageSharedPtr image);
         int SetselectionRect(const SelectionRect& selection_rect);
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
-
+        int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image);
+        int SetImageProperties(uint32_t id, const ImageProperties& properties);
+        int RemoveImage(uint32_t id);
 
 #pragma region //**** Private methods*****/
     private: 
@@ -70,7 +86,6 @@ namespace OIV
         void CreateBuffers();
         void renderOneFrame();
         void UpdateViewportSize(int x, int y);
-        void Destroy();
         void SetDevicestate();
 #pragma endregion
     private:
@@ -79,21 +94,24 @@ namespace OIV
         D3D11ShaderUniquePtr fImageVertexShader;
         D3D11ShaderUniquePtr fImageFragmentShader;
         D3D11ShaderUniquePtr fSelectionFragmentShaer;
+        D3D11ShaderUniquePtr fImageSimpleFragmentShader;
         bool fIsParamsDirty = true;
         SelectionRect fSelectionRect;
-        std::vector<ImageEntry> fImageEntries = std::vector<ImageEntry>(100);
+        using MapImageEntry = std::map<uint16_t,ImageEntry>;
+        MapImageEntry fImageEntries;
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport = {0};
         D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER_SELECTIONRECT> fBufferSelection;
+        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_SIMPLE> fBufferSimple;
+        
         D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER> fConstantBuffer;
-
-        ID3D11Buffer* fVertexBuffer = nullptr;
-        ID3D11InputLayout* fInputLayout = nullptr;
-        ID3D11RenderTargetView* fRenderTargetView = nullptr;
-        ID3D11SamplerState*  fSamplerState = nullptr;
-        ID3D11BlendState* fBlendState = nullptr;
-
+        
+        ComPtr<ID3D11SamplerState>  fSamplerState;
+        ComPtr<ID3D11BlendState> fBlendState;
+        ComPtr<ID3D11InputLayout> fInputLayout;
+        ComPtr<ID3D11Buffer> fVertexBuffer;
+        ComPtr<ID3D11RenderTargetView> fRenderTargetView;
 #pragma endregion 
     };
 }

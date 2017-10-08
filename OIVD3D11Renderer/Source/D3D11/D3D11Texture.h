@@ -24,8 +24,8 @@ namespace OIV
     
         public: // methods
         D3D11Texture(D3D11DeviceSharedPtr device, const CreateParams& createParams, const InitialBuffer* initialBuffer);
+        const CreateParams& GetCreateParams() const;
         void Use() const;
-        ~D3D11Texture();
 
 
     private: // methods
@@ -34,8 +34,8 @@ namespace OIV
 
     private: // member fields
         D3D11DeviceSharedPtr fDevice;
-        ID3D11Texture2D *fTexture = nullptr;
-        ID3D11ShaderResourceView* fTextureShaderResourceView = nullptr;
+        ComPtr<ID3D11Texture2D>  fTexture;
+        ComPtr<ID3D11ShaderResourceView> fTextureShaderResourceView;
         CreateParams fCreateparams;
     };
 

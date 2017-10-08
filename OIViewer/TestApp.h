@@ -61,6 +61,7 @@ namespace OIV
         void UpdateUIZoom();
         void SetZoom(double zoom, int x = -1, int y = -1);
         void UpdateCanvasSize();
+        LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         void UpdateTexelPos();
         void UpdateWindowSize();
         void Center();

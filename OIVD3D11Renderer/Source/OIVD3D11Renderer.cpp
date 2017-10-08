@@ -37,13 +37,23 @@ namespace OIV
          return  fD3D11Renderer->SetFilterLevel(filterType);
     }
 
-     int OIVD3D11Renderer::SetImage(const IMCodec::ImageSharedPtr image)
-    {
-         return fD3D11Renderer->SetImage(image);
-    }
-
     int OIVD3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
     {
         return fD3D11Renderer->SetExposure(exposure);
     }
+
+    int OIVD3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image)
+    {
+        return fD3D11Renderer->SetImageBuffer(id, image);
+    }
+    int OIVD3D11Renderer::SetImageProperties(uint32_t id, const ImageProperties& properties)
+    {
+        return fD3D11Renderer->SetImageProperties(id, properties);
+    }
+
+    int OIVD3D11Renderer::RemoveImage(uint32_t id)
+    {
+        return fD3D11Renderer->RemoveImage(id);
+    }
+
 }

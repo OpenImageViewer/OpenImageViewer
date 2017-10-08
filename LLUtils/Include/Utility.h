@@ -1,8 +1,9 @@
 #pragma once
 #include <list>
-#include "StringUtility.h"
 #include <filesystem>
-#include <immintrin.h> // AVX2
+
+#include "StringUtility.h"
+
 
 namespace LLUtils
 {
@@ -34,60 +35,38 @@ namespace LLUtils
             return std::experimental::filesystem::is_directory(path);
         }
 
-        static int CopyMemSSE4(void* piDst, void* piSrc, unsigned long SizeInBytes)
+        struct BlitBox
         {
-            const int RegisterSizeinBytes = 256 / 8;
-            const int totalRegisters = 4;
-            const int offset = RegisterSizeinBytes * totalRegisters;
-
-            size_t bytesCopyBulk = SizeInBytes / offset * offset;
-            size_t bytesResidue = SizeInBytes - bytesCopyBulk;
-            __m256i data[totalRegisters];
-
-
-            uint8_t* src = (uint8_t*)piSrc;
-            uint8_t* dst = (uint8_t*)piDst;
-
-            while (bytesCopyBulk > 0)
+            uint8_t* buffer;
+            uint32_t rowPitch;
+            uint32_t width;
+            uint32_t height;
+            uint32_t left;
+            uint32_t top;
+            uint32_t pixelSizeInbytes;
+            
+            int32_t GetStartOffset() const
             {
-                /*  for (int i = 0; i < totalRegisters; i++)
-                  {
-                      data[i] = _mm256_loadu_si256((__m256i const *) (src + i * RegisterSizeinBytes));
-                  }
-
-                  for (int i = 0; i < totalRegisters; i++)
-                  {
-                      _mm256_storeu_si256((__m256i *)(dst + i * RegisterSizeinBytes), data[i]);
-                  }*/
-
-                data[0] = _mm256_loadu_si256((__m256i const *)src + 0);
-                data[1] = _mm256_loadu_si256((__m256i const *)(src + 32));
-                data[2] = _mm256_loadu_si256((__m256i const *)(src + 64));
-                data[3] = _mm256_loadu_si256((__m256i const *)(src + 96));
-                /*data[4] = _mm256_loadu_si256((__m256i const *)src + 128 );
-                data[5] = _mm256_loadu_si256((__m256i const *)(src + 160));
-                data[6] = _mm256_loadu_si256((__m256i const *)(src + 192));
-                data[7] = _mm256_loadu_si256((__m256i const *)(src + 224));*/
-
-
-                _mm256_storeu_si256((__m256i *)(dst + 0), data[0]);
-                _mm256_storeu_si256((__m256i *)(dst + 32), data[1]);
-                _mm256_storeu_si256((__m256i *)(dst + 64), data[2]);
-                _mm256_storeu_si256((__m256i *)(dst + 96), data[3]);
-                /*_mm256_storeu_si256((__m256i *)(dst + 128), data[4]);
-                _mm256_storeu_si256((__m256i *)(dst + 160), data[5]);
-                _mm256_storeu_si256((__m256i *)(dst + 192), data[6]);
-                _mm256_storeu_si256((__m256i *)(dst + 224), data[7]);*/
-
-                bytesCopyBulk -= 128;
-                src += 128;
-                dst += 128;
+                return (top * rowPitch) + (left * pixelSizeInbytes);
+                
             }
 
-            memcpy(dst, src, bytesResidue);
 
-            return 0;
+        };
+
+        static void Blit(BlitBox& dst, const BlitBox& src)
+        {
+            const uint8_t* srcPos = src.buffer + src.GetStartOffset();
+            uint8_t* dstPos = dst.buffer + dst.GetStartOffset();
+
+            const uint32_t bytesPerCopy = src.pixelSizeInbytes * src.width;
+
+            for (uint32_t y = src.top; y < src.height; y++)
+            {
+                memcpy(dstPos, srcPos, bytesPerCopy);
+                dstPos += dst.rowPitch;
+                srcPos += src.rowPitch;
+            }
         }
-
     };
 }

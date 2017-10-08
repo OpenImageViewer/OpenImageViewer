@@ -22,6 +22,7 @@ namespace IMCodec
         , TF_I_B8_G8_R8_A8
         , TF_I_A8_R8_G8_B8
         , TF_I_A8_B8_G8_R8
+        , TF_I_A8
         , TF_I_X1
         , TF_I_X8
         , TF_F_X16
@@ -40,6 +41,7 @@ namespace IMCodec
             ,32      // TF_I_B8_G8_R8_A8
             ,32      // TF_I_A8_R8_G8_B8
             ,32      // TF_I_A8_B8_G8_R8
+            ,8       // TF_I_A8
             ,1       // TF_I_X1
             ,8       // TF_I_X8
             ,16      // TF_F_X16

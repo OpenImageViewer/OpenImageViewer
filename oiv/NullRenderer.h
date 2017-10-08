@@ -10,6 +10,5 @@ namespace OIV
         int SetViewParams(const ViewParameters& viewParams) { return 0; }
         int Redraw() override { return 0; }
         int SetFilterLevel(OIV_Filter_type filterLevel) override { return 0; }
-        int SetImage(const IMCodec::ImageSharedPtr image) override { return 0; }
     };
 }

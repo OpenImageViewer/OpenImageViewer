@@ -19,8 +19,13 @@ namespace OIV
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filterType) override;
         int SetSelectionRect(SelectionRect selectionRect) override;
-        int SetImage(const IMCodec::ImageSharedPtr image) override;
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
+        
+        // Multi image API:
+        int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) override;
+        int SetImageProperties(uint32_t id, const ImageProperties& properties) override;
+        int RemoveImage(uint32_t id) override;
+
 #pragma endregion
 
 

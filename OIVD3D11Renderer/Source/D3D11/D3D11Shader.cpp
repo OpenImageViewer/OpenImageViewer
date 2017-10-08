@@ -9,11 +9,6 @@ namespace  OIV
 
     }
 
-    D3D11Shader::~D3D11Shader()
-    {
-        SAFE_RELEASE(fShader);
-    }
-
     void D3D11Shader::Load(std::string sourceCode)
     {
         fSourceCode = sourceCode;
@@ -29,7 +24,7 @@ namespace  OIV
 
     IUnknown* D3D11Shader::GetShader()
     {
-        return fShader;
+        return fShader.Get();
     }
 
     const std::string& D3D11Shader::Getsource() const
@@ -66,8 +61,8 @@ namespace  OIV
         macros[1].Definition = nullptr;
         macros[1].Name = nullptr;
 
-        ID3DBlob* microCode = nullptr;
-        ID3DBlob* errors = nullptr;
+        ComPtr<ID3DBlob> microCode;
+        ComPtr<ID3DBlob> errors;
         HRESULT res;
 
         ShaderCompileParams params;
@@ -85,16 +80,14 @@ namespace  OIV
                 , params.target.c_str()
                 , D3DCOMPILE_OPTIMIZATION_LEVEL3
                 , 0
-                , &microCode
-                , &errors
+                , microCode.GetAddressOf()
+                , errors.GetAddressOf()
             );
 
         if (SUCCEEDED(res) == false)
-            HandleCompileError(errors);
+            HandleCompileError(errors.Get());
 
-        fShaderData = BlobSharedPtr(new Blob(microCode));
-        SAFE_RELEASE(microCode);
-        SAFE_RELEASE(errors);
+        fShaderData = BlobSharedPtr(new Blob(microCode.Get()));
     }
 
     void D3D11Shader::HandleCompileError(ID3DBlob* errors) const

@@ -1,5 +1,7 @@
 #pragma once
 #include <memory>
+#include <wrl/client.h>
+
 namespace OIV
 {
     enum ShaderStage
@@ -15,6 +17,7 @@ namespace OIV
     
     struct Blob;
     typedef std::shared_ptr<Blob>  BlobSharedPtr;
-
-    #define SAFE_RELEASE(x) {if (x) {x->Release(); x = nullptr; } }
+    
+    template < typename T >
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 }

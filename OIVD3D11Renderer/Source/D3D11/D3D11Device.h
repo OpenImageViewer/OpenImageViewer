@@ -9,36 +9,19 @@ namespace OIV
     class D3D11Device
     {
     public:
-
-        D3D11Device()
-        {
-            
-        }
-
-
-        ~D3D11Device()
-        {
-            SAFE_RELEASE(fD3dSwapChain);
-
-            //Destroy device
-            SAFE_RELEASE(fD3dContext);
-            SAFE_RELEASE(fD3dDevice);
-        }
-
-
         ID3D11DeviceContext* GetContext()  const
         {
-            return fD3dContext;
+            return fD3dContext.Get();
         }
 
         ID3D11Device* GetdDevice()  const
         {
-            return fD3dDevice;
+            return fD3dDevice.Get();
         }
 
         IDXGISwapChain* GetSwapChain()  const
         {
-            return fD3dSwapChain;
+            return fD3dSwapChain.Get();
         }
 
         void Create(HWND hwnd)
@@ -84,18 +67,22 @@ namespace OIV
                     sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL),
                     D3D11_SDK_VERSION,
                     &scd,
-                    &fD3dSwapChain,
-                    &fD3dDevice,
+                    fD3dSwapChain.GetAddressOf(),
+                    fD3dDevice.GetAddressOf(),
                     &obtainedLevel,
-                    &fD3dContext);
+                    fD3dContext.GetAddressOf());
+
+#ifdef _DEBUG
+            std::string obj = "D3D11 deivce";
+            fD3dDevice->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
+#endif
             
         }
     private:
         HWND fHWND = nullptr;
-         ID3D11Device* fD3dDevice = nullptr;
-         ID3D11DeviceContext* fD3dContext = nullptr;
-         IDXGISwapChain* fD3dSwapChain = nullptr;
-
+        ComPtr<IDXGISwapChain> fD3dSwapChain;
+        ComPtr<ID3D11DeviceContext> fD3dContext;
+        ComPtr<ID3D11Device> fD3dDevice;
     };
 
 }

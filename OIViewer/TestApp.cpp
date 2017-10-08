@@ -753,7 +753,7 @@ namespace OIV
         if (clientY < 0 )
             clientY = clientSize.y / 2.0;
 
-        zoomPoint = (PointF64(clientX, clientY) - static_cast<PointF64>(fOffset)) / fZoom;
+        zoomPoint = ClientToImage(PointI32(clientX, clientY));
         PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(IST_Original)) * (fZoom - zoomValue) * GetImageSize(IST_Original));
         fZoom = zoomValue;
 
@@ -772,44 +772,53 @@ namespace OIV
 
     void TestApp::UpdateCanvasSize()
     {
-        CmdGetNumTexelsInCanvasResponse response;
-        
-        if (ExecuteCommand(CMD_GetNumTexelsInCanvas, &CmdNull(), &response) == RC_Success)
-        {
-
+        using namespace  LLUtils;
+        PointF64 canvasSize = (PointF64)fWindow.GetClientSize() / fZoom;
             std::wstringstream ss;
             ss << _T("Canvas: ")
-                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.width
+                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << canvasSize.x
                 << _T(" X ")
-                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.height;
+                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << canvasSize.y;
             fWindow.SetStatusBarText(ss.str(), 3, 0);
-        }
+    }
+
+    LLUtils::PointF64 TestApp::ClientToImage(LLUtils::PointI32 clientPos) const
+    {
+        using namespace LLUtils;
+        return (static_cast<PointF64>(clientPos) - static_cast<PointF64>(fOffset)) / fZoom;
     }
 
     void TestApp::UpdateTexelPos()
     {
-        POINT p = fWindow.GetMousePosition();
-        CmdRequestTexelAtMousePos request;
-        CmdResponseTexelAtMousePos response;
-        request.x = p.x;
-        request.y = p.y;
-        if (ExecuteCommand(CE_TexelAtMousePos, &request, &response) == RC_Success)
+        using namespace LLUtils;
+        PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
+
+        std::wstringstream ss;
+        ss << _T("Texel: ")
+            << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << storageImageSpace.x
+            << _T(" X ")
+            << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << storageImageSpace.y;
+        fWindow.SetStatusBarText(ss.str(), 2, 0);
+
+        PointF64 storageImageSize = GetImageSize(IST_Original);
+       
+        if (!( storageImageSpace.x < 0 
+            || storageImageSpace.y < 0
+            || storageImageSpace.x >= storageImageSize.x
+            || storageImageSpace.y >= storageImageSize.y
+            ))
         {
-            std::wstringstream ss;
-            ss << _T("Texel: ") 
-               << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.x
-               << _T(" X ") 
-               << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << response.y;
-            fWindow.SetStatusBarText(ss.str(), 2, 0);
-
-
-            OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle
-                ,static_cast<int32_t>(response.x)
-                ,static_cast<int32_t>(response.y)};
+                 OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle
+            ,static_cast<int32_t>(storageImageSpace.x)
+            ,static_cast<int32_t>(storageImageSpace.y)};
             OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
             if (ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
-                    fWindow.SetStatusBarText(OIVHelper::ParseTexelValue(texelInfoResponse), 5, 0);
+            fWindow.SetStatusBarText(OIVHelper::ParseTexelValue(texelInfoResponse), 5, 0);
+        }
+        else
+        {
+            fWindow.SetStatusBarText(L"", 5, 0);
         }
     }
 
@@ -974,115 +983,109 @@ namespace OIV
 
     void TestApp::CopyVisibleToClipBoard()
     {
-        LLUtils::RectF64 imageRect;
-        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
+        LLUtils::RectF64 imageRect = { ClientToImage(fSelectionRect.p0), ClientToImage(fSelectionRect.p1) };
+        LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y}
+            ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
 
+        ImageHandle croppedHandle;
+        ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
         if (result == RC_Success)
         {
-            LLUtils::RectI32 imageRectInt = {{ (int)imageRect.p0.x,(int)imageRect.p0.y}
-                ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
-            
-            ImageHandle croppedHandle;
-            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
-            if (result == RC_Success)
+
+            struct unloadImage
             {
-
-                struct unloadImage
+                ImageHandle handle;
+                ~unloadImage()
                 {
-                    ImageHandle handle;
-                    ~unloadImage()
+                    if (handle != ImageNullHandle)
+                        OIVCommands::UnloadImage(handle);
+
+                }
+            } handle{ croppedHandle };
+
+
+            //2. Flip the image vertically and convert it to BGRA for the clipboard.
+            result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
+            result = OIVCommands::ConvertImage(croppedHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+
+            //3. Get image pixel buffer and Copy to clipboard.
+
+            OIV_CMD_GetPixels_Request requestGetPixels;
+            OIV_CMD_GetPixels_Response responseGetPixels;
+
+            requestGetPixels.handle = croppedHandle;
+
+            if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+            {
+                struct hDibDelete
+                {
+                    bool dlt;
+                    HANDLE mHande;
+                    ~hDibDelete()
                     {
-                        if (handle != ImageNullHandle)
-                            OIVCommands::UnloadImage(handle);
-                                
+                        if (dlt && mHande)
+                        {
+                            GlobalFree(mHande);
+                        }
                     }
-                } handle{ croppedHandle};
+                };
 
 
-                //2. Flip the image vertically and convert it to BGRA for the clipboard.
-                result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
-                result = OIVCommands::ConvertImage(croppedHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+                uint32_t width = responseGetPixels.width;
+                uint32_t height = responseGetPixels.height;
+                uint8_t bpp;
+                OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
 
-                //3. Get image pixel buffer and Copy to clipboard.
+                HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
 
-                OIV_CMD_GetPixels_Request requestGetPixels;
-                OIV_CMD_GetPixels_Response responseGetPixels;
+                hDibDelete deletor = { true,hDib };
 
-                requestGetPixels.handle = croppedHandle;
 
-                if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+                if (::OpenClipboard(nullptr))
                 {
-                    struct hDibDelete
+                    if (SetClipboardData(CF_DIB, hDib) != nullptr)
                     {
-                        bool dlt;
-                        HANDLE mHande;
-                        ~hDibDelete()
-                        {
-                            if (dlt && mHande)
-                            {
-                                GlobalFree(mHande);
-                            }
-                        }
-                    };
-                   
-
-                    uint32_t width = responseGetPixels.width;
-                    uint32_t height = responseGetPixels.height;
-                    uint8_t bpp;
-                    OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
-
-                    HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
-
-                    hDibDelete deletor = { true,hDib };
-
-
-                    if (::OpenClipboard(nullptr))
-                    {
-                        if (SetClipboardData(CF_DIB, hDib) != nullptr)
-                        {
-                            //succeeded do not free hDib.
-                            deletor.dlt = false;
-                        }
-                        else
-                        {
-                            //Failed setting clipboard data.
-                            std::string error = LLUtils::PlatformUtility::GetLastErrorAsString();
-                            throw std::logic_error("Unable to set clipboard data.\n" + error);
-                        }
-                        if (CloseClipboard() == FALSE)
-                            throw std::logic_error("Unknown error");
+                        //succeeded do not free hDib.
+                        deletor.dlt = false;
                     }
                     else
                     {
-                        throw std::logic_error("could not open clipboard");
+                        //Failed setting clipboard data.
+                        std::string error = LLUtils::PlatformUtility::GetLastErrorAsString();
+                        throw std::logic_error("Unable to set clipboard data.\n" + error);
                     }
+                    if (CloseClipboard() == FALSE)
+                        throw std::logic_error("Unknown error");
                 }
-
+                else
+                {
+                    throw std::logic_error("could not open clipboard");
+                }
             }
+
+
         }
     }
 
     void TestApp::CropVisibleImage()
     {
-        LLUtils::RectF64 imageRect;
-        ResultCode result = OIVCommands::GetImageCoordinates(fSelectionRect, imageRect);
+        LLUtils::RectF64 imageRect = { ClientToImage(fSelectionRect.p0), ClientToImage(fSelectionRect.p1) };
 
+
+        LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y }
+        ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+
+        ImageHandle croppedHandle;
+        ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
         if (result == RC_Success)
         {
-            LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y }
-            ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+            fImageBeingOpened = fOpenedImage;
+            fImageBeingOpened.imageHandle = croppedHandle;
+            fImageBeingOpened.width = 7;
+            fImageBeingOpened.height = 7;
 
-            ImageHandle croppedHandle;
-            result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
-            if (result == RC_Success)
-            {
-                fImageBeingOpened = fOpenedImage;
-                fImageBeingOpened.imageHandle = croppedHandle;
-                fImageBeingOpened.width = 7;
-                fImageBeingOpened.height= 7;
-                
-            }
         }
+
         FinalizeImageLoadThreadSafe(result);
 
     }

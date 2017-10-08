@@ -10,11 +10,11 @@ namespace OIV
         CreateShaderResourceView();
     }
 
-    D3D11Texture::~D3D11Texture()
+    const D3D11Texture::CreateParams& D3D11Texture::GetCreateParams() const
     {
-        SAFE_RELEASE(fTextureShaderResourceView);
-        SAFE_RELEASE(fTexture);
+        return fCreateparams;
     }
+
 
     void D3D11Texture::CreateShaderResourceView()
     {
@@ -26,9 +26,8 @@ namespace OIV
         viewDesc.Texture2D.MipLevels = 1;
         viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 
-        SAFE_RELEASE(fTextureShaderResourceView);
         D3D11Error::HandleDeviceError(
-            fDevice->GetdDevice()->CreateShaderResourceView(fTexture, &viewDesc, &fTextureShaderResourceView)
+            fDevice->GetdDevice()->CreateShaderResourceView(fTexture.Get(), &viewDesc, fTextureShaderResourceView.ReleaseAndGetAddressOf())
             , "Can not create 'Shader resource view'");
     }
 
@@ -55,14 +54,12 @@ namespace OIV
             subResourceDataForAPI = &subResourceData;
         }
 
-
-        SAFE_RELEASE(fTexture);
-        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc, subResourceDataForAPI, &fTexture)
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc, subResourceDataForAPI, fTexture.ReleaseAndGetAddressOf())
                                       , "Can not create texture");
     }
 
     void D3D11Texture::Use() const
     {
-        fDevice->GetContext()->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), &fTextureShaderResourceView);
+        fDevice->GetContext()->PSSetShaderResources(static_cast<UINT>(0), static_cast<UINT>(1), fTextureShaderResourceView.GetAddressOf());
     }
 }

@@ -23,14 +23,19 @@ namespace OIV
 
         IUnknown* CreateImpl()  override
         {
-            ID3D11VertexShader*  vertexShader;
-            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, &vertexShader)
+            ComPtr<ID3D11VertexShader> vertexShader;
+            
+            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, vertexShader.ReleaseAndGetAddressOf())
                 , " could not create vertex shader from microcode");
          
             IUnknown* result = nullptr;
+#ifdef _DEBUG
+            std::string obj = "Vertex shader";
+            vertexShader->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
+#endif
 
-            D3D11Error::HandleDeviceError(vertexShader->QueryInterface(&result));
-            vertexShader->Release();
+            D3D11Error::HandleDeviceError(vertexShader.Get()->QueryInterface(&result));
+            
             return result;
         }
 

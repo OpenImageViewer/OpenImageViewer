@@ -20,14 +20,18 @@ namespace OIV
 
         IUnknown* CreateImpl()  override
         {
-            ID3D11PixelShader*  pixelShader;
+            ComPtr<ID3D11PixelShader> pixelShader;
             D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreatePixelShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, &pixelShader)
                 , " could not create fragment shader from microcode");
 
+#ifdef _DEBUG
+            std::string obj = "Fragment shader";
+            pixelShader->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
+#endif
             IUnknown* result = nullptr;
 
-            D3D11Error::HandleDeviceError(pixelShader->QueryInterface(&result));
-            pixelShader->Release();
+            D3D11Error::HandleDeviceError(pixelShader.Get()->QueryInterface(&result));
+            
             return result;
         }
 

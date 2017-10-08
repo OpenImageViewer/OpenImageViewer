@@ -18,7 +18,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const CmdDataPan* dataPan = reinterpret_cast<const CmdDataPan*>(request);
-            result = (ResultCode)ApiGlobal::sPictureRenderer->Pan(dataPan->x, dataPan->y);
+            result = (ResultCode)ApiGlobal::sPictureRenderer->SetOffset(dataPan->x, dataPan->y);
 
             return result;
         }

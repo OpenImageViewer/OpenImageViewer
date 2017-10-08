@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="oiv.cpp" />
-    <ClCompile Include="ZoomScrollState.cpp" />
     <ClCompile Include="API\functions.cpp">
       <Filter>API</Filter>
     </ClCompile>
@@ -12,10 +11,10 @@
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
     <ClCompile Include="ImageManager.cpp" />
     <ClCompile Include="ApiGlobal.cpp" />
+    <ClCompile Include="FreeType\FreeTypeConnector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
-    <ClInclude Include="ZoomScrollState.h" />
     <ClInclude Include="API\defs.h">
       <Filter>API</Filter>
     </ClInclude>
@@ -33,7 +32,6 @@
     </ClInclude>
     <ClInclude Include="NullRenderer.h" />
     <ClInclude Include="Configuration.h" />
-    <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
     <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
@@ -43,9 +41,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerTexelAtMousePos.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerNumTexelsInCanvas.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
@@ -56,13 +52,16 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
     <ClInclude Include="Interfaces\IRendererDefs.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerWindowToimage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerColorExposure.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
+    <ClInclude Include="FreeType\FreeTypeConnector.h" />
+    <ClInclude Include="FreeType\CodePoint.h" />
+    <ClInclude Include="Common\linux.h" />
+    <ClInclude Include="FreeType\FreeTypeHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

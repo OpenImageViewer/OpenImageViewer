@@ -44,16 +44,13 @@ extern "C"
         , CE_FilterLevel
         , CE_Refresh
         , OIV_CMD_QueryImageInfo
-        , CE_TexelAtMousePos
         , CE_TexelGrid
         , CMD_SetClientSize
-        , CMD_GetNumTexelsInCanvas
         , OIV_CMD_Destroy
         , OIV_CMD_AxisAlignedTransform
         , OIV_CMD_ZoomScrollState
         , OIV_CMD_SetSelectionRect
         , OIV_CMD_GetPixelBuffer
-        , OIV_CMD_WindowToimage
         , OIV_CMD_CropImage
         , OIV_CMD_GetPixels
         , OIV_CMD_ConvertFormat
@@ -109,6 +106,7 @@ extern "C"
         , TF_I_B8_G8_R8_A8
         , TF_I_A8_R8_G8_B8
         , TF_I_A8_B8_G8_R8
+        , TF_I_A8
         , TF_I_X1
         , TF_I_X8
         , TF_F_X16
@@ -176,16 +174,6 @@ extern "C"
         OIV_TexelFormat texelFormat;
     };
     
-
-    struct OIV_CMD_WindowToImage_Request
-    {
-        OIV_RECT_I rect;
-    };
-
-    struct OIV_CMD_WindowToImage_Response
-    {
-        OIV_RECT_F rect;
-    };
 
 
     struct OIV_CMD_ColorExposure_Request
@@ -261,13 +249,7 @@ extern "C"
         uint16_t width;
         uint16_t height;
     };
-
-    struct CmdGetNumTexelsInCanvasResponse
-    {
-        double width;
-        double height;
-    };
-
+    
     struct CmdRequestTexelGrid
     {
         double gridSize;

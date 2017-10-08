@@ -25,10 +25,10 @@ STATIC_CONST float4 red = float4(1, 0, 0, 1);
 //Globals
 uniform SAMPLER2D texture_1;
 uniform SAMPLER_STATE texture_1_state;
-uniform float2 uvScale;
-uniform float2 uvOffset;
-uniform float2 uImageSize;
 uniform float2 uViewportSize;
+uniform float2 uImageSize;
+uniform float2 uImageOffset;
+uniform float2 uScale;
 uniform int uShowGrid;
 uniform float uExposure;
 uniform float uOffset;
@@ -124,19 +124,22 @@ void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texe
 
 float4 GetFinalTexel(float2 i_inputUV,float2 i_viewportSize, float2 i_imageSize, float2 i_uvScale,float2 i_uvOffset,int i_showGrid )
 {
-    float4 texel;
-    float2 uv = i_inputUV * i_uvScale + i_uvOffset;
+	float4 texel;
 
-    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+	float2 uvScale =  uViewportSize.xy / (uImageSize.xy * uScale);
+	float2 offset=  -uImageOffset.xy / uViewportSize.xy * uvScale;
+	float2 uv = i_inputUV * uvScale  + offset;
+	
+ if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
         FillBackGround(uv, i_inputUV, i_viewportSize, texel);
     else
     {
         DrawImage(uv, i_inputUV, i_viewportSize, texel);
         if (i_showGrid == 1)
-            DrawPixelGrid(i_imageSize, i_viewportSize, i_inputUV, i_uvScale, i_uvOffset, texel);
+            DrawPixelGrid(i_imageSize, i_viewportSize, i_inputUV, uvScale, offset, texel);
     }
-
-    texel.w = 1;
+	
+	texel.w = 1;
     return texel;
 }
 #if defined(HLSL) || defined(D3D11)
@@ -154,7 +157,8 @@ struct ShaderOut
 };
 void main(in ShaderIn input, out ShaderOut output)
 {
-    output.texelOut = GetFinalTexel(input.uv, uViewportSize, uImageSize,uvScale, uvOffset, uShowGrid);
+
+    output.texelOut = GetFinalTexel(input.uv, uViewportSize, uImageSize,uScale, uImageOffset, uShowGrid);
 }
 #else
 ////////////////////////
@@ -164,7 +168,7 @@ in vec2 coords;
 out vec4 outColor;
 void main()
 {
-  outColor = GetFinalTexel(coords, uViewportSize, uImageSize,uvScale, uvOffset, uShowGrid);
+  outColor = GetFinalTexel(coords, uViewportSize, uImageSize,uScale, uImageOffset, uShowGrid);
 }
 
 #endif

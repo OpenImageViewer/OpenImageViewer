@@ -8,6 +8,9 @@
 #include <ImageUtil.h>
 #include "Configuration.h"
 #include "API/functions.h"
+#include "FreeType/FreeTypeConnector.h"
+#include "FreeType/FreeTypeHelper.h"
+#include "Interfaces/IRendererDefs.h"
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
@@ -24,7 +27,7 @@
 namespace OIV
 {
 
-    #pragma region ZoomScrollStateListener
+ /*   #pragma region ZoomScrollStateListener
     LLUtils::PointI32 OIV::GetImageSize()
     {
         using namespace LLUtils;
@@ -34,10 +37,7 @@ namespace OIV
             : PointI32::Zero;
     }
 
-    LLUtils::PointI32 OIV::GetClientSize()
-    {
-        return fClientSize;
-    }
+
     
     void OIV::NotifyDirty()
     {
@@ -48,12 +48,25 @@ namespace OIV
     }
 
     
-#pragma endregion 
-   
+#pragma endregion */
+
+    LLUtils::PointI32 OIV::GetClientSize() const
+    {
+        return fClientSize;
+    }
+    
  
     void OIV::RefreshRenderer()
     {
+
         UpdateGpuParams();
+        ::OIV::ImageProperties properties;
+        properties.position = static_cast<LLUtils::PointF64>(fOffset);
+        properties.scale = fZoom;
+        properties.opacity = 1.0;
+        properties.renderMode = RM_MainImage;
+        
+        fRenderer->SetImageProperties(0, properties);
         fRenderer->Redraw();
     }
 
@@ -64,21 +77,8 @@ namespace OIV
 
     void OIV::UpdateGpuParams()
     {
-        LLUtils::PointF64 uvScaleFixed = fScrollState.GetARFixedUVScale();
-        LLUtils::PointF64 uvOffset = fScrollState.GetOffset();
-        
-        if (GetDisplayImage() == nullptr)
-        {
-            // Place image out of the window space.
-            uvOffset = LLUtils::PointF64::One;
-            uvScaleFixed = LLUtils::PointF64::One;
-        }
-        
         fViewParams.showGrid = fShowGrid;
         fViewParams.uViewportSize = GetClientSize();
-        fViewParams.uvOffset = uvOffset;
-        fViewParams.uvscale = uvScaleFixed;
-        
         fRenderer->SetViewParams(fViewParams);
     }
 
@@ -257,7 +257,7 @@ namespace OIV
 
             if (image != nullptr)
             {
-                if (fRenderer->SetImage(image) == RC_Success)
+                if (fRenderer->SetImageBuffer(0,image) == RC_Success)
                 {
                     fDisplayedImage = image;
 
@@ -294,23 +294,7 @@ namespace OIV
         return RC_Success;
     }
 
-    ResultCode OIV::WindowToImage(const OIV_CMD_WindowToImage_Request& request, OIV_CMD_WindowToImage_Response& response)
-    {
-        if (fDisplayedImage != nullptr)
-        {
-            LLUtils::PointF64 p0 = fScrollState.ClientPosToTexel({ request.rect.x0, request.rect.y0 });
-            LLUtils::PointF64 p1 = fScrollState.ClientPosToTexel({ request.rect.x1, request.rect.y1 });
-
-            response.rect.x0 = p0.x;
-            response.rect.y0 = p0.y;
-            response.rect.x1 = p1.x;
-            response.rect.y1 = p1.y;
-            return RC_Success;
-        }
-
-        return RC_InvalidParameters;
-        
-    }
+   
 
     ResultCode OIV::ConverFormat(const OIV_CMD_ConvertFormat_Request& req)
     {
@@ -414,15 +398,15 @@ namespace OIV
         
     }
 
-    ResultCode OIV::Zoom(double zoom)
+    ResultCode OIV::SetZoom(double zoom)
     {
-        fScrollState.SetZoom(zoom);
+        fZoom = zoom;
         return ResultCode::RC_Success;
     }
-
-    ResultCode OIV::Pan(double x, double y)
+    
+    ResultCode OIV::SetOffset(uint32_t x, uint32_t y)
     {
-        fScrollState.SetOffset({ x, y });
+        fOffset = LLUtils::PointI32( x, y);
         return ResultCode::RC_Success;
     }
 
@@ -433,6 +417,8 @@ namespace OIV
 
     int OIV::Init()
     {
+        
+        static_assert(OIV_TexelFormat::TF_COUNT == IMCodec::TexelFormat::TF_COUNT, "Wrong array size");
         fRenderer = CreateBestRenderer();
         fRenderer->Init(fParent);
         return 0;
@@ -446,14 +432,7 @@ namespace OIV
     }
     int OIV::Refresh()
     {
-        if (fIsRefresing == false)
-        {
-            fIsRefresing = true;
-            fScrollState.Refresh();
-            RefreshRenderer();
-            fIsRefresing = false;
-        }
-
+        RefreshRenderer();
         return 0;
     }
 
@@ -494,28 +473,13 @@ namespace OIV
         return RC_InvalidImageHandle;
     }
 
-    int OIV::GetTexelAtMousePos(int mouseX, int mouseY, double& texelX, double& texelY)
-    {
-        LLUtils::PointF64 texelPos = this->fScrollState.ClientPosToTexel({ mouseX, mouseY });
-        texelX = texelPos.x;
-        texelY = texelPos.y;
-        return RC_Success;
-    }
-
     int OIV::SetTexelGrid(double gridSize)
     {
         fShowGrid = gridSize > 0.0;
         return RC_Success;
     }
 
-    int OIV::GetNumTexelsInCanvas(double &x, double &y)
-    {
-        LLUtils::PointF64 canvasSize = fScrollState.GetNumTexelsInCanvas();
-        x = canvasSize.x;
-        y = canvasSize.y;
-        return RC_Success;
-    }
-
+  
     int OIV::SetClientSize(uint16_t width, uint16_t height)
     {
         fClientSize = { width, height };
@@ -530,7 +494,7 @@ namespace OIV
             IMCodec::ImageSharedPtr& image = fDisplayedImage;
             
             image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
-            if (image != nullptr && fRenderer->SetImage(image) == RC_Success)
+            if (image != nullptr && fRenderer->SetImageBuffer(0,image) == RC_Success)
             {
 //                fScrollState.Reset(true);
                 return RC_Success;

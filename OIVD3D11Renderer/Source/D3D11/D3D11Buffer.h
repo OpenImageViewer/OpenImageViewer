@@ -1,5 +1,6 @@
 #pragma once
 #include "D3D11Error.h"
+#include "D3D11Common.h"
 
 namespace OIV
 {
@@ -7,12 +8,6 @@ namespace OIV
     class D3D11Buffer
     {
     public:
-       
-        ~D3D11Buffer()
-        {
-            SAFE_RELEASE(fBuffer);
-        }
-
         D3D11Buffer(D3D11DeviceSharedPtr device, const D3D11_BUFFER_DESC& bufferDesc, const D3D11_SUBRESOURCE_DATA* initialData)
         {
             fDevice = device;
@@ -30,10 +25,10 @@ namespace OIV
             switch (stage)
             {
             case SS_VertexShader:
-                GetDevice()->GetContext()->VSSetConstantBuffers(0, 1, &fBuffer);
+                GetDevice()->GetContext()->VSSetConstantBuffers(0, 1, fBuffer.GetAddressOf());
                 break;
             case SS_FragmentShader:
-                GetDevice()->GetContext()->PSSetConstantBuffers(0, 1, &fBuffer);
+                GetDevice()->GetContext()->PSSetConstantBuffers(0, 1, fBuffer.GetAddressOf());
                 break;
             default:
                 throw std::logic_error("Unexpected value");
@@ -44,9 +39,9 @@ namespace OIV
         void Write(uint32_t size, const uint8_t* buffer, uint32_t offset)
         {
             D3D11_MAPPED_SUBRESOURCE mapped;
-            D3D11Error::HandleDeviceError(fDevice->GetContext()->Map(fBuffer, static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mapped), "Can not map constant buffer");
+            D3D11Error::HandleDeviceError(fDevice->GetContext()->Map(fBuffer.Get(), static_cast<UINT>(0), D3D11_MAP_WRITE_DISCARD, static_cast<UINT>(0), &mapped), "Can not map constant buffer");
             memcpy(static_cast<uint8_t*>(mapped.pData) + offset, buffer, size);
-            fDevice->GetContext()->Unmap(fBuffer, static_cast<UINT>(0));
+            fDevice->GetContext()->Unmap(fBuffer.Get(), static_cast<UINT>(0));
         }
 
     protected:
@@ -65,13 +60,18 @@ namespace OIV
 
 
                 D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBuffer(&fBufferDesc, initialData,
-                    &fBuffer)
+                    fBuffer.ReleaseAndGetAddressOf())
                     , "Can not create constant buffer");
+    
+#ifdef _DEBUG
+          std::string obj = "Constant buffer";
+          fBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
+#endif
         }
 
 
     private:
-        ID3D11Buffer* fBuffer = nullptr;
+        ComPtr<ID3D11Buffer> fBuffer;
         D3D11DeviceSharedPtr fDevice;
         D3D11_BUFFER_DESC fBufferDesc;
     };

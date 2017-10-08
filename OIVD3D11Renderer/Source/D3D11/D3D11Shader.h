@@ -11,7 +11,6 @@ namespace OIV
     {
     public:
         D3D11Shader(D3D11DeviceSharedPtr d3dDevice);
-        virtual ~D3D11Shader();
         void Load(std::string sourceCode);
         void Load(BlobSharedPtr blob);
         IUnknown* GetShader();
@@ -41,7 +40,7 @@ namespace OIV
         D3D11DeviceSharedPtr fDevice;
         std::string fSourceCode;
         BlobSharedPtr fShaderData;
-        IUnknown* fShader;
+        ComPtr<IUnknown> fShader;
     };
 
     typedef std::shared_ptr<D3D11Shader> D3D11ShaderUniquePtr;
