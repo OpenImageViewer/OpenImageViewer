@@ -3,6 +3,7 @@
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include "D3D11Common.h"
+#include "D3D11Error.h"
 
 namespace OIV
 {
@@ -56,22 +57,50 @@ namespace OIV
             createFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
+                //D3D11CreateDevice(
+                //    nullptr
+                //    , D3D_DRIVER_TYPE_HARDWARE
+                //    , nullptr
+                //    , createFlags
+                //    , requestedLevels
+                //    , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
+                //    , D3D11_SDK_VERSION
+                //    , fD3dDevice.GetAddressOf()
+                //    , &obtainedLevel
+                //    , fD3dContext.GetAddressOf()
+                //);
 
-            HRESULT res =
-                D3D11CreateDeviceAndSwapChain(
-                    nullptr,
-                    D3D_DRIVER_TYPE_HARDWARE,
-                    nullptr,
-                    createFlags,
-                    requestedLevels,
-                    sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL),
-                    D3D11_SDK_VERSION,
-                    &scd,
-                    fD3dSwapChain.GetAddressOf(),
-                    fD3dDevice.GetAddressOf(),
-                    &obtainedLevel,
-                    fD3dContext.GetAddressOf());
+                //ComPtr<IDXGIDevice> dxgiDevice;
+                //ComPtr<IDXGIAdapter> dxgiAdapter;
+                //ComPtr<IDXGIFactory>  dxgiFactory;
+                //D3D11Error::HandleDeviceError(fD3dDevice.As(&dxgiDevice)
+                //    , "Could not query for a device");
+                //D3D11Error::HandleDeviceError(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)dxgiAdapter.GetAddressOf())
+                //    , "Could not query for a DXGI adapter");
+                //D3D11Error::HandleDeviceError(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void **)dxgiFactory.GetAddressOf())
+                //    , "Could not query for a DXGI factory");
 
+                //D3D11Error::HandleDeviceError(dxgiFactory->CreateSwapChain(fD3dDevice.Get(), &scd, fD3dSwapChain.GetAddressOf())
+                //    , "Could not create swap chain");
+         
+
+                D3D11Error::HandleDeviceError(
+
+                    D3D11CreateDeviceAndSwapChain(
+                        nullptr,
+                        D3D_DRIVER_TYPE_HARDWARE,
+                        nullptr,
+                        createFlags,
+                        requestedLevels,
+                        sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL),
+                        D3D11_SDK_VERSION,
+                        &scd,
+                        fD3dSwapChain.GetAddressOf(),
+                        fD3dDevice.GetAddressOf(),
+                        &obtainedLevel,
+                        fD3dContext.GetAddressOf())
+                    , "Could not create device");
+            
 #ifdef _DEBUG
             std::string obj = "D3D11 deivce";
             fD3dDevice->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
