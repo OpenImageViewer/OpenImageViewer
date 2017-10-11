@@ -664,7 +664,7 @@ namespace OIV
         }
     }
 
-    void TestApp::SetOffset(LLUtils::PointI32 offset)
+    void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
         fOffset = ResolveOffset(offset);
         OIVCommands::SetOffset(fOffset);
@@ -682,7 +682,7 @@ namespace OIV
     void TestApp::Pan(int horizontalPIxels, int verticalPixels )
     {
         using namespace LLUtils;
-        SetOffset(PointI32(horizontalPIxels, verticalPixels) + fOffset);
+        SetOffset( PointF64( horizontalPIxels, verticalPixels) + fOffset);
 
 
     }
@@ -754,7 +754,7 @@ namespace OIV
             clientY = clientSize.y / 2.0;
 
         zoomPoint = ClientToImage(PointI32(clientX, clientY));
-        PointI32 offset = static_cast<PointI32>((zoomPoint / GetImageSize(IST_Original)) * (fZoom - zoomValue) * GetImageSize(IST_Original));
+        PointF64 offset = (zoomPoint / GetImageSize(IST_Original)) * (fZoom - zoomValue) * GetImageSize(IST_Original);
         fZoom = zoomValue;
 
 
@@ -845,12 +845,12 @@ namespace OIV
     void TestApp::Center()
     {
         using namespace LLUtils;
-        PointI32 offset = static_cast<PointI32>(PointF64(fWindow.GetClientSize()) - GetImageSize(IST_Visible)) / 2;
+        PointF64 offset = (PointF64(fWindow.GetClientSize()) - GetImageSize(IST_Visible)) / 2;
         SetOffset(offset);
         fIsOffsetLocked = true;
     }
 
-    int CalculateOffset(int clientSize, int imageSize, int offset, double margin)
+    double CalculateOffset(double clientSize, double imageSize, double offset, double margin)
     {
         double fixedOffset = offset;
         if (imageSize > clientSize)
@@ -875,10 +875,10 @@ namespace OIV
                 fixedOffset = std::min<double>(clientSize - imageSize * (1 - margin) , offset);
             }
         }
-        return static_cast<int>(fixedOffset);
+        return fixedOffset;
     }
 
-    LLUtils::PointI32 TestApp::ResolveOffset(const LLUtils::PointI32& point)
+    LLUtils::PointF64 TestApp::ResolveOffset(const LLUtils::PointF64& point)
     {
         using namespace LLUtils;
         PointF64 imageSize = GetImageSize(IST_Visible);
@@ -888,7 +888,7 @@ namespace OIV
         
         offset.x = CalculateOffset(clientSize.x, imageSize.x, offset.x, settings.zoomScrollState.Margins.x);
         offset.y = CalculateOffset(clientSize.y, imageSize.y, offset.y, settings.zoomScrollState.Margins.x);
-        return static_cast<PointI32>(offset);
+        return offset;
     }
 
     void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)

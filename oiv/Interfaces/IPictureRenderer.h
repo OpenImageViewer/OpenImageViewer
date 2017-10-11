@@ -9,7 +9,7 @@ namespace OIV
     {
     public:
         virtual ResultCode SetZoom(double zoom) = 0;
-        virtual ResultCode SetOffset(uint32_t x, uint32_t y) = 0;
+        virtual ResultCode SetOffset(double x, double y) = 0;
         virtual ResultCode LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) = 0;
         virtual ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) = 0;
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;

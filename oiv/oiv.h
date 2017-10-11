@@ -14,7 +14,7 @@ namespace OIV
         public:
 #pragma region //-------------IPictureListener implementation------------------
         ResultCode SetZoom(double percentage) override;
-        ResultCode SetOffset(uint32_t x, uint32_t y) override;
+        ResultCode SetOffset(double x, double y) override;
         ResultCode UnloadFile(const ImageHandle handle) override;
         ResultCode LoadFile(void* buffer, std::size_t size, char* extension , OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) override;
         ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) override;
@@ -65,7 +65,7 @@ namespace OIV
 
         LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
         bool fIsViewDirty = true;
-        LLUtils::PointI32 fOffset = 0;
+        LLUtils::PointF64 fOffset = 0;
         LLUtils::PointF64 fZoom = 1.0;
 #pragma endregion
     };

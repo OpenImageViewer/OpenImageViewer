@@ -404,9 +404,9 @@ namespace OIV
         return ResultCode::RC_Success;
     }
     
-    ResultCode OIV::SetOffset(uint32_t x, uint32_t y)
+    ResultCode OIV::SetOffset(double x, double y)
     {
-        fOffset = LLUtils::PointI32( x, y);
+        fOffset = { x, y };
         return ResultCode::RC_Success;
     }
 

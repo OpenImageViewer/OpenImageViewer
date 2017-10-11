@@ -97,7 +97,7 @@ namespace OIV
             return ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
         }
 
-        static ResultCode SetOffset(const LLUtils::PointI32& point)
+        static ResultCode SetOffset(const LLUtils::PointF64& point)
         {
             CmdDataPan pan;
             pan.x = point.x;

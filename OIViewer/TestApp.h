@@ -65,9 +65,9 @@ namespace OIV
         void UpdateTexelPos();
         void UpdateWindowSize();
         void Center();
-        LLUtils::PointI32 ResolveOffset(const LLUtils::PointI32& point);
+        LLUtils::PointF64 ResolveOffset(const LLUtils::PointF64& point);
         void UpdateVisibleImageInfo();
-        void SetOffset(LLUtils::PointI32 offset);
+        void SetOffset(LLUtils::PointF64 offset);
         void SetOriginalSize();
         void OnScroll(LLUtils::PointI32 panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
@@ -112,7 +112,7 @@ namespace OIV
         UserSettings fSettings;
         bool fIsInitialLoad = false;
         bool fUseRainbowNormalization = false;
-        LLUtils::PointI32 fOffset = LLUtils::PointI32::Zero;
+        LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         OIV_CMD_ColorExposure_Request fColorExposure = { 1.0, 0.0, 1.0 };
