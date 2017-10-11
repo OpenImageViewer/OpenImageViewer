@@ -54,7 +54,7 @@ namespace OIV
         void ToggleSlideShow();
         void SetFilterLevel(OIV_Filter_type filterType);
         void ToggleGrid();
-        void Pan(int horizontalPIxels, int verticalPixels);
+        void Pan(const LLUtils::PointF64& panAmount);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
@@ -69,7 +69,7 @@ namespace OIV
         void UpdateVisibleImageInfo();
         void SetOffset(LLUtils::PointF64 offset);
         void SetOriginalSize();
-        void OnScroll(LLUtils::PointI32 panAmount);
+        void OnScroll(const LLUtils::PointF64& panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
         void SetOpenImage(const ImageDescriptor& image_descriptor);
         void FinalizeImageLoad(ResultCode result);

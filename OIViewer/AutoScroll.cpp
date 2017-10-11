@@ -20,15 +20,8 @@ namespace OIV
         ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
         deltaAbs.x = deltaAbs.x < fAutoScrollDeadZone ? 0 : (deltaAbs.x - (fAutoScrollDeadZone - 1));
         deltaAbs.y = deltaAbs.y < fAutoScrollDeadZone ? 0 : (deltaAbs.y - (fAutoScrollDeadZone - 1));
-        fAutoScrollPanning += deltaAbs * (elapsed * fScrollSpeed * 0.001) * deltaFromScrollPosition.Sign();
-
-        if (fAutoScrollPanning.Abs() != ScrollPointType::Zero)
-        {
-            PointI32 actualPanning = static_cast<PointI32>(fAutoScrollPanning);
-            fOnScroll(actualPanning);
-            
-            fAutoScrollPanning -= static_cast<ScrollPointType>(actualPanning);
-        }
+        PointF64 autoScrollAmount = deltaAbs * (elapsed * fScrollSpeed * 0.001) * deltaFromScrollPosition.Sign();
+        fOnScroll(autoScrollAmount);
     }
 
     VOID CALLBACK AutoScroll::OnScroll(

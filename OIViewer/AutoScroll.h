@@ -10,7 +10,7 @@ namespace OIV
     class AutoScroll
     {
     public:
-        typedef std::function< void(LLUtils::PointI32) > OnScrollFunction;
+        typedef std::function< void(const LLUtils::PointF64&) > OnScrollFunction;
         AutoScroll(Win32::Win32WIndow* window, OnScrollFunction scrollFunc) :
                fWindow(window)
              , fOnScroll(scrollFunc)
@@ -38,9 +38,8 @@ namespace OIV
         uint16_t fScrollSpeed = 5; // pixels per second per step
 
         bool fAutoScrolling = false;
-        LLUtils::PointI32 fAutoScrollPosition = LLUtils::PointI32::Zero;
+        LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        ScrollPointType fAutoScrollPanning = ScrollPointType::Zero;
         
         HANDLE fAutoScrollTimerID = nullptr;
         Win32::Win32WIndow* fWindow;

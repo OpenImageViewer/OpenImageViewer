@@ -275,9 +275,9 @@ namespace OIV
         UpdateUIFileIndex();
     }
 
-    void TestApp::OnScroll(LLUtils::PointI32 panAmount)
+    void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
     {
-        Pan(panAmount.x, panAmount.y);
+        Pan(panAmount);
     }
 
 
@@ -609,16 +609,16 @@ namespace OIV
             SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(fFilterType) - 1));
             break;
         case VK_NUMPAD8:
-            Pan(0, fKeyboardPanSpeed);
+            Pan(LLUtils::PointF64(0, fKeyboardPanSpeed));
             break;
         case VK_NUMPAD2:
-            Pan(0, -fKeyboardPanSpeed);
+            Pan(LLUtils::PointF64(0, -fKeyboardPanSpeed));
             break;
         case VK_NUMPAD4:
-            Pan(fKeyboardPanSpeed, 0);
+            Pan(LLUtils::PointF64(fKeyboardPanSpeed, 0));
             break;
         case VK_NUMPAD6:
-            Pan(-fKeyboardPanSpeed, 0);
+            Pan(LLUtils::PointF64(-fKeyboardPanSpeed, 0));
             break;
         case VK_ADD:
             Zoom(fKeyboardZoomSpeed, -1, -1);
@@ -679,10 +679,10 @@ namespace OIV
         Center();
     }
 
-    void TestApp::Pan(int horizontalPIxels, int verticalPixels )
+    void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         using namespace LLUtils;
-        SetOffset( PointF64( horizontalPIxels, verticalPixels) + fOffset);
+        SetOffset(panAmount + fOffset);
 
 
     }
@@ -1203,7 +1203,7 @@ namespace OIV
         if (IsRightCatured == true)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
-                Pan(evnt->DeltaX, evnt->DeltaY);
+                Pan(LLUtils::PointF64( evnt->DeltaX, evnt->DeltaY ));
         }
 
         LONG wheelDelta = evnt->DeltaWheel;
