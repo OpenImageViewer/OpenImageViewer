@@ -48,8 +48,8 @@ namespace OIV
 
             //Try cache first;
             filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename()).replace_extension(L"bin");
-#ifdef DEBUG
-            if (std::experimental::filesystem::exists(cachePath))
+#ifndef DEBUG
+            if (filesystem::exists(cachePath))
             {
                 //Load from cache 
                 BlobSharedPtr blob = BlobSharedPtr(new Blob());
@@ -59,7 +59,7 @@ namespace OIV
             else 
 #endif
 
-            if (std::experimental::filesystem::exists(shaderPath))
+            if (filesystem::exists(shaderPath))
             {
                 std::string shaderSource = LLUtils::File::ReadAllText(shaderPath);
                 // compile source and save cache
