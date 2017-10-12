@@ -13,7 +13,6 @@ namespace OIV
         D3D11Shader(D3D11DeviceSharedPtr d3dDevice);
         void Load(std::string sourceCode);
         void Load(BlobSharedPtr blob);
-        IUnknown* GetShader();
         const std::string& Getsource() const;
         const BlobSharedPtr GetShaderData() const;
         void Use();
@@ -25,7 +24,7 @@ namespace OIV
         };
     protected: // virtual methods
         virtual void GetShaderCompileParams(ShaderCompileParams& compileParams) = 0;
-        virtual IUnknown* CreateImpl() = 0;
+        virtual void CreateImpl() = 0;
         virtual void UseImpl() = 0;
 
     protected: // methods
@@ -40,7 +39,6 @@ namespace OIV
         D3D11DeviceSharedPtr fDevice;
         std::string fSourceCode;
         BlobSharedPtr fShaderData;
-        ComPtr<IUnknown> fShader;
     };
 
     typedef std::shared_ptr<D3D11Shader> D3D11ShaderUniquePtr;

@@ -20,31 +20,20 @@ namespace OIV
         {
             compileParams.target = "vs_4_0";
         }
-
-        IUnknown* CreateImpl()  override
+        
+        void CreateImpl()  override
         {
-            ComPtr<ID3D11VertexShader> vertexShader;
-            
-            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, vertexShader.ReleaseAndGetAddressOf())
+            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, fVertexShader.ReleaseAndGetAddressOf())
                 , " could not create vertex shader from microcode");
-         
-            IUnknown* result = nullptr;
-#ifdef _DEBUG
-            std::string obj = "Vertex shader";
-            vertexShader->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
-#endif
 
-            D3D11Error::HandleDeviceError(vertexShader.Get()->QueryInterface(&result));
-            
-            return result;
+            OIV_D3D_SET_OBJECT_NAME(fVertexShader, "Vertex shader");
         }
 
         void UseImpl() override
         {
-            ID3D11VertexShader* vertexShader = nullptr;
-            D3D11Error::HandleDeviceError(GetShader()->QueryInterface(&vertexShader));
-            GetDevice()->GetContext()->VSSetShader(vertexShader, nullptr, 0);
-            vertexShader->Release();
+            GetDevice()->GetContext()->VSSetShader(fVertexShader.Get(), nullptr, 0);
         }
+    private:
+        ComPtr<ID3D11VertexShader> fVertexShader;
     };
 }

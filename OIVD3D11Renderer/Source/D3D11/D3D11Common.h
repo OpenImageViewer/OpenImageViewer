@@ -20,4 +20,10 @@ namespace OIV
     
     template < typename T >
     using ComPtr = Microsoft::WRL::ComPtr<T>;
+#ifdef _DEBUG
+    #define OIV_D3D_SET_OBJECT_NAME(OBJ,NAME) D3D_SET_OBJECT_NAME_A(OBJ, NAME)
+#else 
+    #define OIV_D3D_SET_OBJECT_NAME(OBJ,NAME)
+#endif
+
 }

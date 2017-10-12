@@ -22,11 +22,6 @@ namespace  OIV
         Create();
     }
 
-    IUnknown* D3D11Shader::GetShader()
-    {
-        return fShader.Get();
-    }
-
     const std::string& D3D11Shader::Getsource() const
     {
         return fSourceCode;
@@ -49,7 +44,7 @@ namespace  OIV
 
     void D3D11Shader::Create()
     {
-        fShader = CreateImpl();
+        CreateImpl();
     }
 
     void D3D11Shader::Compile()
