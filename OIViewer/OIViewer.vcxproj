@@ -179,6 +179,7 @@
     <ClInclude Include="OIVCommands.h" />
     <ClInclude Include="RecursiveDelayOp.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="AdaptiveMotion.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="win32\UserMessages.h" />

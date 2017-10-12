@@ -10,6 +10,7 @@
 #include "UserSettings.h"
 #include <Rect.h>
 #include "RecursiveDelayOp.h"
+#include "AdaptiveMotion.h"
 
 namespace OIV
 {
@@ -96,7 +97,7 @@ namespace OIV
         OIV_Filter_type fFilterType = OIV_Filter_type::FT_Linear;
         RecrusiveDelayedOp fRefreshOperation;
         bool fIsSlideShowActive = false;
-        int fKeyboardPanSpeed = 100;
+        int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         double fIsGridEnabled = false;
         double fZoom = 1.0;
@@ -118,5 +119,8 @@ namespace OIV
         OIV_CMD_ColorExposure_Request fColorExposure = { 1.0, 0.0, 1.0 };
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
         OIV_CMD_QueryImageInfo_Response fVisibleFileInfo = {};
+        AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
+        AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
+        AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
     };
 }

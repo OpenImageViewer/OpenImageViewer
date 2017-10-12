@@ -609,16 +609,16 @@ namespace OIV
             SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(fFilterType) - 1));
             break;
         case VK_NUMPAD8:
-            Pan(LLUtils::PointF64(0, fKeyboardPanSpeed));
+            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(fKeyboardPanSpeed) ));
             break;
         case VK_NUMPAD2:
-            Pan(LLUtils::PointF64(0, -fKeyboardPanSpeed));
+            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(-fKeyboardPanSpeed) ));
             break;
         case VK_NUMPAD4:
-            Pan(LLUtils::PointF64(fKeyboardPanSpeed, 0));
+            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(fKeyboardPanSpeed), 0));
             break;
         case VK_NUMPAD6:
-            Pan(LLUtils::PointF64(-fKeyboardPanSpeed, 0));
+            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-fKeyboardPanSpeed), 0));
             break;
         case VK_ADD:
             Zoom(fKeyboardZoomSpeed, -1, -1);
@@ -689,14 +689,9 @@ namespace OIV
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
     {
-        if (amount > 0)
-            amount = fZoom * (1 + amount);
-        else
-            if (amount < 0)
-                amount = fZoom  / ( 1 - amount);
-        
-        SetZoom(amount, zoomX, zoomY);
-      
+        const double adaptiveAmount = fAdaptiveZoom.Add(amount);
+        const double adjustedAmount = adaptiveAmount > 0 ? fZoom * (1 + adaptiveAmount) : fZoom / (1 - adaptiveAmount);
+        SetZoom(adjustedAmount, zoomX, zoomY);
     }
     
     void TestApp::FitToClientAreaAndCenter()
@@ -731,7 +726,7 @@ namespace OIV
     void TestApp::UpdateUIZoom()
     {
         std::wstringstream ss;
-        ss << L"Scale: " << std::fixed << std::setprecision(1);
+        ss << L"Scale: " << std::fixed << std::setprecision(2);
         if (fZoom >= 1)
             ss << "x" << fZoom;
         else

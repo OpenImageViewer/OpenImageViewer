@@ -98,6 +98,9 @@
     <ClInclude Include="Helpers\OIVHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AdaptiveMotion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
