@@ -106,10 +106,8 @@ namespace OIV
         int stringLength = fOpenedImage.fileName.length();
         std::unique_ptr<wchar_t> buffer = std::unique_ptr<wchar_t>(new wchar_t[stringLength + 2]);
 
-        memcpy(buffer.get(), fOpenedImage.fileName.c_str(), stringLength * sizeof(wchar_t));
+        memcpy(buffer.get(), fOpenedImage.fileName.c_str(), ( stringLength + 1) * sizeof(wchar_t));
 
-
-        buffer.get()[stringLength] = '\0';
         buffer.get()[stringLength + 1] = '\0';
 
 
