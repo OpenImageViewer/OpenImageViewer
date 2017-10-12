@@ -63,7 +63,7 @@ namespace OIV
             {
                 std::string shaderSource = LLUtils::File::ReadAllText(shaderPath);
                 // compile source and save cache
-                if (shaderSource.empty() == true || shaderSource.empty() == true)
+                if (shaderSource.empty() == true)
                     D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
 
                 shader->Load(shaderSource);

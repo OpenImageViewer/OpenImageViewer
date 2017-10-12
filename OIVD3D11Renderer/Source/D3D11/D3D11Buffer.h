@@ -62,11 +62,8 @@ namespace OIV
                 D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBuffer(&fBufferDesc, initialData,
                     fBuffer.ReleaseAndGetAddressOf())
                     , "Can not create constant buffer");
-    
-#ifdef _DEBUG
-          std::string obj = "Constant buffer";
-          fBuffer->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
-#endif
+
+            OIV_D3D_SET_OBJECT_NAME(fBuffer, "Constant buffer");
         }
 
 

@@ -56,6 +56,8 @@ namespace OIV
 
         D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc, subResourceDataForAPI, fTexture.ReleaseAndGetAddressOf())
                                       , "Can not create texture");
+
+        OIV_D3D_SET_OBJECT_NAME(fTexture, "Texture2D");
     }
 
     void D3D11Texture::Use() const

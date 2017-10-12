@@ -1,5 +1,4 @@
 #pragma once
-#include <d3d10.h>
 #include <cstdint>
 
 namespace OIV

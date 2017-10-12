@@ -2,7 +2,6 @@
 #include <d3dcommon.h>
 #include <d3d11.h>
 #include <PlatformUtility.h>
-#include <FileHelper.h>
 #include "D3D11Renderer.h"
 #include "D3D11Common.h"
 #include "D3D11VertexShader.h"
@@ -21,12 +20,8 @@ namespace OIV
     void D3D11Renderer::SetDevicestate()
     {
         ID3D11DeviceContext* d3dContext = fDevice->GetContext();
-        //Set GPU programs.
         fImageVertexShader->Use();
-        fImageFragmentShader->Use();
-      
         d3dContext->IASetInputLayout(fInputLayout.Get());
-
         //Set quad vertex buffer
         UINT stride = 8;
         UINT offset = 0;
@@ -115,7 +110,7 @@ namespace OIV
     {
         // Fill in a buffer description.
         D3D11_BUFFER_DESC cbDesc;
-        cbDesc.ByteWidth = sizeof(VS_CONSTANT_BUFFER) + (sizeof(VS_CONSTANT_BUFFER) % 16 == 0 ? 0 : 16 - sizeof(VS_CONSTANT_BUFFER) % 16);
+        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT>(sizeof(VS_CONSTANT_BUFFER), 16);
         cbDesc.Usage = D3D11_USAGE_DYNAMIC;
         cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -187,11 +182,7 @@ namespace OIV
         D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateSamplerState(&sampler, fSamplerState.ReleaseAndGetAddressOf()),
             "Could not create sampler state");
 
-#ifdef _DEBUG
-        std::string obj = "Sampler state";
-        fSamplerState->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
-#endif
-
+        OIV_D3D_SET_OBJECT_NAME(fSamplerState, "Sampler state");
 
         D3D11_BLEND_DESC blend;
         D3D11Utility::CreateD3D11DefaultBlendState(blend);

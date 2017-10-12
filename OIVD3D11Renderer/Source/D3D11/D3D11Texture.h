@@ -1,7 +1,6 @@
 #pragma once
 #include <memory>
 #include <d3d11.h>
-#include "D3D11Error.h"
 #include "D3D11Device.h"
 namespace OIV
 {

@@ -79,12 +79,8 @@ namespace OIV
 #pragma region //**** Private methods*****/
     private: 
         void ResizeBackBuffer(int x, int y);
-        void CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC& sampler);
         void CreateShaders();
-
-        void CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend);
         void CreateBuffers();
-        void renderOneFrame();
         void UpdateViewportSize(int x, int y);
         void SetDevicestate();
 #pragma endregion

@@ -101,11 +101,10 @@ namespace OIV
                         fD3dContext.GetAddressOf())
                     , "Could not create device");
             
-#ifdef _DEBUG
-            std::string obj = "D3D11 deivce";
-            fD3dDevice->SetPrivateData(WKPDID_D3DDebugObjectName, obj.size(), obj.c_str());
-#endif
-            
+
+        OIV_D3D_SET_OBJECT_NAME(fD3dDevice, "D3D11 device");
+        OIV_D3D_SET_OBJECT_NAME(fD3dSwapChain, "D3D11 swap chain");
+        OIV_D3D_SET_OBJECT_NAME(fD3dContext, "D3D11 context");
         }
     private:
         HWND fHWND = nullptr;
