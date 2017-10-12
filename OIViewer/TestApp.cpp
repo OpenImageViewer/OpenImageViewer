@@ -736,6 +736,20 @@ namespace OIV
     {
         using namespace LLUtils;
 
+        const double MinImagePixelsInSmallAxis = 150.0;
+        const double MaxPixelSize = 30.0;
+
+
+        //Apply zoom limits only if zoom is not bound to the client window
+        if (fIsLockFitToScreen == false)
+        {
+            //We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
+            PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::IST_Transformed);
+            double minimum = std::min(std::max(minimumZoom.x, minimumZoom.y),1.0);
+            
+            zoomValue = Utility::Clamp(zoomValue, minimum, MaxPixelSize);
+        }
+
         PointF64 zoomPoint;
         PointF64 clientSize = static_cast<PointF64>(fWindow.GetClientSize());
         

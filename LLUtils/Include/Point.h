@@ -190,6 +190,13 @@ namespace LLUtils
 #endif
 
     };
+
+    template <class POINT_TYPE>
+    Point<POINT_TYPE> operator /(POINT_TYPE val, const Point<POINT_TYPE>& point)
+    {
+        return Point<POINT_TYPE>(val / point.x, val / point.y);
+    }
+
     template <class POINT_TYPE>
     const Point<POINT_TYPE>  Point<POINT_TYPE>::Zero = Point<POINT_TYPE>(0, 0);
 

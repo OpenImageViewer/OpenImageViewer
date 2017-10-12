@@ -68,5 +68,11 @@ namespace LLUtils
                 srcPos += src.rowPitch;
             }
         }
+
+        template <class T> static  T Clamp(T val, T min, T max)
+        {
+            return std::max(min, std::min(val, max));
+        }
+    
     };
 }
