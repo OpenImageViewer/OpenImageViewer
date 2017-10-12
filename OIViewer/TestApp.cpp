@@ -10,7 +10,6 @@
 #include "StringUtility.h"
 #include "win32/Win32Window.h"
 #include <windows.h>
-#include <tchar.h>
 #include "win32/MonitorInfo.h"
 
 #include <API\functions.h>
@@ -683,8 +682,6 @@ namespace OIV
     {
         using namespace LLUtils;
         SetOffset(panAmount + fOffset);
-
-
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
@@ -770,10 +767,10 @@ namespace OIV
         using namespace  LLUtils;
         PointF64 canvasSize = (PointF64)fWindow.GetClientSize() / fZoom;
             std::wstringstream ss;
-            ss << _T("Canvas: ")
-                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << canvasSize.x
-                << _T(" X ")
-                << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << canvasSize.y;
+            ss << L"Canvas: "
+                << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.x
+                << L" X "
+                << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.y;
             fWindow.SetStatusBarText(ss.str(), 3, 0);
     }
 
@@ -789,10 +786,10 @@ namespace OIV
         PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
 
         std::wstringstream ss;
-        ss << _T("Texel: ")
-            << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << storageImageSpace.x
-            << _T(" X ")
-            << std::fixed << std::setprecision(1) << std::setfill(_T(' ')) << std::setw(6) << storageImageSpace.y;
+        ss << L"Texel: "
+            << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.x
+            << L" X "
+            << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
         fWindow.SetStatusBarText(ss.str(), 2, 0);
 
         PointF64 storageImageSize = GetImageSize(IST_Original);
