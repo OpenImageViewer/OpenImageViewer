@@ -107,8 +107,8 @@ namespace OIV
         std::mutex fMutexWindowCreation;
         LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
         int cTimerID = 1500;
-        LLUtils::ListString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
-        LLUtils::ListString fListFiles;
+        LLUtils::ListWString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
+        LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
         bool fIsInitialLoad = false;

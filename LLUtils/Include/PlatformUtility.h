@@ -93,40 +93,40 @@ namespace LLUtils
         }
 
 
-        static string_type GetModulePath(HMODULE hModule)
+        static default_string_type GetModulePath(HMODULE hModule)
         {
             TCHAR ownPth[MAX_PATH];
 
             if (hModule != nullptr && GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0]))) > 0)
 
-                return string_type(ownPth);
+                return default_string_type(ownPth);
             else
-                return string_type();
+                return default_string_type();
         }
 
-        static string_type GetDllPath()
+        static default_string_type GetDllPath()
         {
             return GetModulePath((HINSTANCE)&__ImageBase);
         }
 
-        static string_type GetDllFolder()
+        static default_string_type GetDllFolder()
         {
             using namespace std::experimental;
             return filesystem::path(GetDllPath()).parent_path().wstring();
         }
 
-        static string_type GetExePath()
+        static default_string_type GetExePath()
         {
             return GetModulePath(GetModuleHandle(nullptr));
         }
 
-        static string_type GetExeFolder()
+        static default_string_type GetExeFolder()
         {
             using namespace std::experimental;
             return filesystem::path(GetExePath()).parent_path().wstring();
         }
 
-        static string_type GetAppDataFolder()
+        static default_string_type GetAppDataFolder()
         {
             TCHAR szPath[MAX_PATH];
 
@@ -136,19 +136,19 @@ namespace LLUtils
                 0,
                 szPath)))
             {
-                string_type result = szPath;
+                default_string_type result = szPath;
                 result += TEXT("\\OIV");
                 LLUtils::Utility::EnsureDirectory(result);
                 return result;
             }
 
-            return string_type();
+            return default_string_type();
         }
 
         
-        static void find_files(string_type wrkdir, ListString &lstFileData, bool recursive = false)
+        static void find_files(default_string_type wrkdir, ListWString &lstFileData, bool recursive = false)
         {
-            string_type wrkdirtemp = wrkdir;
+            default_string_type wrkdirtemp = wrkdir;
             if (!wrkdirtemp.empty() && (wrkdirtemp[wrkdirtemp.length() - 1] != L'\\'))
             {
                 wrkdirtemp += TEXT("\\");
@@ -172,7 +172,7 @@ namespace LLUtils
                     if ((wcscmp(file_data.cFileName, TEXT(".")) != 0) &&
                         (wcscmp(file_data.cFileName, TEXT("..")) != 0))
                     {
-                        string_type directoryName = wrkdirtemp + file_data.cFileName;
+                        default_string_type directoryName = wrkdirtemp + file_data.cFileName;
                         find_files(directoryName, lstFileData);
                     }
                 }

@@ -262,7 +262,7 @@ namespace OIV
     {
         using namespace std::experimental::filesystem;
         fListFiles.clear();
-        fCurrentFileIndex = std::numeric_limits<LLUtils::ListString::size_type>::max();
+        fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
 
         std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
@@ -379,7 +379,7 @@ namespace OIV
     void TestApp::UpdateUIFileIndex()
     {
         std::wstringstream ss;
-        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<LLUtils::ListString::size_type>::max() ? 
+        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<LLUtils::ListWString::size_type>::max() ? 
             0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
 
         fWindow.SetStatusBarText(ss.str(), 1, 0);
@@ -390,7 +390,7 @@ namespace OIV
         if (fListFiles.empty())
             return false;
 
-        LLUtils::ListString::size_type totalFiles = fListFiles.size();
+        LLUtils::ListWString::size_type totalFiles = fListFiles.size();
         int32_t fileIndex = static_cast<int32_t>(fCurrentFileIndex);
 
 
@@ -432,7 +432,7 @@ namespace OIV
         if (isLoaded)
         {
             assert(fileIndex >= 0 && fileIndex < totalFiles);
-            fCurrentFileIndex = static_cast<LLUtils::ListString::size_type>(fileIndex);
+            fCurrentFileIndex = static_cast<LLUtils::ListWString::size_type>(fileIndex);
             UpdateUIFileIndex();
         }
         return isLoaded;

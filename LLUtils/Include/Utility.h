@@ -27,6 +27,7 @@ namespace LLUtils
             return (T(0) < val) - (val < T(0));
         }
 
+        template <class string_type>
         static bool EnsureDirectory(const string_type& path)
         {
             if (std::experimental::filesystem::exists(path) == false)

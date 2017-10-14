@@ -5,37 +5,37 @@
 #include <algorithm>
 
 namespace LLUtils
-{/*
-    template<class char_type>
-    class CharDefs
-    {
-    public:
-        using string_type = std::basic_string<char_type>;
-        using stringstream_type = std::basic_stringstream<char_type> ;
-        using ListString = std::vector<string_type> ;
-        
-    };*/
+{
     
-    typedef wchar_t  char_type;
-    typedef std::basic_string<char_type> string_type;
-    typedef std::basic_stringstream<char_type> stringstream_type;
-    typedef std::vector<string_type> ListString;
-    typedef ListString::iterator ListStringIterator;
+    using default_char_type = wchar_t;
+    using default_string_type = std::basic_string<default_char_type>;
+    using stringstream_type = std::basic_stringstream<default_char_type>;
+    
+    template <class string_type>
+    using ListString = std::vector<string_type>;
+    
+
+    using ListAString = ListString<std::string>;
+    using ListWString = ListString<std::wstring>;
+
+   using  ListStringIterator = ListString<std::wstring>::iterator;
+
+    /*template <class string_type = default_string_type, typename ListString<string_type>::iterator>
+    using  ListStringIterator = ListString<string_type>::iterator;*/
 
     class StringUtility
     {
     public:
 
-        //template< class chartype = wchar_t>
-        static ListString split(const string_type &s, char delim)
+        template< class chartype = default_char_type, typename string_type = std::basic_string<chartype>>
+        static ListString<string_type> split(const string_type &s, char delim)
         {
             using namespace std;
-            ListString elems;
-            
-            stringstream_type ss;
+            ListString<string_type> elems;
+            basic_stringstream<string_type::value_type> ss;
             ss.str(s);
             string_type item;
-            while (getline<char_type>(ss, item, delim))
+            while (getline<string_type::value_type>(ss, item, delim))
                 if (item.empty() == false)
                     elems.push_back(item);
 
@@ -77,29 +77,21 @@ namespace LLUtils
             return ToAString(str.c_str());
         }
 
-        static std::string GetFileExtension(const std::string& str)
+  
+        template <class string_type>
+        static string_type GetFileExtension(const string_type& str)
         {
             using namespace std;
-            string extension;
-
-            string::size_type pos = str.find_last_of(".");
-            if (pos != std::string::npos)
+            string_type extension;
+            
+            string_type::size_type pos = str.find_last_of(46);
+            if (pos != string_type::npos)
                 extension = str.substr(pos + 1, str.length() - pos - 1);
 
             return extension;
         }
 
-        static std::wstring GetFileExtension(const std::wstring& str)
-        {
-            using namespace std;
-            wstring extension;
-            string::size_type pos = str.find_last_of(L".");
-            if (pos != std::wstring::npos)
-                extension = str.substr(pos + 1, str.length() - pos - 1);
-
-            return extension;
-        }
-
+        template <class string_type>
         static string_type ToLower(const string_type& str)
         {
             using namespace std;
