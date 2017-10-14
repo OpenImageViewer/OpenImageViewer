@@ -48,7 +48,7 @@ namespace OIV
 
             //Try cache first;
             filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename()).replace_extension(L"bin");
-#ifndef DEBUG
+#ifndef _DEBUG
             if (filesystem::exists(cachePath))
             {
                 //Load from cache 
