@@ -36,6 +36,12 @@ namespace OIV
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
     {
         
+        fImageProperties.imageHandle = ImageHandleDisplayed;
+        fImageProperties.position = 0;
+        fImageProperties.filterType = OIV_Filter_type::FT_None;
+        fImageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
+        fImageProperties.scale = 1.0;
+        fImageProperties.opacity = 1.0;
     }
 
 
@@ -348,6 +354,11 @@ namespace OIV
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
+    OIV_Filter_type TestApp::GetFilterType() const
+    {
+        return fImageProperties.filterType;
+    }
+
     void TestApp::UpdateExposure()
     {
         ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
@@ -464,16 +475,10 @@ namespace OIV
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
-        
-        OIV_CMD_Filter_Request filter;
-
-        filter.filterType = static_cast<OIV_Filter_type>( std::min(OIV_Filter_type::FT_Count - 1,
-            std::max(static_cast<int>(OIV_Filter_type::FT_None), static_cast<int>(filterType)) ));
-        if (ExecuteCommand(CE_FilterLevel, &filter, &CmdNull()) == RC_Success)
-        {
-            fFilterType = filter.filterType;
-            fRefreshOperation.Queue();
-        }
+        fImageProperties.filterType = LLUtils::Utility::Clamp(filterType
+            , FT_None, static_cast<OIV_Filter_type>( FT_Count - 1));
+        UpdateImageProperties();
+        fRefreshOperation.Queue();
     }
 
     void TestApp::ToggleGrid()
@@ -600,10 +605,10 @@ namespace OIV
             ToggleBorders();
             break;
         case VK_OEM_PERIOD:
-            SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(fFilterType) + 1));
+            SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(GetFilterType()) + 1));
             break;
         case VK_OEM_COMMA:
-            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(fFilterType) - 1));
+            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
             break;
         case VK_NUMPAD8:
             Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(fKeyboardPanSpeed) ));
@@ -663,8 +668,8 @@ namespace OIV
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
-        fOffset = ResolveOffset(offset);
-        OIVCommands::SetOffset(fOffset);
+        fImageProperties.position = ResolveOffset(offset);
+        UpdateImageProperties();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
         fIsLockFitToScreen = false;
@@ -679,13 +684,13 @@ namespace OIV
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         using namespace LLUtils;
-        SetOffset(panAmount + fOffset);
+        SetOffset(panAmount + fImageProperties.position);
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
     {
         const double adaptiveAmount = fAdaptiveZoom.Add(amount);
-        const double adjustedAmount = adaptiveAmount > 0 ? fZoom * (1 + adaptiveAmount) : fZoom / (1 - adaptiveAmount);
+        const double adjustedAmount = adaptiveAmount > 0 ? GetScale() * (1 + adaptiveAmount) : GetScale() / (1 - adaptiveAmount);
         SetZoom(adjustedAmount, zoomX, zoomY);
     }
     
@@ -711,7 +716,7 @@ namespace OIV
         case IST_Transformed:
             return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height);
         case IST_Visible:
-            return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * fZoom;
+            return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * GetScale();
         default:
             throw std::logic_error("Unexpected or corrupted value");
         }
@@ -722,12 +727,17 @@ namespace OIV
     {
         std::wstringstream ss;
         ss << L"Scale: " << std::fixed << std::setprecision(2);
-        if (fZoom >= 1)
-            ss << "x" << fZoom;
+        if (GetScale() >= 1)
+            ss << "x" << GetScale();
         else
-            ss << "1/" << 1 / fZoom;
+            ss << "1/" << 1 / GetScale();
 
         fWindow.SetStatusBarText(ss.str(), 4, 0);
+    }
+
+    void TestApp::UpdateImageProperties()
+    {
+        ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
     }
 
     void TestApp::SetZoom(double zoomValue, int clientX, int clientY)
@@ -758,13 +768,13 @@ namespace OIV
             clientY = clientSize.y / 2.0;
 
         zoomPoint = ClientToImage(PointI32(clientX, clientY));
-        PointF64 offset = (zoomPoint / GetImageSize(IST_Original)) * (fZoom - zoomValue) * GetImageSize(IST_Original);
-        fZoom = zoomValue;
+        PointF64 offset = (zoomPoint / GetImageSize(IST_Original)) * (GetScale() - zoomValue) * GetImageSize(IST_Original);
+        fImageProperties.scale = zoomValue;
 
-
+        UpdateImageProperties();
         fRefreshOperation.Begin();
-        OIVCommands::SetZoom(fZoom);
-        SetOffset(fOffset + offset);
+        
+        SetOffset(GetOffset() + offset);
         
         fRefreshOperation.End();
 
@@ -774,10 +784,15 @@ namespace OIV
         fIsLockFitToScreen = false;
     }
 
+    double TestApp::GetScale() const
+    {
+        return fImageProperties.scale.x;
+    }
+
     void TestApp::UpdateCanvasSize()
     {
         using namespace  LLUtils;
-        PointF64 canvasSize = (PointF64)fWindow.GetClientSize() / fZoom;
+        PointF64 canvasSize = (PointF64)fWindow.GetClientSize() / GetScale();
             std::wstringstream ss;
             ss << L"Canvas: "
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.x
@@ -786,10 +801,17 @@ namespace OIV
             fWindow.SetStatusBarText(ss.str(), 3, 0);
     }
 
+
+
+    LLUtils::PointF64 TestApp::GetOffset() const
+    {
+        return fImageProperties.position;
+    }
+
     LLUtils::PointF64 TestApp::ClientToImage(LLUtils::PointI32 clientPos) const
     {
         using namespace LLUtils;
-        return (static_cast<PointF64>(clientPos) - static_cast<PointF64>(fOffset)) / fZoom;
+        return (static_cast<PointF64>(clientPos) - GetOffset()) / GetScale();
     }
 
     void TestApp::UpdateTexelPos()
@@ -1154,10 +1176,12 @@ namespace OIV
         const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Released;
+        const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Released;
         const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Pressed;
         const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Pressed;
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
         const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
+        const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_DoublePressed;
 
         const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
         

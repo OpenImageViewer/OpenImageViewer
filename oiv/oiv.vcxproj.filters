@@ -38,16 +38,12 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="ApiGlobal.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
@@ -62,6 +58,8 @@
     <ClInclude Include="FreeType\CodePoint.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="FreeType\FreeTypeHelper.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerCreateText.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

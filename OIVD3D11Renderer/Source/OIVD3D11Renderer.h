@@ -23,7 +23,7 @@ namespace OIV
         
         // Multi image API:
         int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) override;
-        int SetImageProperties(uint32_t id, const ImageProperties& properties) override;
+        int SetImageProperties(const OIV_CMD_ImageProperties_Request& properties) override;
         int RemoveImage(uint32_t id) override;
 
 #pragma endregion

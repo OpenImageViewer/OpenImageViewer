@@ -1,8 +1,8 @@
 
 #pragma once
-#include <cwchar>
 #include <cstdint>
-
+#include <Point.h>
+#include <Color.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -26,7 +26,7 @@ extern "C"
 
     typedef int16_t ImageHandle;
     const ImageHandle ImageNullHandle = -1;
-    const ImageHandle ImageHandleDisplayed = -2;
+    const ImageHandle ImageHandleDisplayed = 0;
 
 
 
@@ -39,16 +39,13 @@ extern "C"
         , OIV_CMD_LoadRaw
         , OIV_CMD_UnloadFile
         , OIV_CMD_DisplayImage
-        , CE_Zoom
-        , CE_Pan
-        , CE_FilterLevel
+        , OIV_CMD_ImageProperties
         , CE_Refresh
         , OIV_CMD_QueryImageInfo
         , CE_TexelGrid
         , CMD_SetClientSize
         , OIV_CMD_Destroy
         , OIV_CMD_AxisAlignedTransform
-        , OIV_CMD_ZoomScrollState
         , OIV_CMD_SetSelectionRect
         , OIV_CMD_GetPixelBuffer
         , OIV_CMD_CropImage
@@ -56,6 +53,7 @@ extern "C"
         , OIV_CMD_ConvertFormat
         , OIV_CMD_ColorExposure
         , OIV_CMD_TexelInfo
+        , OIV_CMD_CreateText
     };
 
     
@@ -79,8 +77,10 @@ extern "C"
         , RC_InvalidHandle
         , RC_BadConversion
         , RC_ImageNotFound
+        , RC_NotImplemented
         , RC_UknownError = 0xFF
         , RC_InternalError = 0xFF + 1,
+
     };
 
     //-------Command Structs-------------------------
@@ -194,6 +194,30 @@ extern "C"
         ImageHandle imageHandle;
     };
 
+
+    struct OIV_Prop_text
+    {
+        LLUtils::PointI32 position;
+        double scale;
+        double opacity;
+    };
+
+    struct OIV_CMD_CreateText_Request
+    {
+        OIVCHAR* text;
+        OIVCHAR* fontPath;
+        uint16_t fontSize;
+        LLUtils::Color backgroundColor;
+        OIV_Prop_text textProperties;
+    };
+
+    
+
+    struct OIV_CMD_CreateText_Response
+    {
+        ImageHandle imageHandle;
+    };
+
     struct OIV_CMD_SetSelectionRect_Request
     {
         OIV_RECT_I rect;
@@ -228,7 +252,7 @@ extern "C"
     };
 
 
-    struct OIV_CMD_ZoomScrollState_Request
+    /*struct OIV_CMD_ZoomScrollState_Request
     {
         double innerMarginsX;
         double innerMarginsY;
@@ -236,7 +260,7 @@ extern "C"
         double outermarginsY;
         uint8_t SmallImageOffsetStyle;
         OIV_PROP_Scale_Mode scaleMode;
-    };
+    };*/
 
 
     struct OIV_CMD_AxisAlignedTransform_Request
@@ -276,23 +300,23 @@ extern "C"
         , FT_Count
     };
 
-    struct OIV_CMD_Filter_Request
+    /*struct OIV_CMD_Filter_Request
     {
         OIV_Filter_type filterType;
-    };
+    };*/
 
-    struct CmdDataZoom
+    /*struct CmdDataZoom
     {
         double amount;
-    };
+    };*/
 
     
 
-    struct CmdDataPan
+  /*  struct CmdDataPan
     {
         double x;
         double y;
-    };
+    };*/
 
     
     enum OIV_CMD_LoadFile_Flags
@@ -314,6 +338,24 @@ extern "C"
         
     };
 
+
+    enum OIV_Image_Render_mode
+    {
+          IRM_Default
+        , IRM_MainImage
+        , IRM_Overlay
+    };
+
+
+    struct OIV_CMD_ImageProperties_Request
+    {
+        ImageHandle imageHandle;
+        LLUtils::PointF64 position;
+        LLUtils::PointF64 scale;
+        OIV_Image_Render_mode imageRenderMode;
+        double opacity = 1.0;
+        OIV_Filter_type filterType;
+    };
 
 
     struct OIV_CMD_LoadFile_Response

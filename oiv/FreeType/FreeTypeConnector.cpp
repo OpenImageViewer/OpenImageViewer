@@ -3,6 +3,7 @@
 #include <vector>
 #include <StringUtility.h>
 #include <Utility.h>
+#include <Color.h>
 
 
 FreeTypeConnector FreeTypeConnector::sInstance;
@@ -15,6 +16,47 @@ FreeTypeConnector::FreeTypeConnector()
 
 }
 
+FreeTypeConnector& FreeTypeConnector::GetSingleton()
+{
+    return sInstance;
+}
+
+FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const std::string& format)
+{
+    using namespace std;
+    using namespace LLUtils;
+
+    Format result = {};
+    string trimmed = StringUtility::ToLower(format);
+    trimmed.erase(trimmed.find_last_not_of(" >") + 1);
+    trimmed.erase(0,trimmed.find_first_not_of(" <"));
+
+    ListAString properties = StringUtility::split<char>(trimmed, ';');
+    stringstream ss;
+    for (const string& prop : properties)
+    {
+        ListAString trimmedList = StringUtility::split<char>(prop, '=');
+        const string& key = trimmedList[0];
+        const string& value = trimmedList[1];
+        if (key == "textcolor")
+        {
+            ss << std::hex << value;
+            ss >> result.color;
+        }
+        else if (key == "backgroundcolor")
+        {
+            ss << std::hex << value;
+            ss >> result.backgroundColor;
+        }
+        else if (key == "textSize")
+        {
+            ss << std::hex << value;
+            ss >> result.size;
+        }
+    }
+
+    return result;
+}
 
 FreeTypeConnector::~FreeTypeConnector()
 {
@@ -26,8 +68,72 @@ FreeTypeConnector::~FreeTypeConnector()
     }
 }
 
-void FreeTypeConnector::CreateBitmap(const std::vector<std::string>& text, const std::string& fontPath,uint16_t fontSize, Bitmap &bitmap)
+std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormattedText(std::string text, int fontSize)
 {
+    using namespace std;
+    int beginTag = -1;
+    int endTag = -1;
+    vector<FormattedTextEntry> formattedText;
+    for (int i = 0; i < text.length(); i++)
+    {
+        if (text[i] == '<')
+        {
+            if (endTag != -1)
+            {
+                string tagContents = text.substr(beginTag, endTag - beginTag + 1);
+
+                string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
+                beginTag = i;
+                endTag = -1;
+
+                Format format = Format::Parse(tagContents);
+                FormattedTextEntry entry;
+                entry.size = fontSize;
+                entry.text = textInsideTag;
+                entry.color = format.color;
+                formattedText.push_back(entry);
+            }
+            else
+            {
+                beginTag = i;
+            }
+
+
+        }
+        if (text[i] == '>')
+        {
+            endTag = i;
+        }
+    }
+
+   
+        int i = text.length() - 1;
+        string tagContents = text.substr(beginTag, endTag - beginTag + 1);
+
+        string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
+        beginTag = i;
+        endTag = -1;
+
+        Format format = Format::Parse(tagContents);
+        FormattedTextEntry entry;
+        entry.size = fontSize;
+        entry.text = textInsideTag;
+        entry.color = format.color;
+        formattedText.push_back(entry);
+    
+    return formattedText;
+}
+
+
+void FreeTypeConnector::CreateBitmap(const std::string& text
+    , const std::string& fontPath
+    , uint16_t fontSize
+    , LLUtils::Color backgroundColor
+    , Bitmap &out_bitmap
+    
+)
+{
+    using namespace std;
     FT_Face face;
     FT_Error error = FT_New_Face(fLibrary, fontPath.c_str() ,0, &face);
 
@@ -46,40 +152,96 @@ void FreeTypeConnector::CreateBitmap(const std::vector<std::string>& text, const
 
    
 
+              //Height in pixels (using a double for sub-pixel precision)
+    double baseline_height = abs(face->descender) * (double)fontSize / face->units_per_EM;
+    baseline_height = std::ceil(baseline_height);
+
+
      if (error)
         throw std::logic_error("Can not set char height");
 
-    using namespace std;
-    int maxLength = 0;
-    for (const string& e : text)
-        maxLength = std::max<int>(maxLength, e.length());
+    const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
+
+     const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
+
     
+    vector<FormattedTextEntry> formattedText = GetFormattedText(text,fontSize);
 
-    const uint32_t maxAdvanceX = face->size->metrics.max_advance >> 6;;
-    const uint32_t maxAdvanceY = face->size->metrics.height >> 6;
+    int penX = 0, penY = 0;
+    //First mesure text
+    int maxRow = 0;
+    for (const FormattedTextEntry& el : formattedText)
+    {
+        for (const string::value_type & e : el.text)
+        {
+            if (e == '\n')
+            {
+                penY += rowHeight;
+                maxRow = std::max(penX, maxRow);
+                penX = 0;
+                continue;
+            }
 
-    uint32_t destWidth = maxAdvanceX * maxLength;
-    uint32_t destHeight = maxAdvanceY * text.size();
+            std::string codePointChar;
+            codePointChar.push_back(e);
 
-    uint8_t* imageBuffer = new uint8_t[destWidth * destHeight];
-    memset(imageBuffer, 0, destWidth * destHeight);
+            const int codePoint = CodePoint::codepoint(codePointChar);
+            const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
+            error = FT_Load_Glyph(
+                face,          /* handle to face object */
+                glyph_index,   /* glyph index           */
+                FT_LOAD_DEFAULT);  /* load flags, see below */
+
+            if (error)
+                throw std::logic_error("can not load glyph");
+
+            penX += face->glyph->advance.x >> 6;
+            penY += face->glyph->advance.y >> 6;
+            //face->glyph->
+            //int height1 = face->max_advance_height >> 6;// glyph->metrics.vertAdvance >> 6;
+            int k = 0;
+        }
+    }
+    penY += rowHeight;
+    maxRow = std::max(penX, maxRow);
+
+
+    const uint32_t destWidth = maxRow;
+    const uint32_t destHeight = penY;
+
+    const uint32_t destPixelSize = 4;
+    const uint32_t destRowPitch = destWidth * destPixelSize;
+    const uint32_t sizeOFDestBuffer = destHeight * destRowPitch;
+    uint8_t* imageBuffer = new uint8_t[sizeOFDestBuffer];
+    for (int i = 0 ;i < destWidth * destHeight; i++)
+    {
+        reinterpret_cast<uint32_t*>(imageBuffer)[i] = backgroundColor.colorValue;
+    }
+    
     LLUtils::Utility::BlitBox  dest = {};
 
     dest.buffer = imageBuffer;
     dest.width = destWidth;
     dest.height = destHeight;
-    dest.pixelSizeInbytes = 1;
-    dest.rowPitch = destWidth;
-    int penX = 0 , penY = 0;
-    
-    for (const string& e : text)
-    {
+    dest.pixelSizeInbytes = destPixelSize;
+    dest.rowPitch = destRowPitch;
 
-        for (int i = 0; i < e.length(); i++)
+    penX = 0;
+    penY = 0;
+    
+    for (const FormattedTextEntry& el : formattedText)
+    {
+        for (const string::value_type & e : el.text)
         {
-            char c = e[i];
-            std::string codePointChar;
-            codePointChar.push_back(c);
+            if (e == '\n')
+            {
+                penY += rowHeight;
+                penX = 0;
+                continue;
+            }
+
+            string codePointChar;
+            codePointChar.push_back(e);
 
 
             int codePoint = CodePoint::codepoint(codePointChar);
@@ -102,46 +264,52 @@ void FreeTypeConnector::CreateBitmap(const std::vector<std::string>& text, const
 
             FT_GlyphSlot  slot = face->glyph;
             FT_Bitmap bitmap = slot->bitmap;
+
+            //Create a copy of the bitmap in RGBA.
+            unique_ptr<uint8_t> RGBABitmap = unique_ptr<uint8_t>(new uint8_t[bitmap.width * bitmap.rows * destPixelSize]);
+            
+            // Fill glyph background with background color.
+            uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.get());
+            for (int i = 0; i < bitmap.width * bitmap.rows; i++)
+            {
+                RGBABitmapPtr[i] = backgroundColor.colorValue;
+            }
+
+            
+            //Blend source bitmap with the new RGBA bitmap
+            for (int i = 0; i < bitmap.rows * bitmap.width; i++)
+            {
+                LLUtils::Color source(bitmap.buffer[i] << 24 | el.color);
+                RGBABitmapPtr[i] = LLUtils::Color(RGBABitmapPtr[i]).Blend(source).colorValue;
+            }
+
             LLUtils::Utility::BlitBox source = {};
-            source.buffer = bitmap.buffer;
+            source.buffer = RGBABitmap.get();
             source.width = bitmap.width;
             source.height = bitmap.rows;
-            source.pixelSizeInbytes = 1;
-            source.rowPitch = bitmap.pitch;
+            source.pixelSizeInbytes = destPixelSize;
+            source.rowPitch = destPixelSize * bitmap.width;//
 
             int bitmapTop = slot->bitmap_top;
 
-            //HACK: clamp bitmap top  to rows, not sure why it happens.
-            if (bitmap.rows > slot->bitmap_top)
-            {
-                bitmapTop = bitmap.rows;
-            }
-
             dest.left = penX + slot->bitmap_left;
-            dest.top = penY + maxAdvanceY - bitmapTop - 1;
+            dest.top = penY + rowHeight - bitmapTop  - 1 - baselineHeight;
             penX += slot->advance.x >> 6;
             penY += slot->advance.y >> 6;
 
             LLUtils::Utility::Blit(dest, source);
-
         }
-        penY += maxAdvanceY;
-        penX = 0;
     }
-
-    bitmap.width = destWidth;
-    bitmap.height = destHeight;
-    bitmap.buffer = imageBuffer;
+    out_bitmap.width = destWidth;
+    out_bitmap.height = destHeight;
+    out_bitmap.buffer = imageBuffer;
+    out_bitmap.PixelSize = destPixelSize;
+    out_bitmap.rowPitch = destRowPitch;
     
 
     error = FT_Done_Face(face);
     if (error)
         throw std::logic_error("Can not destroy face");
  
-}
-
-FreeTypeConnector& FreeTypeConnector::GetSingleton()
-{
-    return sInstance;
 }
 

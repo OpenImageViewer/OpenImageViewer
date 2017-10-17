@@ -18,7 +18,7 @@ namespace OIV
 
         //Multi image API
         virtual int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) = 0;
-        virtual int SetImageProperties(uint32_t id, const ImageProperties& properties) = 0;
+        virtual int SetImageProperties(const OIV_CMD_ImageProperties_Request&) = 0;
         virtual int RemoveImage(uint32_t id) = 0;
 
         virtual ~IRenderer() {}

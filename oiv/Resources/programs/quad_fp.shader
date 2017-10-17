@@ -109,6 +109,14 @@ void DrawPixelGrid(
 		}
 } 
 
+float3 saturate(float3 color, float amount)
+{
+	const float3 RGBWeights = float3(0.299, 0.587, 0.114);
+	float3 v  = color * color * RGBWeights;
+	float luminance = sqrt(v.r + v.g + v.b); 
+	return  luminance + ( color - luminance) * amount;
+}
+
 void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
 {
 	if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
@@ -118,6 +126,9 @@ void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texe
 {
     float4 sampledTexel = SampleTexture(texture_1,uv);
     sampledTexel.xyz =  pow(sampledTexel.xyz * uExposure  + uOffset, 1 / uGamma);
+    //TODO: Add parameter for saturation
+    //sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
+	
     float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }

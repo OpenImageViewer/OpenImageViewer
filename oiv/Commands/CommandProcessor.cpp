@@ -3,16 +3,12 @@
 #include "Handlers/CommandHandlerInit.h"
 #include "Handlers/CommandHandlerLoadFile.h"
 #include "Handlers/CommandHandlerDisplayImage.h"
-#include "Handlers/CommandHandlerPan.h"
-#include "Handlers/CommandHandlerZoom.h"
 #include "Handlers/CommandHandlerRefresh.h"
 #include "Handlers/CommandHandlerTexelGrid.h"
-#include "Handlers/CommandHandlerFilterLevel.h"
 #include "Handlers/CommandHandlerSetClientSize.h"
 #include "Handlers/CommandHandlerDestroy.h"
 #include "Handlers/CommandHandlerAxisAlignedTransform.h"
 #include "Handlers/CommandHandlerUnloadFile.h"
-#include "Handlers/CommandHandlerZoomScrollState.h"
 #include "Handlers/CommandHandlerLoadRaw.h"
 #include "Handlers/CommandHandlerSetSelectionRect.h"
 #include "Handlers/CommandHandlerCropImage.h"
@@ -21,6 +17,7 @@
 #include "Handlers/CommandHandlerColorExposure.h"
 #include "Handlers/CommandHandlerTexelInfo.h"
 #include "Handlers/CommandHandlerQueryImageInfo.h"
+#include "Handlers/CommandHandlerImageProperties.h"
 
 
 namespace OIV
@@ -35,15 +32,12 @@ namespace OIV
             , make_pair(OIV_CMD_LoadRaw,new CommandHandlerLoadRaw())
             , make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
             , make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
-            , make_pair(CE_Zoom,new CommandHandlerZoom())
-            , make_pair(CE_Pan,new CommandHandlerPan())
             , make_pair(CE_Refresh,new CommandHandlerRefresh())
             , make_pair(CE_TexelGrid,new CommandHandlerTexelGrid())
             , make_pair(CMD_SetClientSize,new CommandHandlerSetClientSize())
             , make_pair(OIV_CMD_Destroy,new CommandHandlerDestroy())
             , make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
-            , make_pair(CE_FilterLevel,new CommandHandlerFilterLevel())
-            , make_pair(OIV_CMD_ZoomScrollState,new CommandHandlerZoomScrollState())
+            , make_pair(OIV_CMD_ImageProperties,new CommandHandlerImageProperties())
             , make_pair(OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect())
             , make_pair(OIV_CMD_CropImage,new CommandHandlerCropImage())
             , make_pair(OIV_CMD_GetPixels,new CommandHandlerGetPixels())

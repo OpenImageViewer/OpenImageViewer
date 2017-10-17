@@ -8,12 +8,11 @@ namespace OIV
     class IPictureRenderer
     {
     public:
-        virtual ResultCode SetZoom(double zoom) = 0;
-        virtual ResultCode SetOffset(double x, double y) = 0;
         virtual ResultCode LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) = 0;
         virtual ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) = 0;
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;
         virtual ResultCode DisplayFile(const OIV_CMD_DisplayImage_Request& display_request) = 0;
+        virtual ResultCode CreateText(const OIV_CMD_CreateText_Request&, OIV_CMD_CreateText_Response&) = 0;
 
         virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
 
@@ -22,13 +21,13 @@ namespace OIV
         virtual int Refresh() = 0;
 
         virtual ResultCode GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& information) = 0;
-        virtual IMCodec::ImageSharedPtr GetImage(ImageHandle handle) = 0;
-        virtual int SetFilterLevel(OIV_Filter_type filter_level) = 0;
+        virtual IMCodec::ImageSharedPtr GetImage(ImageHandle handle) const = 0;
         virtual int SetTexelGrid(double gridSize) = 0;
         virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
         virtual ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request) = 0;
         virtual ~IPictureRenderer() {}
-        virtual ResultCode SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request* zoom_scroll_state) = 0;
+        virtual ResultCode SetImageProperties(const OIV_CMD_ImageProperties_Request& imageProperties) = 0;
+        
         virtual ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) = 0;
         virtual ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) = 0;
         virtual ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req) = 0;

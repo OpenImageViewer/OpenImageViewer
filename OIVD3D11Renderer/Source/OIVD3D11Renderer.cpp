@@ -46,9 +46,9 @@ namespace OIV
     {
         return fD3D11Renderer->SetImageBuffer(id, image);
     }
-    int OIVD3D11Renderer::SetImageProperties(uint32_t id, const ImageProperties& properties)
+    int OIVD3D11Renderer::SetImageProperties(const OIV_CMD_ImageProperties_Request& props)
     {
-        return fD3D11Renderer->SetImageProperties(id, properties);
+        return fD3D11Renderer->SetImageProperties(props);
     }
 
     int OIVD3D11Renderer::RemoveImage(uint32_t id)

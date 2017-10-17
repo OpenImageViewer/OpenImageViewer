@@ -54,13 +54,17 @@ namespace OIV
         void ToggleBorders();
         void ToggleSlideShow();
         void SetFilterLevel(OIV_Filter_type filterType);
+        OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
         void Pan(const LLUtils::PointF64& panAmount);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void UpdateUIZoom();
+        void UpdateImageProperties();
         void SetZoom(double zoom, int x = -1, int y = -1);
+        double GetScale() const;
+        LLUtils::PointF64 GetOffset() const;
         void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         void UpdateTexelPos();
@@ -94,13 +98,11 @@ namespace OIV
     private: // member fields
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
-        OIV_Filter_type fFilterType = OIV_Filter_type::FT_Linear;
         RecrusiveDelayedOp fRefreshOperation;
         bool fIsSlideShowActive = false;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         double fIsGridEnabled = false;
-        double fZoom = 1.0;
         ImageDescriptor fImageBeingOpened;
         ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
@@ -113,7 +115,6 @@ namespace OIV
         UserSettings fSettings;
         bool fIsInitialLoad = false;
         bool fUseRainbowNormalization = false;
-        LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         OIV_CMD_ColorExposure_Request fColorExposure = { 1.0, 0.0, 1.0 };
@@ -122,5 +123,6 @@ namespace OIV
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
+        OIV_CMD_ImageProperties_Request fImageProperties;
     };
 }

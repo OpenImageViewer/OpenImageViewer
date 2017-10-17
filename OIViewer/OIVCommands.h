@@ -91,18 +91,5 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
-        static ResultCode SetZoom(double fZoom)
-        {
-            CmdDataZoom zoom{ fZoom};
-            return ExecuteCommand(CommandExecute::CE_Zoom, &zoom, &CmdNull());
-        }
-
-        static ResultCode SetOffset(const LLUtils::PointF64& point)
-        {
-            CmdDataPan pan;
-            pan.x = point.x;
-            pan.y = point.y;
-            return ExecuteCommand(CommandExecute::CE_Pan, &pan, &(CmdNull()));
-        }
     };
 }

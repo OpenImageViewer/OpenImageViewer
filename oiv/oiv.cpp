@@ -26,53 +26,20 @@
 
 namespace OIV
 {
-
- /*   #pragma region ZoomScrollStateListener
-    LLUtils::PointI32 OIV::GetImageSize()
-    {
-        using namespace LLUtils;
-        return GetDisplayImage() ? PointI32(
-                static_cast<PointI32::point_type>(GetDisplayImage()->GetWidth()),
-                static_cast<PointI32::point_type>(GetDisplayImage()->GetHeight()))
-            : PointI32::Zero;
-    }
-
-
-    
-    void OIV::NotifyDirty()
-    {
-        const bool AutoRefreshWhenDirty = false;
-        fIsViewDirty = true;
-        if (AutoRefreshWhenDirty == true)
-            Refresh();
-    }
-
-    
-#pragma endregion */
-
     LLUtils::PointI32 OIV::GetClientSize() const
     {
         return fClientSize;
     }
-    
- 
+  
     void OIV::RefreshRenderer()
     {
-
         UpdateGpuParams();
-        ::OIV::ImageProperties properties;
-        properties.position = static_cast<LLUtils::PointF64>(fOffset);
-        properties.scale = fZoom;
-        properties.opacity = 1.0;
-        properties.renderMode = RM_MainImage;
-        
-        fRenderer->SetImageProperties(0, properties);
         fRenderer->Redraw();
     }
 
     IMCodec::ImageSharedPtr OIV::GetDisplayImage() const
     {
-        return fDisplayedImage;
+        return  GetImage(ImageHandleDisplayed);
     }
 
     void OIV::UpdateGpuParams()
@@ -214,7 +181,7 @@ namespace OIV
 
         if (display_request.handle == ImageNullHandle)
         {
-            fDisplayedImage.reset();
+            fImageManager.RemoveImage(ImageHandleDisplayed);
             return result;
         }
 
@@ -259,13 +226,11 @@ namespace OIV
             {
                 if (fRenderer->SetImageBuffer(0,image) == RC_Success)
                 {
-                    fDisplayedImage = image;
+                    fImageManager.ReplaceImage(ImageHandleDisplayed, image);
 
                     const bool resetScrollState = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ResetScrollState) != 0;
                     const bool refreshRenderer = (display_flags & OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer) != 0;
 
-                    //if (resetScrollState)
-                        //fScrollState.Reset(resetScrollState);
 
                     if (refreshRenderer)
                         RefreshRenderer();
@@ -288,13 +253,16 @@ namespace OIV
         return result;
     }
 
+    ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
+    {
+        return RC_NotImplemented;
+    }
+
     ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)
     {
         fRenderer->SetSelectionRect({ { selectionRect.rect.x0 ,selectionRect.rect.y0 },{ selectionRect.rect.x1 ,selectionRect.rect.y1 } });
         return RC_Success;
     }
-
-   
 
     ResultCode OIV::ConverFormat(const OIV_CMD_ConvertFormat_Request& req)
     {
@@ -398,16 +366,10 @@ namespace OIV
         
     }
 
-    ResultCode OIV::SetZoom(double zoom)
+    ResultCode OIV::SetImageProperties(const OIV_CMD_ImageProperties_Request& imageProperties)
     {
-        fZoom = zoom;
-        return ResultCode::RC_Success;
-    }
-    
-    ResultCode OIV::SetOffset(double x, double y)
-    {
-        fOffset = { x, y };
-        return ResultCode::RC_Success;
+        fRenderer->SetImageProperties(imageProperties);
+        return RC_Success;
     }
 
     ResultCode OIV::UnloadFile(const ImageHandle handle)
@@ -436,23 +398,9 @@ namespace OIV
         return 0;
     }
 
-    IMCodec::ImageSharedPtr OIV::GetImage(ImageHandle handle)
+    IMCodec::ImageSharedPtr OIV::GetImage(ImageHandle handle) const
     {
-        if (handle == ImageHandleDisplayed)
-            return fDisplayedImage;
-        else
-            return fImageManager.GetImage(handle);
-    }
-
-    int OIV::SetFilterLevel(OIV_Filter_type filter_level)
-    {
-        if (filter_level >= FT_None && filter_level < FT_Count)
-        {
-            fRenderer->SetFilterLevel(filter_level);
-            return RC_Success;
-        }
-
-        return RC_WrongParameters;
+        return fImageManager.GetImage(handle);
     }
 
     ResultCode OIV::GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& info)
@@ -491,12 +439,12 @@ namespace OIV
         
         if (request.handle == ImageHandleDisplayed && GetDisplayImage() != nullptr)
         {
-            IMCodec::ImageSharedPtr& image = fDisplayedImage;
+            IMCodec::ImageSharedPtr& image = fImageManager.GetImage(ImageHandleDisplayed);
             
             image = IMUtil::ImageUtil::Transform(static_cast<IMUtil::AxisAlignedRTransform>(request.transform), image);
             if (image != nullptr && fRenderer->SetImageBuffer(0,image) == RC_Success)
             {
-//                fScrollState.Reset(true);
+                fImageManager.ReplaceImage(ImageHandleDisplayed, image);
                 return RC_Success;
             }
         }
@@ -510,12 +458,6 @@ namespace OIV
             }
         }
         return RC_UknownError;
-    }
-    ResultCode OIV::SetZoomScrollState(const OIV_CMD_ZoomScrollState_Request * zoom_scroll_state)
-    {
-
-        return ResultCode::RC_Success;
-        
     }
 #pragma endregion
 

@@ -210,15 +210,15 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerColorExposure.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerConvertFormat.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerCreateText.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerFilterLevel.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadRaw.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerPan.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
@@ -226,8 +226,6 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerUnloadFile.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerZoom.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerZoomScrollState.h" />
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />

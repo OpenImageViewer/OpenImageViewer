@@ -56,7 +56,7 @@ namespace OIV
     struct ImageEntry
     {
         D3D11TextureSharedPtr texture;
-        ImageProperties properties;
+        OIV_CMD_ImageProperties_Request properties;
     };
 
     class D3D11Renderer 
@@ -73,7 +73,7 @@ namespace OIV
         int SetselectionRect(const SelectionRect& selection_rect);
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
         int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image);
-        int SetImageProperties(uint32_t id, const ImageProperties& properties);
+        int SetImageProperties(const OIV_CMD_ImageProperties_Request&);
         int RemoveImage(uint32_t id);
 
 #pragma region //**** Private methods*****/

@@ -274,43 +274,51 @@ namespace OIV
             if (entry.texture == nullptr)
                 continue;
             
-            const ImageProperties& props = entry.properties;
 
-            if (props.renderMode == RM_Overlay)
+            const OIV_CMD_ImageProperties_Request& props = entry.properties;
+            //TODO: change to switch statement and unify constant buffres.
+
+            switch (props.imageRenderMode)
             {
-                CONSTANT_BUFFER_IMAGE_SIMPLE& gpuBuffer = fBufferSimple->GetBuffer();
-                gpuBuffer.uImageOffset[0] = props.position.x;
-                gpuBuffer.uImageOffset[1] = props.position.y;
-                gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
-                gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
-                gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
-                gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
-                gpuBuffer.uScale[0] = props.scale.x;
-                gpuBuffer.uScale[1] = props.scale.y;
+             case OIV_Image_Render_mode::IRM_Overlay:
+                 {
+                 CONSTANT_BUFFER_IMAGE_SIMPLE& gpuBuffer = fBufferSimple->GetBuffer();
+                 gpuBuffer.uImageOffset[0] = props.position.x;
+                 gpuBuffer.uImageOffset[1] = props.position.y;
+                 gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
+                 gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
+                 gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
+                 gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
+                 gpuBuffer.uScale[0] = props.scale.x;
+                 gpuBuffer.uScale[1] = props.scale.y;
 
-                fBufferSimple->Update();
-                fBufferSimple->Use(ShaderStage::SS_FragmentShader);
-                fImageSimpleFragmentShader->Use();
+                 fBufferSimple->Update();
+                 fBufferSimple->Use(ShaderStage::SS_FragmentShader);
+                 fImageSimpleFragmentShader->Use();
+                 }
+                 break;
+             case  OIV_Image_Render_mode::IRM_MainImage:
+                 {
+                 VS_CONSTANT_BUFFER& gpuBuffer = fConstantBuffer->GetBuffer();
+                 gpuBuffer.uImageOffset[0] = props.position.x;
+                 gpuBuffer.uImageOffset[1] = props.position.y;
+                 gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
+                 gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
+                 gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
+                 gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
+                 gpuBuffer.uScale[0] = props.scale.x;
+                 gpuBuffer.uScale[1] = props.scale.y;
+                 fConstantBuffer->Update();
+                 fConstantBuffer->Use(ShaderStage::SS_FragmentShader);
+                 fImageFragmentShader->Use();
+                 }
+
+                 break;
+             default:
+                 throw std::logic_error("Unexpected value");
             }
-            else  if (props.renderMode == RM_MainImage)
-            {
-                //continue;
-                VS_CONSTANT_BUFFER& gpuBuffer = fConstantBuffer->GetBuffer();
-                gpuBuffer.uImageOffset[0] = props.position.x;
-                gpuBuffer.uImageOffset[1] = props.position.y;
-                gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
-                gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
-                gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
-                gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
-                gpuBuffer.uScale[0] = props.scale.x;
-                gpuBuffer.uScale[1] = props.scale.y;
-                fConstantBuffer->Update();
-                fConstantBuffer->Use(ShaderStage::SS_FragmentShader);
 
-                fImageFragmentShader->Use();
-            }
-
-
+            SetFilterLevel(props.filterType);
             entry.texture->Use();
             context->Draw(4, 0);
         }
@@ -390,9 +398,9 @@ namespace OIV
         return 0; 
     }
 
-    int D3D11Renderer::SetImageProperties(uint32_t id, const ImageProperties& properties)
+    int D3D11Renderer::SetImageProperties(const OIV_CMD_ImageProperties_Request& properties)
     {
-        ImageEntry& entry = fImageEntries[id];
+        ImageEntry& entry = fImageEntries[properties.imageHandle];
         entry.properties = properties;
         return 0;
     }
