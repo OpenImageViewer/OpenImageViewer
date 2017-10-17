@@ -204,6 +204,7 @@ extern "C"
     {
         uint32_t width;
         uint32_t height;
+        uint32_t rowPitch;
         OIV_TexelFormat texelFormat;
         uint8_t* buffer;
         OIV_AxisAlignedRTransform transformation;

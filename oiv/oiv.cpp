@@ -183,7 +183,7 @@ namespace OIV
         props.NumSubImages = 0;
         props.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
         props.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
-        props.RowPitchInBytes = loadRawRequest.width * IMCodec::GetTexelFormatSize(props.TexelFormatDecompressed) / 8;
+        props.RowPitchInBytes = loadRawRequest.rowPitch;
 
         const std::size_t buferSize = props.RowPitchInBytes * props.Height;
         props.ImageBuffer = new uint8_t[buferSize];

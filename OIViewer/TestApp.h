@@ -80,7 +80,7 @@ namespace OIV
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRTransform transform);
-        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat);
+        void LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat);
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();

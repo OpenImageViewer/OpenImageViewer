@@ -917,7 +917,7 @@ namespace OIV
         ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
     }
 
-    void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height, OIV_TexelFormat texelFormat)
+    void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
     {
         using namespace LLUtils;
         
@@ -926,6 +926,7 @@ namespace OIV
         loadRequest.buffer = const_cast<uint8_t*>(buffer);
         loadRequest.width = width;
         loadRequest.height = height;
+        loadRequest.rowPitch = rowPitch;
         loadRequest.texelFormat = texelFormat;
         loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
         
@@ -971,9 +972,11 @@ namespace OIV
                         BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER*>(dib);
                         
                         uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
+
                         LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
                                 , info->biWidth
                                 , info->biHeight
+                                , info->biSizeImage / info->biHeight
                                 , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
 
                         GlobalUnlock(dib);
