@@ -6,6 +6,5 @@ namespace IMCodec
     {
     public:
         static bool InstallPlugins(ImageLoader* imageLoader);
-        
     };
 }

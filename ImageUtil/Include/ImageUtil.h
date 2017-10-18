@@ -7,7 +7,6 @@
 #include "half.hpp"
 #include "HSLRGB.h"
 
-
 namespace IMUtil
 {
 #define RGBA(R,G,B,A) (A << 24 | B << 16 | G << 8 | R ) 
@@ -19,7 +18,6 @@ namespace IMUtil
     private:
         struct ConvertKey
         {
-            
             struct Hash
             {
                 std::size_t operator()(const ConvertKey& key) const
@@ -126,9 +124,9 @@ namespace IMUtil
             }
             else
                 return image;
-            
+
         }
-        
+
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr image)
         {
             using namespace IMCodec;
@@ -159,7 +157,7 @@ namespace IMUtil
             normalizedImageProperties.ImageBuffer = newBuffer;
             normalizedImageProperties.RowPitchInBytes = targetRowPitch;
 
-            
+
             return ImageSharedPtr(new Image(normalizedImageProperties, image->GetData()));
         }
 
@@ -170,17 +168,17 @@ namespace IMUtil
 
             if (sourceImage->GetImageType() != targetPixelFormat)
             {
-                
+
                 auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
 
                 if (converter != sConvertionFunction.end())
                 {
                     uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
                     uint8_t* dest = nullptr;
-                    
+
                     //TODO: convert without normalization.
                     convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : Normalize(sourceImage);
-                        
+
                     PixelUtil::Convert(converter->second
                         , &dest
                         , convertedImage->GetBuffer()
@@ -240,9 +238,9 @@ namespace IMUtil
 
         enum NormalizeMode
         {
-              NM_Default    = 0
-            , NM_GrayScale  = 1
-            , NM_RainBow    = 2
+            NM_Default = 0
+            , NM_GrayScale = 1
+            , NM_RainBow = 2
         };
 
         template <class T>
@@ -252,9 +250,9 @@ namespace IMUtil
 
             T min = std::numeric_limits<T>::max();
             T max = std::numeric_limits<T>::min();
-            
+
             uint32_t totalPixels = sourceImage->GetTotalPixels();
-            for (uint32_t i = 0 ; i < totalPixels ;i++)
+            for (uint32_t i = 0; i < totalPixels; i++)
             {
                 T currentSample = sampleData[i];
                 min = std::min(min, currentSample);
@@ -266,7 +264,7 @@ namespace IMUtil
             props.TexelFormatDecompressed = IMCodec::TF_I_R8_G8_B8_A8;
             props.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TF_I_R8_G8_B8_A8) / 8 * props.Width;
             props.ImageBuffer = new uint8_t[props.RowPitchInBytes * props.Height];
-            
+
             PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.ImageBuffer);
 
 
@@ -284,7 +282,7 @@ namespace IMUtil
                     uint8_t grayValue = std::min(static_cast<uint8_t>(std::round((currentSample / length) * 255)), static_cast<uint8_t>(255));
                     currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
                 }
-                    break;
+                break;
 
                 case NM_RainBow:
                 {
@@ -297,11 +295,11 @@ namespace IMUtil
                     }
                     currentTexel[i].value = RGBA(rgb.R, rgb.G, rgb.B, 255);
                 }
-                    break;
+                break;
                 }
-             
+
             }
-            return IMCodec::ImageSharedPtr(new IMCodec::Image(props,sourceImage->GetData()));
+            return IMCodec::ImageSharedPtr(new IMCodec::Image(props, sourceImage->GetData()));
         }
     };
 }

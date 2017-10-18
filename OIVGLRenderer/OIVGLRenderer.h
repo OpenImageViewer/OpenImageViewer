@@ -37,10 +37,13 @@ namespace OIV
         int SetViewParams(const ViewParameters& viewParams) override;
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filtertype) override;
-        int SetImage(const IMCodec::ImageSharedPtr image) override;
         int SetSelectionRect(SelectionRect selectionRect) override;
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
-        
+
+        int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) override;
+        int SetImageProperties(const OIV_CMD_ImageProperties_Request&) override;
+        int RemoveImage(uint32_t id) override;
+
     private:
         bool fIsParamsDirty;
         GLGpuProgramUniquePtr fProgram;

@@ -49,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -94,7 +94,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.3.5-1-bin\include\;E:\Downloads\freetype-2.3.5-1-bin\include\freetype2\;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\include\;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OIVRootDir)..\libraries\glew\glew-2.0.0\lib\Release\x64\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -125,7 +125,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.8.tar\freetype-2.8\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)LLUtils\Include;$(SolutionDir)ImageCodec\Image\Include;$(SolutionDir)ImageCodec\ImageLoader\Include;$(SolutionDir)ImageUtil\Include;$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\include\;$(ProjectDir);%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -133,7 +133,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MTd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OIVRootDir)..\libraries\glew\glew-2.0.0\lib\Release\x64\glew32s.lib;$(OIVRootDir)..\libraries\libjpeg-turbo\libjpeg-turbo-1.5.2-vc64\lib\turbojpeg.lib;D3D11.lib;$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\objs\vc2010\x64\freetype28MTd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -158,14 +158,14 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.3.5-1-bin\include\;E:\Downloads\freetype-2.3.5-1-bin\include\freetype2\;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\include\;%(AdditionalIncludeDirectories);$(ProjectDir);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OIVRootDir)..\libraries\glew\glew-2.0.0\lib\Release\x64\glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
     <PostBuildEvent>
@@ -177,12 +177,12 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.8.tar\freetype-2.8\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)LLUtils\Include;$(SolutionDir)ImageCodec\Image\Include;$(SolutionDir)ImageCodec\ImageLoader\Include;$(SolutionDir)ImageUtil\Include;$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\include;$(ProjectDir);%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OIVRootDir)..\libraries\glew\glew-2.0.0\lib\Release\x64\glew32s.lib;$(OIVRootDir)..\libraries\libjpeg-turbo\libjpeg-turbo-1.5.2-vc64\lib\turbojpeg.lib;D3D11.lib;$(OIVRootDir)..\libraries\freetype\ft281\freetype-2.8.1\objs\vc2010\x64\freetype281.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
     <PostBuildEvent>
