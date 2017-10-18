@@ -15,7 +15,7 @@ OIV::OIVGLRenderer::OIVGLRenderer()
 void OIV::OIVGLRenderer::PrepareResources()
 {
     using namespace OIV;
-    
+
     // Disable vsync
     context.SetSwapInterval(0);
 
@@ -47,23 +47,21 @@ int OIV::OIVGLRenderer::Init(std::size_t container)
     return 0;
 }
 
-
 int OIV::OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
 {
-    fUVScale[0] = static_cast<GLfloat>(viewParams.uvscale.x);
+    /*fUVScale[0] = static_cast<GLfloat>(viewParams.uvscale.x);
     fUVScale[1] = static_cast<GLfloat>(viewParams.uvscale.y);
-
+    
     fUVffset[0] = static_cast<GLfloat>(viewParams.uvOffset.x);
     fUVffset[1] = static_cast<GLfloat>(viewParams.uvOffset.y);
 
     UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
 
-    
-
     fShowGrid = viewParams.showGrid ? 1 : 0;
-    
+
     fIsParamsDirty = true;
-    return 0;
+    return 0;*/
+    return -1;
 }
 
 int OIV::OIVGLRenderer::Redraw()
@@ -78,13 +76,19 @@ int OIV::OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
     return 0;
 }
 
-int OIV::OIVGLRenderer::SetImage(const IMCodec::ImageSharedPtr image)
+int OIV::OIVGLRenderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image)
 {
-    fImageSize[0] = static_cast<GLfloat>(image->GetWidth());
-    fImageSize[1] = static_cast<GLfloat>(image->GetHeight());
-    fIsParamsDirty = true;
-    fTexture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
-    return 0;
+    return -1;
+}
+
+int OIV::OIVGLRenderer::SetImageProperties(const OIV_CMD_ImageProperties_Request&)
+{
+    return -1;
+}
+
+int OIV::OIVGLRenderer::RemoveImage(uint32_t id)
+{
+    return -1;
 }
 
 int OIV::OIVGLRenderer::SetSelectionRect(SelectionRect selectionRect)

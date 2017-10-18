@@ -1112,7 +1112,6 @@ namespace OIV
             fImageBeingOpened.imageHandle = croppedHandle;
             fImageBeingOpened.width = 7;
             fImageBeingOpened.height = 7;
-
         }
 
         FinalizeImageLoadThreadSafe(result);
