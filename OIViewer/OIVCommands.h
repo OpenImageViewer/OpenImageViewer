@@ -15,17 +15,17 @@ namespace OIV
         }
 
         template <class T, class U>
-        static ResultCode OIVCommands::ExecuteCommand(CommandExecute command, T* request, U* response)
+        static ResultCode ExecuteCommand(CommandExecute command, T* request, U* response)
         {
             return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
         }
 
-        static ResultCode OIVCommands::Refresh()
+        static ResultCode Refresh()
         {
-                return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
+            return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
         }
 
-        static ResultCode OIVCommands::ClearImage()
+        static ResultCode ClearImage()
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};
 
@@ -33,7 +33,7 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
-        static ResultCode OIVCommands::UnloadImage(ImageHandle handle)
+        static ResultCode UnloadImage(ImageHandle handle)
         {
             if (handle != ImageNullHandle)
             {
@@ -44,16 +44,16 @@ namespace OIV
             else return RC_InvalidHandle;
         }
 
-        static ResultCode OIVCommands::TransformImage(ImageHandle handle, OIV_AxisAlignedRTransform transform)
+        static ResultCode TransformImage(ImageHandle handle, OIV_AxisAlignedRTransform transform)
         {
             OIV_CMD_AxisAlignedTransform_Request request = {};
             request.handle = handle;
             request.transform = transform;
-            
+
             return ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &CmdNull());
         }
 
-        static ResultCode OIVCommands::ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat)
+        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat)
         {
             OIV_CMD_ConvertFormat_Request request = {};
             request.handle = handle;
@@ -61,9 +61,9 @@ namespace OIV
 
             return ExecuteCommand(CommandExecute::OIV_CMD_ConvertFormat, &request, &CmdNull());
         }
-        
 
-        static ResultCode OIVCommands::CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
+
+        static ResultCode CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
         {
             OIV_CMD_CropImage_Request requestCropImage;
             OIV_CMD_CropImage_Response responseCropImage;
@@ -77,10 +77,10 @@ namespace OIV
             return result;
         }
 
-        static ResultCode OIVCommands::DisplayImage(ImageHandle image_handle
-                , OIV_CMD_DisplayImage_Flags displayFlags
-                , OIV_PROP_Normalize_Mode normalizationFlags = OIV_PROP_Normalize_Mode::NM_Default
-                )
+        static ResultCode DisplayImage(ImageHandle image_handle
+            , OIV_CMD_DisplayImage_Flags displayFlags
+            , OIV_PROP_Normalize_Mode normalizationFlags = OIV_PROP_Normalize_Mode::NM_Default
+        )
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};
 
@@ -90,6 +90,5 @@ namespace OIV
 
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
-
     };
 }
