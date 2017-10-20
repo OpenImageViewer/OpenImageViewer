@@ -11,18 +11,14 @@
 
 namespace OIV
 {
-    const std::string BLANK_STRING;
-
 #pragma pack(1)
-    struct VS_CONSTANT_BUFFER_SELECTIONRECT
+    struct CONSTANT_BUFFER_SELECTION_RECT
     {
         int32_t uvViewportSize [4];
         int32_t uSelectionRect[4]; // p0 (x,y) ,  p1 (z,w)
     };
 
-    
-
-    struct CONSTANT_BUFFER_IMAGE_SIMPLE
+    struct CONSTANT_BUFFER_IMAGE_COMMON
     {
         float uvViewportSize[2];
         float uImageSize[2];
@@ -30,13 +26,8 @@ namespace OIV
         float uScale[2];
     };
 
-
-    struct VS_CONSTANT_BUFFER
+    struct CONSTANT_BUFFER_IMAGE_MAIN
     {
-        float uvViewportSize[2];
-        float uImageSize[2];
-        float uImageOffset[2];
-        float uScale[2];
         int32_t uShowGrid;
         float exposure;
         float offset;
@@ -86,7 +77,6 @@ namespace OIV
 #pragma endregion
     private:
         D3D11DeviceSharedPtr fDevice;
-        
         D3D11ShaderUniquePtr fImageVertexShader;
         D3D11ShaderUniquePtr fImageFragmentShader;
         D3D11ShaderUniquePtr fSelectionFragmentShaer;
@@ -98,10 +88,9 @@ namespace OIV
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport = {0};
-        D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER_SELECTIONRECT> fBufferSelection;
-        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_SIMPLE> fBufferSimple;
-        
-        D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER> fConstantBuffer;
+        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> fBufferSelection;
+        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_COMMON> fBufferImageCommon;
+        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_MAIN> fBufferImageMain;
         
         ComPtr<ID3D11SamplerState>  fSamplerState;
         ComPtr<ID3D11BlendState> fBlendState;

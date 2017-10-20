@@ -23,16 +23,25 @@ STATIC_CONST float4 darkBlue = float4(0 / 255.0, 0 / 255.0, 40 / 255.0, 1);
 STATIC_CONST float4 red = float4(1, 0, 0, 1);
 
 //Globals
+
+cbuffer BaseImageData : register(b0) 
+{
+	float2 uViewportSize;
+	float2 uImageSize;
+	float2 uImageOffset;
+	float2 uScale;
+};
+
+cbuffer MainImageData : register(b1) 
+{
+	int uShowGrid;
+	float uExposure;
+	float uOffset;
+	float uGamma;
+};
+
 uniform SAMPLER2D texture_1;
 uniform SAMPLER_STATE texture_1_state;
-uniform float2 uViewportSize;
-uniform float2 uImageSize;
-uniform float2 uImageOffset;
-uniform float2 uScale;
-uniform int uShowGrid;
-uniform float uExposure;
-uniform float uOffset;
-uniform float uGamma;
 
 
 float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)

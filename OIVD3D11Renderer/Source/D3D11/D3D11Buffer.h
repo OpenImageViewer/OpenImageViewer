@@ -20,15 +20,15 @@ namespace OIV
             return fBufferDesc.ByteWidth;
         }
 
-        void Use(ShaderStage stage)
+        void Use(ShaderStage stage,int32_t slot)
         {
             switch (stage)
             {
             case SS_VertexShader:
-                GetDevice()->GetContext()->VSSetConstantBuffers(0, 1, fBuffer.GetAddressOf());
+                GetDevice()->GetContext()->VSSetConstantBuffers(static_cast<UINT>(slot), 1, fBuffer.GetAddressOf());
                 break;
             case SS_FragmentShader:
-                GetDevice()->GetContext()->PSSetConstantBuffers(0, 1, fBuffer.GetAddressOf());
+                GetDevice()->GetContext()->PSSetConstantBuffers(static_cast<UINT>(slot), 1, fBuffer.GetAddressOf());
                 break;
             default:
                 throw std::logic_error("Unexpected value");
