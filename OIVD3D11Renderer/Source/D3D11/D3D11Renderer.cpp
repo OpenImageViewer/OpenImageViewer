@@ -110,7 +110,7 @@ namespace OIV
     {
         // Fill in a buffer description.
         D3D11_BUFFER_DESC cbDesc;
-        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT>(sizeof(VS_CONSTANT_BUFFER), 16);
+        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT>(sizeof(CONSTANT_BUFFER_IMAGE_MAIN), 16);
         cbDesc.Usage = D3D11_USAGE_DYNAMIC;
         cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -124,10 +124,10 @@ namespace OIV
         InitData.SysMemPitch = 0;
         InitData.SysMemSlicePitch = 0;*/
 
-        fConstantBuffer = D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER>(new D3D11BufferBound<VS_CONSTANT_BUFFER>
+        fBufferImageMain = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_MAIN>(new D3D11BufferBound<CONSTANT_BUFFER_IMAGE_MAIN>
             (fDevice, cbDesc, nullptr));
 
-        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         buffer.exposure = 1.0;
         buffer.gamma = 1.0;
         buffer.offset = 0.0;
@@ -138,7 +138,7 @@ namespace OIV
     {
         // Fill in a buffer description.
         D3D11_BUFFER_DESC cbDesc;
-        cbDesc.ByteWidth = sizeof(VS_CONSTANT_BUFFER_SELECTIONRECT);
+        cbDesc.ByteWidth = sizeof(CONSTANT_BUFFER_SELECTION_RECT);
         cbDesc.Usage = D3D11_USAGE_DYNAMIC;
         cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -152,8 +152,8 @@ namespace OIV
         InitData.SysMemPitch = 0;
         InitData.SysMemSlicePitch = 0;*/
 
-        fBufferSelection = D3D11BufferBoundUniquePtr<VS_CONSTANT_BUFFER_SELECTIONRECT> (
-            new D3D11BufferBound<VS_CONSTANT_BUFFER_SELECTIONRECT>(fDevice, cbDesc, nullptr));
+        fBufferSelection = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> (
+            new D3D11BufferBound<CONSTANT_BUFFER_SELECTION_RECT>(fDevice, cbDesc, nullptr));
 
         // Mark cpu buffer as invalid selection rect.
         fBufferSelection->GetBuffer().uSelectionRect[0] = -1;
@@ -163,15 +163,15 @@ namespace OIV
     {
         // Fill in a buffer description.
         D3D11_BUFFER_DESC cbDesc;
-        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT> (sizeof(CONSTANT_BUFFER_IMAGE_SIMPLE), 16);
+        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT> (sizeof(CONSTANT_BUFFER_IMAGE_COMMON), 16);
         cbDesc.Usage = D3D11_USAGE_DYNAMIC;
         cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         cbDesc.MiscFlags = 0;
         cbDesc.StructureByteStride = 0;
         
-        fBufferSimple = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_SIMPLE>(
-         new D3D11BufferBound<CONSTANT_BUFFER_IMAGE_SIMPLE>(fDevice, cbDesc, nullptr));
+        fBufferImageCommon = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_COMMON>(
+         new D3D11BufferBound<CONSTANT_BUFFER_IMAGE_COMMON>(fDevice, cbDesc, nullptr));
        
     }
         
@@ -242,7 +242,7 @@ namespace OIV
     int D3D11Renderer::SetViewParams(const ViewParameters& viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
-        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         
         buffer.uShowGrid = viewParams.showGrid;
         fIsParamsDirty = true;
@@ -254,7 +254,7 @@ namespace OIV
     {
         if (fIsParamsDirty)
         {
-            fConstantBuffer->Update();
+            fBufferImageMain->Update();
             //fConstantBuffer->Write(sizeof(fShaderParameters), reinterpret_cast<const uint8_t*>(&fShaderParameters)
             //    , 0);
             fIsParamsDirty = false;
@@ -278,41 +278,28 @@ namespace OIV
             const OIV_CMD_ImageProperties_Request& props = entry.properties;
             //TODO: change to switch statement and unify constant buffres.
 
+            CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
+            gpuBuffer.uImageOffset[0] = props.position.x;
+            gpuBuffer.uImageOffset[1] = props.position.y;
+            gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
+            gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
+            gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
+            gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
+            gpuBuffer.uScale[0] = props.scale.x;
+            gpuBuffer.uScale[1] = props.scale.y;
+
+            fBufferImageCommon->Update();
+            fBufferImageCommon->Use(ShaderStage::SS_FragmentShader, 0);
+            
+
             switch (props.imageRenderMode)
             {
              case OIV_Image_Render_mode::IRM_Overlay:
-                 {
-                 CONSTANT_BUFFER_IMAGE_SIMPLE& gpuBuffer = fBufferSimple->GetBuffer();
-                 gpuBuffer.uImageOffset[0] = props.position.x;
-                 gpuBuffer.uImageOffset[1] = props.position.y;
-                 gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
-                 gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
-                 gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
-                 gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
-                 gpuBuffer.uScale[0] = props.scale.x;
-                 gpuBuffer.uScale[1] = props.scale.y;
-
-                 fBufferSimple->Update();
-                 fBufferSimple->Use(ShaderStage::SS_FragmentShader);
                  fImageSimpleFragmentShader->Use();
-                 }
                  break;
              case  OIV_Image_Render_mode::IRM_MainImage:
-                 {
-                 VS_CONSTANT_BUFFER& gpuBuffer = fConstantBuffer->GetBuffer();
-                 gpuBuffer.uImageOffset[0] = props.position.x;
-                 gpuBuffer.uImageOffset[1] = props.position.y;
-                 gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
-                 gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
-                 gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
-                 gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
-                 gpuBuffer.uScale[0] = props.scale.x;
-                 gpuBuffer.uScale[1] = props.scale.y;
-                 fConstantBuffer->Update();
-                 fConstantBuffer->Use(ShaderStage::SS_FragmentShader);
+                 fBufferImageMain->Use(ShaderStage::SS_FragmentShader,1);
                  fImageFragmentShader->Use();
-                 }
-
                  break;
              default:
                  throw std::logic_error("Unexpected value");
@@ -326,7 +313,7 @@ namespace OIV
         //Draw selection rect.
         if (fBufferSelection->GetBuffer().uSelectionRect[0] != -1)
         {
-            fBufferSelection->Use(ShaderStage::SS_FragmentShader);
+            fBufferSelection->Use(ShaderStage::SS_FragmentShader, 0);
             fSelectionFragmentShaer->Use();
             context->Draw(4, 0);
         }
@@ -365,7 +352,7 @@ namespace OIV
     int D3D11Renderer::SetselectionRect(const SelectionRect& selection_rect)
     {
         fSelectionRect = selection_rect;
-        VS_CONSTANT_BUFFER_SELECTIONRECT& buffer = fBufferSelection->GetBuffer();
+        CONSTANT_BUFFER_SELECTION_RECT& buffer = fBufferSelection->GetBuffer();
         
         buffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
         buffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
@@ -382,7 +369,7 @@ namespace OIV
 
     int D3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
     {
-        VS_CONSTANT_BUFFER& buffer = fConstantBuffer->GetBuffer();
+        CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         buffer.exposure = static_cast<float>(exposure.exposure);
         buffer.offset = static_cast<float>(exposure.offset);
         buffer.gamma = static_cast<float>(exposure.gamma);
