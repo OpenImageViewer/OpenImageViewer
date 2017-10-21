@@ -31,6 +31,7 @@ namespace OIV
             POINT GetMousePosition() const;
             const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
             bool IsUnderMouseCursor() const;
+            FullSceenState GetFullScreenState() const { return fFullSceenState; }
 
         public: // methods
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
