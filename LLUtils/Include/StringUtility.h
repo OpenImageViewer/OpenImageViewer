@@ -99,5 +99,14 @@ namespace LLUtils
             std::transform(localStr.begin(), localStr.end(), localStr.begin(), ::tolower);
             return localStr;
         }
+
+        template <class string_type>
+        static string_type ToUpper(const string_type& str)
+        {
+            using namespace std;
+            string_type localStr = str;
+            std::transform(localStr.begin(), localStr.end(), localStr.begin(), ::toupper);
+            return localStr;
+        }
     };
 }
