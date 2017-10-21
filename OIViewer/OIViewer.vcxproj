@@ -161,6 +161,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AutoScroll.cpp" />
+    <ClCompile Include="Keyboard\KeyCombination.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="UserSettings.cpp" />
@@ -172,10 +173,15 @@
   <ItemGroup>
     <ClInclude Include="AutoScroll.h" />
     <ClInclude Include="BuildConfig.h" />
+    <ClInclude Include="CommandManager.h" />
     <ClInclude Include="Helpers\OIVHelper.h" />
     <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="FullScreenState.h" />
     <ClInclude Include="Helpers\FileSystemHelper.h" />
+    <ClInclude Include="Keyboard\KeyBindings.h" />
+    <ClInclude Include="Keyboard\KeyCodeHelper.h" />
+    <ClInclude Include="Keyboard\KeyCombination.h" />
+    <ClInclude Include="Keyboard\KeyCode.h" />
     <ClInclude Include="OIVCommands.h" />
     <ClInclude Include="RecursiveDelayOp.h" />
     <ClInclude Include="resource.h" />

@@ -131,6 +131,7 @@ namespace OIV
         buffer.exposure = 1.0;
         buffer.gamma = 1.0;
         buffer.offset = 0.0;
+        buffer.saturation = 1.0;
     }
 
 
@@ -287,6 +288,7 @@ namespace OIV
             gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
             gpuBuffer.uScale[0] = props.scale.x;
             gpuBuffer.uScale[1] = props.scale.y;
+            gpuBuffer.opacity = props.opacity;
 
             fBufferImageCommon->Update();
             fBufferImageCommon->Use(ShaderStage::SS_FragmentShader, 0);
@@ -373,6 +375,8 @@ namespace OIV
         buffer.exposure = static_cast<float>(exposure.exposure);
         buffer.offset = static_cast<float>(exposure.offset);
         buffer.gamma = static_cast<float>(exposure.gamma);
+        buffer.saturation = static_cast<float>(exposure.saturation);
+        
         fIsParamsDirty = true;
         return 0;
         

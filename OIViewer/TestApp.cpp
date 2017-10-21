@@ -23,6 +23,8 @@
 #include "OIVCommands.h"
 #include <Rect.h>
 #include "Helpers/OIVHelper.h"
+#include "Keyboard/KeyCombination.h"
+#include "Keyboard/KeyBindings.h"
 
 namespace OIV
 {
@@ -32,6 +34,105 @@ namespace OIV
         return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
+    void TestApp::SetScreenState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace LLUtils;
+        using namespace std;
+        ListAString keyval = StringUtility::split(request.args, '=');
+
+        
+        if (keyval[0] == "type")
+        {
+            if (keyval[1] == "toggle") // Toggle fullscreen
+
+                fWindow.ToggleFullScreen(false);
+            else if (keyval[1] == "togglemulti") //Toggle multi fullscreen
+            {
+                fWindow.ToggleFullScreen(true);
+            }
+
+            switch (fWindow.GetFullScreenState())
+            {
+            case FSS_MultiScreen:
+                result.resValue = "Multi full screen";
+                break;
+            case FSS_SingleScreen:
+                result.resValue = "Full screen";
+                break;
+            case FSS_Windowed:
+                result.resValue = "Windowd";
+                break;
+            }
+        }
+    }
+
+    void TestApp::CMD_ToggleColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace LLUtils;
+        using namespace std;
+        ListAString keyval = StringUtility::split(request.args, '=');
+        
+        if (ToggleColorCorrection())
+            result.resValue = "Reset color correction to previous";
+        else
+
+            result.resValue = "Reset color correction to default";
+    }
+
+
+
+    void TestApp::ColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        std::string args = request.args;
+        using namespace LLUtils;
+        using namespace std;
+        ListAString props = StringUtility::split(args, ';');
+
+        string type;
+        string op;
+        string val;
+
+        for (const std::string& pair : props )
+        {
+            ListAString keyval = StringUtility::split(pair, '=');
+            const std::string& key = keyval[0];
+            const std::string& value = keyval[1];
+
+            if (key == "type")
+                type = value;
+            else if (key == "op")
+                op = value;
+            else if (key == "val")
+                val = value;
+        }
+
+        double newValue;
+
+        if (type == "gamma")
+            newValue = PerformColorOp(fColorExposure.gamma, op, val);
+        else if (type == "exposure")
+            newValue = PerformColorOp(fColorExposure.exposure, op, val);
+        else if (type == "offset")
+            newValue = PerformColorOp(fColorExposure.offset, op, val);
+        else if (type == "saturation")
+            newValue = PerformColorOp(fColorExposure.saturation, op, val);
+        else if (type == "contrast")
+            newValue = PerformColorOp(fColorExposure.contrast, op, val);
+            
+            std::stringstream ss;
+            
+            ss <<"<textcolor=#00ff00>"<< type << "<textcolor=#7672ff>" <<" " << op << " " << val;
+            
+            if (op == "increase" || op == "decrease")
+                ss << "%";
+        
+            
+        ss << "<textcolor=#00ff00> ("<< std::fixed << std::setprecision(2) << newValue * 100 << "%)";
+            result.resValue = ss.str();
+            UpdateExposure();
+        
+    }
+    
     TestApp::TestApp()
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
     {
@@ -42,6 +143,55 @@ namespace OIV
         fImageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
         fImageProperties.scale = 1.0;
         fImageProperties.opacity = 1.0;
+
+
+        fUserMessageOverlayProperties.imageHandle = ImageNullHandle;
+        fUserMessageOverlayProperties.position = { 20,20 };
+        fUserMessageOverlayProperties.filterType = OIV_Filter_type::FT_None;
+        fUserMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
+        fUserMessageOverlayProperties.scale = 1.0;
+        fUserMessageOverlayProperties.opacity = 1.0;
+
+
+      
+     }
+
+
+    void TestApp::AddCommandsAndKeyBindings()
+    {
+        struct CommandDesc
+        {
+            std::string description;
+            std::string command;
+            std::string arguments;
+            std::string keybindings;
+        };
+
+        std::vector<CommandDesc> commandDescription
+        {
+            { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
+            ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+            ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
+            ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
+            ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
+            ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
+            ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
+            ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
+            ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
+            ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
+            ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
+        };
+
+        using namespace std;
+        using namespace placeholders;
+
+        fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::ColorCorrection, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_screen_state", std::bind(&TestApp::SetScreenState, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
+
+        for (const CommandDesc& desc : commandDescription)
+            fKeyBindings.AddBinding(KeyCombination::FromString(desc.keybindings)
+                , { desc.description, desc.command,desc.arguments });
     }
 
 
@@ -346,12 +496,28 @@ namespace OIV
         if (fOpenedImage.source ==  IS_File)
             LoadFileInFolder(fOpenedImage.fileName);
 
+        AddCommandsAndKeyBindings();
+
     }
 
     void TestApp::Destroy()
     {
         // Destroy OIV when window is closed.
         ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
+    }
+
+    double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
+    {
+        double value = std::atof(val.c_str());
+        if (op == "increase")
+            gamma *= (1 + value / 100.0);
+        else if (op == "decrease")
+            gamma *= 1 / (1 + value / 100.0);
+        else if (op == "add")
+            gamma += value;
+        else if (op == "subtract")
+            gamma -=  value;
+        return gamma;
     }
 
     OIV_Filter_type TestApp::GetFilterType() const
@@ -365,21 +531,23 @@ namespace OIV
         fRefreshOperation.Queue();
     }
 
-    void TestApp::ToggleColorCorrection()
+    bool TestApp::ToggleColorCorrection()
     {
+        bool isDefault = true;
         OIV_CMD_ColorExposure_Request exposure = fLastColorExposure;
-        if (fColorExposure.exposure == 1.0 
-            && fColorExposure.gamma == 1.0
-            && fColorExposure.offset == 0.0)
+        if (memcmp(&fColorExposure, &DefaultColorCorrection,sizeof(OIV_CMD_ColorExposure_Request)) == 0)
         {
             std::swap(fLastColorExposure, fColorExposure);
         }
         else
         {
+            isDefault = false;
             std::swap(fLastColorExposure, fColorExposure);
-            fColorExposure = { 1.0,0.0,1.0 };
+            fColorExposure = DefaultColorCorrection;
         }
         UpdateExposure();
+
+        return isDefault;
     }
 
     void TestApp::Run()
@@ -495,6 +663,13 @@ namespace OIV
 
     void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
+        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam));
+
+
+        if (bindings.command.empty() == false
+            && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
+                return; // return if operation has been handled.
+        
         bool IsAlt =  (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
         bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
         bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
@@ -523,10 +698,6 @@ namespace OIV
                 else
                     CopyVisibleToClipBoard();
             }
-            else if (IsAlt == true)
-            {
-                ToggleColorCorrection();
-            }
             else
                 CropVisibleImage();
             break;
@@ -546,20 +717,11 @@ namespace OIV
             TransformImage(AAT_Rotate90CW);
             
             break;
-        case 'Q':
+        
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;
-        case 'F':
-            ToggleFullScreen();
-            break;
         case VK_NEXT:
-            if (IsAlt)
-            {
-                fColorExposure.gamma /= 1.05;
-                UpdateExposure();
-            }
-            else
                 JumpFiles(1);
             break;
 
@@ -572,31 +734,13 @@ namespace OIV
             JumpFiles(-1);
             break;
         case VK_PRIOR:
-            if (IsAlt)
-            {
-                fColorExposure.gamma *= 1.05;
-                UpdateExposure();
-            }
-            else
                 JumpFiles(1);
             break;
         case VK_HOME:
-            if (IsAlt)
-            {
-                fColorExposure.offset += 0.02;
-                UpdateExposure();
-            }
-            else
-                JumpFiles(std::numeric_limits<int>::min());
+            JumpFiles(std::numeric_limits<int>::min());
             break;
         case VK_END:
-            if (IsAlt)
-            {
-                fColorExposure.offset -= 0.02;
-                UpdateExposure();
-            }
-            else
-                JumpFiles(std::numeric_limits<int>::max());
+            JumpFiles(std::numeric_limits<int>::max());
             break;
         case VK_SPACE:
             ToggleSlideShow();
@@ -637,21 +781,9 @@ namespace OIV
         case VK_DIVIDE:
             FitToClientAreaAndCenter();
             break;
-        case VK_INSERT:
-            if (IsAlt)
-            {
-                fColorExposure.exposure *= 1.05;
-                UpdateExposure();
-            }
-            break;;
         case VK_DELETE:
-            if (IsAlt)
-            {
-                fColorExposure.exposure /= 1.05;
-                UpdateExposure();
-            }
-            else
-                DeleteOpenedFile(IsShift);
+         
+             DeleteOpenedFile(IsShift);
             break;
         case 'G':
             ToggleGrid();
@@ -1131,7 +1263,10 @@ namespace OIV
 
         case WM_TIMER:
             if (uMsg.wParam == cTimerID)
+            
                 JumpFiles(1);
+            else if (uMsg.wParam == cTimerIDHideUserMessage)
+                HideUserMessage();
         break;
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
             FinalizeImageLoadThreadSafe(static_cast<ResultCode>( evnt->message.wParam));
@@ -1284,6 +1419,51 @@ namespace OIV
         if (rawInputEvent != nullptr)
             HandleRawInputMouse(rawInputEvent);
 
+        return false;
+    }
+
+    void TestApp::SetUserMessage(const std::string& message)
+    {
+        OIV_CMD_CreateText_Request request;
+        OIV_CMD_CreateText_Response response;
+        
+        std::wstring wmsg = L"<textcolor=#ff8930>";
+        wmsg += LLUtils::StringUtility::ToWString(message);
+        
+        request.text = const_cast<wchar_t*>( wmsg.c_str());
+        request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        request.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
+        request.fontSize = 26;
+
+        if (ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
+        {
+            fUserMessageOverlayProperties.imageHandle = response.imageHandle;
+            fUserMessageOverlayProperties.opacity = 1.0;
+            if (ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull()) == RC_Success)
+            {
+                fRefreshOperation.Queue();
+                SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, fDelayRemoveMessage, nullptr);
+            }
+        }
+    }
+
+    void TestApp::HideUserMessage()
+    {
+        KillTimer(fWindow.GetHandle(), cTimerIDHideUserMessage);
+        fUserMessageOverlayProperties.opacity = 0;
+        ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull());
+        fRefreshOperation.Queue();
+    }
+
+    bool TestApp::ExecuteUserCommand(const CommandManager::CommandRequest& request)
+    {
+        CommandManager::CommandResult res;
+        if (fCommandManager.ExecuteCommand(request, res))
+        {
+            SetUserMessage(res.resValue);
+            return true;
+        }
         return false;
     }
 }
