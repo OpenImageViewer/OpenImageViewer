@@ -255,7 +255,21 @@ namespace OIV
 
     ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
     {
-        return RC_NotImplemented;
+        
+
+        std::string text = LLUtils::StringUtility::ToAString(request.text);
+        std::string fontPath = LLUtils::StringUtility::ToAString(request.fontPath);
+
+
+        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(
+            text,
+            fontPath,
+            request.fontSize,
+            request.backgroundColor);
+
+        response.imageHandle = 1;
+        fRenderer->SetImageBuffer(response.imageHandle, imageText);
+        return RC_Success;
     }
 
     ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)

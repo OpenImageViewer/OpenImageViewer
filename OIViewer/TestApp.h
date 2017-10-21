@@ -11,6 +11,8 @@
 #include <Rect.h>
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
+#include "CommandManager.h"
+#include "Keyboard/KeyBindings.h"
 
 namespace OIV
 {
@@ -26,24 +28,33 @@ namespace OIV
     {
     public:
         TestApp();
-        
+
         ~TestApp();
         void Init(std::wstring filePath);
         void Run();
         void Destroy();
-   
+
     private: //methods
 #pragma region Win32 event handling
         void handleKeyInput(const Win32::EventWinMessage* evnt);
+        void HideUserMessage();
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
 #pragma endregion Win32 event handling
-        
+        void AddCommandsAndKeyBindings();
+        void SetUserMessage(const std::string& message);
+        bool ExecuteUserCommand(const CommandManager::CommandRequest&);
         void PostInitOperations();
         template<class T, class U>
         ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
+#pragma region Commands
+        void SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
+        void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
+        void ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
+        double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
+#pragma endregion //Commands
         void OnRefresh();
         HWND GetWindowHandle() const;
         void UpdateTitle();
@@ -92,7 +103,7 @@ namespace OIV
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
         void UpdateExposure();
-        void ToggleColorCorrection(); 
+        bool ToggleColorCorrection(); 
         
 
     private: // member fields
@@ -108,7 +119,9 @@ namespace OIV
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
-        int cTimerID = 1500;
+        const int cTimerID = 1500;
+        const int cTimerIDHideUserMessage = 1600;
+        uint32_t fDelayRemoveMessage = 2000;
         LLUtils::ListWString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
@@ -117,12 +130,23 @@ namespace OIV
         bool fUseRainbowNormalization = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
-        OIV_CMD_ColorExposure_Request fColorExposure = { 1.0, 0.0, 1.0 };
+        const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
+        OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
+        
         OIV_CMD_QueryImageInfo_Response fVisibleFileInfo = {};
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
         OIV_CMD_ImageProperties_Request fImageProperties;
+        OIV_CMD_ImageProperties_Request fUserMessageOverlayProperties;
+        CommandManager fCommandManager;
+        struct BindingElement
+        {
+            std::string commandDescription;
+            std::string command;
+            std::string arguments;
+        };
+        KeyBindings<BindingElement> fKeyBindings;
     };
 }

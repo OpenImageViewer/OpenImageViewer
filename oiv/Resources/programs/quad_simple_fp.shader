@@ -2,6 +2,7 @@ uniform float2 uViewportSize;
 uniform float2 uImageSize;
 uniform float2 uImageOffset;
 uniform float2 uScale;
+float  uOpacity;
 
 uniform Texture2D    tex1;
 uniform SamplerState samplerState;
@@ -29,15 +30,18 @@ float4 GetFinalTexel(float2 i_inputUV)
 	float2 offset= uImageOffset.xy / uViewportSize.xy / uvScale;
 	float2 uvFixed = i_inputUV / uvScale  - offset;
 	
+	float4 finalTexelColor;
+	
 	if (   uvFixed.x >= 0  
 		&& uvFixed.x <= 1 
 		&& uvFixed.y >= 0 
 		&& uvFixed.y <= 1)
-        return tex1.Sample(samplerState, uvFixed);
+        finalTexelColor = tex1.Sample(samplerState, uvFixed);
     else
-        return float4(0, 0, 0, 0);
-
-
+        finalTexelColor = float4(0, 0, 0, 0);
+		
+		finalTexelColor.a *= uOpacity;
+		return finalTexelColor;
 }
 void main(in ShaderIn input, out ShaderOut output)
 {

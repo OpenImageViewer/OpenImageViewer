@@ -18,6 +18,7 @@
 #include "Handlers/CommandHandlerTexelInfo.h"
 #include "Handlers/CommandHandlerQueryImageInfo.h"
 #include "Handlers/CommandHandlerImageProperties.h"
+#include "Handlers/CommandHandlerCreateText.h"
 
 
 namespace OIV
@@ -45,6 +46,7 @@ namespace OIV
             , make_pair(OIV_CMD_ColorExposure,new CommandHandlerColorExposure())
             , make_pair(OIV_CMD_TexelInfo,new CommandHandlerTexelInfo())
             , make_pair(OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo())
+            , make_pair(OIV_CMD_CreateText,new CommandHandlerCreateText())
         };
     }
 

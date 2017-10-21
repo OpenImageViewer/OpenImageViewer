@@ -30,14 +30,16 @@ cbuffer BaseImageData : register(b0)
 	float2 uImageSize;
 	float2 uImageOffset;
 	float2 uScale;
+	float  uOpacity;
 };
 
 cbuffer MainImageData : register(b1) 
 {
-	int uShowGrid;
+	int   uShowGrid;
 	float uExposure;
 	float uOffset;
 	float uGamma;
+	float uSaturation;
 };
 
 uniform SAMPLER2D texture_1;
@@ -135,8 +137,7 @@ void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texe
 {
     float4 sampledTexel = SampleTexture(texture_1,uv);
     sampledTexel.xyz =  pow(sampledTexel.xyz * uExposure  + uOffset, 1 / uGamma);
-    //TODO: Add parameter for saturation
-    //sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
+    sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
 	
     float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);

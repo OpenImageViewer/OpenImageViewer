@@ -7,7 +7,7 @@
 namespace OIV
 {
 
-    class CommandHandlerCropImage : public CommandHandler
+    class CommandHandlerCreateText : public CommandHandler
     {
     protected:
         ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override

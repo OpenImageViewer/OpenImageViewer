@@ -181,6 +181,8 @@ extern "C"
         double exposure;
         double offset;
         double gamma;
+        double saturation;
+        double contrast;
     };
 
     struct OIV_CMD_CropImage_Request
@@ -195,20 +197,12 @@ extern "C"
     };
 
 
-    struct OIV_Prop_text
-    {
-        LLUtils::PointI32 position;
-        double scale;
-        double opacity;
-    };
-
     struct OIV_CMD_CreateText_Request
     {
         OIVCHAR* text;
         OIVCHAR* fontPath;
         uint16_t fontSize;
         LLUtils::Color backgroundColor;
-        OIV_Prop_text textProperties;
     };
 
     

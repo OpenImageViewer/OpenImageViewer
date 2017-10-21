@@ -40,18 +40,17 @@ FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const std::string& fo
         const string& value = trimmedList[1];
         if (key == "textcolor")
         {
-            ss << std::hex << value;
-            ss >> result.color;
+            Color c = Color::FromString(value);
+            result.color = c.colorValue;
         }
         else if (key == "backgroundcolor")
         {
-            ss << std::hex << value;
-            ss >> result.backgroundColor;
+            Color c = Color::FromString(value);
+            result.backgroundColor = c.colorValue;
         }
         else if (key == "textSize")
         {
-            ss << std::hex << value;
-            ss >> result.size;
+            result.size = std::atoi(value.c_str());
         }
     }
 
@@ -110,7 +109,7 @@ std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormatt
         int i = text.length() - 1;
         string tagContents = text.substr(beginTag, endTag - beginTag + 1);
 
-        string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
+        string textInsideTag = text.substr(endTag + 1, i - endTag );
         beginTag = i;
         endTag = -1;
 
@@ -279,7 +278,11 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
             //Blend source bitmap with the new RGBA bitmap
             for (int i = 0; i < bitmap.rows * bitmap.width; i++)
             {
-                LLUtils::Color source(bitmap.buffer[i] << 24 | el.color);
+                //Make the text overlay color transparent for text blending.
+                LLUtils::Color textOverlayColor = el.color;
+                textOverlayColor.A = 0;
+
+                LLUtils::Color source(bitmap.buffer[i] << 24 | textOverlayColor.colorValue);
                 RGBABitmapPtr[i] = LLUtils::Color(RGBABitmapPtr[i]).Blend(source).colorValue;
             }
 

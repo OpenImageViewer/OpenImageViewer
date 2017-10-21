@@ -24,6 +24,7 @@ namespace OIV
         float uImageSize[2];
         float uImageOffset[2];
         float uScale[2];
+        float opacity;
     };
 
     struct CONSTANT_BUFFER_IMAGE_MAIN
@@ -32,6 +33,7 @@ namespace OIV
         float exposure;
         float offset;
         float gamma;
+        float saturation;
     };
 #pragma pack()
 
