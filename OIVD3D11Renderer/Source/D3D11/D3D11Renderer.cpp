@@ -399,7 +399,7 @@ namespace OIV
 
     int D3D11Renderer::RemoveImage(uint32_t id)
     {
-        //TODO: implement
+        fImageEntries.erase(id);
         return 0;
     }
 }
