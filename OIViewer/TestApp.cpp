@@ -75,7 +75,6 @@ namespace OIV
         if (ToggleColorCorrection())
             result.resValue = "Reset color correction to previous";
         else
-
             result.resValue = "Reset color correction to default";
     }
 
@@ -194,12 +193,6 @@ namespace OIV
                 , { desc.description, desc.command,desc.arguments });
     }
 
-
-    TestApp::~TestApp()
-    {
-        
-    }
-    
     void TestApp::OnRefresh()
     {
         OIVCommands::Refresh();
@@ -497,7 +490,6 @@ namespace OIV
             LoadFileInFolder(fOpenedImage.fileName);
 
         AddCommandsAndKeyBindings();
-
     }
 
     void TestApp::Destroy()
@@ -661,15 +653,16 @@ namespace OIV
         
     }
 
-    void TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
+    bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
         const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam));
 
 
         if (bindings.command.empty() == false
             && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
-                return; // return if operation has been handled.
+                return true; // return if operation has been handled.
         
+        bool handled = true;
         bool IsAlt =  (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
         bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
         bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
@@ -793,6 +786,8 @@ namespace OIV
             std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
             ShellExecute(nullptr, L"open", command.c_str(),  fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
         }
+        default:
+            handled = false;
         break;
 
         }
@@ -1253,6 +1248,8 @@ namespace OIV
 
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
+        bool handled = false;
+
         const MSG& uMsg = evnt->message;
         switch (uMsg.message)
         {
@@ -1278,7 +1275,7 @@ namespace OIV
 
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
-            handleKeyInput(evnt);
+            handled = handleKeyInput(evnt);
             break;
 
         case WM_MOUSEMOVE:
@@ -1286,7 +1283,8 @@ namespace OIV
             break;
         break;
         }
-        return true;
+
+        return handled;
     }
     
 
@@ -1296,7 +1294,7 @@ namespace OIV
         {
             LoadFileInFolder(event_ddrag_drop_file->fileName);
         }
-        return true;
+        return false;
         
     }
 

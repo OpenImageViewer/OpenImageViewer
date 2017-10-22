@@ -255,8 +255,6 @@ namespace OIV
 
     ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
     {
-        
-
         std::string text = LLUtils::StringUtility::ToAString(request.text);
         std::string fontPath = LLUtils::StringUtility::ToAString(request.fontPath);
 

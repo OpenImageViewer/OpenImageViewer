@@ -61,7 +61,7 @@ namespace OIV
             void SetFullScreen(bool multiMonitor);
             LRESULT ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             void ResizeStatusBar();
-            void RaiseEvent(const Event& evnt);
+            bool RaiseEvent(const Event& evnt);
 
         private: // member fields
 
