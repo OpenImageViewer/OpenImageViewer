@@ -14,7 +14,7 @@ namespace OIV
     class ImageDescriptor
     {
     public:
-        ImageHandle imageHandle = ImageNullHandle;
+        ImageHandle imageHandle = ImageHandleNull;
         ImageSource source = IS_None;
         std::wstring fileName;
         uint32_t width = 0;

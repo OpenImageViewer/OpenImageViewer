@@ -41,7 +41,7 @@ namespace OIV
             return pair.first->first;
         }
 
-        return ImageNullHandle;
+        return ImageHandleNull;
     }
 
     bool ImageManager::RemoveImage(ImageHandle handle)
@@ -59,7 +59,7 @@ namespace OIV
     IMCodec::ImageSharedPtr ImageManager::GetImage(ImageHandle handle) const
     {
         IMCodec::ImageSharedPtr image = nullptr;
-        if (handle != ImageNullHandle)
+        if (handle != ImageHandleNull)
         {
             auto it = fMapHandleToImage.find(handle);
             if (it != fMapHandleToImage.end())

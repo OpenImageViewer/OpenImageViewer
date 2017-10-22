@@ -25,7 +25,7 @@ extern "C"
 
 
     typedef int16_t ImageHandle;
-    const ImageHandle ImageNullHandle = -1;
+    const ImageHandle ImageHandleNull = -1;
     const ImageHandle ImageHandleDisplayed = 0;
 
 

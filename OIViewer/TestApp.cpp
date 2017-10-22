@@ -231,7 +231,7 @@ namespace OIV
         fImageProperties.opacity = 1.0;
 
 
-        fUserMessageOverlayProperties.imageHandle = ImageNullHandle;
+        fUserMessageOverlayProperties.imageHandle = ImageHandleNull;
         fUserMessageOverlayProperties.position = { 20,20 };
         fUserMessageOverlayProperties.filterType = OIV_Filter_type::FT_None;
         fUserMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
@@ -312,7 +312,7 @@ namespace OIV
 
     void TestApp::DisplayImage(ImageDescriptor& descriptor , bool resetScrollState) 
     {
-        if (descriptor.imageHandle != ImageNullHandle)
+        if (descriptor.imageHandle != ImageHandleNull)
         {
             LLUtils::StopWatch stopWatch(true);
 
@@ -1233,7 +1233,7 @@ namespace OIV
                 ImageHandle handle;
                 ~unloadImage()
                 {
-                    if (handle != ImageNullHandle)
+                    if (handle != ImageHandleNull)
                         OIVCommands::UnloadImage(handle);
 
                 }
@@ -1514,7 +1514,7 @@ namespace OIV
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
         request.fontSize = 26;
 
-        if (fUserMessageOverlayProperties.imageHandle != ImageNullHandle)
+        if (fUserMessageOverlayProperties.imageHandle != ImageHandleNull)
             OIVCommands::UnloadImage(fUserMessageOverlayProperties.imageHandle);
         
 
