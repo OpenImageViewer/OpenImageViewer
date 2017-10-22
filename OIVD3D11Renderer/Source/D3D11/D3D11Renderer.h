@@ -87,6 +87,7 @@ namespace OIV
         SelectionRect fSelectionRect;
         using MapImageEntry = std::map<uint16_t,ImageEntry>;
         MapImageEntry fImageEntries;
+        LLUtils::Color fBackgroundColor = { 64,64,64,255 };
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport = {0};
