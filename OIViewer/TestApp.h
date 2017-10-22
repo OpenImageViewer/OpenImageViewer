@@ -120,8 +120,8 @@ namespace OIV
         std::mutex fMutexWindowCreation;
         LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
         const int cTimerID = 1500;
-        const int cTimerIDHideUserMessage = 1600;
-        uint32_t fDelayRemoveMessage = 2000;
+        const int cTimerIDHideUserMessage = 1000;
+        uint32_t fDelayRemoveMessage = 1000;
         LLUtils::ListWString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
