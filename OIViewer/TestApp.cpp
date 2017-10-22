@@ -107,7 +107,7 @@ namespace OIV
         wmsg += LLUtils::StringUtility::ToWString(message);
 
         requestText.text = const_cast<wchar_t*>(wmsg.c_str());
-        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216);
         requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
         requestText.fontSize = 22;
 
@@ -406,6 +406,8 @@ namespace OIV
             DisplayImage(fImageBeingOpened,true);
             SetOpenImage(fImageBeingOpened);
             FitToClientAreaAndCenter();
+            UnloadWelcomeMessage();
+            
             //Don't refresh on initial file, wait for WM_SIZE
             fRefreshOperation.End(!fIsInitialLoad);
             
@@ -588,8 +590,10 @@ namespace OIV
         fSettings.Load();
 
         //If a file has been succesfuly loaded, index all the file in the folder
-        if (fOpenedImage.source ==  IS_File)
+        if (fOpenedImage.source == IS_File)
             LoadFileInFolder(fOpenedImage.fileName);
+        else
+            ShowWelcomeMessage();
 
         AddCommandsAndKeyBindings();
     }
@@ -1569,5 +1573,68 @@ namespace OIV
             return true;
         }
         return false;
+    }
+
+    void TestApp::ShowWelcomeMessage()
+    {
+        using namespace std;
+        
+        string message = "<textcolor=#4a80e2>Welcome to <textcolor=#dd0f1d>OIV\n"\
+                         "<textcolor=#25bc25>Drag <textcolor=#4a80e2>here an image to start\n"\
+                         "Press <textcolor=#25bc25>F1<textcolor=#4a80e2> to show key bindings";
+        
+
+        OIV_CMD_CreateText_Request requestText;
+        OIV_CMD_CreateText_Response responseText;
+
+        
+        std::wstring wmsg; ;
+        wmsg += LLUtils::StringUtility::ToWString(message);
+
+        requestText.text = const_cast<wchar_t*>(wmsg.c_str());
+        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 0);
+        requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        requestText.fontSize = 72;
+
+        
+
+        if (ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
+        {
+            OIV_CMD_QueryImageInfo_Request loadRequest;
+            OIV_CMD_QueryImageInfo_Response textImageInfo;
+            loadRequest.handle = responseText.imageHandle;
+            ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &textImageInfo);
+            
+            using namespace LLUtils;
+            PointI32 clientSize = fWindow.GetClientSize();
+            PointI32 center = (clientSize - PointI32(textImageInfo.width, textImageInfo.height)) / 2;
+            
+            
+            
+
+            fWelcomeMessageHandle = responseText.imageHandle;
+            OIV_CMD_ImageProperties_Request imageProperties;
+            imageProperties.position = static_cast<PointF64>( center);
+            imageProperties.filterType = OIV_Filter_type::FT_None;
+            imageProperties.imageHandle = responseText.imageHandle;
+            imageProperties.imageRenderMode = IRM_Overlay;
+            imageProperties.scale = 1.0;
+            imageProperties.opacity = 1.0;
+
+            if (ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
+            {
+                fRefreshOperation.Queue();
+            }
+        }
+    }
+
+    void TestApp::UnloadWelcomeMessage()
+    {
+        if (fWelcomeMessageHandle != ImageHandleNull)
+        {
+            OIVCommands::UnloadImage(fWelcomeMessageHandle);
+            fRefreshOperation.Queue();
+            fWelcomeMessageHandle = ImageHandleNull;
+        }
     }
 }

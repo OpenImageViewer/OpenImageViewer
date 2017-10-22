@@ -88,6 +88,8 @@ namespace OIV
         void OnScroll(const LLUtils::PointF64& panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
         void SetOpenImage(const ImageDescriptor& image_descriptor);
+        void UnloadWelcomeMessage();
+        void ShowWelcomeMessage();
         void FinalizeImageLoad(ResultCode result);
         void FinalizeImageLoadThreadSafe(ResultCode result);
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
@@ -142,6 +144,8 @@ namespace OIV
         OIV_CMD_ImageProperties_Request fUserMessageOverlayProperties;
         CommandManager fCommandManager;
         ImageHandle fKeybindingsHandle = ImageHandleNull;
+        ImageHandle fWelcomeMessageHandle = ImageHandleNull;
+
         struct BindingElement
         {
             std::string commandDescription;
