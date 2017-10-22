@@ -49,6 +49,8 @@ namespace OIV
         ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 #pragma region Commands
         void SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
+        void CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request,
+                                   CommandManager::CommandResult& result);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
         void ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
         double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
@@ -146,5 +148,14 @@ namespace OIV
             std::string arguments;
         };
         KeyBindings<BindingElement> fKeyBindings;
+
+        struct CommandDesc
+        {
+            std::string description;
+            std::string command;
+            std::string arguments;
+            std::string keybindings;
+        };
+        std::vector<CommandDesc> fCommandDescription;
     };
 }

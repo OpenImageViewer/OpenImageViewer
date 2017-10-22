@@ -265,7 +265,9 @@ namespace OIV
             request.fontSize,
             request.backgroundColor);
 
-        response.imageHandle = 1;
+        ImageHandle handle = fImageManager.AddImage(imageText);
+
+        response.imageHandle = handle;
         fRenderer->SetImageBuffer(response.imageHandle, imageText);
         return RC_Success;
     }
@@ -386,7 +388,11 @@ namespace OIV
 
     ResultCode OIV::UnloadFile(const ImageHandle handle)
     {
-        return fImageManager.RemoveImage(handle) == true ? RC_Success : RC_FileNotFound;
+        ResultCode result = RC_Success;
+        fImageManager.RemoveImage(handle);
+        fRenderer->RemoveImage(handle);
+
+        return result;
     }
 
     int OIV::Init()

@@ -66,6 +66,62 @@ namespace OIV
         }
     }
 
+    void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        stringstream ss;
+        size_t maxLength = 0;
+        for (const CommandDesc& desc : fCommandDescription)
+            maxLength = std::max(maxLength, desc.description.length());
+
+        for (const CommandDesc& desc : fCommandDescription)
+        {
+            ss << desc.description;
+
+            size_t currentLength = desc.description.length();
+            while (currentLength++ < maxLength)
+                ss << " ";
+
+            ss << " - " << desc.keybindings << "\n";
+
+        }
+
+        std::string message = ss.str();
+        if (message[message.size() - 1] == '\n')
+            message.erase(message.size() - 1);
+
+
+
+        OIV_CMD_CreateText_Request requestText;
+        OIV_CMD_CreateText_Response responseText;
+
+        std::wstring wmsg = L"<textcolor=#ff8930>";
+        wmsg += LLUtils::StringUtility::ToWString(message);
+
+        requestText.text = const_cast<wchar_t*>(wmsg.c_str());
+        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        requestText.fontSize = 22;
+
+        if (ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
+        {
+            OIV_CMD_ImageProperties_Request imageProperties;
+            imageProperties.position = { 20,20 };
+            imageProperties.filterType = OIV_Filter_type::FT_None;
+            imageProperties.imageHandle = responseText.imageHandle;
+            imageProperties.imageRenderMode = IRM_Overlay;
+            imageProperties.scale = 1.0;
+            imageProperties.opacity = 1.0;
+ 
+            if (ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
+            {
+                fRefreshOperation.Queue();
+            }
+        }
+        
+    }
+    
+
     void TestApp::CMD_ToggleColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
@@ -158,37 +214,37 @@ namespace OIV
 
     void TestApp::AddCommandsAndKeyBindings()
     {
-        struct CommandDesc
+   
+        if (fCommandDescription.empty())
         {
-            std::string description;
-            std::string command;
-            std::string arguments;
-            std::string keybindings;
-        };
+            std::vector<CommandDesc> localDesc
+  
+            {
+                { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
+                ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+                ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
+                ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
+                ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
+                ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
+                ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
+                ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
+                ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
+                ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
+                ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
+                ,{ "Toggle key bindings","cmd_toggle_keybindings","" ,"F1" }
+            };
 
-        std::vector<CommandDesc> commandDescription
-        {
-            { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
-            ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
-            ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
-            ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
-            ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
-            ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
-            ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
-            ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
-            ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
-            ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
-            ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
-        };
-
+            fCommandDescription = localDesc;
+        }
         using namespace std;
         using namespace placeholders;
 
         fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::ColorCorrection, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_screen_state", std::bind(&TestApp::SetScreenState, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
 
-        for (const CommandDesc& desc : commandDescription)
+        for (const CommandDesc& desc : fCommandDescription)
             fKeyBindings.AddBinding(KeyCombination::FromString(desc.keybindings)
                 , { desc.description, desc.command,desc.arguments });
     }
@@ -1434,6 +1490,10 @@ namespace OIV
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
         request.fontSize = 26;
 
+        if (fUserMessageOverlayProperties.imageHandle != ImageNullHandle)
+            OIVCommands::UnloadImage(fUserMessageOverlayProperties.imageHandle);
+        
+
         if (ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
         {
             fUserMessageOverlayProperties.imageHandle = response.imageHandle;
@@ -1459,7 +1519,8 @@ namespace OIV
         CommandManager::CommandResult res;
         if (fCommandManager.ExecuteCommand(request, res))
         {
-            SetUserMessage(res.resValue);
+            if (res.resValue.empty() == false)
+                SetUserMessage(res.resValue);
             return true;
         }
         return false;
