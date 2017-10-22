@@ -578,10 +578,13 @@ namespace OIV
             LocalFree(hloc);
         }
 
-        void Win32WIndow::RaiseEvent(const Event& evnt)
+        bool Win32WIndow::RaiseEvent(const Event& evnt)
         {
+            bool handled = false;
             for (auto callback : fListeners)
-                bool result = callback(&evnt);
+                handled |= callback(&evnt);
+
+            return handled;
         }
 
         SIZE Win32WIndow::GetClientSize() const

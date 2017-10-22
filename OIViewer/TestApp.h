@@ -28,15 +28,13 @@ namespace OIV
     {
     public:
         TestApp();
-
-        ~TestApp();
         void Init(std::wstring filePath);
         void Run();
         void Destroy();
 
     private: //methods
 #pragma region Win32 event handling
-        void handleKeyInput(const Win32::EventWinMessage* evnt);
+        bool handleKeyInput(const Win32::EventWinMessage* evnt);
         void HideUserMessage();
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
