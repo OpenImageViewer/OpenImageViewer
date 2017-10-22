@@ -34,7 +34,7 @@ namespace OIV
         return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
-    void TestApp::SetScreenState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_SetScreenState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -120,7 +120,38 @@ namespace OIV
         }
         
     }
-    
+
+    void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
+    {
+        std::string args = request.args;
+        using namespace LLUtils;
+        using namespace std;
+        ListAString keyval = StringUtility::split(request.args, '=');
+
+        OIV_AxisAlignedRTransform transform = OIV_AxisAlignedRTransform::AAT_None;
+
+        
+
+        if (keyval[0] == "type")
+        {
+            if (false);
+            else if (keyval[1] == "hflip")
+                transform = AAT_FlipHorizontal;
+            else if (keyval[1] == "vflip")
+                transform = AAT_FlipVertical;
+            else if (keyval[1] == "rotatecw")
+                transform = AAT_Rotate90CW;
+            else if (keyval[1] == "rotateccw")
+                transform = AAT_Rotate90CCW;
+        }
+        if (transform != OIV_AxisAlignedRTransform::AAT_None)
+        {
+            TransformImage(transform);
+            response.resValue = request.description;
+        }
+       
+    }
+
 
     void TestApp::CMD_ToggleColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
@@ -136,7 +167,7 @@ namespace OIV
 
 
 
-    void TestApp::ColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_ColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         std::string args = request.args;
         using namespace LLUtils;
@@ -214,35 +245,41 @@ namespace OIV
 
     void TestApp::AddCommandsAndKeyBindings()
     {
-   
-        if (fCommandDescription.empty())
-        {
-            std::vector<CommandDesc> localDesc
-  
-            {
-                { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
-                ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
-                ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
-                ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
-                ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
-                ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
-                ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
-                ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
-                ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
-                ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
-                ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
-                ,{ "Toggle key bindings","cmd_toggle_keybindings","" ,"F1" }
-            };
 
-            fCommandDescription = localDesc;
-        }
+
+        std::vector<CommandDesc> localDesc
+
+        {
+            { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
+            ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+            ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
+            ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
+            ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
+            ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
+            ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
+            ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
+            ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
+            ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
+            ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
+            ,{ "Toggle key bindings","cmd_toggle_keybindings","" ,"F1" }
+            ,{ "Horizontal flip","cmd_axis_aligned_transform","type=hflip" ,"H" }
+            ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
+            ,{ "Rotate clockwise","cmd_axis_aligned_transform","type=rotatecw" ,"RBracket" }
+            ,{ "Rotate counter clockwise","cmd_axis_aligned_transform","type=rotateccw" ,"LBracket" }
+
+        };
+
+        fCommandDescription = localDesc;
+
         using namespace std;
         using namespace placeholders;
-
-        fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::ColorCorrection, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_screen_state", std::bind(&TestApp::SetScreenState, this, _1, _2)));
+        
+        fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::CMD_ColorCorrection, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_screen_state", std::bind(&TestApp::CMD_SetScreenState, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
+
 
         for (const CommandDesc& desc : fCommandDescription)
             fKeyBindings.AddBinding(KeyCombination::FromString(desc.keybindings)
@@ -753,20 +790,7 @@ namespace OIV
         case 'V':
             if (IsControl == true)
                 PasteFromClipBoard();
-            else
-                TransformImage(AAT_FlipVertical);
-            break;
-        case 'H':
-            TransformImage(AAT_FlipHorizontal);
                 break;
-        case VK_OEM_4: // '['
-            TransformImage(AAT_Rotate90CCW);
-            break;
-        case VK_OEM_6: // ']'
-            TransformImage(AAT_Rotate90CW);
-            
-            break;
-        
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;

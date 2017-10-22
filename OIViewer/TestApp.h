@@ -48,11 +48,11 @@ namespace OIV
         template<class T, class U>
         ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 #pragma region Commands
-        void SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
-        void CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request,
-                                   CommandManager::CommandResult& result);
+        void CMD_SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_ToggleKeyBindings(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&,CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
-        void ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
+        void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
         double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
 #pragma endregion //Commands
         void OnRefresh();
