@@ -179,7 +179,7 @@ namespace OIV
     {
         ResultCode result = RC_Success;
 
-        if (display_request.handle == ImageNullHandle)
+        if (display_request.handle == ImageHandleNull)
         {
             fImageManager.RemoveImage(ImageHandleDisplayed);
             return result;

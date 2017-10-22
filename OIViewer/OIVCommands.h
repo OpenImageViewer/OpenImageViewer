@@ -29,13 +29,13 @@ namespace OIV
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};
 
-            displayRequest.handle = ImageNullHandle;
+            displayRequest.handle = ImageHandleNull;
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
         static ResultCode OIVCommands::UnloadImage(ImageHandle handle)
         {
-            if (handle != ImageNullHandle)
+            if (handle != ImageHandleNull)
             {
                 OIV_CMD_UnloadFile_Request unloadRequest = {};
                 unloadRequest.handle = handle;
@@ -73,7 +73,7 @@ namespace OIV
 
             // 1. create a new cropped image 
             ResultCode result = ExecuteCommand(OIV_CMD_CropImage, &requestCropImage, &responseCropImage);
-            croppedHandle = (result == RC_Success ? responseCropImage.imageHandle : ImageNullHandle);
+            croppedHandle = (result == RC_Success ? responseCropImage.imageHandle : ImageHandleNull);
             return result;
         }
 
