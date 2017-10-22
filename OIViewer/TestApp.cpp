@@ -222,7 +222,7 @@ namespace OIV
                 ss << "%";
         
             
-        ss << "<textcolor=#00ff00> ("<< std::fixed << std::setprecision(2) << newValue * 100 << "%)";
+        ss << "<textcolor=#00ff00> ("<< std::fixed << std::setprecision(0) << newValue * 100 << "%)";
             result.resValue = ss.str();
             UpdateExposure();
         
