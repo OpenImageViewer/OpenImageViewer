@@ -1541,8 +1541,20 @@ namespace OIV
 
     void TestApp::HideUserMessage()
     {
-        KillTimer(fWindow.GetHandle(), cTimerIDHideUserMessage);
-        fUserMessageOverlayProperties.opacity = 0;
+        if (fUserMessageOverlayProperties.opacity == 1.0)
+        {
+            // start exponential fadeout after after 'fDelayRemoveMessage' milliseconds.
+            SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, 5, nullptr);
+            fUserMessageOverlayProperties.opacity = 0.99;
+        }
+
+        fUserMessageOverlayProperties.opacity = fUserMessageOverlayProperties.opacity * 0.8;// fUserMessageOverlayProperties.opacity;
+        if (fUserMessageOverlayProperties.opacity < 0.01)
+        {
+            fUserMessageOverlayProperties.opacity = 0;
+            KillTimer(fWindow.GetHandle(), cTimerIDHideUserMessage);
+        }
+
         ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull());
         fRefreshOperation.Queue();
     }
