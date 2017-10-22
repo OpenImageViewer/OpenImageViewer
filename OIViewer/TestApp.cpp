@@ -60,7 +60,7 @@ namespace OIV
                 result.resValue = "Full screen";
                 break;
             case FSS_Windowed:
-                result.resValue = "Windowd";
+                result.resValue = "Windowed";
                 break;
             }
         }
