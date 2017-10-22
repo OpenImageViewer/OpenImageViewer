@@ -68,6 +68,14 @@ namespace OIV
 
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
+        if (fKeybindingsHandle != ImageHandleNull)
+        {
+            OIVCommands::UnloadImage(fKeybindingsHandle);
+            fRefreshOperation.Queue();
+            fKeybindingsHandle = ImageHandleNull;
+            return;
+        }
+
         using namespace std;
         stringstream ss;
         size_t maxLength = 0;
@@ -105,6 +113,7 @@ namespace OIV
 
         if (ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
         {
+            fKeybindingsHandle = responseText.imageHandle;
             OIV_CMD_ImageProperties_Request imageProperties;
             imageProperties.position = { 20,20 };
             imageProperties.filterType = OIV_Filter_type::FT_None;

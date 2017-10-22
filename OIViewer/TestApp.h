@@ -141,6 +141,7 @@ namespace OIV
         OIV_CMD_ImageProperties_Request fImageProperties;
         OIV_CMD_ImageProperties_Request fUserMessageOverlayProperties;
         CommandManager fCommandManager;
+        ImageHandle fKeybindingsHandle = ImageHandleNull;
         struct BindingElement
         {
             std::string commandDescription;
