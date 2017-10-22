@@ -27,8 +27,8 @@ namespace OIV
         UINT offset = 0;
         d3dContext->IASetVertexBuffers(0, 1, fVertexBuffer.GetAddressOf(), &stride, &offset);
         d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        float white[4] = { 1.0f,1.0f,1.0f,1.0f };
-        d3dContext->OMSetBlendState(fBlendState.Get(),white, static_cast<UINT>(0xFFFFFFFF));
+        
+        d3dContext->OMSetBlendState(fBlendState.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>() , static_cast<UINT>(0xFFFFFFFF));
         d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
         
         d3dContext->RSSetViewports(1, &fViewport);
@@ -54,9 +54,9 @@ namespace OIV
         D3D11Error::HandleDeviceError(d3dDevice->CreateRenderTargetView(backbuffer.Get(), nullptr, fRenderTargetView.GetAddressOf())
         ," Can not create render target view");
 
-        FLOAT white[4] = { 1,1,1,1 };
+        
         d3dContext->OMSetRenderTargets(1, fRenderTargetView.GetAddressOf(), nullptr);
-        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), white);
+        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>());
     }
 
     void D3D11Renderer::CreateBuffers()

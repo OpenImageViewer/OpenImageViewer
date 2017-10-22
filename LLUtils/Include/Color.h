@@ -12,7 +12,17 @@ namespace LLUtils
             };
             uint32_t colorValue;
         };
-
+        template <class T>
+        T* GetNormalizedColorValue()
+        {
+            static_assert(std::is_floating_point<T>(), "Only floating point support normilization");
+            static thread_local T normalizedColor[4];
+            normalizedColor[0] = R / 255.0;
+            normalizedColor[1] = G / 255.0;
+            normalizedColor[2] = B / 255.0;
+            normalizedColor[3] = A / 255.0;
+            return normalizedColor;
+        }
         Color() {}
         Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
         {
