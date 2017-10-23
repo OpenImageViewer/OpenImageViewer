@@ -130,6 +130,16 @@ namespace OIV
         
     }
 
+    void TestApp::CMD_OpenFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
+    {
+        std::wstring fileName = Win32Helper::OpenFile(fWindow.GetHandle());
+        if (fileName.empty() == false)
+        {
+            LoadFile(fileName, false);
+            response.resValue = "Open file: " + LLUtils::StringUtility::ToAString(fileName);
+        }
+    }
+
     void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
     {
         std::string args = request.args;
@@ -275,7 +285,7 @@ namespace OIV
             ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
             ,{ "Rotate clockwise","cmd_axis_aligned_transform","type=rotatecw" ,"RBracket" }
             ,{ "Rotate counter clockwise","cmd_axis_aligned_transform","type=rotateccw" ,"LBracket" }
-
+            ,{ "Open file","cmd_open_file","" ,"Control+O" }
         };
 
         fCommandDescription = localDesc;
@@ -288,6 +298,7 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_open_file", std::bind(&TestApp::CMD_OpenFile, this, _1, _2)));
 
 
         for (const CommandDesc& desc : fCommandDescription)

@@ -54,5 +54,27 @@ namespace OIV
         {
             return{ rect.right - rect.left , rect.bottom - rect.top };
         }
+
+
+        static std::wstring OpenFile(HWND ownerWindow)
+        {        
+            wchar_t filename[MAX_PATH];
+
+            OPENFILENAME ofn;
+            ZeroMemory(&filename, sizeof(filename));
+            ZeroMemory(&ofn, sizeof(ofn));
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = ownerWindow;  // If you have a window to center over, put its HANDLE here
+            ofn.lpstrFilter = L"Any File\0*.*\0";
+            ofn.lpstrFile = filename;
+            ofn.nMaxFile = MAX_PATH;
+            ofn.lpstrTitle = L"Open a file";
+            ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
+
+            if (GetOpenFileName(&ofn))
+                return filename;
+            else
+                return std::wstring();
+        }
     };
 }

@@ -50,6 +50,7 @@ namespace OIV
 #pragma region Commands
         void CMD_SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleKeyBindings(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_OpenFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response);
         void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&,CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
         void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult& result);
