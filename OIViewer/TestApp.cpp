@@ -84,13 +84,13 @@ namespace OIV
 
         for (const CommandDesc& desc : fCommandDescription)
         {
-            ss << desc.description;
+            ss << "<textcolor=#ff8930>" << desc.description;
 
             size_t currentLength = desc.description.length();
             while (currentLength++ < maxLength)
-                ss << " ";
+                ss << ".";
 
-            ss << " - " << desc.keybindings << "\n";
+            ss << "..." << "<textcolor=#98f733>" << desc.keybindings << "\n";
 
         }
 
@@ -115,7 +115,7 @@ namespace OIV
         {
             fKeybindingsHandle = responseText.imageHandle;
             OIV_CMD_ImageProperties_Request imageProperties;
-            imageProperties.position = { 20,20 };
+            imageProperties.position = { 20,60 };
             imageProperties.filterType = OIV_Filter_type::FT_None;
             imageProperties.imageHandle = responseText.imageHandle;
             imageProperties.imageRenderMode = IRM_Overlay;
@@ -259,8 +259,8 @@ namespace OIV
         std::vector<CommandDesc> localDesc
 
         {
-            { "Toggle full screen,","cmd_screen_state","type=toggle" ,"Alt+Enter" }
-            ,{ "Toggle multi full screen,","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+             { "Toggle full screen","cmd_screen_state","type=toggle" ,"Alt+Enter" }
+            ,{ "Toggle multi full screen","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
             ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
             ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
