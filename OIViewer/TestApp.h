@@ -13,6 +13,7 @@
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
 #include "Keyboard/KeyBindings.h"
+#include "SelectionRect.h"
 
 namespace OIV
 {
@@ -79,6 +80,7 @@ namespace OIV
         LLUtils::PointF64 GetOffset() const;
         void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
+        LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
         void UpdateTexelPos();
         void UpdateWindowSize();
         void Center();
@@ -121,7 +123,7 @@ namespace OIV
         ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
-        LLUtils::RectI32 fSelectionRect = { {-1,-1},{-1,-1} };
+        SelectionRect fSelectionRect;
         const int cTimerID = 1500;
         const int cTimerIDHideUserMessage = 1000;
         uint32_t fDelayRemoveMessage = 1000;

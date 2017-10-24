@@ -22,15 +22,33 @@ struct ShaderOut
 float4 GetFinalTexel(float2 i_inputUV)
 {
 	float2 viewportSize = float2(uViewportSize.xy);
-	float2 p0 = float2(uSelectionRect.xy) / viewportSize;
-	float2 p1 = float2(uSelectionRect.zw) / viewportSize; 
+	float2 pixelOnScreen = viewportSize.xy * i_inputUV;
 	
-	if (i_inputUV.x >  p0.x  &&  i_inputUV.x < p1.x 
-	&& i_inputUV.y > p0.y &&  i_inputUV.y < p1.y)
+	float2 p0 = float2(uSelectionRect.xy);
+	float2 p1 = float2(uSelectionRect.zw);
 	
-        return float4(1, 1, 1,0.15);
+	if (pixelOnScreen.x >  p0.x  &&  pixelOnScreen.x < p1.x 
+	&& pixelOnScreen.y > p0.y &&  pixelOnScreen.y < p1.y)
+	{
+		float4 selectionRectColor;
+		
+		float d1 = abs(pixelOnScreen.x -  p0.x);
+		float d2 = abs(pixelOnScreen.y -  p0.y);
+		float d3 = abs(pixelOnScreen.x -  p1.x);
+		float d4 = abs(pixelOnScreen.y -  p1.y);
+		
+		float minimum = min(d1,min(d2,min(d3,d4)));
+		if (minimum <= 1)
+		      selectionRectColor = float4(0 / 255.0, 120 / 255.0, 215 / 255.0,1);
+		else
+			selectionRectColor = float4(0.7, 0.7, 1, 0.25);
+		return selectionRectColor;
+	}
     else
-        return float4(0, 0, 0,0.4 );
+	{
+		//Darken background
+        return float4(0, 0, 0,0.5 );
+	}
 }
 void main(in ShaderIn input, out ShaderOut output)
 {

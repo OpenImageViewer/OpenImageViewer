@@ -1,6 +1,6 @@
 #pragma once
 #include "API/defs.h"
-#include "TestApp.h"
+#include "API/functions.h"
 #include <Rect.h>
 
 namespace OIV
@@ -11,21 +11,23 @@ namespace OIV
 
         static OIV_RECT_I ToOIVRect(const LLUtils::RectI32& rect)
         {
-            return{ rect.p0.x,rect.p0.y ,rect.p1.x,rect.p1.y };
+            LLUtils::RectI32::Point_Type topleft = rect.GetCorner(LLUtils::Corner::TopLeft);
+            LLUtils::RectI32::Point_Type bottomRight = rect.GetCorner(LLUtils::Corner::BottomRight);
+            return{ topleft.x, topleft.y, bottomRight.x, bottomRight.y};
         }
 
         template <class T, class U>
-        static ResultCode OIVCommands::ExecuteCommand(CommandExecute command, T* request, U* response)
+        static ResultCode ExecuteCommand(CommandExecute command, T* request, U* response)
         {
             return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
         }
 
-        static ResultCode OIVCommands::Refresh()
+        static ResultCode Refresh()
         {
                 return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
         }
 
-        static ResultCode OIVCommands::ClearImage()
+        static ResultCode ClearImage()
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};
 
@@ -33,7 +35,7 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
-        static ResultCode OIVCommands::UnloadImage(ImageHandle handle)
+        static ResultCode UnloadImage(ImageHandle handle)
         {
             if (handle != ImageHandleNull)
             {
@@ -44,7 +46,7 @@ namespace OIV
             else return RC_InvalidHandle;
         }
 
-        static ResultCode OIVCommands::TransformImage(ImageHandle handle, OIV_AxisAlignedRTransform transform)
+        static ResultCode TransformImage(ImageHandle handle, OIV_AxisAlignedRTransform transform)
         {
             OIV_CMD_AxisAlignedTransform_Request request = {};
             request.handle = handle;
@@ -53,7 +55,7 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &CmdNull());
         }
 
-        static ResultCode OIVCommands::ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat)
+        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat)
         {
             OIV_CMD_ConvertFormat_Request request = {};
             request.handle = handle;
@@ -91,5 +93,20 @@ namespace OIV
             return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
+        static void SetSelectionRect(const LLUtils::RectI32& rect)
+        {
+            OIV_CMD_SetSelectionRect_Request request;
+            request.rect.x0 = rect.GetCorner(LLUtils::TopLeft).x;
+            request.rect.y0 = rect.GetCorner(LLUtils::TopLeft).y;
+            request.rect.x1 = rect.GetCorner(LLUtils::BottomRight).x;
+            request.rect.y1 = rect.GetCorner(LLUtils::BottomRight).y;
+            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &CmdNull());
+        }
+
+        static void CancelSelectionRect()
+        {
+            OIV_CMD_SetSelectionRect_Request request = { -1,-1,-1,-1 };
+            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &CmdNull());
+        }
     };
 }

@@ -22,7 +22,7 @@ namespace LLUtils
         
 
         template <typename T>
-        static int8_t Sign(T val)
+        static T Sign(T val)
         {
             return (T(0) < val) - (val < T(0));
         }

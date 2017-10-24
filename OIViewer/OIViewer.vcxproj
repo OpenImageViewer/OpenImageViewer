@@ -163,6 +163,7 @@
     <ClCompile Include="AutoScroll.cpp" />
     <ClCompile Include="Keyboard\KeyCombination.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SelectionRect.cpp" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="UserSettings.cpp" />
     <ClCompile Include="win32\DragAndDrop.cpp" />
@@ -186,6 +187,7 @@
     <ClInclude Include="RecursiveDelayOp.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="AdaptiveMotion.h" />
+    <ClInclude Include="SelectionRect.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="win32\UserMessages.h" />

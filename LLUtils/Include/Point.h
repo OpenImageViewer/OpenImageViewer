@@ -7,7 +7,6 @@
 
 namespace LLUtils
 {
-    typedef uint8_t SignType;
     template <class POINT_TYPE>
     class Point
     {
@@ -163,6 +162,7 @@ namespace LLUtils
         }
 #pragma endregion Unary operators
         
+        // Casting operator
         template <class BASE_TYPE>
         explicit operator Point<BASE_TYPE>() const
         {

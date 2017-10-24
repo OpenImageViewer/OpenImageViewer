@@ -25,6 +25,7 @@
 #include "Helpers/OIVHelper.h"
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
+#include "SelectionRect.h"
 
 namespace OIV
 {
@@ -1045,6 +1046,15 @@ namespace OIV
         return (static_cast<PointF64>(clientPos) - GetOffset()) / GetScale();
     }
 
+    LLUtils::RectF64 TestApp::ClientToImage(LLUtils::RectI32 clientRect) const
+    {
+        using namespace LLUtils;
+        return {
+              ClientToImage(clientRect.GetCorner(Corner::TopLeft))
+            , ClientToImage(clientRect.GetCorner(Corner::BottomRight))
+        };
+    }
+
     void TestApp::UpdateTexelPos()
     {
         using namespace LLUtils;
@@ -1242,12 +1252,10 @@ namespace OIV
         }
     }
 
+
     void TestApp::CopyVisibleToClipBoard()
     {
-        LLUtils::RectF64 imageRect = { ClientToImage(fSelectionRect.p0), ClientToImage(fSelectionRect.p1) };
-        LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y}
-            ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
-
+        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         ImageHandle croppedHandle;
         ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
         if (result == RC_Success)
@@ -1330,11 +1338,9 @@ namespace OIV
 
     void TestApp::CropVisibleImage()
     {
-        LLUtils::RectF64 imageRect = { ClientToImage(fSelectionRect.p0), ClientToImage(fSelectionRect.p1) };
+        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
 
-
-        LLUtils::RectI32 imageRectInt = { { (int)imageRect.p0.x,(int)imageRect.p0.y }
-        ,{ (int)imageRect.p1.x,(int)imageRect.p1.y } };
+        
 
         ImageHandle croppedHandle;
         ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
@@ -1420,51 +1426,28 @@ namespace OIV
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
         const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
         const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_DoublePressed;
-
         const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
+
         
-        static bool isSelecting = false;
-
-        if (IsLeftPressed == true && Win32Helper::IsKeyPressed(VK_MENU))
+        if (Win32Helper::IsKeyPressed(VK_MENU))
         {
-            if (fDragStart.x == -1)
-            {
-                fSelectionRect = { {-1,-1},{-1,-1} };
+            SelectionRect::Operation op = SelectionRect::Operation::NoOp;
+            if (IsLeftPressed)
+                op = SelectionRect::Operation::BeginDrag;
+            else if (IsLeftReleased)
+                op = SelectionRect::Operation::EndDrag;
+            else if (IsLeftCaptured)
+                op = SelectionRect::Operation::Drag;
 
-                ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
-                //Disable selection rect
-            }
-            fDragStart = evnt->window->GetMousePosition();
-            
+            fSelectionRect.SetSelection(op, evnt->window->GetMousePosition());
         }
-
         else
-            if (IsLeftCaptured == true)
-            {
-                LLUtils::PointI32 dragCurent = evnt->window->GetMousePosition();
-                if (fDragStart.x != -1 && isSelecting == true || dragCurent.DistanceSquared(fDragStart) > 225)
-                {
-                    isSelecting = true;
-                    LLUtils::PointI32 p0 = { std::min(dragCurent.x, fDragStart.x), std::min(dragCurent.y, fDragStart.y) };
-                    LLUtils::PointI32 p1 = { std::max(dragCurent.x, fDragStart.x), std::max(dragCurent.y, fDragStart.y) };
-
-                    fSelectionRect = { p0,p1};
-
-                    ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &fSelectionRect, &CmdNull());
-                
-                }
-
-
-            }
-
-        if (IsLeftReleased == true)
         {
-            isSelecting = false;
-            fDragStart.x = -1;
-            fDragStart.y = -1;
+            if (IsLeftPressed)
+                fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, evnt->window->GetMousePosition());
         }
+            
 
-       
         
         /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
             evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/

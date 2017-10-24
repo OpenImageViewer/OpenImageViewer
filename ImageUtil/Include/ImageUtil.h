@@ -206,7 +206,7 @@ namespace IMUtil
         {
             LLUtils::RectI32 image = { { 0,0 } ,{ static_cast<int32_t> (sourceImage->GetWidth())
                 , static_cast<int32_t> (sourceImage->GetHeight()) } };
-            if (subimage.IsValid() && subimage.IsNonNegative() && subimage.IsInside(image))
+            if (subimage.IsNonNegative() && subimage.IsInside(image))
             {
                 const uint8_t* sourceBuffer = sourceImage->GetBuffer();
 
@@ -217,8 +217,10 @@ namespace IMUtil
                 {
                     for (int32_t x = 0; x < subimage.GetWidth(); x++)
                     {
+                        decltype(subimage)::Point_Type topLeft = subimage.GetCorner(LLUtils::Corner::TopLeft);
+                        
                         const uint32_t idxDest = y * subimage.GetWidth() + x;
-                        const uint32_t idxSource = (y + subimage.p0.y)  * sourceImage->GetWidth() + (x + subimage.p0.x);
+                        const uint32_t idxSource = (y + topLeft.y)  * sourceImage->GetWidth() + (x + topLeft.x);
                         PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest, sourceBuffer, idxSource);
                     }
                 }

@@ -2,9 +2,40 @@
 #include "Point.h"
 namespace LLUtils
 {
-    template <class T>  
-    struct Rect
+    enum Corner
     {
+        None,
+        TopLeft,
+        BottomLeft,
+        TopRight,
+        BottomRight
+    };
+
+    template <class T>  
+    class Rect
+    {
+    public:
+        using Point_Type = Point<T>;
+        
+        Rect()
+        {
+            
+        }
+
+
+        Rect(Point_Type point1, Point_Type point2)
+        {
+            if (point1.x > point2.x)
+                std::swap(point1.x, point2.x);
+
+            if (point1.y > point2.y)
+                std::swap(point1.y, point2.y);
+
+            p0 = point1;
+            p1 = point2;
+        }
+
+
         Rect Intersection(const Rect& rect)
         {
             T x0 = std::max(p0.x, rect.p0.x);
@@ -15,11 +46,7 @@ namespace LLUtils
             return{ {x0,y0},{x1,y1}};
             
         }
-        bool IsValid() const
-        {
-            return GetWidth() >= 0 && GetHeight() >= 0;
-        }
-
+        
         bool IsNonNegative() const
         {
             return p0.x >= 0 && p1.x >= 0 && p0.y >= 0 && p1.y >= 0;
@@ -34,11 +61,45 @@ namespace LLUtils
 
         }
 
+        Rect& operator +=(Point_Type translation)
+        {
+            p0 += translation;
+            p1 += translation;
+            return *this;
+        }
+
         int32_t GetWidth() const { return p1.x - p0.x; }
         int32_t GetHeight() const { return p1.y - p0.y; }
 
-        Point<T> p0;
-        Point<T> p1;
+        Point_Type GetCorner(const Corner corner) const
+        {
+            switch (corner)
+            {
+            case Corner::TopLeft:
+                return p0;
+            case Corner::BottomRight:
+                return p1;
+            case Corner::BottomLeft:
+                return Point_Type(p0.x, p1.y);
+            case Corner::TopRight:
+                return Point_Type(p1.x, p0.y);
+            default:
+                throw std::logic_error("Unexpected or corrupted value");
+                
+            }
+        }
+
+        // Casting operator
+        template <class BASE_TYPE>
+        explicit operator Rect<BASE_TYPE>() const
+        {
+            using BASE_POINT_TYPE = Point<BASE_TYPE>;
+            return  Rect<BASE_TYPE>(static_cast<BASE_POINT_TYPE>(p0), static_cast<BASE_POINT_TYPE>(p1));
+        }
+    private:
+
+        Point_Type p0;
+        Point_Type p1;
     };
 
     typedef Rect<int32_t> RectI32;
