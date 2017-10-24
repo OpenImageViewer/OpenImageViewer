@@ -1,4 +1,6 @@
+
 #include "FreeTypeConnector.h"
+#if OIV_BUILD_FREETYPE == 1
 #include "CodePoint.h"
 #include <vector>
 #include <StringUtility.h>
@@ -315,4 +317,4 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
         throw std::logic_error("Can not destroy face");
  
 }
-
+#endif // endif

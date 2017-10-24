@@ -255,6 +255,7 @@ namespace OIV
 
     ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
     {
+    #if OIV_BUILD_FREETYPE == 1
         std::string text = LLUtils::StringUtility::ToAString(request.text);
         std::string fontPath = LLUtils::StringUtility::ToAString(request.fontPath);
 
@@ -270,6 +271,9 @@ namespace OIV
         response.imageHandle = handle;
         fRenderer->SetImageBuffer(response.imageHandle, imageText);
         return RC_Success;
+#else
+        return RC_NotImplemented;
+#endif
     }
 
     ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)

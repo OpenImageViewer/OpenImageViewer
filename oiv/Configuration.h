@@ -1,6 +1,9 @@
 #pragma once
 //TODO: define the following using cmake
 //MISC
+
+#define OIV_BUILD_FREETYPE 1
+
 #define OIV_CLIENT_BUILD 0
 
 
