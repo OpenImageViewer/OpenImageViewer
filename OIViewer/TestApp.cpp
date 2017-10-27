@@ -1225,11 +1225,12 @@ namespace OIV
                         BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER*>(dib);
                         
                         uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
+                        uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / 8), 4);
 
                         LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
                                 , info->biWidth
                                 , info->biHeight
-                                , info->biSizeImage / info->biHeight
+                                , rowPitch
                                 , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
 
                         GlobalUnlock(dib);
