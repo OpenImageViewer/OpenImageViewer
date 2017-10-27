@@ -20,7 +20,7 @@ namespace OIV
 
     struct CONSTANT_BUFFER_IMAGE_COMMON
     {
-        float uvViewportSize[2];
+        float uvViewportSize[4];
         float uImageSize[2];
         float uImageOffset[2];
         float uScale[2];

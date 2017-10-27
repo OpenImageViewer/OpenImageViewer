@@ -1,4 +1,4 @@
-uniform float2 uViewportSize;
+uniform float4 uViewportSize;
 uniform float2 uImageSize;
 uniform float2 uImageOffset;
 uniform float2 uScale;
@@ -55,7 +55,7 @@ in vec2 coords;
 out vec4 outColor;
 void main()
 {
-    outColor = GetFinalTexel(coords, uViewportSize, uImageSize, uvScale, uvOffset, uShowGrid);
+    outColor = GetFinalTexel(coords, uViewportSize.xy, uImageSize, uvScale, uvOffset, uShowGrid);
 }
 
 #endif

@@ -26,7 +26,7 @@ STATIC_CONST float4 red = float4(1, 0, 0, 1);
 
 cbuffer BaseImageData : register(b0) 
 {
-	float2 uViewportSize;
+	float4 uViewportSize;
 	float2 uImageSize;
 	float2 uImageOffset;
 	float2 uScale;
@@ -78,6 +78,58 @@ float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
     return checkerColor;
 }
 
+
+void DrawPixelGrid2(  in    float2 i_imageSize
+				    , in    float2 i_imageOffset
+					, in    float2 i_imageScale
+					, in    float4 i_viewportSize
+					, in    float2  i_inputUV
+					, inout float4 o_texel)
+{
+/*
+	const float constantFactor = 2.9;
+	const float decayFactor = 0.6;
+	const float blendDecay = 3.7;
+*/
+	
+	const float constantFactor = 2.2;
+	const float decayFactor = 0.6;
+	const float blendDecay = 2.8;
+	const float fullOpacityGridScale = 5;
+
+	float minImageScale = min(i_imageScale.x, i_imageScale.y);
+
+	
+	float2 pixelSizeNorm =  i_viewportSize.zw;
+	float2 pixelOnViewportNorm =  i_inputUV;
+	float2 imageOffsetNorm = i_viewportSize.zw * i_imageOffset;
+	float aspectRatioFactor = i_viewportSize.z / i_viewportSize.w;
+	float2 widthOfGrid =  pixelSizeNorm * (constantFactor /  pow(i_imageScale,decayFactor));
+	float2 currentDistance = widthOfGrid / 2.0;
+	float2 imageSpacePositionNorm = (pixelOnViewportNorm - imageOffsetNorm) / i_imageScale;
+	float2  pixelSizeNormAR = float2(pixelSizeNorm.x * aspectRatioFactor, pixelSizeNorm.y);
+	float2 dd = abs(imageSpacePositionNorm  %  pixelSizeNorm );
+	float2 rdd = pixelSizeNorm - dd;
+	float2 ddMin = float2(min(dd.x, rdd.x), min(dd.y, rdd.y));
+	float maxDistance = max(currentDistance.x  , currentDistance.y);
+	
+	//Fixed aspect ratio so width of grid lines would be the same for each axis.
+	if (aspectRatioFactor < 1)
+		ddMin.x /= aspectRatioFactor;
+		else
+		ddMin.y *= aspectRatioFactor;
+	
+	float minDD = min(ddMin.x , ddMin.y);
+	
+	if ( minDD < maxDistance)
+	{
+		float minImageScale = min(i_imageScale.x, i_imageScale.y);
+		float alpha = (1.0 -  minDD / maxDistance) * min(1, (minImageScale / fullOpacityGridScale));
+		o_texel = lerp(o_texel,float4(1,0,0,1), pow(alpha, blendDecay));
+	}
+	
+}
+
 void DrawPixelGrid(
 					  float2 imageSize
 					, float2 screenSize
@@ -92,21 +144,7 @@ void DrawPixelGrid(
 		
 		float2 pixelSize = screenSize / imageSize / uvScale;
 		float2 lineWidthInPixels = min(max(minLineWidth,pixelSize / 40.0),maxLineWidth) ;
-		
-		/*
-		float screenAR = screenSize.x / screenSize.y;
-		if (screenAR > 1.0)
-		{
-			lineWidthInPixels.y *=screenAR;
-			pixelDrawThreshold.y *= screenAR;
-	    }
-		else
-		{
-			lineWidthInPixels.x /=screenAR;
-			pixelDrawThreshold.x /= screenAR;
-		}
-		*/
-		
+	
 		float2 oneOverPixelSize = 1.0 / pixelSize;
 		float2 factor2 = screenSize * oneOverPixelSize;
 		float2 offset = float2(0,0);
@@ -143,7 +181,7 @@ void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texe
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }
 
-float4 GetFinalTexel(float2 i_inputUV,float2 i_viewportSize, float2 i_imageSize, float2 i_uvScale,float2 i_uvOffset,int i_showGrid )
+float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize, float2 i_uvScale,float2 i_uvOffset,int i_showGrid )
 {
 	float4 texel;
 
@@ -152,15 +190,19 @@ float4 GetFinalTexel(float2 i_inputUV,float2 i_viewportSize, float2 i_imageSize,
 	float2 uv = i_inputUV * uvScale  + offset;
 	
  if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-        FillBackGround(uv, i_inputUV, i_viewportSize, texel);
+        FillBackGround(uv, i_inputUV, i_viewportSize.xy, texel);
     else
     {
-        DrawImage(uv, i_inputUV, i_viewportSize, texel);
-        if (i_showGrid == 1)
-            DrawPixelGrid(i_imageSize, i_viewportSize, i_inputUV, uvScale, offset, texel);
+        DrawImage(uv, i_inputUV, i_viewportSize.xy, texel);
+        //if (i_showGrid == 1)
+          //  DrawPixelGrid(i_imageSize, i_viewportSize.xy, i_inputUV, uvScale, offset, texel);
+			
+		if (i_showGrid == 1)
+			DrawPixelGrid2(i_imageSize,uImageOffset,uScale ,i_viewportSize, i_inputUV, texel);
+			
     }
 	
-	texel.w = 1;
+	//texel.w = 1;
     return texel;
 }
 #if defined(HLSL) || defined(D3D11)

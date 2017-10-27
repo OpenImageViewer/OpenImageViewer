@@ -282,8 +282,10 @@ namespace OIV
             CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
             gpuBuffer.uImageOffset[0] = props.position.x;
             gpuBuffer.uImageOffset[1] = props.position.y;
-            gpuBuffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
-            gpuBuffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
+            gpuBuffer.uvViewportSize[0] = fViewport.Width;
+            gpuBuffer.uvViewportSize[1] = fViewport.Height;
+            gpuBuffer.uvViewportSize[2] = 1.0 / fViewport.Width;
+            gpuBuffer.uvViewportSize[3] = 1.0 / fViewport.Height;
             gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
             gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
             gpuBuffer.uScale[0] = props.scale.x;
