@@ -9,18 +9,63 @@ namespace OIV
     {
     public:
         
+        struct KeyValuePair
+        {
+            std::string key;
+            std::string value;
+        };
+
+        using ListKeyValue = std::vector<KeyValuePair>;
+
         struct CommandResult
         {
             std::string resValue;
         };
 
-        struct CommandRequest
+        struct CommandArgs
+        {
+            static CommandArgs FromString(const std::string& str)
+            {
+                
+                using namespace LLUtils;
+                using namespace std;
+                CommandArgs args;
+                ListAString props = StringUtility::split(str, ';');
+                args.args.reserve(props.size());
+
+                for (const std::string& pair : props)
+                {
+                    ListAString keyval = StringUtility::split(pair, '=');
+                    args.args.push_back({ keyval[0],keyval[1] });
+                }
+                return args;
+            }
+
+            ListKeyValue args;
+            std::string GetArgValue(const std::string argName) const
+            {
+                for (const KeyValuePair& arg : args)
+                    if (arg.key == argName)
+                        return arg.value;
+
+                return std::string();
+            }
+        };
+
+        struct CommandClientRequest
         {
             std::string description;
             std::string commandName;
             std::string args;
         };
 
+        struct CommandRequest
+        {
+            std::string description;
+            std::string commandName;
+            CommandArgs args;
+        };
+        
 
         using CommandCallback = std::function<void(const CommandRequest&, CommandResult&)>;
 
@@ -56,12 +101,17 @@ namespace OIV
         
         using MapCommands = std::unordered_map<std::string, Command>;
     public:
-        bool ExecuteCommand(const CommandRequest& commandRequest,CommandResult& out_result)
+        bool ExecuteCommand(const CommandClientRequest& commandRequest,CommandResult& out_result)
         {
-            MapCommands::const_iterator it = fCommands.find(commandRequest.commandName);
+            MapCommands::iterator it = fCommands.find(commandRequest.commandName);
             if (it != fCommands.end())
             {
-                fCommands[commandRequest.commandName].Execute(commandRequest, out_result);
+                CommandRequest CommandRequestParsed;
+                CommandRequestParsed.description = commandRequest.description;
+                CommandRequestParsed.commandName = commandRequest.commandName;
+                CommandRequestParsed.args = CommandArgs::FromString(commandRequest.args);
+
+                it->second.Execute(CommandRequestParsed, out_result);
                 return true;
             }
             return false;

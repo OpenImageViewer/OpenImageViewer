@@ -35,36 +35,51 @@ namespace OIV
         return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
+    void TestApp::CMD_SetZoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+
+        using namespace LLUtils;
+        using namespace std;
+
+        double val = std::atof(request.args.GetArgValue("val").c_str());
+        int32_t cx = std::atoi(request.args.GetArgValue("cx").c_str());
+        int32_t cy = std::atoi(request.args.GetArgValue("cy").c_str());
+
+        SetZoomInternal(val, cx, cy);
+        
+        stringstream ss;
+        ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
+            <<fixed << setprecision(2) << fImageProperties.scale.x * 100.0 << "%)";
+
+        result.resValue = ss.str();
+    }
+
     void TestApp::CMD_SetScreenState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
-        ListAString keyval = StringUtility::split(request.args, '=');
 
-        
-        if (keyval[0] == "type")
+        string type = request.args.GetArgValue("type");
+
+        if (type == "toggle") // Toggle fullscreen
+            fWindow.ToggleFullScreen(false);
+
+        else if (type == "togglemulti") //Toggle multi fullscreen
+            fWindow.ToggleFullScreen(true);
+
+        switch (fWindow.GetFullScreenState())
         {
-            if (keyval[1] == "toggle") // Toggle fullscreen
-
-                fWindow.ToggleFullScreen(false);
-            else if (keyval[1] == "togglemulti") //Toggle multi fullscreen
-            {
-                fWindow.ToggleFullScreen(true);
-            }
-
-            switch (fWindow.GetFullScreenState())
-            {
-            case FSS_MultiScreen:
-                result.resValue = "Multi full screen";
-                break;
-            case FSS_SingleScreen:
-                result.resValue = "Full screen";
-                break;
-            case FSS_Windowed:
-                result.resValue = "Windowed";
-                break;
-            }
+        case FSS_MultiScreen:
+            result.resValue = "Multi full screen";
+            break;
+        case FSS_SingleScreen:
+            result.resValue = "Full screen";
+            break;
+        case FSS_Windowed:
+            result.resValue = "Windowed";
+            break;
         }
+
     }
 
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
@@ -143,27 +158,21 @@ namespace OIV
 
     void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
     {
-        std::string args = request.args;
-        using namespace LLUtils;
-        using namespace std;
-        ListAString keyval = StringUtility::split(request.args, '=');
-
         OIV_AxisAlignedRTransform transform = OIV_AxisAlignedRTransform::AAT_None;
 
+        std::string type = request.args.GetArgValue("type");
         
-
-        if (keyval[0] == "type")
-        {
             if (false);
-            else if (keyval[1] == "hflip")
+            else if (type == "hflip")
                 transform = AAT_FlipHorizontal;
-            else if (keyval[1] == "vflip")
+            else if (type == "vflip")
                 transform = AAT_FlipVertical;
-            else if (keyval[1] == "rotatecw")
+            else if (type == "rotatecw")
                 transform = AAT_Rotate90CW;
-            else if (keyval[1] == "rotateccw")
+            else if (type == "rotateccw")
                 transform = AAT_Rotate90CCW;
-        }
+
+
         if (transform != OIV_AxisAlignedRTransform::AAT_None)
         {
             TransformImage(transform);
@@ -177,7 +186,6 @@ namespace OIV
     {
         using namespace LLUtils;
         using namespace std;
-        ListAString keyval = StringUtility::split(request.args, '=');
         
         if (ToggleColorCorrection())
             result.resValue = "Reset color correction to previous";
@@ -189,28 +197,10 @@ namespace OIV
 
     void TestApp::CMD_ColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        std::string args = request.args;
-        using namespace LLUtils;
         using namespace std;
-        ListAString props = StringUtility::split(args, ';');
-
-        string type;
-        string op;
-        string val;
-
-        for (const std::string& pair : props )
-        {
-            ListAString keyval = StringUtility::split(pair, '=');
-            const std::string& key = keyval[0];
-            const std::string& value = keyval[1];
-
-            if (key == "type")
-                type = value;
-            else if (key == "op")
-                op = value;
-            else if (key == "val")
-                val = value;
-        }
+        string type = request.args.GetArgValue("type");
+        string op = request.args.GetArgValue("op");;
+        string val = request.args.GetArgValue("val");;
 
         double newValue;
 
@@ -300,6 +290,7 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_open_file", std::bind(&TestApp::CMD_OpenFile, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_zoom", std::bind(&TestApp::CMD_SetZoom, this, _1, _2)));
 
 
         for (const CommandDesc& desc : fCommandDescription)
@@ -909,7 +900,7 @@ namespace OIV
 
     void TestApp::SetOriginalSize()
     {
-        SetZoom(1.0, -1, -1);
+        SetZoomInternal(1.0, -1, -1);
         Center();
     }
 
@@ -933,7 +924,7 @@ namespace OIV
         PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(IST_Transformed);
         double zoom = std::min(ratio.x, ratio.y);
         fRefreshOperation.Begin();
-        SetZoom(zoom, -1, -1);
+        SetZoomInternal(zoom, -1, -1);
         Center();
         fIsLockFitToScreen = true;
         fRefreshOperation.End();
@@ -973,6 +964,15 @@ namespace OIV
     }
 
     void TestApp::SetZoom(double zoomValue, int clientX, int clientY)
+    {
+        CommandManager::CommandClientRequest request;
+        request.description = "Zoom";
+        request.args = "val=" + std::to_string(zoomValue) + ";cx=" + std::to_string(clientX) + ";cy=" + std::to_string(clientY);
+        request.commandName = "cmd_zoom";
+        ExecuteUserCommand(request);
+    }
+
+    void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY)
     {
         using namespace LLUtils;
 
@@ -1558,7 +1558,7 @@ namespace OIV
         fRefreshOperation.Queue();
     }
 
-    bool TestApp::ExecuteUserCommand(const CommandManager::CommandRequest& request)
+    bool TestApp::ExecuteUserCommand(const CommandManager::CommandClientRequest& request)
     {
         CommandManager::CommandResult res;
         if (fCommandManager.ExecuteCommand(request, res))
