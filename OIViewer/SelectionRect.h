@@ -31,7 +31,7 @@ namespace OIV
         LLUtils::RectI32 fSelectionRect;
         LLUtils::PointI32 fSelectStartPoint;
         LLUtils::PointI32 fSelectEndPoint;
-        const bool pixelsThreshold = 15;
-        const bool pixelsThresholdSquare = pixelsThreshold * pixelsThreshold;
+        const uint16_t pixelsThreshold = 15;
+        const uint16_t pixelsThresholdSquare = pixelsThreshold * pixelsThreshold;
     };
 }

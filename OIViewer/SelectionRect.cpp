@@ -24,6 +24,10 @@ namespace OIV
             return BottomRight;
         case Corner::BottomRight:
             return TopLeft;
+        case Corner::None:
+            throw std::logic_error("Error, Corner must be set to get opposite corner");
+        default:
+            throw std::logic_error("Error, Unexpected or coruppted value");
         }
     }
 

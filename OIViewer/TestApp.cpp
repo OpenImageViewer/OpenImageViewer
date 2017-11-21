@@ -887,6 +887,8 @@ namespace OIV
         break;
 
         }
+
+        return handled;
     }
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)

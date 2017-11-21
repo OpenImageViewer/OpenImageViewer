@@ -60,7 +60,7 @@ namespace LLUtils
                     if (hexValues.length() > 8)
                         hexValues.erase(hexValues.length());
 
-                    int length = hexValues.length();
+                    size_t length = hexValues.length();
                     int i = 0;
                     while (i < length)
                     {
