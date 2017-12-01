@@ -35,9 +35,9 @@ namespace IMCodec
                 out_properties.Height = image.height;
 
                 if (image.format == PNG_FORMAT_RGBA)
-                    out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
+                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
                 if (image.format == PNG_FORMAT_RGB)
-                    out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8;
+                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8;
                 out_properties.NumSubImages = 0;
 
                 //read buffer

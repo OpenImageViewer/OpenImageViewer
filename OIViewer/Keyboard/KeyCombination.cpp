@@ -11,6 +11,9 @@ namespace OIV
 {
     ListKeyCombinations  KeyCombination::FromString(const std::string& string)
     {
+
+        static_assert(sizeof(KeyCombination) == 2, "Size of key combination must be two bytes");
+
         using namespace LLUtils;
         std::string upper = StringUtility::ToUpper(string);
 
@@ -22,20 +25,21 @@ namespace OIV
 
         ListKeyCombinations bindings;
 
+
         ListAString  keyCombination = StringUtility::split(upper, '+');
 
         for (const std::string& key : keyCombination)
         {
             if (key == "CONTROL")
-                duplicateCombinations2Darray.push_back({ KC_LCONTROL,KC_RCONTROL });
+                duplicateCombinations2Darray.push_back({ KeyCode::LCONTROL, KeyCode::RCONTROL });
             else if (key == "ALT")
-                duplicateCombinations2Darray.push_back({ KC_LALT,KC_RALT });
+                duplicateCombinations2Darray.push_back({ KeyCode::LALT, KeyCode::RALT });
 
             else if (key == "SHIFT")
-                duplicateCombinations2Darray.push_back({ KC_LSHIFT,KC_RSHIFT });
+                duplicateCombinations2Darray.push_back({ KeyCode::LSHIFT, KeyCode::RSHIFT });
 
             else if (key == "WINKEY")
-                duplicateCombinations2Darray.push_back({ KC_LWIN,KC_RWIN });
+                duplicateCombinations2Darray.push_back({ KeyCode::LWIN, KeyCode::RWIN });
             else
                 combination.AssignKey(KeyCodeHelper::KeyNameToKeyCode(key));
         }
@@ -85,42 +89,42 @@ namespace OIV
         combination.rightShift = (GetKeyState(VK_RSHIFT) & static_cast<USHORT>(0x8000)) != 0;
         combination.leftWinKey = (GetKeyState(VK_LWIN) & static_cast<USHORT>(0x8000)) != 0;
         combination.rightWinKey = (GetKeyState(VK_RWIN) & static_cast<USHORT>(0x8000)) != 0;
-        combination.keycode = MapVirtualKey(key, MAPVK_VK_TO_VSC);
+        combination.keycode = static_cast<KeyCode>(MapVirtualKey(key, MAPVK_VK_TO_VSC));
         return combination;
     }
 #endif
 
-    void KeyCombination::AssignKey(KeyCode keyCode)
+    void KeyCombination::AssignKey(KeyCode key)
     {
-        switch (keyCode)
+        switch (key)
         {
-        case KC_LALT:
+        case KeyCode::LALT:
             leftAlt = 1;
             break;
-        case KC_RALT:
+        case KeyCode::RALT:
             rightAlt = 1;
             break;
-        case KC_RCONTROL:
+        case KeyCode::RCONTROL:
             rightCtrl = 1;
             break;
-        case KC_LCONTROL:
+        case KeyCode::LCONTROL:
             leftCtrl = 1;
             break;
-        case KC_RSHIFT:
+        case KeyCode::RSHIFT:
             rightShift = 1;
             break;
-        case KC_LSHIFT:
+        case KeyCode::LSHIFT:
             leftShift = 1;
             break;
-        case KC_RWIN:
+        case KeyCode::RWIN:
             rightWinKey = 1;
             break;
-        case KC_LWIN:
+        case KeyCode::LWIN:
             leftWinKey = 1;
             break;
         default:
             //Not a modifer - assign key.
-            keycode = keyCode;
+            keycode = key;
             break;
         }
     }

@@ -75,26 +75,26 @@ namespace OIV
     {
         switch (operation)
         {
-        case NoOp:
+        case Operation::NoOp:
             return; // return - Don't change state
 
-        case BeginDrag:
+        case Operation::BeginDrag:
 
             //Begin drawing the selection rect
-            if (fOperation == NoOp || fOperation == CancelSelection)
+            if (fOperation == Operation::NoOp || fOperation == Operation::CancelSelection)
             {
                 fSelectStartPoint = posWindowSpace;
                 fOperation = operation;
             }
 
             //Begin Dragging or resizing the selection rect
-            if (fOperation == EndDrag)
+            if (fOperation == Operation::EndDrag)
             {
                 LLUtils::Corner corner = GetCorner(posWindowSpace);
                 if (corner != LLUtils::Corner::None)
                 {
                     //Selection rect already visible, re-drag
-                    fOperation = BeginDrag;
+                    fOperation = Operation::BeginDrag;
                     fSelectStartPoint = fSelectionRect.GetCorner(OppositeCorner(corner));
                 }
                 else
@@ -105,10 +105,10 @@ namespace OIV
             break;
 
 
-        case Drag:
+        case Operation::Drag:
             {
                 //Changing the size of the selection rect
-                if (fOperation == BeginDrag || fOperation == Drag)
+                if (fOperation == Operation::BeginDrag || fOperation == Operation::Drag)
                 {
                     using namespace LLUtils;
                     PointI32 p0 = {
@@ -124,7 +124,7 @@ namespace OIV
                     fOperation = operation;
                 }
 
-                if (fOperation == EndDrag)
+                if (fOperation == Operation::EndDrag)
                 {
                     using namespace LLUtils;
                     // Dragging the selection rect in the client window
@@ -134,15 +134,15 @@ namespace OIV
                 }
             }
             break;
-        case EndDrag:
+        case Operation::EndDrag:
 
             //Update operation state only when finshing setting the selection rect.
-            if (fOperation == Drag)
+            if (fOperation == Operation::Drag)
                 fOperation = operation;
 
 
             break;
-        case CancelSelection:
+        case Operation::CancelSelection:
             fOperation = operation;
             OIVCommands::CancelSelectionRect();
             break;

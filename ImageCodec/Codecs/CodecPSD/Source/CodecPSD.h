@@ -28,7 +28,7 @@ namespace IMCodec
                 out_properties.ImageBuffer = reinterpret_cast<uint8_t*>(context->merged_image_data);
                 out_properties.Width = context->width;
                 out_properties.Height = context->height;
-                out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
+                out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
                 out_properties.RowPitchInBytes = 4 * context->width;
                 
                 // 'merged_image_data' ownership has been delegated to image properties - do not free memory.

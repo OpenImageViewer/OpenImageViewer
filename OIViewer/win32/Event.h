@@ -30,7 +30,7 @@ namespace OIV
 
             MouseState::EventType GetButtonEvent(MouseState::Button button) const
             {
-                MouseState::EventType result = MouseState::EventType::ET_NotSet;
+                MouseState::EventType result = MouseState::EventType::NotSet;
                 for (auto s : ChangedButtons)
                 {
                     if (s.button == button)

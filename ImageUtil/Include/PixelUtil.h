@@ -198,19 +198,19 @@ namespace IMUtil
 
                     switch (transformInfo.transform)
                     {
-                    case AAT_Rotate180:
+                    case AxisAlignedRTransform::Rotate180:
                         idxDest = transformInfo.width - x - 1 + (transformInfo.height - y - 1) * transformInfo.width;
                         break;
-                    case AAT_Rotate90CW:
+                    case AxisAlignedRTransform::Rotate90CW:
                         idxDest = (transformInfo.height - 1 - y) + x * transformInfo.height;
                         break;
-                    case AAT_Rotate90CCW:
+                    case AxisAlignedRTransform::Rotate90CCW:
                         idxDest = y + (transformInfo.width - 1 - x) * transformInfo.height;
                         break;
-                    case AAT_FlipVertical:
+                    case AxisAlignedRTransform::FlipVertical:
                         idxDest = x + (transformInfo.height - y - 1) * transformInfo.width;
                         break;
-                    case AAT_FlipHorizontal:
+                    case AxisAlignedRTransform::FlipHorizontal:
                         idxDest = (transformInfo.width - 1 - x) + y * transformInfo.width;
                         break;
 

@@ -24,7 +24,9 @@ namespace IMUtil
             {
                 std::size_t operator()(const ConvertKey& key) const
                 {
-                    return key.source << 16 | key.target;
+                    using eumType = std::underlying_type<IMCodec::TexelFormat>::type;
+                    static_assert(sizeof(eumType) <= 2, "Size of enum underlying type should not be more than two bytes");
+                    return static_cast<eumType>(key.source) << (sizeof(eumType) * 8) | static_cast<eumType>(key.target);
                 }
             };
 
@@ -56,7 +58,7 @@ namespace IMUtil
             if (image->GetIsByteAligned() == false)
                 throw std::logic_error("OIV::Image::Transom works only with byte aligned image formats");
 
-            if (transform != AAT_None)
+            if (transform != AxisAlignedRTransform::None)
             {
                 uint8_t* dest = new uint8_t[image->GetTotalSizeOfImageTexels()];
 
@@ -117,7 +119,7 @@ namespace IMUtil
 
                 ImageProperies transformedProperties = image->GetProperties();
 
-                if (transform == AAT_Rotate90CW || transform == AAT_Rotate90CCW)
+                if (transform == AxisAlignedRTransform::Rotate90CW || transform == AxisAlignedRTransform::Rotate90CCW)
                     swap(transformedProperties.Height, transformedProperties.Width);
 
                 transformedProperties.RowPitchInBytes = transformedProperties.Width * image->GetBytesPerTexel();
@@ -240,15 +242,15 @@ namespace IMUtil
             return IMCodec::ImageSharedPtr();
         }
 
-        enum NormalizeMode
+        enum class NormalizeMode
         {
-              NM_Default    = 0
-            , NM_GrayScale  = 1
-            , NM_RainBow    = 2
+              Default    = 0
+            , GrayScale  = 1
+            , RainBow    = 2
         };
 
         template <class T>
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NM_Default)
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NormalizeMode::Default)
         {
             const T* sampleData = reinterpret_cast<const T*> (sourceImage->GetConstBuffer());
 
@@ -265,8 +267,8 @@ namespace IMUtil
 
             IMCodec::ImageProperies props;
             props = sourceImage->GetProperties();
-            props.TexelFormatDecompressed = IMCodec::TF_I_R8_G8_B8_A8;
-            props.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TF_I_R8_G8_B8_A8) / 8 * props.Width;
+            props.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+            props.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TexelFormat::I_R8_G8_B8_A8) / 8 * props.Width;
             props.ImageBuffer = new uint8_t[props.RowPitchInBytes * props.Height];
             
             PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.ImageBuffer);
@@ -280,15 +282,15 @@ namespace IMUtil
 
                 switch (normalizeMode)
                 {
-                case NM_Default:
-                case NM_GrayScale:
+                case NormalizeMode::Default:
+                case NormalizeMode::GrayScale:
                 {
                     uint8_t grayValue = std::min(static_cast<uint8_t>(std::round((currentSample / length) * 255)), static_cast<uint8_t>(255));
                     currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
                 }
                     break;
 
-                case NM_RainBow:
+                case NormalizeMode::RainBow:
                 {
                     RGB rgb = RGB(0, 0, 0);
                     if (currentSample != 0)

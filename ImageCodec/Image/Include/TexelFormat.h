@@ -12,24 +12,24 @@ namespace IMCodec
     // A - alpha (opacity)
     // X - any other channel (depth, gray-scale, monochrome or luminance)
 
-    enum TexelFormat : uint16_t
+    enum class TexelFormat : uint16_t
     {
-          TF_BEGIN
-        , TF_UNKNOWN = TF_BEGIN
-        , TF_I_R8_G8_B8
-        , TF_I_R8_G8_B8_A8
-        , TF_I_B8_G8_R8
-        , TF_I_B8_G8_R8_A8
-        , TF_I_A8_R8_G8_B8
-        , TF_I_A8_B8_G8_R8
-        , TF_I_A8
-        , TF_I_X1
-        , TF_I_X8
-        , TF_F_X16
-        , TF_F_X24
-        , TF_F_X32
-        , TF_F_X64
-        , TF_COUNT
+          BEGIN
+        , UNKNOWN = BEGIN
+        , I_R8_G8_B8
+        , I_R8_G8_B8_A8
+        , I_B8_G8_R8
+        , I_B8_G8_R8_A8
+        , I_A8_R8_G8_B8
+        , I_A8_B8_G8_R8
+        , I_A8
+        , I_X1
+        , I_X8
+        , F_X16
+        , F_X24
+        , F_X32
+        , F_X64
+        , COUNT
     };
 
     const uint8_t TexelFormatSize[] =
@@ -52,10 +52,10 @@ namespace IMCodec
 
     __forceinline  uint8_t GetTexelFormatSize(TexelFormat format)
     {
-        static_assert(sizeof(TexelFormatSize) / sizeof(TexelFormatSize[0]) == TF_COUNT, " Wrong array size");
-
-        if (format >= TF_BEGIN && format < TF_COUNT)
-            return TexelFormatSize[format];
+        static_assert(sizeof(TexelFormatSize) / sizeof(TexelFormatSize[0]) == static_cast<std::underlying_type<TexelFormat>::type>(TexelFormat::COUNT), " Wrong array size");
+        
+        if (format >= TexelFormat::BEGIN && format < TexelFormat::COUNT)
+            return TexelFormatSize[static_cast<std::underlying_type<TexelFormat>::type>(format)];
         else
             throw std::logic_error("Index out of bounds");
     }

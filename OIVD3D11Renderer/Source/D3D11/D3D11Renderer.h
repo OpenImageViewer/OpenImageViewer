@@ -38,11 +38,11 @@ namespace OIV
 #pragma pack()
 
 
-    enum ImageDisplayMode
+    enum class ImageDisplayMode
     {
-          IDM_Default
-        , IDM_ImageView
-        , IDM_Overlay
+          Default
+        , ImageView
+        , Overlay
     };
 
 

@@ -27,7 +27,7 @@ namespace IMCodec
 
         TexelFormat GetTexelFormat(uint16_t sampleFormat, uint16 bitsPerSample) const
         {
-            TexelFormat texelFormat = TexelFormat::TF_UNKNOWN;
+            TexelFormat texelFormat = TexelFormat::UNKNOWN;
             switch (sampleFormat)
             {
             case SAMPLEFORMAT_IEEEFP:
@@ -35,14 +35,14 @@ namespace IMCodec
                 switch (bitsPerSample)
                 {
                 case 16:
-                    texelFormat = TF_F_X16;
+                    texelFormat = TexelFormat::F_X16;
                     break;
                 case 24:
-                    texelFormat = TF_F_X24;
+                    texelFormat = TexelFormat::F_X24;
                     throw std::logic_error("not implemented");
                     break;
                 case 32:
-                    texelFormat = TF_F_X32;
+                    texelFormat = TexelFormat::F_X32;
                     break;
                 default:
                     throw std::logic_error("unsupported format");
@@ -54,7 +54,7 @@ namespace IMCodec
                 switch (bitsPerSample)
                 {
                 case 8:
-                    texelFormat = TF_I_X8;
+                    texelFormat = TexelFormat::I_X8;
                     break;
                 default:
                     throw std::logic_error("unsupported format");
@@ -85,7 +85,7 @@ namespace IMCodec
                 uint16 photoMetric;
                 uint16 samplesPerPixel;
 
-                TexelFormat texelFormat = TexelFormat::TF_UNKNOWN;
+                TexelFormat texelFormat = TexelFormat::UNKNOWN;
                 uint32_t rowPitch;
                 uint8_t* decompressedBuffer = nullptr;
                 uint32 rowsPerStrip;
@@ -109,7 +109,7 @@ namespace IMCodec
                 switch (photoMetric)
                 {
                 case PHOTOMETRIC_RGB:
-                    texelFormat = TF_I_R8_G8_B8_A8;
+                    texelFormat = TexelFormat::I_R8_G8_B8_A8;
                     //override target row pitch - always 32bpp
                     rowPitch = width * 4;
                     decompressedBuffer = new uint8[height * rowPitch];

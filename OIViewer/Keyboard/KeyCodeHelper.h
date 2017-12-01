@@ -28,7 +28,7 @@ namespace OIV
                 return keyName == item.keyName;
             });
 
-            return foundItem != KeyCodeString.end() ? foundItem->keyCode : KC_UNASSIGNED;
+            return foundItem != KeyCodeString.end() ? foundItem->keyCode :KeyCode::UNASSIGNED;
         }
 
         static std::vector<std::vector<int>> ComputeCombinations(std::vector<int> groupSizes)

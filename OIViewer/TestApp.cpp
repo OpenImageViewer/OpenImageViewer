@@ -69,13 +69,13 @@ namespace OIV
 
         switch (fWindow.GetFullScreenState())
         {
-        case FSS_MultiScreen:
+        case FullSceenState::MultiScreen:
             result.resValue = "Multi full screen";
             break;
-        case FSS_SingleScreen:
+        case FullSceenState::SingleScreen:
             result.resValue = "Full screen";
             break;
-        case FSS_Windowed:
+        case FullSceenState::Windowed:
             result.resValue = "Windowed";
             break;
         }
@@ -450,7 +450,7 @@ namespace OIV
     {
         fImageBeingOpened = ImageDescriptor();
         fImageBeingOpened.fileName = filePath;
-        fImageBeingOpened.source = ImageSource::IS_File;
+        fImageBeingOpened.source = ImageSource::File;
         using namespace LLUtils;
         FileMapping fileMapping(filePath);
         void* buffer = fileMapping.GetBuffer();
@@ -499,13 +499,13 @@ namespace OIV
 
     void TestApp::ReloadFileInFolder()
     {
-        if (fOpenedImage.source == ImageSource::IS_File)
+        if (fOpenedImage.source == ImageSource::File)
             LoadFileInFolder(fOpenedImage.GetName());
     }
 
     void TestApp::UpdateOpenedFileIndex()
     {
-        if (fOpenedImage.source == IS_File)
+        if (fOpenedImage.source == ImageSource::File)
         {
             LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fOpenedImage.fileName);
 
@@ -593,7 +593,7 @@ namespace OIV
         fSettings.Load();
 
         //If a file has been succesfuly loaded, index all the file in the folder
-        if (fOpenedImage.source == IS_File)
+        if (fOpenedImage.source == ImageSource::File)
             LoadFileInFolder(fOpenedImage.fileName);
         else
             ShowWelcomeMessage();
@@ -795,7 +795,7 @@ namespace OIV
         case 'C':
             if (IsControl == true)
             {
-                if (IsShift && fOpenedImage.source == IS_File)
+                if (IsShift && fOpenedImage.source == ImageSource::File)
                     LLUtils::PlatformUtility::CopyTextToClipBoard(fOpenedImage.fileName);
                 else
                     CopyVisibleToClipBoard();
@@ -923,7 +923,7 @@ namespace OIV
     {
         using namespace LLUtils;
         SIZE clientSize = fWindow.GetClientSize();
-        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(IST_Transformed);
+        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
         double zoom = std::min(ratio.x, ratio.y);
         fRefreshOperation.Begin();
         SetZoomInternal(zoom, -1, -1);
@@ -936,11 +936,11 @@ namespace OIV
     {
         switch (imageSizeType)
         {
-        case IST_Original:
+        case ImageSizeType::Original:
             return LLUtils::PointF64(fOpenedImage.width, fOpenedImage.height);
-        case IST_Transformed:
+        case ImageSizeType::Transformed:
             return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height);
-        case IST_Visible:
+        case ImageSizeType::Visible:
             return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * GetScale();
         default:
             throw std::logic_error("Unexpected or corrupted value");
@@ -986,7 +986,7 @@ namespace OIV
         if (fIsLockFitToScreen == false)
         {
             //We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::IST_Transformed);
+            PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::Transformed);
             double minimum = std::min(std::max(minimumZoom.x, minimumZoom.y),1.0);
             
             zoomValue = Utility::Clamp(zoomValue, minimum, MaxPixelSize);
@@ -1002,7 +1002,7 @@ namespace OIV
             clientY = clientSize.y / 2.0;
 
         zoomPoint = ClientToImage(PointI32(clientX, clientY));
-        PointF64 offset = (zoomPoint / GetImageSize(IST_Original)) * (GetScale() - zoomValue) * GetImageSize(IST_Original);
+        PointF64 offset = (zoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
         fImageProperties.scale = zoomValue;
 
         UpdateImageProperties();
@@ -1069,7 +1069,7 @@ namespace OIV
             << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
         fWindow.SetStatusBarText(ss.str(), 2, 0);
 
-        PointF64 storageImageSize = GetImageSize(IST_Original);
+        PointF64 storageImageSize = GetImageSize(ImageSizeType::Original);
        
         if (!( storageImageSpace.x < 0 
             || storageImageSpace.y < 0
@@ -1114,7 +1114,7 @@ namespace OIV
     void TestApp::Center()
     {
         using namespace LLUtils;
-        PointF64 offset = (PointF64(fWindow.GetClientSize()) - GetImageSize(IST_Visible)) / 2;
+        PointF64 offset = (PointF64(fWindow.GetClientSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
         SetOffset(offset);
         fIsOffsetLocked = true;
     }
@@ -1150,7 +1150,7 @@ namespace OIV
     LLUtils::PointF64 TestApp::ResolveOffset(const LLUtils::PointF64& point)
     {
         using namespace LLUtils;
-        PointF64 imageSize = GetImageSize(IST_Visible);
+        PointF64 imageSize = GetImageSize(ImageSizeType::Visible);
         PointF64 clientSize = fWindow.GetClientSize();
         PointF64 offset = static_cast<PointF64>(point);
         const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
@@ -1203,7 +1203,7 @@ namespace OIV
             fImageBeingOpened.width = loadRequest.width;
             fImageBeingOpened.height = loadRequest.height;
             fImageBeingOpened.loadTime = loadResponse.loadTime;
-            fImageBeingOpened.source = ImageSource::IS_Clipboard;
+            fImageBeingOpened.source = ImageSource::Clipboard;
             OIV_Util_GetBPPFromTexelFormat(texelFormat, &fImageBeingOpened.bpp);
             fImageBeingOpened.imageHandle = loadResponse.handle;
         }
@@ -1421,13 +1421,13 @@ namespace OIV
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
         const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
-        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Released;
-        const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Released;
-        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_Pressed;
-        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_Pressed;
-        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::ET_Pressed;
-        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::ET_DoublePressed;
-        const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::ET_DoublePressed;
+        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Released;
+        const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Released;
+        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Pressed;
+        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Pressed;
+        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::Pressed;
+        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::DoublePressed;
+        const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::DoublePressed;
         const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
 
         

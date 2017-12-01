@@ -14,17 +14,17 @@ namespace OIV
         {
             MouseState::SetButtonState(button, state);
 
-            if (state == Down && fWin->IsUnderMouseCursor())
+            if (state == State::Down && fWin->IsUnderMouseCursor())
             {
-               fCaptured[button] = true;
+               fCaptured[static_cast<size_t>(button)] = true;
             }
-            else if (state == Up)
-                fCaptured[button] = false;
+            else if (state == State::Up)
+                fCaptured[static_cast<size_t>(button)] = false;
         }
 
         bool RawInputMouseWindow::IsCaptured(Button button) const
         {
-            return fCaptured[button] == true;
+            return fCaptured[static_cast<size_t>(button)] == true;
         }
     }
 }

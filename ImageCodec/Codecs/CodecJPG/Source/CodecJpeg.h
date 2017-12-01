@@ -34,7 +34,7 @@ namespace IMCodec
                 if (tjDecompress2(ftjHandle, const_cast<unsigned char*>(buffer), jpegSize, bufferDecompressed, width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
                 {
                     out_properties.ImageBuffer = static_cast<uint8_t*>(bufferDecompressed);
-                    out_properties.TexelFormatDecompressed = TF_I_R8_G8_B8_A8;
+                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
                     out_properties.Width = width;
                     out_properties.Height = height;
                     out_properties.RowPitchInBytes = bytesPerPixel * width;

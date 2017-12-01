@@ -27,7 +27,7 @@ namespace OIV
             props.ImageBuffer = rasterizedText.buffer;
             props.RowPitchInBytes = rasterizedText.rowPitch;
             props.Width = rasterizedText.width;
-            props.TexelFormatDecompressed = TexelFormat::TF_I_R8_G8_B8_A8;
+            props.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
             ImageSharedPtr textImage = ImageSharedPtr(new Image(props, ImageData()));
             return textImage;
         }

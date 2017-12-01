@@ -1,15 +1,15 @@
 #pragma once
 namespace IMUtil
 {
-    enum AxisAlignedRTransform
+    enum class AxisAlignedRTransform
     {
-          AAT_None
-        , AAT_Rotate90CW
-        , AAT_Rotate270CCW = AAT_Rotate90CW
-        , AAT_Rotate90CCW
-        , AAT_Rotate270CW = AAT_Rotate90CCW
-        , AAT_Rotate180
-        , AAT_FlipVertical
-        , AAT_FlipHorizontal
+          None
+        , Rotate90CW
+        , Rotate270CCW = Rotate90CW
+        , Rotate90CCW
+        , Rotate270CW = Rotate90CCW
+        , Rotate180
+        , FlipVertical
+        , FlipHorizontal
     };
 }

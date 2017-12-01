@@ -1,6 +1,6 @@
 #pragma once
-#include <windows.h>
 #include "KeyCombination.h"
+#include <unordered_map>
 namespace OIV
 {
     template <class BindingType>
@@ -12,7 +12,7 @@ namespace OIV
     public:
       void AddBinding(KeyCombination combination,const BindingType& binding)
       {
-          if (combination.keycode == KC_UNASSIGNED)
+          if (static_cast<KeyCode>(combination.keycode) == KeyCode::UNASSIGNED)
               throw std::logic_error("trying to add an 'Unassigned' key binding");
 
 

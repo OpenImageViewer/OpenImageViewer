@@ -55,7 +55,7 @@ namespace IMCodec
                     switch (header.biBitCount)
                     {
                     case 8:
-                        out_properties.TexelFormatDecompressed = TF_I_X8;
+                        out_properties.TexelFormatDecompressed = TexelFormat::I_X8;
                         break;
                     case 32:
                         if (format == FIF_BMP)
@@ -71,13 +71,13 @@ namespace IMCodec
 
                             }
                         }
-                        out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8_A8;
+                        out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
                         break;
                     case 24:
-                        out_properties.TexelFormatDecompressed = TF_I_B8_G8_R8;
+                        out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8;
                         break;
                     default:
-                        out_properties.TexelFormatDecompressed = TF_UNKNOWN;
+                        out_properties.TexelFormatDecompressed = TexelFormat::UNKNOWN;
 
                     }
                 }

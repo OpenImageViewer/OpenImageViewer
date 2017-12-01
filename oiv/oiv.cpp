@@ -197,23 +197,23 @@ namespace OIV
 
             // Texel format supported by the renderer is currently RGBA.
             // support for other texel formats may save conversion.
-            const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::TF_I_R8_G8_B8_A8;
+            const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::I_R8_G8_B8_A8;
 
             switch (image->GetImageType())
             {
-            case IMCodec::TF_F_X16:
+            case IMCodec::TexelFormat::F_X16:
                 image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
                 break;
 
-            case IMCodec::TF_F_X24:
+            case IMCodec::TexelFormat::F_X24:
                 throw std::logic_error("not implemented");
                 image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
                 break;
 
-            case IMCodec::TF_F_X32:
+            case IMCodec::TexelFormat::F_X32:
                 image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat,static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
                 break;
-            case IMCodec::TF_I_X8:
+            case IMCodec::TexelFormat::I_X8:
                 image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat, static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
                 break;
 
@@ -402,7 +402,7 @@ namespace OIV
     int OIV::Init()
     {
         
-        static_assert(OIV_TexelFormat::TF_COUNT == IMCodec::TexelFormat::TF_COUNT, "Wrong array size");
+        static_assert(OIV_TexelFormat::TF_COUNT == static_cast<OIV_TexelFormat>( IMCodec::TexelFormat::COUNT), "Wrong array size");
         fRenderer = CreateBestRenderer();
         fRenderer->Init(fParent);
         return 0;

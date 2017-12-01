@@ -293,7 +293,7 @@ namespace OIV
             gpuBuffer.opacity = props.opacity;
 
             fBufferImageCommon->Update();
-            fBufferImageCommon->Use(ShaderStage::SS_FragmentShader, 0);
+            fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
             
 
             switch (props.imageRenderMode)
@@ -302,7 +302,7 @@ namespace OIV
                  fImageSimpleFragmentShader->Use();
                  break;
              case  OIV_Image_Render_mode::IRM_MainImage:
-                 fBufferImageMain->Use(ShaderStage::SS_FragmentShader,1);
+                 fBufferImageMain->Use(ShaderStage::FragmentShader,1);
                  fImageFragmentShader->Use();
                  break;
              default:
@@ -317,7 +317,7 @@ namespace OIV
         //Draw selection rect.
         if (fBufferSelection->GetBuffer().uSelectionRect[0] != -1)
         {
-            fBufferSelection->Use(ShaderStage::SS_FragmentShader, 0);
+            fBufferSelection->Use(ShaderStage::FragmentShader, 0);
             fSelectionFragmentShaer->Use();
             context->Draw(4, 0);
         }

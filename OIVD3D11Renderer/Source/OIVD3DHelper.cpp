@@ -8,7 +8,7 @@ namespace OIV
         D3D11TextureSharedPtr OIVD3DHelper::CreateTexture(D3D11DeviceSharedPtr device, const IMCodec::ImageSharedPtr image)
         {
 
-            if (image->GetImageType() != IMCodec::TF_I_R8_G8_B8_A8)
+            if (image->GetImageType() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 D3D11Error::HandleError("Direct3D11 renderer supports only RGBA pixel format");
 
 

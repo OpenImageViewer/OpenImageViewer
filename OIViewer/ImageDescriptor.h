@@ -4,18 +4,18 @@
 
 namespace OIV
 {
-     enum ImageSource
+     enum class ImageSource
      {
-           IS_None
-         , IS_File
-         , IS_Clipboard
+           None
+         , File
+         , Clipboard
 
      };
     class ImageDescriptor
     {
     public:
         ImageHandle imageHandle = ImageHandleNull;
-        ImageSource source = IS_None;
+        ImageSource source = ImageSource::None;
         std::wstring fileName;
         uint32_t width = 0;
         uint32_t height = 0;
@@ -31,11 +31,11 @@ namespace OIV
             static std::wstring empty = L"";
             switch (source)
             {
-            case IS_File:
+            case ImageSource::File:
                 return  fileName;
-            case IS_Clipboard:
+            case ImageSource::Clipboard:
                 return clipboard;
-            case IS_None:
+            case ImageSource::None:
                 return empty;
             default:
                 throw std::logic_error("Unexpected or corrupted value");

@@ -17,11 +17,11 @@
 
 namespace OIV
 {
-    enum ImageSizeType
+    enum class ImageSizeType
     {
-          IST_Original
-        , IST_Transformed
-        , IST_Visible
+          Original
+        , Transformed
+        , Visible
     };
 
 

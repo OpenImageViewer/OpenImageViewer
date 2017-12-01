@@ -18,7 +18,7 @@ namespace OIV
             currentStyles |= WS_CLIPCHILDREN;
 
                 
-            if (fFullSceenState != FSS_Windowed || fShowBorders == false)
+            if (fFullSceenState != FullSceenState::Windowed || fShowBorders == false)
                 return currentStyles;
             else
                 return currentStyles
@@ -42,7 +42,7 @@ namespace OIV
 
         bool Win32WIndow::IsFullScreen() const
         {
-            return fFullSceenState != FSS_Windowed;
+            return fFullSceenState != FullSceenState::Windowed;
         }
 
         void Win32WIndow::UpdateWindowStyles()
@@ -64,7 +64,7 @@ namespace OIV
 
         void Win32WIndow::SetWindowed()
         {
-            fFullSceenState = FSS_Windowed;
+            fFullSceenState = FullSceenState::Windowed;
             UpdateWindowStyles();
             RestorePlacement();
         }
@@ -95,17 +95,17 @@ namespace OIV
             GetMonitorInfo(MonitorFromWindow(fHandleWindow, MONITOR_DEFAULTTOPRIMARY), &mi);
             RECT rect = mi.rcMonitor;
 
-            if (fFullSceenState == FSS_Windowed)
+            if (fFullSceenState == FullSceenState::Windowed)
                 SavePlacement();
 
             if (multiMonitor)
             {
                 MonitorInfo::GetSingleton().Refresh();
                 rect = MonitorInfo::GetSingleton().getBoundingMonitorArea();
-                fFullSceenState = FSS_MultiScreen;
+                fFullSceenState = FullSceenState::MultiScreen;
             }
             else
-                fFullSceenState = FSS_SingleScreen;
+                fFullSceenState = FullSceenState::SingleScreen;
 
             UpdateWindowStyles();
             
@@ -124,21 +124,21 @@ namespace OIV
 
             switch (fFullSceenState)
             {
-            case FSS_Windowed:
+            case FullSceenState::Windowed:
                 SetFullScreen(multiMonitor);
                 break;
-            case FSS_SingleScreen:
+            case FullSceenState::SingleScreen:
                 if (multiMonitor == true)
                     SetFullScreen(multiMonitor);
                 else
                     SetWindowed();
                 break;
-            case FSS_MultiScreen:
+            case FullSceenState::MultiScreen:
                 SetWindowed();
                 break;
             }
             
-            ShowWindow(fHandleStatusBar, fFullSceenState == FSS_Windowed ? SW_SHOW : SW_HIDE);
+            ShowWindow(fHandleStatusBar, fFullSceenState == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
         }
 
         HWND Win32WIndow::GetHandle() const
@@ -611,7 +611,7 @@ namespace OIV
             clientSize.cy = rect.bottom - rect.top;
 
 
-            if (fShowStatusBar && fFullSceenState == FullSceenState::FSS_Windowed)
+            if (fShowStatusBar && fFullSceenState == FullSceenState::Windowed)
             {
                 RECT statusBarRect;
                 ShowWindow(fHandleStatusBar,  SW_SHOW);

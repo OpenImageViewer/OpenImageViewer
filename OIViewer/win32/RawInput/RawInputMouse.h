@@ -35,9 +35,9 @@ namespace OIV
             static const int Max_Buttons = 3;
         
             public:
-            enum Button { Left,Right,Middle,Third, Forth, Fifth};
-            enum State { NotSet, Down, Up };
-            enum EventType { ET_NotSet, ET_Pressed, ET_Clicked, ET_DoublePressed,  ET_Released };
+            enum class Button { Left,Right,Middle,Third, Forth, Fifth};
+            enum class State { NotSet, Down, Up };
+            enum class EventType { NotSet, Pressed, Clicked, DoublePressed,  Released };
 
             ///////////////////////
             // Button event            
@@ -57,7 +57,7 @@ namespace OIV
          
         private:
             LLUtils::StopWatch fTimer = LLUtils::StopWatch(true);
-            State fButtons[Max_Buttons] = { NotSet };
+            State fButtons[Max_Buttons] = {State::NotSet };
             LONG fDeltaX = 0;
             LONG fDeltaY = 0;
             LONG fwheel = 0;
@@ -78,7 +78,7 @@ namespace OIV
 
             virtual void SetButtonState(Button button , State state)
             {
-                fButtons[button] = state;
+                fButtons[static_cast<size_t>(button)] = state;
             }
 
             void Update(const RAWMOUSE& mouse)
@@ -96,25 +96,25 @@ namespace OIV
                     Button button = static_cast<Button>(i);
                     if (mouse.ulButtons & (1ul << (i * 2)))
                     {
-                        SetButtonState(button, Down);
-                        fButtonActions.push_back({elpased, button, EventType::ET_Pressed ,mousePos.x, mousePos.y });
+                        SetButtonState(button, State::Down);
+                        fButtonActions.push_back({elpased, button, EventType::Pressed ,mousePos.x, mousePos.y });
 
                         if (IsClicked(button, dDoubleClickTime, mousePos, 10 * 10))
                         {
-                            fButtonActions.push_back({ elpased, button, EventType::ET_DoublePressed, mousePos.x , mousePos.y });
+                            fButtonActions.push_back({ elpased, button, EventType::DoublePressed, mousePos.x , mousePos.y });
                             ClearHistory(button);
                         }
                         else
                         {
-                            fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Pressed, mousePos.x, mousePos.y });
+                            fButtonActionsHistory.push_back({ elpased, button, EventType::Pressed, mousePos.x, mousePos.y });
                         }
                         
                     }
                     if (mouse.ulButtons & (2ul << (i * 2)))
                     {
-                        SetButtonState(button, Up);
-                        fButtonActions.push_back({ elpased, button, EventType::ET_Released, mousePos.x , mousePos.y });
-                        fButtonActionsHistory.push_back({ elpased, button, EventType::ET_Released, mousePos.x , mousePos.y });
+                        SetButtonState(button, State::Up);
+                        fButtonActions.push_back({ elpased, button, EventType::Released, mousePos.x , mousePos.y });
+                        fButtonActionsHistory.push_back({ elpased, button, EventType::Released, mousePos.x , mousePos.y });
                     }
                 }
                 ClearHistory();
@@ -149,12 +149,12 @@ namespace OIV
                         
                         if (elpased - evnt.timeStamp < time)
                         {
-                            if (evnt.eventType == ET_Pressed)
+                            if (evnt.eventType == EventType::Pressed)
                             {
                                 if (origin.DistanceSquared({ evnt.x, evnt.y }) < radiusSquared)
                                 state = 1;
                             }
-                            else if (evnt.eventType == ET_Released && state == 1)
+                            else if (evnt.eventType == EventType::Released && state == 1)
                             {
                                 if (origin.DistanceSquared({ evnt.x , evnt.y }) < radiusSquared)
                                     return true;
@@ -181,7 +181,7 @@ namespace OIV
 
             State GetButtonState(Button button) const
             {
-                return fButtons[button];
+                return fButtons[static_cast<int>(button)];
             }
         };
     }

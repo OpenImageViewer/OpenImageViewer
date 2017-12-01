@@ -8,7 +8,7 @@ namespace OIV
 
     public:
 
-        enum Operation
+        enum class Operation
         {
               NoOp
             , BeginDrag
@@ -27,7 +27,7 @@ namespace OIV
 
 
     private: // member fields
-        Operation fOperation = NoOp;
+        Operation fOperation = Operation::NoOp;
         LLUtils::RectI32 fSelectionRect;
         LLUtils::PointI32 fSelectStartPoint;
         LLUtils::PointI32 fSelectEndPoint;

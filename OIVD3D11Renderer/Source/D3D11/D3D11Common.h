@@ -4,12 +4,12 @@
 
 namespace OIV
 {
-    enum ShaderStage
+    enum class ShaderStage
     {
-          SS_None
-        , SS_VertexShader
-        , SS_GeometryShader
-        , SS_FragmentShader
+          None
+        , VertexShader
+        , GeometryShader
+        , FragmentShader
     };
 
     class D3D11Device;

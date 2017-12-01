@@ -39,20 +39,18 @@ namespace OIV
             uint16_t keyValue = 0;
             struct
             {
-                unsigned keycode : 8;
-                unsigned leftCtrl : 1;
-                unsigned rightCtrl : 1;
-                unsigned leftAlt : 1;
-                unsigned rightAlt : 1;
-                unsigned leftShift : 1;
-                unsigned rightShift : 1;
-                unsigned leftWinKey : 1;
-                unsigned rightWinKey : 1;
+                KeyCode keycode;
+                unsigned char leftCtrl : 1;
+                unsigned char rightCtrl : 1;
+                unsigned char leftAlt : 1;
+                unsigned char rightAlt : 1;
+                unsigned char leftShift : 1;
+                unsigned char rightShift : 1;
+                unsigned char leftWinKey : 1;
+                unsigned char rightWinKey : 1;
             };
         };
 
 #pragma endregion //memeber fields
     };
-
-
 }

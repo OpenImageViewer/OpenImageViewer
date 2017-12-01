@@ -24,10 +24,10 @@ namespace OIV
         {
             switch (stage)
             {
-            case SS_VertexShader:
+            case ShaderStage::VertexShader:
                 GetDevice()->GetContext()->VSSetConstantBuffers(static_cast<UINT>(slot), 1, fBuffer.GetAddressOf());
                 break;
-            case SS_FragmentShader:
+            case ShaderStage::FragmentShader:
                 GetDevice()->GetContext()->PSSetConstantBuffers(static_cast<UINT>(slot), 1, fBuffer.GetAddressOf());
                 break;
             default:
