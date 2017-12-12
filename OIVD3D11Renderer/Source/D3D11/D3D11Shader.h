@@ -11,9 +11,12 @@ namespace OIV
     {
     public:
         D3D11Shader(D3D11DeviceSharedPtr d3dDevice);
-        void Load(std::string sourceCode);
-        void Load(BlobSharedPtr blob);
+        void SetMicroCode(BlobSharedPtr blob);
+        void SetSourceFileName(const std::wstring& fileName);
+        void SetSourceCode(const std::string& sourceCode);
+        void Load();
         const std::string& Getsource() const;
+        const std::wstring& GetsourceFileName() const;
         const BlobSharedPtr GetShaderData() const;
         void Use();
 
@@ -32,12 +35,14 @@ namespace OIV
 
     private: // methods
         void Create();
+        UINT GetCompileFlags() const;
         void Compile();
         void HandleCompileError(ID3DBlob* errors) const;
 
     private: // member fields
         D3D11DeviceSharedPtr fDevice;
         std::string fSourceCode;
+        std::wstring fSourceFileName;
         BlobSharedPtr fShaderData;
     };
 

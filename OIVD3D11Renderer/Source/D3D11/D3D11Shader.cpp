@@ -1,30 +1,100 @@
 #include "d3d11shader.h"
 #include "D3D11Blob.h"
+#include <FileHelper.h>
 
 namespace  OIV
 {
+
+    class D3D11IncludeHandler final : public ID3DInclude
+    {
+    public:
+
+        D3D11IncludeHandler(D3D11Shader* shader)
+        {
+            fShader = shader;
+        }
+
+        HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
+            LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override
+        {
+            using namespace std::experimental;
+            filesystem::path p = fShader->GetsourceFileName();
+            p = p.parent_path() / pFileName;
+            uint8_t* buffer;
+            size_t bufferSize;
+            LLUtils::File::ReadAllBytes(p,bufferSize,buffer);
+            *pBytes = bufferSize;
+            *ppData = buffer;
+            return S_OK;
+            
+        }
+
+        HRESULT __stdcall Close(LPCVOID pData) override
+        {
+            delete [] reinterpret_cast<const uint8_t*>(pData);
+            return S_OK;
+        }
+
+    private:
+        D3D11Shader* fShader;
+        
+    };
+
+
     D3D11Shader::D3D11Shader(D3D11DeviceSharedPtr d3dDevice)
         : fDevice(d3dDevice)
     {
 
     }
 
-    void D3D11Shader::Load(std::string sourceCode)
-    {
-        fSourceCode = sourceCode;
-        Compile();
-        Create();
-    }
-
-    void D3D11Shader::Load(BlobSharedPtr blob)
+    void D3D11Shader::SetMicroCode(BlobSharedPtr blob)
     {
         fShaderData = blob;
+    }
+
+
+    void D3D11Shader::SetSourceFileName(const std::wstring& fileName)
+    {
+        fSourceFileName = fileName;
+    }
+
+    void D3D11Shader::SetSourceCode(const std::string& sourceCode)
+    {
+        fSourceCode = sourceCode;
+    }
+
+    void D3D11Shader::Load()
+    {
+        if (fShaderData == nullptr)
+        {
+            if (fSourceCode.empty() == true)
+            {
+                if (fSourceFileName.empty() == true)
+                    D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
+
+                fSourceCode = LLUtils::File::ReadAllText(GetsourceFileName());
+            }
+            
+            if (fSourceCode.empty() == true)
+                D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
+
+            Compile();
+        }
+
+        if (fShaderData == nullptr)
+            D3D11Error::HandleError("Could not compile GPU program");
+
         Create();
     }
 
     const std::string& D3D11Shader::Getsource() const
     {
         return fSourceCode;
+    }
+
+    const std::wstring& D3D11Shader::GetsourceFileName() const
+    {
+        return fSourceFileName;
     }
 
     const BlobSharedPtr D3D11Shader::GetShaderData() const
@@ -47,6 +117,16 @@ namespace  OIV
         CreateImpl();
     }
 
+    UINT D3D11Shader::GetCompileFlags() const
+    {
+        return 
+              D3DCOMPILE_OPTIMIZATION_LEVEL3 
+            | D3DCOMPILE_IEEE_STRICTNESS 
+            | D3DCOMPILE_ENABLE_STRICTNESS
+            | D3DCOMPILE_WARNINGS_ARE_ERRORS
+        ;
+    }
+
     void D3D11Shader::Compile()
     {
         D3D_SHADER_MACRO macros[2];
@@ -62,18 +142,19 @@ namespace  OIV
 
         ShaderCompileParams params;
 
+        D3D11IncludeHandler includeHandler(this);
         GetShaderCompileParams(params);
-
+        
         res =
             D3DCompile(
                 static_cast<const void*>(fSourceCode.c_str())
                 , fSourceCode.length()
-                , nullptr /*source name*/
+                , fSourceFileName.empty() == false ? LLUtils::StringUtility::ToAString(fSourceFileName).c_str() : nullptr /*source name*/
                 , &macros[0]
-                , nullptr
+                , &includeHandler
                 , "main"
                 , params.target.c_str()
-                , D3DCOMPILE_OPTIMIZATION_LEVEL3
+                , GetCompileFlags() 
                 , 0
                 , microCode.GetAddressOf()
                 , errors.GetAddressOf()

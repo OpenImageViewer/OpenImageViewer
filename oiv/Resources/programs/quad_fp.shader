@@ -14,6 +14,8 @@
 	#define lerp mix
 #endif
 
+#include "colorCorrection.shader"
+#include "imagecommon.shader"
 
 STATIC_CONST float4 white = float4(1, 1, 1, 1);
 STATIC_CONST float4 gray25 = float4(0.75, 0.75, 0.75, 1);
@@ -24,13 +26,9 @@ STATIC_CONST float4 red = float4(1, 0, 0, 1);
 
 //Globals
 
-cbuffer BaseImageData : register(b0) 
+cbuffer BaseImageData_ : register(b0) 
 {
-	float4 uViewportSize;
-	float2 uImageSize;
-	float2 uImageOffset;
-	float2 uScale;
-	float  uOpacity;
+BaseImageData baseImageData;
 };
 
 cbuffer MainImageData : register(b1) 
@@ -56,7 +54,7 @@ float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 #endif
 	
 }
-#line 46
+
 float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
 {
     float2 checkerSize = float2(0.03, 0.03);
@@ -67,7 +65,7 @@ float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
 		checkerSize.x *= viewportSize.y / viewportSize.x;
 
     float2 checkerPos = uv / checkerSize;
-    int2 checkerPosInt = int2(checkerPos);
+    uint2 checkerPosInt = uint2(checkerPos);
     checkerPosInt = checkerPosInt % 2;
     float4 checkerColor;
     if (checkerPosInt.x == checkerPosInt.y)
@@ -86,37 +84,34 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 					, in    float2  i_inputUV
 					, inout float4 o_texel)
 {
-/*
-	const float constantFactor = 2.9;
-	const float decayFactor = 0.6;
-	const float blendDecay = 3.7;
-*/
-	
+	//Base width of the grid
 	const float constantFactor = 2.2;
+	//The rate of change in grid width relative to scale - higher value means thinner line sooner.
 	const float decayFactor = 0.6;
+	//The rate of change in opacity relative to scale - higher value means less opacity sooner.
 	const float blendDecay = 2.8;
+	// On what scale the grid will be fully opaque
 	const float fullOpacityGridScale = 5;
 
 	float minImageScale = min(i_imageScale.x, i_imageScale.y);
 
 	
-	float2 pixelSizeNorm =  i_viewportSize.zw;
 	float2 pixelOnViewportNorm =  i_inputUV;
 	float2 imageOffsetNorm = i_viewportSize.zw * i_imageOffset;
 	float aspectRatioFactor = i_viewportSize.z / i_viewportSize.w;
-	float2 widthOfGrid =  pixelSizeNorm * (constantFactor /  pow(i_imageScale,decayFactor));
+	float2 pixelSizeNorm =  i_viewportSize.zw;
+	float2 widthOfGrid =  pixelSizeNorm * (constantFactor /  pow(abs(i_imageScale),decayFactor));
 	float2 currentDistance = widthOfGrid / 2.0;
 	float2 imageSpacePositionNorm = (pixelOnViewportNorm - imageOffsetNorm) / i_imageScale;
-	float2  pixelSizeNormAR = float2(pixelSizeNorm.x * aspectRatioFactor, pixelSizeNorm.y);
-	float2 dd = abs(imageSpacePositionNorm  %  pixelSizeNorm );
-	float2 rdd = pixelSizeNorm - dd;
+	float2 dd = abs( fmod(imageSpacePositionNorm,  pixelSizeNorm ));
+	float2 rdd = abs(pixelSizeNorm - dd);
 	float2 ddMin = float2(min(dd.x, rdd.x), min(dd.y, rdd.y));
 	float maxDistance = max(currentDistance.x  , currentDistance.y);
 	
 	//Fixed aspect ratio so width of grid lines would be the same for each axis.
 	if (aspectRatioFactor < 1)
 		ddMin.x /= aspectRatioFactor;
-		else
+	else
 		ddMin.y *= aspectRatioFactor;
 	
 	float minDD = min(ddMin.x , ddMin.y);
@@ -125,7 +120,7 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 	{
 		float minImageScale = min(i_imageScale.x, i_imageScale.y);
 		float alpha = (1.0 -  minDD / maxDistance) * min(1, (minImageScale / fullOpacityGridScale));
-		o_texel = lerp(o_texel,float4(1,0,0,1), pow(alpha, blendDecay));
+		o_texel = lerp(o_texel,float4(1,0,0,1), pow(abs(alpha), blendDecay));
 	}
 	
 }
@@ -158,47 +153,42 @@ void DrawPixelGrid(
 		}
 } 
 
-float3 saturate(float3 color, float amount)
-{
-	const float3 RGBWeights = float3(0.299, 0.587, 0.114);
-	float3 v  = color * color * RGBWeights;
-	float luminance = sqrt(v.r + v.g + v.b); 
-	return  luminance + ( color - luminance) * amount;
-}
 
 void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
 {
 	if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
             texel = GetChecker(black, darkBlue, screenUV, viewportSize);
 }
-void DrawImage(float2 uv, float2 screenUV,float2 viewportSize, inout float4 texel)
+
+void DrawImage(float2 uv, float2 screenUV,float2 scale, float2 viewportSize,in float2 imageSize, inout float4 texel)
 {
+ 
     float4 sampledTexel = SampleTexture(texture_1,uv);
-    sampledTexel.xyz =  pow(sampledTexel.xyz * uExposure  + uOffset, 1 / uGamma);
+    sampledTexel.xyz =  pow(abs(sampledTexel.xyz * uExposure  + uOffset), 1.0 / uGamma);
     sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
 	
     float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }
 
-float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize, float2 i_uvScale,float2 i_uvOffset,int i_showGrid )
+float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize, float2 i_imageScale,float2 i_ImageOffset,int i_showGrid )
 {
 	float4 texel;
 
-	float2 uvScale =  uViewportSize.xy / (uImageSize.xy * uScale);
-	float2 offset=  -uImageOffset.xy / uViewportSize.xy * uvScale;
+	float2 uvScale =  i_viewportSize.xy / (i_imageSize.xy * i_imageScale);
+	float2 offset=  -i_ImageOffset.xy / i_viewportSize.xy * uvScale;
 	float2 uv = i_inputUV * uvScale  + offset;
 	
  if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
         FillBackGround(uv, i_inputUV, i_viewportSize.xy, texel);
     else
     {
-        DrawImage(uv, i_inputUV, i_viewportSize.xy, texel);
+        DrawImage(uv, i_inputUV,uvScale, i_viewportSize.xy, i_imageSize, texel);
         //if (i_showGrid == 1)
           //  DrawPixelGrid(i_imageSize, i_viewportSize.xy, i_inputUV, uvScale, offset, texel);
 			
 		if (i_showGrid == 1)
-			DrawPixelGrid2(i_imageSize,uImageOffset,uScale ,i_viewportSize, i_inputUV, texel);
+			DrawPixelGrid2(i_imageSize,i_ImageOffset,i_imageScale ,i_viewportSize, i_inputUV, texel);
 			
     }
 	
@@ -221,7 +211,7 @@ struct ShaderOut
 void main(in ShaderIn input, out ShaderOut output)
 {
 
-    output.texelOut = GetFinalTexel(input.uv, uViewportSize, uImageSize,uScale, uImageOffset, uShowGrid);
+    output.texelOut = GetFinalTexel(input.uv, baseImageData.uViewportSize, baseImageData.uImageSize, baseImageData.uScale, baseImageData.uImageOffset, uShowGrid);
 }
 #else
 ////////////////////////

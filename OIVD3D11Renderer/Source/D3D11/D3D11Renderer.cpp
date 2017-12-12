@@ -200,20 +200,27 @@ namespace OIV
 
     void D3D11Renderer::CreateShaders()
     {
-        fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
-        fImageFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
-        fSelectionFragmentShaer = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
-        fImageSimpleFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
-
         using namespace std;
         using path = std::experimental::filesystem::path;
-        
+
         path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
         path programsPath = executableDirPath / L"/Resources/programs";
-        D3D11Utility::LoadShader(fImageVertexShader, programsPath / L"quad_vp.shader");
-        D3D11Utility::LoadShader(fImageFragmentShader, programsPath / L"quad_fp.shader");
-        D3D11Utility::LoadShader(fSelectionFragmentShaer, programsPath / L"quad_selection_fp.shader");
-        D3D11Utility::LoadShader(fImageSimpleFragmentShader, programsPath / L"quad_simple_fp.shader");
+
+        fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
+        fImageVertexShader->SetSourceFileName(programsPath / L"quad_vp.shader");
+        fImageFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fImageFragmentShader->SetSourceFileName(programsPath / L"quad_fp.shader");
+        fSelectionFragmentShaer = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fSelectionFragmentShaer->SetSourceFileName(programsPath / L"quad_selection_fp.shader");
+        fImageSimpleFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fImageSimpleFragmentShader->SetSourceFileName(programsPath / L"quad_simple_fp.shader");
+
+     
+
+        D3D11Utility::LoadShader(fImageVertexShader);
+        D3D11Utility::LoadShader(fImageFragmentShader);
+        D3D11Utility::LoadShader(fSelectionFragmentShaer);
+        D3D11Utility::LoadShader(fImageSimpleFragmentShader);
 
     }
 

@@ -1,8 +1,10 @@
-uniform float4 uViewportSize;
-uniform float2 uImageSize;
-uniform float2 uImageOffset;
-uniform float2 uScale;
-float  uOpacity;
+#include "imagecommon.shader"
+
+cbuffer BaseImageData_ : register(b0) 
+{
+	BaseImageData baseImageData;
+};
+
 
 uniform Texture2D    tex1;
 uniform SamplerState samplerState;
@@ -26,8 +28,8 @@ struct ShaderOut
 
 float4 GetFinalTexel(float2 i_inputUV)
 {
-	float2 uvScale = (uImageSize.xy * uScale / uViewportSize.xy );
-	float2 offset= uImageOffset.xy / uViewportSize.xy / uvScale;
+	float2 uvScale = (baseImageData.uImageSize.xy * baseImageData.uScale / baseImageData.uViewportSize.xy );
+	float2 offset= baseImageData.uImageOffset.xy / baseImageData.uViewportSize.xy / uvScale;
 	float2 uvFixed = i_inputUV / uvScale  - offset;
 	
 	float4 finalTexelColor;
@@ -40,7 +42,7 @@ float4 GetFinalTexel(float2 i_inputUV)
     else
         finalTexelColor = float4(0, 0, 0, 0);
 		
-		finalTexelColor.a *= uOpacity;
+		finalTexelColor.a *= baseImageData.uOpacity;
 		return finalTexelColor;
 }
 void main(in ShaderIn input, out ShaderOut output)

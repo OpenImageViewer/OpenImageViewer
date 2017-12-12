@@ -40,33 +40,29 @@ namespace OIV
             sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
         }
 
-        static void D3D11Utility::LoadShader(D3D11ShaderUniquePtr& shader, const std::experimental::filesystem::path& shaderPath)
+        static void D3D11Utility::LoadShader(D3D11ShaderUniquePtr& shader)
         {
             using namespace std::experimental;
 
             filesystem::path oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
-
+            
             //Try cache first;
-            filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename()).replace_extension(L"bin");
+            filesystem::path shaderPath = shader->GetsourceFileName();
+            filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename() ).replace_extension(L"bin");
 #ifndef _DEBUG
             if (filesystem::exists(cachePath))
             {
                 //Load from cache 
                 BlobSharedPtr blob = BlobSharedPtr(new Blob());
                 LLUtils::File::ReadAllBytes(cachePath, blob->size, blob->buffer);
-                shader->Load(blob);
+                shader->SetMicroCode(blob);
+                shader->Load();
+
             }
-            else 
+            else
 #endif
-
-            if (filesystem::exists(shaderPath))
             {
-                std::string shaderSource = LLUtils::File::ReadAllText(shaderPath);
-                // compile source and save cache
-                if (shaderSource.empty() == true)
-                    D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
-
-                shader->Load(shaderSource);
+                shader->Load();
                 BlobSharedPtr blob = shader->GetShaderData();
                 LLUtils::File::WriteAllBytes(cachePath, blob->size, blob->buffer);
             }
