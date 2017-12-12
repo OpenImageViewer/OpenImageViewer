@@ -30,7 +30,7 @@ namespace OIV
             {
                 OIV_CMD_LoadRaw_Response* loadResponse = reinterpret_cast<OIV_CMD_LoadRaw_Response*>(response);
                 IMCodec::ImageSharedPtr image = ApiGlobal::sPictureRenderer->GetImage(handle);
-                loadResponse->loadTime = image->GetData().LoadTime;
+                loadResponse->loadTime = image->GetDescriptor().fMetaData.LoadTime;
                 loadResponse->handle = handle;
             }
 

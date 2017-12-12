@@ -21,7 +21,7 @@ namespace IMCodec
         }
 
 
-        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) override
+        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
             FIBITMAP* freeImageHandle;
             bool opened = false;
@@ -37,15 +37,14 @@ namespace IMCodec
 
                 const BITMAPINFOHEADER& header = imageInfo->bmiHeader;
 
-                out_properties.Width = header.biWidth;
-                out_properties.Height = header.biHeight;
-                out_properties.RowPitchInBytes = FreeImage_GetPitch(freeImageHandle);
+                out_properties.fProperties.Width = header.biWidth;
+                out_properties.fProperties.Height = header.biHeight;
+                out_properties.fProperties.RowPitchInBytes = FreeImage_GetPitch(freeImageHandle);
 
-                out_properties.NumSubImages = 0;
+                out_properties.fProperties.NumSubImages = 0;
 
-                std::size_t imageSizeInMemory = header.biHeight * out_properties.RowPitchInBytes;
-                out_properties.ImageBuffer = new uint8_t[imageSizeInMemory];
-                memcpy_s(out_properties.ImageBuffer, imageSizeInMemory, FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
+                std::size_t imageSizeInMemory = header.biHeight * out_properties.fProperties.RowPitchInBytes;
+                out_properties.fData.AllocateAndWrite(FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
 
 
                 switch (TexelFormat)
@@ -55,29 +54,29 @@ namespace IMCodec
                     switch (header.biBitCount)
                     {
                     case 8:
-                        out_properties.TexelFormatDecompressed = TexelFormat::I_X8;
+                        out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_X8;
                         break;
                     case 32:
                         if (format == FIF_BMP)
                         {
                             // Hack: BMP isn't read with an alpha channel.
-                            uint32_t* line = (uint32_t*)out_properties.ImageBuffer;
-                            for (uint32_t y = 0; y < out_properties.Height; y++)
+                            uint32_t* line = (uint32_t*)out_properties.fData.GetBuffer();
+                            for (uint32_t y = 0; y < out_properties.fProperties.Height; y++)
                             {
-                                for (uint32_t x = 0; x < out_properties.Width; x++)
+                                for (uint32_t x = 0; x < out_properties.fProperties.Width; x++)
                                     line[x] = line[x] | 0xFF000000;
 
-                                line = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(line) + out_properties.RowPitchInBytes);
+                                line = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(line) + out_properties.fProperties.RowPitchInBytes);
 
                             }
                         }
-                        out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
+                        out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
                         break;
                     case 24:
-                        out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8;
+                        out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8;
                         break;
                     default:
-                        out_properties.TexelFormatDecompressed = TexelFormat::UNKNOWN;
+                        out_properties.fProperties.TexelFormatDecompressed = TexelFormat::UNKNOWN;
 
                     }
                 }

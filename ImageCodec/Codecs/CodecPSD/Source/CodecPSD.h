@@ -14,7 +14,7 @@ namespace IMCodec
             return pluginProperties;
         }
 
-        bool LoadImage(const uint8_t* buffer, size_t size, ImageProperies& out_properties) override
+        bool LoadImage(const uint8_t* buffer, size_t size, ImageDescriptor& out_properties) override
         {
             bool success = false;
             psd_context * context = nullptr;
@@ -24,12 +24,13 @@ namespace IMCodec
 
             if (status == psd_status_done)
             {
-                out_properties.NumSubImages = 0;
-                out_properties.ImageBuffer = reinterpret_cast<uint8_t*>(context->merged_image_data);
-                out_properties.Width = context->width;
-                out_properties.Height = context->height;
-                out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
-                out_properties.RowPitchInBytes = 4 * context->width;
+                out_properties.fData.AllocateAndWrite(reinterpret_cast<uint8_t*>(context->merged_image_data), size);
+
+                out_properties.fProperties.NumSubImages = 0;
+                out_properties.fProperties.Width = context->width;
+                out_properties.fProperties.Height = context->height;
+                out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
+                out_properties.fProperties.RowPitchInBytes = 4 * context->width;
                 
                 // 'merged_image_data' ownership has been delegated to image properties - do not free memory.
                 context->merged_image_data = nullptr;

@@ -11,8 +11,8 @@ namespace IMCodec
     class IImagePlugin
     {
     public:
-        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) = 0;
-        virtual bool SaveImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties)
+        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) = 0;
+        virtual bool SaveImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties)
         {
             throw std::runtime_error("not implemented");
         }

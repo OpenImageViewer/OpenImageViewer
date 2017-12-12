@@ -37,7 +37,6 @@ namespace LLUtils
             using namespace std;
             using namespace std::experimental;
             std::size_t fileSize = filesystem::file_size(filePath);
-            
             uint8_t* buf = new uint8_t[fileSize];
             ifstream t(filePath, std::ios::binary);
             t.read((char*)buf, fileSize);

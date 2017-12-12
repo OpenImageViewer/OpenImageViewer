@@ -22,7 +22,7 @@ namespace IMCodec
         }
 
         //Base abstract methods
-        bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) override
+        bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
             using namespace std;
             using namespace nv_dds;
@@ -45,29 +45,29 @@ namespace IMCodec
             try
             {
                 image.load(istream(&sbuf), false);
-                out_properties.Width = image.get_width();
-                out_properties.Height = image.get_height();
-                out_properties.NumSubImages = image.get_num_mipmaps();
-                out_properties.ImageBuffer = new uint8_t[image.get_size()];
-                memcpy(out_properties.ImageBuffer, static_cast<uint8_t*>(image), image.get_size());
+                out_properties.fProperties.Width = image.get_width();
+                out_properties.fProperties.Height = image.get_height();
+                out_properties.fProperties.NumSubImages = image.get_num_mipmaps();
+                out_properties.fData.AllocateAndWrite (static_cast<uint8_t*>(image), image.get_size());
+                
                 unsigned format = image.get_format();
                 switch (format)
                 {
                 case GL_BGRA_EXT:
-                    out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
+                    out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
                     break;
                 case GL_BGR_EXT:
-                    out_properties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8;
+                    out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8;
                     break;
                 case GL_RGB:
-                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8;
+                    out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8;
                     break;
                 case GL_RGBA:
-                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
+                    out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
                     break;
                 }
                 //TODO: chech if need to extract row pitch from DDS.
-                out_properties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.TexelFormatDecompressed) / 8;
+                out_properties.fProperties.RowPitchInBytes = image.get_width() * GetTexelFormatSize(out_properties.fProperties.TexelFormatDecompressed) / 8;
                 success = true;
 
             }

@@ -60,7 +60,10 @@ namespace IMUtil
 
             if (transform != AxisAlignedRTransform::None)
             {
-                uint8_t* dest = new uint8_t[image->GetTotalSizeOfImageTexels()];
+                ImageDescriptor transformedProperties;
+                transformedProperties.fProperties = image->GetDescriptor().fProperties;
+                transformedProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
+                uint8_t* dest = transformedProperties.fData.GetBuffer();
 
                 const size_t MegaBytesPerThread = 6;
                 static const uint8_t MaxGlobalThrads = 32;
@@ -117,14 +120,14 @@ namespace IMUtil
                     PixelUtil::TransformTexels(descTemplate);
                 }
 
-                ImageProperies transformedProperties = image->GetProperties();
+                
 
                 if (transform == AxisAlignedRTransform::Rotate90CW || transform == AxisAlignedRTransform::Rotate90CCW)
-                    swap(transformedProperties.Height, transformedProperties.Width);
+                    swap(transformedProperties.fProperties.Height, transformedProperties.fProperties.Width);
 
-                transformedProperties.RowPitchInBytes = transformedProperties.Width * image->GetBytesPerTexel();
-                transformedProperties.ImageBuffer = dest;
-                return ImageSharedPtr(new Image(transformedProperties, image->GetData()));
+                transformedProperties.fProperties.RowPitchInBytes = transformedProperties.fProperties.Width * image->GetBytesPerTexel();
+                
+                return ImageSharedPtr(new Image(transformedProperties));
             }
             else
                 return image;
@@ -138,17 +141,18 @@ namespace IMUtil
             if (image->GetIsByteAligned() == false)
                 throw std::logic_error("Can not normalize a non byte aligned pixel format");
 
-            ImageProperies normalizedImageProperties;
+            ImageDescriptor normalizedImageProperties;
 
             if (image->GetIsRowPitchNormalized() == true)
                 throw std::logic_error("Image already normalized");
 
 
             const uint8_t* oldBuffer = image->GetBuffer();
-            normalizedImageProperties = image->GetProperties();
+            normalizedImageProperties.fProperties = image->GetDescriptor().fProperties;
+            normalizedImageProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
             uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
-            uint8_t* newBuffer = new uint8_t[image->GetTotalSizeOfImageTexels()];
-            normalizedImageProperties.ImageBuffer = newBuffer;
+            uint8_t* newBuffer = normalizedImageProperties.fData.GetBuffer();
+            
             for (std::size_t y = 0; y < image->GetHeight(); y++)
                 for (std::size_t x = 0; x < targetRowPitch; x++)
                 {
@@ -158,11 +162,10 @@ namespace IMUtil
                     newBuffer[dstIndex] = oldBuffer[srcIndex];
                 }
 
-            normalizedImageProperties.ImageBuffer = newBuffer;
-            normalizedImageProperties.RowPitchInBytes = targetRowPitch;
+            normalizedImageProperties.fProperties.RowPitchInBytes = targetRowPitch;
 
             
-            return ImageSharedPtr(new Image(normalizedImageProperties, image->GetData()));
+            return ImageSharedPtr(new Image(normalizedImageProperties));
         }
 
         static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
@@ -173,27 +176,31 @@ namespace IMUtil
             if (sourceImage->GetImageType() != targetPixelFormat)
             {
                 
+                ImageDescriptor properties;
+                properties.fProperties = sourceImage->GetDescriptor().fProperties;
+
                 auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
 
                 if (converter != sConvertionFunction.end())
                 {
                     uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
-                    uint8_t* dest = nullptr;
+                    properties.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
+                    uint8_t* dest = properties.fData.GetBuffer();
                     
                     //TODO: convert without normalization.
                     convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : Normalize(sourceImage);
-                        
+                    
+
                     PixelUtil::Convert(converter->second
                         , &dest
                         , convertedImage->GetBuffer()
                         , targetPixelSize
                         , convertedImage->GetTotalPixels());
 
-                    ImageProperies properties = convertedImage->GetProperties();
-                    properties.TexelFormatDecompressed = targetPixelFormat;
-                    properties.ImageBuffer = dest;
-                    properties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
-                    return ImageSharedPtr(new Image(properties, convertedImage->GetData()));
+                    properties.fProperties.TexelFormatDecompressed = targetPixelFormat;
+                    
+                    properties.fProperties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
+                    return ImageSharedPtr(new Image(properties));
                 }
             }
             else
@@ -210,10 +217,14 @@ namespace IMUtil
                 , static_cast<int32_t> (sourceImage->GetHeight()) } };
             if (subimage.IsNonNegative() && subimage.IsInside(image))
             {
+                using namespace IMCodec;
                 const uint8_t* sourceBuffer = sourceImage->GetBuffer();
 
                 const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
-                uint8_t* destBuffer = new uint8_t[destBufferSize];
+                ImageDescriptor props;
+                props.fProperties = sourceImage->GetDescriptor().fProperties;
+                props.fData.Allocate(destBufferSize);
+                uint8_t* destBuffer = props.fData.GetBuffer();
 
                 for (int32_t y = 0; y < subimage.GetHeight(); y++)
                 {
@@ -227,15 +238,15 @@ namespace IMUtil
                     }
                 }
 
-                using namespace IMCodec;
-                ImageProperies props = sourceImage->GetProperties();
+                
+       
 
-                props.Height = subimage.GetHeight();
-                props.Width = subimage.GetWidth();
-                props.ImageBuffer = destBuffer;
-                props.RowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
+                props.fProperties.Height = subimage.GetHeight();
+                props.fProperties.Width = subimage.GetWidth();
+                
+                props.fProperties.RowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
 
-                ImageSharedPtr subImagePtr = ImageSharedPtr(new Image(props, ImageData()));
+                ImageSharedPtr subImagePtr = ImageSharedPtr(new Image(props));
 
                 return subImagePtr;
             }
@@ -265,13 +276,14 @@ namespace IMUtil
                 max = std::max(max, currentSample);
             }
 
-            IMCodec::ImageProperies props;
-            props = sourceImage->GetProperties();
-            props.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-            props.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TexelFormat::I_R8_G8_B8_A8) / 8 * props.Width;
-            props.ImageBuffer = new uint8_t[props.RowPitchInBytes * props.Height];
+            IMCodec::ImageDescriptor props;
+            props.fProperties = sourceImage->GetDescriptor().fProperties;
+
+            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TexelFormat::I_R8_G8_B8_A8) / 8 * props.fProperties.Width;
+            props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
             
-            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.ImageBuffer);
+            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.GetBuffer());
 
 
             float length = max - min;
@@ -305,7 +317,7 @@ namespace IMUtil
                 }
              
             }
-            return IMCodec::ImageSharedPtr(new IMCodec::Image(props,sourceImage->GetData()));
+            return IMCodec::ImageSharedPtr(new IMCodec::Image(props));
         }
     };
 }

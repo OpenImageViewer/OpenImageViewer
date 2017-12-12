@@ -124,7 +124,7 @@ namespace OIV
                 easyexif::EXIFInfo exifInfo;
                 if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
                 {
-                    const_cast<ImageData&>(image->GetData()).exifOrientation = exifInfo.Orientation;
+                    const_cast<ImageDescriptor::MetaData&>(image->GetDescriptor().fMetaData).exifOrientation = exifInfo.Orientation;
                 }
             }
                 
@@ -141,24 +141,19 @@ namespace OIV
     ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
     {
         using namespace IMCodec;
-        
-        ImageData data;
-        data.LoadTime = 0;
-        ImageProperies props;
-        props.Height = loadRawRequest.height;
-        props.Width = loadRawRequest.width;
-        props.NumSubImages = 0;
-        props.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
-        props.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
-        props.RowPitchInBytes = loadRawRequest.rowPitch;
 
-        const std::size_t buferSize = props.RowPitchInBytes * props.Height;
-        props.ImageBuffer = new uint8_t[buferSize];
+        ImageDescriptor props;
+        props.fProperties.Height = loadRawRequest.height;
+        props.fProperties.Width = loadRawRequest.width;
+        props.fProperties.NumSubImages = 0;
+        props.fProperties.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.fProperties.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.fProperties.RowPitchInBytes = loadRawRequest.rowPitch;
+
+        props.fData.AllocateAndWrite(loadRawRequest.buffer, props.fProperties.RowPitchInBytes * props.fProperties.Height);
 
 
-        memcpy(props.ImageBuffer, loadRawRequest.buffer, buferSize);
-
-        ImageSharedPtr image = ImageSharedPtr(new Image(props, data));
+        ImageSharedPtr image = ImageSharedPtr(new Image(props));
         image = IMUtil::ImageUtil::Transform(
             static_cast<IMUtil::AxisAlignedRTransform>(loadRawRequest.transformation), image);
 
@@ -171,7 +166,7 @@ namespace OIV
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
     {
         return IMUtil::ImageUtil::Transform(
-            static_cast<IMUtil::AxisAlignedRTransform>(ResolveExifRotation(image->GetData().exifOrientation))
+            static_cast<IMUtil::AxisAlignedRTransform>(ResolveExifRotation(image->GetDescriptor().fMetaData.exifOrientation))
             , image);
     }
 

@@ -39,11 +39,11 @@
     <ClInclude Include="Source\BuildConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\ImageProperties.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

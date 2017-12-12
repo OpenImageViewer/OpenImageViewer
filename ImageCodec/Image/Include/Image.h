@@ -4,37 +4,34 @@
 
 namespace IMCodec
 {
-    class Image
+    class Image final
     {
 
     public:
-        Image(const ImageProperies& properties, const ImageData& imageData);
-        virtual ~Image()
+        Image(const ImageDescriptor& properties)
+            : fDescriptor(properties)
+
         {
-            if (fProperies.ImageBuffer != nullptr)
-            {
-                delete[]fProperies.ImageBuffer;
-                const_cast<ImageProperies&>(fProperies).ImageBuffer = nullptr;
-            }
+
         }
+        
         //Image(const Image& rhs) = delete;
         Image operator= (const Image& rhs) = delete;
 
 
 
         //Internal methods
-        const ImageProperies& GetProperties() const { return fProperies; }
-        const ImageData& GetData() const { return fImageData; }
+        const ImageDescriptor& GetDescriptor() const { return fDescriptor; }
 
         // Query methods
-        uint8_t* GetBufferAt(int32_t x, int32_t y) const { return &fProperies.ImageBuffer[y * GetRowPitchInBytes() + x * GetBytesPerTexel()]; }
-        uint8_t* GetBuffer() const { return fProperies.ImageBuffer; }
-        const uint8_t* GetConstBuffer() const { return fProperies.ImageBuffer; }
-        uint32_t GetNumSubImages() const {return fProperies.NumSubImages;}
-        uint32_t GetWidth() const { return fProperies.Width; }
-        uint32_t GetHeight() const { return fProperies.Height; }
-        uint32_t GetRowPitchInBytes() const { return fProperies.RowPitchInBytes; }
-        uint32_t GetBitsPerTexel() const { return GetTexelFormatSize(fProperies.TexelFormatDecompressed); }
+        uint8_t* GetBufferAt(int32_t x, int32_t y) const { return &fDescriptor.fData.GetBuffer()[y * GetRowPitchInBytes() + x * GetBytesPerTexel()]; }
+        uint8_t* GetBuffer() const { return fDescriptor.fData.GetBuffer(); }
+        const uint8_t* GetConstBuffer() const { return fDescriptor.fData.GetBuffer(); }
+        uint32_t GetNumSubImages() const {return fDescriptor.fProperties.NumSubImages;}
+        uint32_t GetWidth() const { return fDescriptor.fProperties.Width; }
+        uint32_t GetHeight() const { return fDescriptor.fProperties.Height; }
+        uint32_t GetRowPitchInBytes() const { return fDescriptor.fProperties.RowPitchInBytes; }
+        uint32_t GetBitsPerTexel() const { return GetTexelFormatSize(fDescriptor.fProperties.TexelFormatDecompressed); }
         uint32_t GetBytesPerRowOfPixels() const { return GetWidth() * GetBytesPerTexel(); }
         uint32_t GetRowPitchInTexels() const { return GetRowPitchInBytes() / GetBytesPerTexel(); }
         uint32_t GetSlicePitchInBytes() const { return GetRowPitchInBytes() * GetHeight(); }
@@ -47,12 +44,11 @@ namespace IMCodec
         bool GetIsRowPitchNormalized() const { return GetRowPitchInBytes() == GetBytesPerRowOfPixels(); }
         bool GetIsByteAligned() const { return GetBitsPerTexel() % 8 == 0; }
         
-        TexelFormat GetImageType() const { return fProperies.TexelFormatDecompressed; }
-        TexelFormat GetOriginalTexelFormat() const { return fProperies.TexelFormatStorage; }
+        TexelFormat GetImageType() const { return fDescriptor.fProperties.TexelFormatDecompressed; }
+        TexelFormat GetOriginalTexelFormat() const { return fDescriptor.fProperties.TexelFormatStorage; }
 
     private:
-        const ImageData fImageData;
-        const ImageProperies fProperies;
+        const ImageDescriptor fDescriptor;
     };
 
     typedef std::shared_ptr<Image> ImageSharedPtr;

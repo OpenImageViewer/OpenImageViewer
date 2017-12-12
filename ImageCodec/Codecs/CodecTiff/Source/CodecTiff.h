@@ -67,7 +67,7 @@ namespace IMCodec
             return texelFormat;
         }
         //Base abstract methods
-        bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) override
+        bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
             using namespace std;
 
@@ -87,7 +87,6 @@ namespace IMCodec
 
                 TexelFormat texelFormat = TexelFormat::UNKNOWN;
                 uint32_t rowPitch;
-                uint8_t* decompressedBuffer = nullptr;
                 uint32 rowsPerStrip;
                 uint16_t stripRowCount = 0;
 
@@ -112,15 +111,16 @@ namespace IMCodec
                     texelFormat = TexelFormat::I_R8_G8_B8_A8;
                     //override target row pitch - always 32bpp
                     rowPitch = width * 4;
-                    decompressedBuffer = new uint8[height * rowPitch];
+                    out_properties.fData.Allocate(height * rowPitch);
                     
-                    TIFFReadRGBAImage(tiff, width, height, reinterpret_cast<uint32*>(decompressedBuffer));
+                    TIFFReadRGBAImage(tiff, width, height, reinterpret_cast<uint32*>(out_properties.fData.GetBuffer()));
                     break;
                 case PHOTOMETRIC_MINISWHITE:
                 case PHOTOMETRIC_MINISBLACK:
                     texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
-                    decompressedBuffer = new uint8[height * rowPitch];
-                    uint8_t* currensPos = decompressedBuffer;
+                    out_properties.fData.Allocate(height * rowPitch);
+                    
+                    uint8_t* currensPos = out_properties.fData.GetBuffer();
 
                     if (stripSize != rowPitch * rowsPerStrip)
                         throw std::logic_error("Not implemented");
@@ -136,12 +136,11 @@ namespace IMCodec
                 }
 
                 success = true;
-                out_properties.Width = width;
-                out_properties.Height = height;
-                out_properties.NumSubImages = 0;
-                out_properties.ImageBuffer = decompressedBuffer;
-                out_properties.TexelFormatDecompressed = texelFormat;
-                out_properties.RowPitchInBytes = rowPitch;
+                out_properties.fProperties.Width = width;
+                out_properties.fProperties.Height = height;
+                out_properties.fProperties.NumSubImages = 0;
+                out_properties.fProperties.TexelFormatDecompressed = texelFormat;
+                out_properties.fProperties.RowPitchInBytes = rowPitch;
             }
             return success;
         }

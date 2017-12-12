@@ -68,7 +68,7 @@ namespace IMUtil
             const size_t texelsPerThread = bytesPerThread / bytesPerPixel;
             
             const uint8_t totalThreads = (std::min)(maxThreads, static_cast<uint8_t>(numTexels / texelsPerThread));
-            *i_dest = new uint8_t[numTexels * bytesPerPixel];
+
             uint8_t* dest = *i_dest;
             if (totalThreads > 0)
             {

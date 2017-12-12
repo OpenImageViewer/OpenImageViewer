@@ -21,14 +21,14 @@ namespace OIV
         static IMCodec::ImageSharedPtr BitmapToRGBAImage(const FreeTypeConnector::Bitmap& rasterizedText)
         {
             using namespace IMCodec;
-            ImageProperies props;
-            props.NumSubImages = 0;
-            props.Height = rasterizedText.height;
-            props.ImageBuffer = rasterizedText.buffer;
-            props.RowPitchInBytes = rasterizedText.rowPitch;
-            props.Width = rasterizedText.width;
-            props.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
-            ImageSharedPtr textImage = ImageSharedPtr(new Image(props, ImageData()));
+            ImageDescriptor props;
+            props.fProperties.NumSubImages = 0;
+            props.fProperties.Height = rasterizedText.height;
+            props.fData.AllocateAndWrite(rasterizedText.buffer, rasterizedText.rowPitch * rasterizedText.height);
+            props.fProperties.RowPitchInBytes = rasterizedText.rowPitch;
+            props.fProperties.Width = rasterizedText.width;
+            props.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
+            ImageSharedPtr textImage = ImageSharedPtr(new Image(props));
             return textImage;
         }
     };

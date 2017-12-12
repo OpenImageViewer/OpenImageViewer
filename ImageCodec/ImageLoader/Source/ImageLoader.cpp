@@ -45,26 +45,15 @@ namespace IMCodec
 
     Image* ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size)
     {
-        ImageProperies props;
-        ImageData imageData;
+        ImageDescriptor props;
         LLUtils::StopWatch stopWatch(true);
         Image* loadedImage = nullptr;
         if (plugin->LoadImage(buffer, size, props))
         {
-            imageData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-            if ((props.IsInitialized() == false))
-            {
-                // Image properties is not completely initialized, image is considered bogus.
-                if (props.ImageBuffer != nullptr)
-                {
-                    delete[]props.ImageBuffer;
-                    props.ImageBuffer = nullptr;
-                }
-            }
-            else
-            {
-                loadedImage = new Image(props, imageData);
-            }
+            
+            props.fMetaData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+            if ((props.IsInitialized() == true))
+                loadedImage = new Image(props);
 
         }
 

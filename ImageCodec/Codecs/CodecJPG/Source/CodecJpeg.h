@@ -17,7 +17,7 @@ namespace IMCodec
             return pluginProperties;
         }
 
-        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageProperies& out_properties) override
+        virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
             bool success = false;
         
@@ -29,16 +29,16 @@ namespace IMCodec
             unsigned long jpegSize = static_cast<unsigned long>(size);
             if (tjDecompressHeader2(ftjHandle,const_cast<unsigned char*>( buffer), jpegSize, &width, &height, &subsamp) != -1)
             {
-                unsigned char* bufferDecompressed = new unsigned char[width * height * bytesPerPixel];
+                size_t imageDataSize = width * height * bytesPerPixel;
+                out_properties.fData.Allocate(imageDataSize);
 
-                if (tjDecompress2(ftjHandle, const_cast<unsigned char*>(buffer), jpegSize, bufferDecompressed, width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
+                if (tjDecompress2(ftjHandle, const_cast<unsigned char*>(buffer), jpegSize, out_properties.fData.GetBuffer(), width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
                 {
-                    out_properties.ImageBuffer = static_cast<uint8_t*>(bufferDecompressed);
-                    out_properties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
-                    out_properties.Width = width;
-                    out_properties.Height = height;
-                    out_properties.RowPitchInBytes = bytesPerPixel * width;
-                    out_properties.NumSubImages = 0;
+                    out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
+                    out_properties.fProperties.Width = width;
+                    out_properties.fProperties.Height = height;
+                    out_properties.fProperties.RowPitchInBytes = bytesPerPixel * width;
+                    out_properties.fProperties.NumSubImages = 0;
 
                     success = true;
                 }
