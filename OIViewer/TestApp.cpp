@@ -1230,7 +1230,8 @@ namespace OIV
 
                 if (!hClipboard)
                 {
-                    hClipboard = GetClipboardData(CF_DIBV5);
+                    throw std::runtime_error("Unsupported clipboard bitmap format type");
+                    //hClipboard = GetClipboardData(CF_DIBV5);
                 }
 
                 if (hClipboard != NULL && hClipboard != INVALID_HANDLE_VALUE)
@@ -1239,16 +1240,30 @@ namespace OIV
 
                     if (dib)
                     {
-                        BITMAPINFOHEADER *info = reinterpret_cast<BITMAPINFOHEADER*>(dib);
-                        
-                        uint32_t imageSize = info->biWidth * info->biHeight * (info->biBitCount / 8);
+                        const tagBITMAPINFO * bitmapInfo = reinterpret_cast<tagBITMAPINFO*>(dib);
+                        const BITMAPINFOHEADER* info = &(bitmapInfo->bmiHeader);
                         uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / 8), 4);
 
-                        LoadRaw(reinterpret_cast<const uint8_t*>(info + 1)
-                                , info->biWidth
-                                , info->biHeight
-                                , rowPitch
-                                , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
+                        const uint8_t* bitmapBitsconst = reinterpret_cast<const uint8_t*>(info + 1);
+                        uint8_t* bitmapBits = const_cast<uint8_t*>(bitmapBitsconst);
+
+                        switch (info->biCompression)
+                        {
+                        case BI_RGB:
+                            break;
+                        case BI_BITFIELDS:
+                            bitmapBits += 3 * sizeof(DWORD);
+                            break;
+                        default:
+                            throw std::runtime_error("Unsupported clipboard bitmap compression type");
+                        }
+
+
+                        LoadRaw(bitmapBits
+                            , info->biWidth
+                            , info->biHeight
+                            , rowPitch
+                            , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
 
                         GlobalUnlock(dib);
                     }
