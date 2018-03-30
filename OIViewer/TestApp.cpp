@@ -29,6 +29,7 @@
 
 namespace OIV
 {
+    //TODO: move to OIVCommands
     template <class T,class U>
     ResultCode TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
     {
@@ -247,9 +248,6 @@ namespace OIV
         fUserMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
         fUserMessageOverlayProperties.scale = 1.0;
         fUserMessageOverlayProperties.opacity = 1.0;
-
-
-      
      }
 
 
@@ -522,7 +520,14 @@ namespace OIV
 
         std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
-        LLUtils::PlatformUtility::find_files(absoluteFolderPath, fListFiles);
+
+        std::string fileTypesAnsi;
+        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
+         
+        std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
+
+        LLUtils::Utility::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false);
+
 
         UpdateOpenedFileIndex();
         UpdateUIFileIndex();

@@ -1,5 +1,4 @@
 #include "CommandProcessor.h"
-#include <memory>
 #include "Handlers/CommandHandlerInit.h"
 #include "Handlers/CommandHandlerLoadFile.h"
 #include "Handlers/CommandHandlerDisplayImage.h"
@@ -19,6 +18,7 @@
 #include "Handlers/CommandHandlerQueryImageInfo.h"
 #include "Handlers/CommandHandlerImageProperties.h"
 #include "Handlers/CommandHandlerCreateText.h"
+#include "Handlers/CommandHandlerGetKnownFileTypes.h"
 
 
 namespace OIV
@@ -47,6 +47,7 @@ namespace OIV
             , make_pair(OIV_CMD_TexelInfo,new CommandHandlerTexelInfo())
             , make_pair(OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo())
             , make_pair(OIV_CMD_CreateText,new CommandHandlerCreateText())
+            , make_pair(OIV_CMD_GetKnownFileTypes,new CommandHandlerGetKnownFileTypes())
         };
     }
 

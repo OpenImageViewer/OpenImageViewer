@@ -27,6 +27,27 @@ namespace OIV
                 return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
         }
 
+
+        static ResultCode GetKnownFileTypes(std::string& o_fileTypes)
+        {
+
+            OIV_CMD_GetKnownFileTypes_Response res = {};
+
+            ResultCode rc = RC_Success;
+
+            if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &CmdNull(), &res)) == RC_Success)
+            {
+                res.knownFileTypes = new char[res.bufferSize];
+                if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &CmdNull(), &res)) == RC_Success)
+                    o_fileTypes = res.knownFileTypes;
+
+                delete[] res.knownFileTypes;
+            }
+            return rc;
+            
+        }
+
+
         static ResultCode ClearImage()
         {
             OIV_CMD_DisplayImage_Request displayRequest = {};

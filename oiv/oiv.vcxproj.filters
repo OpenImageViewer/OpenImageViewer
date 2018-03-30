@@ -60,6 +60,7 @@
     <ClInclude Include="FreeType\FreeTypeHelper.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerCreateText.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetKnownFileTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

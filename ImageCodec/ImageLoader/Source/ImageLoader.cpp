@@ -11,14 +11,14 @@ namespace IMCodec
         EmbeddedPluginInstaller::InstallPlugins(this);
     }
 
-    IImagePlugin* ImageLoader::GetFirstPlugin(const std::wstring& hint)
+    IImagePlugin* ImageLoader::GetFirstPlugin(const std::wstring& hint) const
     {
         using namespace std;
         IImagePlugin* result = nullptr;
         auto it = fMapPlugins.find(hint);
         if (it != fMapPlugins.end())
         {
-            ListPlugin& pluginsList = it->second;
+            const ListPlugin& pluginsList = it->second;
             result = *pluginsList.begin();
         }
 
@@ -43,7 +43,7 @@ namespace IMCodec
         }
     }
 
-    Image* ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size)
+    Image* ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size) const
     {
         ImageDescriptor props;
         LLUtils::StopWatch stopWatch(true);
@@ -60,7 +60,7 @@ namespace IMCodec
         return loadedImage;
     }
 
-    Image* ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension)
+    Image* ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension) const
     {
         Image* loadedImage = nullptr;
         
@@ -76,5 +76,15 @@ namespace IMCodec
                     loadedImage = TryLoad(plugin, buffer, size);
 
         return loadedImage;
+    }
+
+    std::wstring ImageLoader::GetKnownFileTypes() const
+    {
+        std::wstringstream ss;
+        for (const auto& pair : fMapPlugins)
+            ss << pair.first << ";";
+
+        return ss.str();
+
     }
 }

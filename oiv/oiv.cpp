@@ -385,6 +385,17 @@ namespace OIV
         return RC_Success;
     }
 
+    ResultCode OIV::GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res)
+    {
+        std::wstring knownFileTypes = fImageLoader.GetKnownFileTypes();
+        std::string knownFileTypesAnsi =  LLUtils::StringUtility::ToAString(knownFileTypes);
+        res.bufferSize = knownFileTypesAnsi.size() + 1;
+        if (res.knownFileTypes != nullptr)
+            memcpy(res.knownFileTypes, knownFileTypesAnsi.data(), knownFileTypesAnsi.size() + 1);
+        
+        return RC_Success;
+    }
+
     ResultCode OIV::UnloadFile(const ImageHandle handle)
     {
         ResultCode result = RC_Success;

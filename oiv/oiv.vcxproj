@@ -214,6 +214,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerDestroy.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerCropImage.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetKnownFileTypes.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerGetPixels.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />

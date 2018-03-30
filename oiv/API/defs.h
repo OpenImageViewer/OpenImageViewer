@@ -54,6 +54,7 @@ extern "C"
         , OIV_CMD_ColorExposure
         , OIV_CMD_TexelInfo
         , OIV_CMD_CreateText
+        , OIV_CMD_GetKnownFileTypes
     };
 
     
@@ -257,10 +258,10 @@ extern "C"
     };*/
 
 
-    struct OIV_CMD_AxisAlignedTransform_Request
+    struct OIV_CMD_GetKnownFileTypes_Response
     {
-        OIV_AxisAlignedRTransform transform;
-        ImageHandle handle;
+        size_t bufferSize;
+        char*  knownFileTypes;
     };
 
     struct CmdSetClientSizeRequest
@@ -268,6 +269,14 @@ extern "C"
         uint16_t width;
         uint16_t height;
     };
+
+
+    struct OIV_CMD_AxisAlignedTransform_Request
+    {
+        OIV_AxisAlignedRTransform transform;
+        ImageHandle handle;
+    };
+
     
     struct CmdRequestTexelGrid
     {

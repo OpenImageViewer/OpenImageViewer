@@ -57,10 +57,7 @@ namespace LLUtils
         }
         static std::string ToAString(const wchar_t* str)
         {
-
             std::size_t strLength = wcslen(str) + 1;
-
-
             char* pBuff = new char[strLength];
             std::size_t converted;
             wcstombs_s(&converted, pBuff, strLength, str, strLength * 2);

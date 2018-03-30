@@ -13,16 +13,15 @@ namespace IMCodec
         typedef std::unordered_map<std::wstring, ListPlugin> MapStringListPlugin;
         MapStringListPlugin fMapPlugins;
         ListPlugin fListPlugins;
-        IImagePlugin* GetFirstPlugin(const std::wstring& hint);
-        Image* TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size);
+        IImagePlugin* GetFirstPlugin(const std::wstring& hint) const;
+        Image* TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size) const;
 
-    public:
-
+    public: // const methods
+        std::wstring GetKnownFileTypes() const;
+        Image* Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true) const;
+        
+    public: // methods
         ImageLoader();
         void InstallPlugin(IImagePlugin* plugin);
-        
-        Image* Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true);
     };
-
-   
 }

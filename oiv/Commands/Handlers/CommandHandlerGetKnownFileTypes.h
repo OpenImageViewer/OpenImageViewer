@@ -6,21 +6,21 @@
 namespace OIV
 {
 
-    class CommandHandlerDisplayImage : public CommandHandler
+    class CommandHandlerGetKnownFileTypes : public CommandHandler
     {
     protected:
         ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override
         {
-            return VERIFY_REQUEST(OIV_CMD_DisplayImage_Request, requestSize);
+            return VERIFY_RESPONSE(OIV_CMD_GetKnownFileTypes_Response, responseSize);
         }
 
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
         {
             ImageHandle handle = ImageHandleNull;
             ResultCode result = RC_UknownError;
-            const OIV_CMD_DisplayImage_Request* displayFile = reinterpret_cast<const OIV_CMD_DisplayImage_Request*>(request);
 
-            result = ApiGlobal::sPictureRenderer->DisplayFile(*displayFile);
+            OIV_CMD_GetKnownFileTypes_Response* res = reinterpret_cast<OIV_CMD_GetKnownFileTypes_Response*>(response);
+            result = ApiGlobal::sPictureRenderer->GetKnownFileTypes(*res);
 
             return result;
         }
@@ -28,4 +28,5 @@ namespace OIV
 
 
 }
+
 

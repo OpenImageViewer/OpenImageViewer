@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <set>
 #include <filesystem>
 
 #include "StringUtility.h"
@@ -74,6 +75,33 @@ namespace LLUtils
         {
             return std::max(min, std::min(val, max));
         }
-    
+
+        static ListWString FindFiles(ListWString& filesList, std::experimental::filesystem::path workingDir, std::wstring fileTypes,bool recursive)
+        {
+            using namespace std::experimental::filesystem;
+            ListWString extensions = StringUtility::split(fileTypes, L';');
+            std::set<std::wstring> extensionSet;
+            for (const auto& ext : extensions)
+                extensionSet.insert(ext);
+
+            auto AddFileIfExtensionsMatches = [&](const path& filePath)
+            {
+                //TODO : use c++17 string_view instead of erasing the dot
+                std::wstring extNoDot =  filePath.extension().wstring().erase(0, 1);
+
+                if (extensionSet.find(extNoDot) != extensionSet.end())
+                    filesList.push_back(filePath.wstring());
+
+            };
+
+            if (recursive == true)
+                for (const auto& p : recursive_directory_iterator(workingDir))
+                    AddFileIfExtensionsMatches(p);
+            else
+                for (const auto& p : directory_iterator(workingDir))
+                    AddFileIfExtensionsMatches(p);
+
+            return filesList;
+        }
     };
 }
