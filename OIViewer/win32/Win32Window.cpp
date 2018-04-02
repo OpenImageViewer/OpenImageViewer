@@ -269,7 +269,7 @@ namespace OIV
                 corner = HTBOTTOMLEFT;
                 break;
             default:
-                throw std::logic_error("Unexepcted value");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "unexepcted value");
             }
 
             return corner;
@@ -380,8 +380,9 @@ namespace OIV
                     &dwSize,
                     sizeof(RAWINPUTHEADER)) != dwSize)
                 {
-                    throw std::runtime_error("Unknown error");
+                    LL_EXCEPTION_SYSTEM_ERROR("can not get raw input data");
                 }
+
                 window->HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.get()));
             }
             break;

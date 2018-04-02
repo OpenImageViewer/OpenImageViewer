@@ -6,6 +6,7 @@
 #include <tiffio.hxx>
 #include "TiffClientFunctions.h"
 #include "TiffFile.h"
+#include "../../../../LLUtils/Include/Exception.h"
 
 namespace IMCodec
 {
@@ -39,13 +40,13 @@ namespace IMCodec
                     break;
                 case 24:
                     texelFormat = TexelFormat::F_X24;
-                    throw std::logic_error("not implemented");
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: 24bit floating point format is not implemented.");
                     break;
                 case 32:
                     texelFormat = TexelFormat::F_X32;
                     break;
                 default:
-                    throw std::logic_error("unsupported format");
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported floating point format.");
                 }
                 break;
 
@@ -57,11 +58,11 @@ namespace IMCodec
                     texelFormat = TexelFormat::I_X8;
                     break;
                 default:
-                    throw std::logic_error("unsupported format");
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported integer format.");
                 }
                 break;
             default:
-                throw std::logic_error("unsupported format");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported type format.");
             }
 
             return texelFormat;
@@ -123,7 +124,8 @@ namespace IMCodec
                     uint8_t* currensPos = out_properties.fData.GetBuffer();
 
                     if (stripSize != rowPitch * rowsPerStrip)
-                        throw std::logic_error("Not implemented");
+                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");
+
 
                     for (int i = 0; i < numberOfStripts; i++)
                     {

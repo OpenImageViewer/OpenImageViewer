@@ -96,7 +96,6 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,7 +115,6 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -137,7 +135,6 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,7 +152,6 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
-      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

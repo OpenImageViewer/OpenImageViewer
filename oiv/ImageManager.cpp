@@ -1,4 +1,5 @@
 #include "ImageManager.h"
+#include "Exception.h"
 
 namespace OIV
 {
@@ -36,7 +37,7 @@ namespace OIV
         {
             auto pair = fMapHandleToImage.insert(std::make_pair(AllocateImageHandle(), image));
             if (pair.second == false)
-                throw std::logic_error("Bad or corrupted data");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "Image manager, duplicate image found");
 
             return pair.first->first;
         }

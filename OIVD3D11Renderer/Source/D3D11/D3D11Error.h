@@ -2,6 +2,7 @@
 #include <string>
 #include <windows.h>
 #include <PlatformUtility.h>
+#include <Exception.h>
 
 namespace OIV
 {
@@ -14,8 +15,7 @@ namespace OIV
             if (fShowDeviceErrors)
                 MessageBoxA(static_cast<HWND>(0), errorMessage.c_str(), "Error", MB_OK);
             else
-                throw std::logic_error(errorMessage);
-
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, errorMessage);
         }
 
         static void HandleDeviceError(HRESULT result)
@@ -30,7 +30,7 @@ namespace OIV
                 std::string message = "Direct3D11 could complete the operation.";
                 if (errorMessage.empty() == false)
                     message += "\n" + errorMessage;
-                std::string err = LLUtils::PlatformUtility::GetLastErrorAsString();
+                std::string err = LLUtils::PlatformUtility::GetLastErrorAsString<char>();
 
                 if (err.empty() == false)
                     message += "\n" + err;

@@ -3,6 +3,7 @@
 #include <vector>
 #include <StopWatch.h>
 #include "../Win32Helper.h"
+#include "Exception.h"
 
 namespace OIV
 {
@@ -20,9 +21,7 @@ namespace OIV
                 Rid[0].dwFlags = RIDEV_INPUTSINK;
                 Rid[0].hwndTarget = hWnd;
                 if (RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == false)
-                {
-                    throw std::runtime_error("Could not register raw input");
-                }
+                    LL_EXCEPTION_SYSTEM_ERROR("could not register raw input");
             }
         };
 

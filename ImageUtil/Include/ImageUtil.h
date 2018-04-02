@@ -6,7 +6,7 @@
 #include "../../LLUtils/Include/Rect.h"
 #include "half.hpp"
 #include "HSLRGB.h"
-
+#include <Exception.h>
 
 namespace IMUtil
 {
@@ -56,7 +56,7 @@ namespace IMUtil
             using namespace IMCodec;
 
             if (image->GetIsByteAligned() == false)
-                throw std::logic_error("OIV::Image::Transom works only with byte aligned image formats");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "OIV::Image::Transom works only with byte aligned image formats.");
 
             if (transform != AxisAlignedRTransform::None)
             {
@@ -139,12 +139,12 @@ namespace IMUtil
             using namespace IMCodec;
 
             if (image->GetIsByteAligned() == false)
-                throw std::logic_error("Can not normalize a non byte aligned pixel format");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "can not normalize a non byte aligned pixel format.");
 
             ImageDescriptor normalizedImageProperties;
 
             if (image->GetIsRowPitchNormalized() == true)
-                throw std::logic_error("Image already normalized");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "image already normalized.");
 
 
             const uint8_t* oldBuffer = image->GetBuffer();

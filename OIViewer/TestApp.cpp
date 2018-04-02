@@ -13,6 +13,7 @@
 #include "win32/MonitorInfo.h"
 
 #include <API\functions.h>
+#include "Exception.h"
 #include "win32/Win32Helper.h"
 #include "FileHelper.h"
 #include "StopWatch.h"
@@ -26,6 +27,10 @@
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
 #include "SelectionRect.h"
+
+
+LL_EXCEPTION_DECLARE_HANDLER
+
 
 namespace OIV
 {
@@ -227,8 +232,25 @@ namespace OIV
         ss << "<textcolor=#00ff00> ("<< std::fixed << std::setprecision(0) << newValue * 100 << "%)";
             result.resValue = ss.str();
             UpdateExposure();
-        
     }
+
+
+    void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
+    {
+        using namespace std;
+        wstringstream ss;
+        std::wstring source = isFromLibrary ? L"OIV library" : L"OIV viewer";
+        ss << LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " << args.functionName << L" at "<< source << L"." << endl;
+        ss << "Description: " << args.description << endl;
+
+        if (args.systemErrorMessage.empty() == false)
+            ss << "System error: " << args.systemErrorMessage;
+
+        ss << "call stack:" << endl << args.callstack;
+
+        MessageBoxW(nullptr, ss.str().c_str(), L"Unhandled exception has occured.", MB_OK);
+    }
+
     
     TestApp::TestApp()
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
@@ -248,6 +270,33 @@ namespace OIV
         fUserMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
         fUserMessageOverlayProperties.scale = 1.0;
         fUserMessageOverlayProperties.opacity = 1.0;
+        
+        OIV_CMD_RegisterCallbacks_Request request;
+        
+        request.OnException = [](OIV_Exception_Args args)
+        {
+
+            using namespace std;
+            //Convert from C to C++
+            LLUtils::Exception::EventArgs localArgs;
+            localArgs.errorCode = static_cast<LLUtils::Exception::ErrorCode>(args.errorCode);
+            localArgs.functionName = args.functionName;
+            localArgs.callstack = args.callstack;
+            localArgs.description = args.description;
+            localArgs.systemErrorMessage = args.systemErrorMessage;
+
+            HandleException(true, localArgs);
+        };
+
+
+       ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
+
+        LLUtils::Exception::OnException.Add([](LLUtils::Exception::EventArgs args)
+        {
+            HandleException(false, args);
+        }
+        );
+        
      }
 
 
@@ -948,7 +997,7 @@ namespace OIV
         case ImageSizeType::Visible:
             return LLUtils::PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * GetScale();
         default:
-            throw std::logic_error("Unexpected or corrupted value");
+            LL_EXCEPTION_UNEXPECTED_VALUE;
         }
     }
    
@@ -1227,10 +1276,12 @@ namespace OIV
             if (OpenClipboard(NULL))
             {
                 HANDLE hClipboard = GetClipboardData(CF_DIB);
+                
+                //LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Unsupported clipboard bitmap format type");
 
                 if (!hClipboard)
                 {
-                    throw std::runtime_error("Unsupported clipboard bitmap format type");
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Unsupported clipboard bitmap format type");
                     //hClipboard = GetClipboardData(CF_DIBV5);
                 }
 
@@ -1255,7 +1306,7 @@ namespace OIV
                             bitmapBits += 3 * sizeof(DWORD);
                             break;
                         default:
-                            throw std::runtime_error("Unsupported clipboard bitmap compression type");
+                            LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, std::string("Unsupported clipboard bitmap compression type :") + std::to_string(info->biCompression));
                         }
 
 
@@ -1341,16 +1392,15 @@ namespace OIV
                     }
                     else
                     {
-                        //Failed setting clipboard data.
-                        std::string error = LLUtils::PlatformUtility::GetLastErrorAsString();
-                        throw std::logic_error("Unable to set clipboard data.\n" + error);
+                        LL_EXCEPTION_SYSTEM_ERROR("Unable to set clipboard data.");
                     }
                     if (CloseClipboard() == FALSE)
-                        throw std::logic_error("Unknown error");
+                        LL_EXCEPTION_SYSTEM_ERROR("can not close clipboard.");
+                        
                 }
                 else
                 {
-                    throw std::logic_error("could not open clipboard");
+                    LL_EXCEPTION_SYSTEM_ERROR("Can not open clipboard.");
                 }
             }
 

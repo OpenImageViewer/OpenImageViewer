@@ -1,6 +1,9 @@
 #pragma once
 namespace OIV
 {
+//DELETE is a macro defined in winnt.h
+// disable it for this file.
+   
 #pragma push_macro("DELETE")
 #undef DELETE
     enum class KeyCode : uint8_t

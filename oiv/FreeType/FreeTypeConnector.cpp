@@ -1,5 +1,6 @@
 
 #include "FreeTypeConnector.h"
+#include "Exception.h"
 #if OIV_BUILD_FREETYPE == 1
 #include "CodePoint.h"
 #include <vector>
@@ -14,7 +15,7 @@ FreeTypeConnector::FreeTypeConnector()
 {
     FT_Error  error = FT_Init_FreeType(&fLibrary);
     if (error)
-        throw std::logic_error("Can no initialize freetype library");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Can no initialize freetype library");
 
 }
 
@@ -139,9 +140,9 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     FT_Error error = FT_New_Face(fLibrary, fontPath.c_str() ,0, &face);
 
     if (error == FT_Err_Unknown_File_Format)
-        throw std::logic_error("Unkown  file    format");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error Unknown file format");
     else if (error)
-        throw std::logic_error("Unkown  error");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::Unknown,"FreeType unkown error Unknown file format");
 
 
     error = FT_Set_Char_Size(
@@ -159,11 +160,11 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
 
 
      if (error)
-        throw std::logic_error("Can not set char height");
+         LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not set char height");
 
     const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
 
-     const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
+    const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
 
     
     vector<FormattedTextEntry> formattedText = GetFormattedText(text,fontSize);
@@ -194,7 +195,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
                 FT_LOAD_DEFAULT);  /* load flags, see below */
 
             if (error)
-                throw std::logic_error("can not load glyph");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not load glyph");
 
             penX += face->glyph->advance.x >> 6;
             penY += face->glyph->advance.y >> 6;
@@ -253,14 +254,14 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
                 FT_LOAD_DEFAULT);  /* load flags, see below */
 
             if (error)
-                throw std::logic_error("unable to load glyph");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to load glyph");
 
 
             error = FT_Render_Glyph(face->glyph,   /* glyph slot  */
                 FT_RENDER_MODE_NORMAL); /* render mode */
 
             if (error)
-                throw std::logic_error("unable to render glyph");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to render glyph");
 
 
             FT_GlyphSlot  slot = face->glyph;
@@ -314,7 +315,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
 
     error = FT_Done_Face(face);
     if (error)
-        throw std::logic_error("Can not destroy face");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, can not destroy face");
  
 }
 #endif // endif

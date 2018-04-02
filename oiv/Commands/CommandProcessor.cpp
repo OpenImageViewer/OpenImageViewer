@@ -19,6 +19,7 @@
 #include "Handlers/CommandHandlerImageProperties.h"
 #include "Handlers/CommandHandlerCreateText.h"
 #include "Handlers/CommandHandlerGetKnownFileTypes.h"
+#include "Handlers/CommandHandlerRegisterCallbacks.h"
 
 
 namespace OIV
@@ -48,6 +49,7 @@ namespace OIV
             , make_pair(OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo())
             , make_pair(OIV_CMD_CreateText,new CommandHandlerCreateText())
             , make_pair(OIV_CMD_GetKnownFileTypes,new CommandHandlerGetKnownFileTypes())
+            , make_pair(OIV_CMD_RegisterCallbacks,new CommandHandlerRegisterCallbacks())
         };
     }
 
@@ -61,6 +63,21 @@ namespace OIV
     ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
     {
         auto pair = fCommandHandlers.find(command);
-        return pair != fCommandHandlers.end() ? pair->second->Execute(requestData, requestSize, responseData, responseSize) : RC_UnknownCommand;
+        if (pair != fCommandHandlers.end())
+        {
+            try
+            {
+                return pair->second->Execute(requestData, requestSize, responseData, responseSize);
+            }
+
+            catch (LLUtils::Exception exc)
+            {
+                return RC_InternalError;
+            }
+        }
+        else
+        {
+            return RC_UnknownCommand;
+        }
     }
 }

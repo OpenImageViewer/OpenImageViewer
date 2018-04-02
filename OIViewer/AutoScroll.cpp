@@ -48,7 +48,7 @@ namespace OIV
                 , WT_EXECUTEINTIMERTHREAD//_In_     ULONG               Flags
             ) == FALSE )
             {
-                throw  std::exception("Could not create timer");
+                LL_EXCEPTION_SYSTEM_ERROR("Could not create timer");
             }
 
             fAutoScrollPosition = fWindow->GetMousePosition();

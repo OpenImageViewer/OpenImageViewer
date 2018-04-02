@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D11Error.h"
 #include "D3D11Common.h"
+#include "Exception.h"
 
 namespace OIV
 {
@@ -31,7 +32,7 @@ namespace OIV
                 GetDevice()->GetContext()->PSSetConstantBuffers(static_cast<UINT>(slot), 1, fBuffer.GetAddressOf());
                 break;
             default:
-                throw std::logic_error("Unexpected value");
+                LL_EXCEPTION_UNEXPECTED_VALUE;
             }
             
         }

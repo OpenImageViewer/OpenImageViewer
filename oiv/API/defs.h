@@ -55,6 +55,7 @@ extern "C"
         , OIV_CMD_TexelInfo
         , OIV_CMD_CreateText
         , OIV_CMD_GetKnownFileTypes
+        , OIV_CMD_RegisterCallbacks
     };
 
     
@@ -145,6 +146,20 @@ extern "C"
         ImageHandle handle;
         int32_t x;
         int32_t y;
+    };
+
+    struct OIV_Exception_Args
+    {
+        int errorCode;
+        const wchar_t* description;
+        const wchar_t* systemErrorMessage;
+        const wchar_t* callstack;
+        const wchar_t* functionName;
+    };
+
+    struct OIV_CMD_RegisterCallbacks_Request
+    {
+        void(*OnException) (OIV_Exception_Args);
     };
 
 

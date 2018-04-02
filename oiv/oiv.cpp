@@ -22,8 +22,6 @@
 #include "../OIVGLRenderer/OIVGLRendererFactory.h"
 #endif
 
-
-
 namespace OIV
 {
     LLUtils::PointI32 OIV::GetClientSize() const
@@ -101,7 +99,7 @@ namespace OIV
     #endif
 #endif
 
-        throw std::runtime_error("wrong build configuration");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::BadParameters, "Bad build configuration");
 
     }
 
@@ -110,7 +108,6 @@ namespace OIV
     // IPictureViewr implementation
     ResultCode OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
-
         if (buffer == nullptr || size == 0)
             return RC_InvalidParameters;
 
@@ -201,8 +198,8 @@ namespace OIV
                 break;
 
             case IMCodec::TexelFormat::F_X24:
-                throw std::logic_error("not implemented");
-                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff, 24 bit float is not implemented");
+                //image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
                 break;
 
             case IMCodec::TexelFormat::F_X32:
@@ -396,6 +393,12 @@ namespace OIV
         return RC_Success;
     }
 
+    ResultCode OIV::RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks)
+    {
+        fCallBacks = callbacks;
+        return RC_Success;
+    }
+
     ResultCode OIV::UnloadFile(const ImageHandle handle)
     {
         ResultCode result = RC_Success;
@@ -407,8 +410,23 @@ namespace OIV
 
     int OIV::Init()
     {
-        
         static_assert(OIV_TexelFormat::TF_COUNT == static_cast<OIV_TexelFormat>( IMCodec::TexelFormat::COUNT), "Wrong array size");
+
+        LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
+        {
+            if (fCallBacks.OnException != nullptr)
+            {
+                OIV_Exception_Args localArgs = { };
+                localArgs.errorCode = static_cast<int>(args.errorCode);
+                localArgs.callstack = args.callstack.c_str();
+                localArgs.description = args.description.c_str();
+                localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
+                localArgs.functionName = args.functionName.c_str();
+                fCallBacks.OnException(localArgs);
+            }
+        }
+        );
+
         fRenderer = CreateBestRenderer();
         fRenderer->Init(fParent);
         return 0;

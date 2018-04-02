@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include <stdexcept>
+#include "Exception.h"
 
 namespace IMCodec
 {
@@ -57,6 +57,6 @@ namespace IMCodec
         if (format >= TexelFormat::BEGIN && format < TexelFormat::COUNT)
             return TexelFormatSize[static_cast<std::underlying_type<TexelFormat>::type>(format)];
         else
-            throw std::logic_error("Index out of bounds");
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, " index out of bounds.");
     }
 }

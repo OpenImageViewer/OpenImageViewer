@@ -1,4 +1,6 @@
 #include "SelectionRect.h"
+#include "Exception.h"
+
 namespace OIV
 {
     void SelectionRect::UpdateVisualSelectionRect() const
@@ -25,9 +27,9 @@ namespace OIV
         case Corner::BottomRight:
             return TopLeft;
         case Corner::None:
-            throw std::logic_error("Error, Corner must be set to get opposite corner");
+            LL_EXCEPTION(Exception::ErrorCode::LogicError, "corner must be set to get opposite corner");
         default:
-            throw std::logic_error("Error, Unexpected or coruppted value");
+            LL_EXCEPTION_UNEXPECTED_VALUE;
         }
     }
 

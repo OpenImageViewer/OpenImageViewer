@@ -133,7 +133,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MTd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MTd.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -182,7 +182,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;c:\libjpeg-turbo64\lib\turbojpeg.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
     <PostBuildEvent>
@@ -222,6 +222,7 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerRegisterCallbacks.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetSelectionRect.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />

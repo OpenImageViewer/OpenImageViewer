@@ -34,5 +34,6 @@ namespace OIV
         virtual ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) = 0;
         virtual ResultCode GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse) = 0;
         virtual ResultCode GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res) = 0;
+        virtual ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) = 0;
     };
 }

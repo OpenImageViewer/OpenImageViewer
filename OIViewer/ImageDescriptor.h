@@ -38,7 +38,7 @@ namespace OIV
             case ImageSource::None:
                 return empty;
             default:
-                throw std::logic_error("Unexpected or corrupted value");
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "unexpected or corrupted value");
             }
         }
 

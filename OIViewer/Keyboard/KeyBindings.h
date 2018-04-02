@@ -1,6 +1,8 @@
 #pragma once
 #include "KeyCombination.h"
 #include <unordered_map>
+#include "Exception.h"
+
 namespace OIV
 {
     template <class BindingType>
@@ -13,13 +15,11 @@ namespace OIV
       void AddBinding(KeyCombination combination,const BindingType& binding)
       {
           if (static_cast<KeyCode>(combination.keycode) == KeyCode::UNASSIGNED)
-              throw std::logic_error("trying to add an 'Unassigned' key binding");
-
+              LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError , "trying to add an 'Unassigned' key binding");
 
           auto ib = mBindings.insert(MapCombinationToBinding::value_type(combination, binding));
           if (ib.second == false)
-              throw std::logic_error("Duplicate entries are not allowed");
-
+              LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "duplicate entries are not allowed");
       }
 
       void AddBinding(ListKeyCombinations combination, const BindingType& binding)

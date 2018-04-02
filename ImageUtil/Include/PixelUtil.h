@@ -1,10 +1,10 @@
 #pragma once
 #include <cstdint>
-#include <stdexcept>
 #include <thread>
 #include <algorithm>
 #include "AxisAlignedTransform.h"
 #include "Int24.h"
+#include "../../LLUtils/Include/Exception.h"
 
 namespace IMUtil
 {
@@ -215,7 +215,7 @@ namespace IMUtil
                         break;
 
                     default:
-                        throw std::runtime_error("Wrong or corrupted value");
+                        LL_EXCEPTION_UNEXPECTED_VALUE;
                     }
 
 
@@ -236,7 +236,7 @@ namespace IMUtil
                         PixelUtil::CopyTexel<PixelUtil::BitTexel32>(transformInfo.dstBuffer, idxDest, srcRow, x);
                         break;
                     default:
-                        throw std::runtime_error("Wrong or corrupted value");
+                        LL_EXCEPTION_UNEXPECTED_VALUE;
                     }
                 }
         }

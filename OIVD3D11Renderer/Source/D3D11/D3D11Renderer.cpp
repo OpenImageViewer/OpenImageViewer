@@ -313,7 +313,7 @@ namespace OIV
                  fImageFragmentShader->Use();
                  break;
              default:
-                 throw std::logic_error("Unexpected value");
+                 LL_EXCEPTION_UNEXPECTED_VALUE;
             }
 
             SetFilterLevel(props.filterType);
@@ -351,7 +351,7 @@ namespace OIV
             desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
             break;
         default:
-            throw std::runtime_error("wrong or corrupted value");
+            LL_EXCEPTION_UNEXPECTED_VALUE;
 
         }
         fDevice->GetdDevice()->CreateSamplerState(&desc, fSamplerState.ReleaseAndGetAddressOf());

@@ -15,9 +15,9 @@ namespace LLUtils
     public:
         struct StackTraceEntry
         {
-            std::string name;
+            std::wstring name;
             uint64_t address;
-            std::string fileName;
+            std::wstring fileName;
             uint32_t line;
         };
 
@@ -25,31 +25,33 @@ namespace LLUtils
 
         static StackTrace GetCallStack(int framesToSkip = 0)
         {
-
             unsigned int   i;
-            void         * stack[100];
+            void* stack[std::numeric_limits<USHORT>::max()];
             unsigned short frames;
-            SYMBOL_INFO  * symbol;
             HANDLE         process;
 
             process = GetCurrentProcess();
 
-            SymInitialize(process, NULL, TRUE);
+            SymInitializeW(process, nullptr, TRUE);
 
-            frames = CaptureStackBackTrace(framesToSkip, 100, stack, NULL);
-            symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);
-            symbol->MaxNameLen = 255;
-            symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+            constexpr size_t maxNameLength = 255;
+            constexpr size_t sizeOfStruct = sizeof(SYMBOL_INFOW);
+
+            frames = CaptureStackBackTrace(framesToSkip, std::numeric_limits<USHORT>::max() , stack, nullptr);
+            
+            SYMBOL_INFOW * symbol = reinterpret_cast<SYMBOL_INFOW *>(malloc(sizeOfStruct + (maxNameLength - 1) * sizeof(TCHAR)));
+            symbol->MaxNameLen = maxNameLength;
+            symbol->SizeOfStruct = sizeOfStruct;
             StackTrace stackTrace(frames);
             for (i = 0; i < frames; i++)
             {
-                SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol);
-                
-                IMAGEHLP_LINE64 line;
+                SymFromAddrW(process, reinterpret_cast<DWORD64>(stack[i]), 0, symbol);
+                IMAGEHLP_LINEW64 line;
+                line.SizeOfStruct = sizeof(IMAGEHLP_LINEW64);
                 DWORD displacement;
-                SymGetLineFromAddr64(process, (DWORD64)(stack[i]), &displacement, &line);
-                stackTrace[i] = { symbol->Name, symbol->Address,line.FileName, line.LineNumber };
-            }
+                if (SymGetLineFromAddrW64(process, (DWORD64)(stack[i]), &displacement, &line) == TRUE)
+                    stackTrace[i] = { symbol->Name, symbol->Address,line.FileName, line.LineNumber };
+            } 
 
             free(symbol);
 
@@ -190,19 +192,29 @@ namespace LLUtils
 
 
         
-            //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-        static std::string GetLastErrorAsString()
+        //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+        template <class CHAR_TYPE = wchar_t , typename ustring =  std::basic_string<CHAR_TYPE>>
+        static ustring GetLastErrorAsString()
         {
             //Get the error message, if any.
             DWORD errorMessageID = ::GetLastError();
             if (errorMessageID == 0)
-                return std::string(); //No error message has been recorded
+                return ustring(); //No error message has been recorded
 
-            LPSTR messageBuffer = nullptr;
-            size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+            CHAR_TYPE* messageBuffer = nullptr;
+            size_t size = 0;
+            if (typeid(CHAR_TYPE) == typeid(wchar_t))
+            {
+                size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&messageBuffer), 0, NULL);
+            }
+            else
+            {
+                size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<char*>(&messageBuffer), 0, NULL);
+            }
 
-            std::string message(messageBuffer, size);
+            ustring message(messageBuffer, size);
 
             //Free the buffer.
             LocalFree(messageBuffer);
