@@ -34,7 +34,7 @@ namespace LLUtils
 
     
         using OnExceptionEventType = Event<void(EventArgs)>;
-        static OnExceptionEventType OnException;
+        static inline OnExceptionEventType OnException;
         Exception(ErrorCode errorCode, std::string function, std::string description, bool systemError)
         {
             using namespace std;
@@ -107,7 +107,5 @@ namespace LLUtils
 #define LL_EXCEPTION(ERROR_CODE,DESCRIPTION) ( throw LLUtils::Exception(ERROR_CODE, __FUNCTION__, DESCRIPTION, false) )
 #define LL_EXCEPTION_SYSTEM_ERROR(DESCRIPTION) ( throw LLUtils::Exception(LLUtils::Exception::ErrorCode::SystemError, __FUNCTION__, DESCRIPTION, true) )
 #define LL_EXCEPTION_UNEXPECTED_VALUE ( throw LLUtils::Exception(LLUtils::Exception::ErrorCode::RuntimeError, __FUNCTION__, "unexpected or coruppted value.", false) )
-
-#define LL_EXCEPTION_DECLARE_HANDLER LLUtils::Exception::OnExceptionEventType LLUtils::Exception::OnException;
 
 }

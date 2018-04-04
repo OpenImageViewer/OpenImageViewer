@@ -29,9 +29,6 @@
 #include "SelectionRect.h"
 
 
-LL_EXCEPTION_DECLARE_HANDLER
-
-
 namespace OIV
 {
     //TODO: move to OIVCommands
