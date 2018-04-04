@@ -118,7 +118,7 @@ extern "C"
         , TF_COUNT
     };
 
-#pragma pack(1)
+#pragma pack(16)
 
     struct CmdNull
     {
