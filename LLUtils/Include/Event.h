@@ -1,8 +1,17 @@
 #pragma once
 #include <functional>
 #include <vector>
+#include <algorithm>
 namespace LLUtils
 {
+
+    template<typename T, typename... U>
+    void* getAddress(std::function<T(U...)> f) {
+        typedef T(fnType)(U...);
+        fnType ** fnPointer = f.template target<fnType*>();
+        return fnPointer != nullptr ? *fnPointer : nullptr;
+    }
+
 	template <class T>
 	class Event
 	{
@@ -23,14 +32,14 @@ namespace LLUtils
 
 		void Remove(const Func& func)
 		{
-			Listeners::const_iterator it = std::find(fListeners.begin(), fListeners.end(), func);
-			if (it != fListeners.end())
-				fListeners.erase(it);
-			
+            fListeners.erase(std::remove_if(fListeners.begin(), fListeners.end(), [&](const Func& elem)
+            {
+                return getAddress(func) == getAddress(elem);
+            }));
 		}
-	private:
+
+    private:
 		using Listeners = std::vector<Func>;
 		Listeners fListeners;
-
 	};
 }
