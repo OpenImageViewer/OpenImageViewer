@@ -31,12 +31,12 @@ namespace OIV
                 duplicateCombinations2Darray.push_back({ KeyCode::LCONTROL, KeyCode::RCONTROL });
             else if (key == "ALT")
                 duplicateCombinations2Darray.push_back({ KeyCode::LALT, KeyCode::RALT });
-
             else if (key == "SHIFT")
                 duplicateCombinations2Darray.push_back({ KeyCode::LSHIFT, KeyCode::RSHIFT });
-
             else if (key == "WINKEY")
                 duplicateCombinations2Darray.push_back({ KeyCode::LWIN, KeyCode::RWIN });
+            else if (key == "ENTER")
+                duplicateCombinations2Darray.push_back({ KeyCode::ENTERMAIN, KeyCode::KEYPADENTER});
             else
                 combination.AssignKey(KeyCodeHelper::KeyNameToKeyCode(key));
         }

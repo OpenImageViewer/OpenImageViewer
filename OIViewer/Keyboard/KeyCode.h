@@ -36,7 +36,7 @@ namespace OIV
         P = 0x19,
         LBRACKET = 0x1A,
         RBRACKET = 0x1B,
-        ENTER = 0x1C,    // Enter on main keyboard
+        ENTERMAIN = 0x1C,    // Enter on main keyboard
         LCONTROL = 0x1D,
         A = 0x1E,
         S = 0x1F,
@@ -216,7 +216,7 @@ namespace OIV
         ,{KeyCode::P ,                         "P" }
         ,{KeyCode::LBRACKET ,           "LBRACKET" }
         ,{KeyCode::RBRACKET ,           "RBRACKET" }
-        ,{KeyCode::ENTER,               "ENTER" }    // Enter on main keyboard
+        ,{KeyCode::ENTERMAIN,           "ENTERMAIN" }    // Enter on main keyboard
         ,{KeyCode::LCONTROL ,           "LCONTROL" }
         ,{KeyCode::A ,                         "A" }
         ,{KeyCode::S ,                         "S" }
