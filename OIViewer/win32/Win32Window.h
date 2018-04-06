@@ -45,7 +45,7 @@ namespace OIV
             void FlushInput(bool calledFromIdleTimer);
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
-            void HandleRawInputMouse(const RAWMOUSE& mouse);
+            
             void Move(const int16_t delta_x, const int16_t delta_y);
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts);
@@ -54,6 +54,9 @@ namespace OIV
 
             friend DragAndDropTarget;
         private: // methods
+            void HandleRawInputMouse(const RAWMOUSE& mouse);
+            void HandleRawInputKeyboard(const RAWKEYBOARD& keyboard);
+
             void UpdateWindowStyles();
             void SavePlacement();
             void RestorePlacement();

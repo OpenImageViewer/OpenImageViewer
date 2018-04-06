@@ -197,8 +197,19 @@ namespace OIV
 
         void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input)
         {
-            if (event_raw_input->header.dwType == RIM_TYPEMOUSE)
+
+            switch (event_raw_input->header.dwType)
+            {
+            case RIM_TYPEMOUSE:
                 HandleRawInputMouse(event_raw_input->data.mouse);
+                break;
+            case RIM_TYPEKEYBOARD:
+                HandleRawInputKeyboard(event_raw_input->data.keyboard);
+                break;
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+
+            }
 
 
             FlushInput(false);
@@ -226,7 +237,12 @@ namespace OIV
             fMouseState.Update(mouse);
         }
 
-        
+        void Win32WIndow::HandleRawInputKeyboard(const RAWKEYBOARD& keyboard)
+        {
+            //TODO: add support here for keyboard raw input.
+        }
+
+
 #pragma endregion
 
         void Win32WIndow::Move(const int16_t delta_x, const int16_t delta_y)
@@ -269,7 +285,7 @@ namespace OIV
                 corner = HTBOTTOMLEFT;
                 break;
             default:
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "unexepcted value");
+                LL_EXCEPTION_UNEXPECTED_VALUE;
             }
 
             return corner;

@@ -4,6 +4,7 @@
 #include <StopWatch.h>
 #include "../Win32Helper.h"
 #include "Exception.h"
+#include <array>
 
 namespace OIV
 {
@@ -12,15 +13,59 @@ namespace OIV
         class RawInput
         {
         public:
+            enum class UsagePage
+            {
+                  Undefined  
+                , GenericDesktopControls // we use this
+                , SimulationControls
+                , Vr
+                , Sport
+                , Game
+                , GenericDevice
+                , Keyboard
+                , LEDs
+                , Button
+            };
+
+            enum class GenericDesktopControlsUsagePage
+            {
+                 Undefined
+                ,Pointer
+                ,Mouse
+                ,Reserved
+                ,Joystick
+                ,GamePad
+                ,Keyboard // we use this
+                ,Keypad
+                ,MultiAxisController
+                ,TabletPCcontrols
+            };
+
 
             static void ResiterWindow(HWND hWnd)
             {
-                RAWINPUTDEVICE Rid[1];
-                Rid[0].usUsagePage = 0x01;
-                Rid[0].usUsage = 0x02; // 0x6 keyboard
-                Rid[0].dwFlags = RIDEV_INPUTSINK;
-                Rid[0].hwndTarget = hWnd;
-                if (RegisterRawInputDevices(Rid, 1, sizeof(Rid[0])) == false)
+                // mice
+
+                std::array<RAWINPUTDEVICE, 1> Rids;
+                {
+                    RAWINPUTDEVICE& rid = Rids[0];
+                    rid.usUsagePage = static_cast<USHORT>(UsagePage::GenericDesktopControls);
+                    rid.usUsage = static_cast<USHORT>(GenericDesktopControlsUsagePage::Mouse);
+                    rid.dwFlags = RIDEV_INPUTSINK;
+                    rid.hwndTarget = hWnd;
+                }
+                
+                // keyboards
+
+                /*{
+                    RAWINPUTDEVICE& rid = Rids[1];
+                    rid.usUsagePage = static_cast<USHORT>(UsagePage::GenericDesktopControls);
+                    rid.usUsage = static_cast<USHORT>(GenericDesktopControlsUsagePage::Keyboard);
+                    rid.dwFlags = RIDEV_INPUTSINK;
+                    rid.hwndTarget = hWnd;
+                }*/
+
+                if (RegisterRawInputDevices(Rids.data(), Rids.size(), sizeof(RAWINPUTDEVICE) ) == FALSE)
                     LL_EXCEPTION_SYSTEM_ERROR("could not register raw input");
             }
         };
