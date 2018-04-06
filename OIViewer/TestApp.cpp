@@ -1589,7 +1589,7 @@ namespace OIV
         request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
         request.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
-        request.fontSize = 26;
+        request.fontSize = 22;
 
         if (fUserMessageOverlayProperties.imageHandle != ImageHandleNull)
             OIVCommands::UnloadImage(fUserMessageOverlayProperties.imageHandle);
