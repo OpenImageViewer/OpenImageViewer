@@ -38,17 +38,21 @@ namespace OIV
         return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
     }
 
-    void TestApp::CMD_SetZoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
 
         using namespace LLUtils;
         using namespace std;
 
-        double val = std::atof(request.args.GetArgValue("val").c_str());
-        int32_t cx = std::atoi(request.args.GetArgValue("cx").c_str());
-        int32_t cy = std::atoi(request.args.GetArgValue("cy").c_str());
 
-        SetZoomInternal(val, cx, cy);
+        string cxStr = request.args.GetArgValue("cx");
+        string cyStr = request.args.GetArgValue("cy");
+        double val = std::atof(request.args.GetArgValue("val").c_str());
+
+        int32_t cx = cxStr.empty() ? - 1 :  std::atoi(cxStr.c_str());
+        int32_t cy = cyStr.empty() ? -1 : std::atoi(cyStr.c_str());
+
+        ZoomInternal(val, cx, cy);
         
         stringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
@@ -231,6 +235,55 @@ namespace OIV
             UpdateExposure();
     }
 
+    void TestApp::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string direction = request.args.GetArgValue("direction");
+        string amount = request.args.GetArgValue("amount");;
+
+        double amountVal = std::stod(amount, nullptr);
+            
+
+
+        if (direction == "up")
+            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(amountVal)));
+        else if (direction == "down")
+            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(-amountVal)));
+        else if (direction == "left")
+            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(amountVal), 0));
+        else if (direction == "right")
+            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-amountVal), 0));
+
+        
+        std::stringstream ss;
+
+        ss << "<textcolor=#00ff00>" << request.description << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+
+        result.resValue = ss.str();
+        
+    }
+
+    void TestApp::CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string cmd = request.args.GetArgValue("cmd");
+
+
+        if (cmd == "originalSize")
+            SetOriginalSize();
+        else if (cmd == "fitToScreen")
+            FitToClientAreaAndCenter();
+        else if (cmd == "center")
+            Center();
+
+        stringstream ss;
+
+        ss << "<textcolor=#00ff00>" << request.description;// << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+
+        result.resValue = ss.str();
+
+    }
+
 
     void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
     {
@@ -304,8 +357,14 @@ namespace OIV
         std::vector<CommandDesc> localDesc
 
         {
-             { "Toggle full screen","cmd_screen_state","type=toggle" ,"Alt+Enter" }
+            // general
+             { "Key bindings","cmd_toggle_keybindings","" ,"F1" }
+            ,{ "Open file","cmd_open_file","" ,"Control+O" }
+
+            //Screen state
+            ,{ "Toggle full screen","cmd_screen_state","type=toggle" ,"Alt+Enter" }
             ,{ "Toggle multi full screen","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+            //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
             ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
             ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
@@ -315,12 +374,26 @@ namespace OIV
             ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
             ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
             ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
-            ,{ "Toggle key bindings","cmd_toggle_keybindings","" ,"F1" }
+            
+            //Axis aligned transformations
             ,{ "Horizontal flip","cmd_axis_aligned_transform","type=hflip" ,"H" }
             ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
             ,{ "Rotate clockwise","cmd_axis_aligned_transform","type=rotatecw" ,"RBracket" }
             ,{ "Rotate counter clockwise","cmd_axis_aligned_transform","type=rotateccw" ,"LBracket" }
-            ,{ "Open file","cmd_open_file","" ,"Control+O" }
+            //Pan
+            ,{ "Pan up","cmd_pan","direction=up;amount=1" ,"Numpad8" }
+            ,{ "Pan down","cmd_pan","direction=down;amount=1" ,"Numpad2" }
+            ,{ "Pan left","cmd_pan","direction=left;amount=1" ,"Numpad4" }
+            ,{ "Pan right","cmd_pan","direction=right;amount=1" ,"Numpad6" }
+            //Zoom
+            ,{ "Zoom in ","cmd_zoom","val=0.1" ,"Add" }
+            ,{ "Zoom out","cmd_zoom","val=-0.1" ,"Subtract" }
+            //Image placement
+            ,{ "Original size","cmd_placement","cmd=originalSize" ,"Multiply" }
+            ,{ "Fit to screen","cmd_placement","cmd=fitToScreen" ,"KeyPadDivide" }
+            ,{ "Center","cmd_placement","cmd=center" ,"Numpad5" }
+
+
         };
 
         fCommandDescription = localDesc;
@@ -334,7 +407,9 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_open_file", std::bind(&TestApp::CMD_OpenFile, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_zoom", std::bind(&TestApp::CMD_SetZoom, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_zoom", std::bind(&TestApp::CMD_Zoom, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_pan", std::bind(&TestApp::CMD_Pan, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_placement", std::bind(&TestApp::CMD_Placement, this, _1, _2)));
 
 
         for (const CommandDesc& desc : fCommandDescription)
@@ -894,33 +969,7 @@ namespace OIV
         case VK_OEM_COMMA:
             SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
             break;
-        case VK_NUMPAD8:
-            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(fKeyboardPanSpeed) ));
-            break;
-        case VK_NUMPAD2:
-            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(-fKeyboardPanSpeed) ));
-            break;
-        case VK_NUMPAD4:
-            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(fKeyboardPanSpeed), 0));
-            break;
-        case VK_NUMPAD6:
-            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-fKeyboardPanSpeed), 0));
-            break;
-        case VK_ADD:
-            Zoom(fKeyboardZoomSpeed, -1, -1);
-            break;
-        case VK_SUBTRACT:
-            Zoom(-fKeyboardZoomSpeed, -1, -1);
-            break;
-        case VK_NUMPAD5:
-            Center();
-            break;
-        case VK_MULTIPLY:
-            SetOriginalSize();
-            break;
-        case VK_DIVIDE:
-            FitToClientAreaAndCenter();
-            break;
+        
         case VK_DELETE:
          
              DeleteOpenedFile(IsShift);
@@ -965,9 +1014,18 @@ namespace OIV
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
     {
+        CommandManager::CommandClientRequest request;
+        request.description = "Zoom";
+        request.args = "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY);
+        request.commandName = "cmd_zoom";
+        ExecuteUserCommand(request); 
+    }
+
+    void TestApp::ZoomInternal(double amount, int zoomX, int zoomY)
+    {
         const double adaptiveAmount = fAdaptiveZoom.Add(amount);
         const double adjustedAmount = adaptiveAmount > 0 ? GetScale() * (1 + adaptiveAmount) : GetScale() / (1 - adaptiveAmount);
-        SetZoom(adjustedAmount, zoomX, zoomY);
+        SetZoomInternal(adjustedAmount, zoomX, zoomY);
     }
     
     void TestApp::FitToClientAreaAndCenter()
@@ -1015,16 +1073,7 @@ namespace OIV
     {
         ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
     }
-
-    void TestApp::SetZoom(double zoomValue, int clientX, int clientY)
-    {
-        CommandManager::CommandClientRequest request;
-        request.description = "Zoom";
-        request.args = "val=" + std::to_string(zoomValue) + ";cx=" + std::to_string(clientX) + ";cy=" + std::to_string(clientY);
-        request.commandName = "cmd_zoom";
-        ExecuteUserCommand(request);
-    }
-
+    
     void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY)
     {
         using namespace LLUtils;

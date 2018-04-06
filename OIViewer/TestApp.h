@@ -49,13 +49,15 @@ namespace OIV
         template<class T, class U>
         ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 #pragma region Commands
-        void CMD_SetZoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_Zoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleKeyBindings(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_OpenFile(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&,CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
 #pragma endregion //Commands
         void OnRefresh();
@@ -72,11 +74,11 @@ namespace OIV
         void ToggleGrid();
         void Pan(const LLUtils::PointF64& panAmount);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
+        void ZoomInternal(double amount, int zoomX, int zoomY);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void UpdateUIZoom();
         void UpdateImageProperties();
-        void SetZoom(double zoom, int x = -1, int y = -1);
         void SetZoomInternal(double zoom, int x = -1, int y = -1);
         double GetScale() const;
         LLUtils::PointF64 GetOffset() const;
