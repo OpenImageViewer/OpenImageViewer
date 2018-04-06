@@ -815,7 +815,7 @@ namespace OIV
 
     bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam));
+        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam, evnt->message.lParam));
 
 
         if (bindings.command.empty() == false

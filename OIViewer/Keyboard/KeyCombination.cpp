@@ -11,9 +11,6 @@ namespace OIV
 {
     ListKeyCombinations  KeyCombination::FromString(const std::string& string)
     {
-
-        static_assert(sizeof(KeyCombination) == 2, "Size of key combination must be two bytes");
-
         using namespace LLUtils;
         std::string upper = StringUtility::ToUpper(string);
 
@@ -78,7 +75,8 @@ namespace OIV
     }
 
 #ifdef _WIN32
-    KeyCombination KeyCombination::FromVirtualKey(uint32_t key)
+
+    KeyCombination KeyCombination::FromVirtualKey(uint32_t virtualKey, uint32_t params)
     {
         KeyCombination combination;
         combination.leftAlt = (GetKeyState(VK_LMENU) & static_cast<USHORT>(0x8000)) != 0;
@@ -89,7 +87,7 @@ namespace OIV
         combination.rightShift = (GetKeyState(VK_RSHIFT) & static_cast<USHORT>(0x8000)) != 0;
         combination.leftWinKey = (GetKeyState(VK_LWIN) & static_cast<USHORT>(0x8000)) != 0;
         combination.rightWinKey = (GetKeyState(VK_RWIN) & static_cast<USHORT>(0x8000)) != 0;
-        combination.keycode = static_cast<KeyCode>(MapVirtualKey(key, MAPVK_VK_TO_VSC));
+        combination.keycode = KeyCodeHelper::KeyCodeFromVK(virtualKey, params);
         return combination;
     }
 #endif

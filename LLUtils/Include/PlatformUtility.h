@@ -7,6 +7,9 @@
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
+#pragma macro push("max")
+#undef max
+
 namespace LLUtils
 {
 
@@ -270,3 +273,4 @@ namespace LLUtils
         }
     };
 }
+#pragma pop("max")

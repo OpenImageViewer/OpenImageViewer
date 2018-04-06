@@ -6,7 +6,7 @@ namespace OIV
    
 #pragma push_macro("DELETE")
 #undef DELETE
-    enum class KeyCode : uint8_t
+    enum class KeyCode : uint16_t
     {
         UNASSIGNED = 0x00,
         ESCAPE = 0x01,
@@ -153,6 +153,31 @@ namespace OIV
         MYCOMPUTER = 0xEB,    // My Computer
         MAIL = 0xEC,    // Mail
         MEDIASELECT = 0xED     // Media Select
+
+        //Extended scan codes
+        , KEYPADENTER = 0XE01C
+        , RCONTROL2          = 0XE01D //  1d(LCtrl)
+        , FAKELSHIFT         = 0XE02A // 	2a(LShift)
+        , KEYPADDIVIDE       = 0XE035 // 	35 (/ ? )
+        , FAKERSHIFT         = 0XE036 // 	36 (RShift)
+        , CONTROLPRINTSCREEN = 0XE037 // )		37 (*/ PrtScn)
+        , RIGHTALT           = 0XE038 // )
+        , CONTROL2           = 0XE046 // 		46 (ScrollLock)
+        , GREYHOME           = 0XE047 // 	47 (Keypad - 7 / Home)
+        , GREYUP             = 0XE048 // 48 (Keypad - 8 / UpArrow)
+        , GREYPGUP           = 0XE049 // 	49 (Keypad - 9 / PgUp)
+        , GREYLEFT           = 0XE04B // 	4b(Keypad - 4 / Left)
+        , GREYRIGHT          = 0XE04D // 	4d(Keypad - 6 / Right)
+        , GREYEND            = 0XE04F // 	4f(Keypad - 1 / End)
+        , GREYDOWN           = 0XE050 // 	50 (Keypad - 2 / DownArrow)
+        , GREYPGDN           = 0XE051 // 	51 (Keypad - 3 / PgDn)
+        , GREYINSERT         = 0XE052 // 	52 (Keypad - 0 / Ins)
+        , GREYDELETE         = 0XE053 // 	53 (Keypad - . / Del)
+        , LEFTWINDOW         = 0XE05B //(LeftWindow)
+        , RIGHTWINDOW        = 0XE05C // (RightWindow)
+        , MENU               = 0XE05D // (Menu)
+
+
     };
 
     struct KeyCodeKeyStringPair
@@ -307,7 +332,30 @@ namespace OIV
         ,{KeyCode::WEBBACK ,                          "WEBBACK" }    // Web Back
         ,{KeyCode::MYCOMPUTER ,                    "MYCOMPUTER" }    // My Computer
         ,{KeyCode::MAIL ,                                "MAIL" }    // Mail
-        ,{KeyCode::MEDIASELECT,                     "MEDIASELECT" }
+        ,{KeyCode::MEDIASELECT,                    "MEDIASELECT"}
+            
+        //Extended scan codes
+        ,{KeyCode::KEYPADENTER,                   "KEYPADENTER" }
+        ,{KeyCode::RCONTROL2,                     "RCONTROL2"   }
+        ,{KeyCode::FAKELSHIFT,                    "FAKELSHIFT"  }
+        ,{KeyCode::KEYPADDIVIDE,                  "KEYPADDIVIDE"}
+        ,{KeyCode::FAKERSHIFT,                    "FAKERSHIFT"  }
+        ,{KeyCode::CONTROLPRINTSCREEN,            "CONTROLPRINTSCREEN" }
+        ,{KeyCode::RIGHTALT,                      "RALT"        }
+        ,{KeyCode::CONTROL2,                      "CONTROL2"    }
+        ,{KeyCode::GREYHOME,                      "GREYHOME"    }                 
+        ,{KeyCode::GREYUP,                        "GREYUP"      }       
+        ,{KeyCode::GREYPGUP,                      "GREYPGUP"    }
+        ,{KeyCode::GREYLEFT,                      "GREYLEFT"    }         
+        ,{KeyCode::GREYRIGHT,                     "GREYRIGHT"   }         
+        ,{KeyCode::GREYEND,                       "GREYEND"     }         
+        ,{KeyCode::GREYDOWN,                      "GREYDOWN"    }         
+        ,{KeyCode::GREYPGDN,                      "GREYPGDN"    }         
+        ,{KeyCode::GREYINSERT,                    "GREYINSERT"  }         
+        ,{KeyCode::GREYDELETE,                    "GREYDELETE"  } 
+        ,{ KeyCode::LEFTWINDOW,                   "LEFTWINDOW"  }
+        ,{ KeyCode::RIGHTWINDOW,                  "RIGHTWINDOW" }
+        ,{ KeyCode::MENU,                         "MENU"        }
     };
 #pragma pop_macro("DELETE")
 }
