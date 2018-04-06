@@ -44,6 +44,7 @@ namespace OIV
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
         void SetUserMessage(const std::string& message);
+        void SetDebugMessage(const std::string& message);
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
         void PostInitOperations();
         template<class T, class U>
@@ -149,6 +150,7 @@ namespace OIV
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
         OIV_CMD_ImageProperties_Request fImageProperties;
         OIV_CMD_ImageProperties_Request fUserMessageOverlayProperties;
+        OIV_CMD_ImageProperties_Request fDebugMessageOverlayProperties;
         CommandManager fCommandManager;
         ImageHandle fKeybindingsHandle = ImageHandleNull;
         ImageHandle fWelcomeMessageHandle = ImageHandleNull;

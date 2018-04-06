@@ -320,6 +320,15 @@ namespace OIV
         fUserMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
         fUserMessageOverlayProperties.scale = 1.0;
         fUserMessageOverlayProperties.opacity = 1.0;
+
+
+        fDebugMessageOverlayProperties.imageHandle = ImageHandleNull;
+        fDebugMessageOverlayProperties.position = { 20,60 };
+        fDebugMessageOverlayProperties.filterType = OIV_Filter_type::FT_None;
+        fDebugMessageOverlayProperties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
+        fDebugMessageOverlayProperties.scale = 1.0;
+        fDebugMessageOverlayProperties.opacity = 1.0;
+
         
         OIV_CMD_RegisterCallbacks_Request request;
         
@@ -1655,6 +1664,35 @@ namespace OIV
             }
         }
     }
+
+    void TestApp::SetDebugMessage(const std::string& message)
+    {
+        OIV_CMD_CreateText_Request request;
+        OIV_CMD_CreateText_Response response;
+
+        std::wstring wmsg = L"<textcolor=#ff8930>";
+        wmsg += LLUtils::StringUtility::ToWString(message);
+
+        request.text = const_cast<wchar_t*>(wmsg.c_str());
+        request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        request.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
+        request.fontSize = 26;
+
+        if (fDebugMessageOverlayProperties.imageHandle != ImageHandleNull)
+            OIVCommands::UnloadImage(fDebugMessageOverlayProperties.imageHandle);
+
+
+        if (ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
+        {
+            fDebugMessageOverlayProperties.imageHandle = response.imageHandle;
+            fDebugMessageOverlayProperties.opacity = 1.0;
+            if (ExecuteCommand(OIV_CMD_ImageProperties, &fDebugMessageOverlayProperties, &CmdNull()) == RC_Success)
+                fRefreshOperation.Queue();
+        }
+    }
+
+
 
     void TestApp::HideUserMessage()
     {
