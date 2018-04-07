@@ -879,7 +879,7 @@ namespace OIV
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
-        fImageProperties.filterType = LLUtils::Utility::Clamp(filterType
+        fImageProperties.filterType =  std::clamp(filterType
             , FT_None, static_cast<OIV_Filter_type>( FT_Count - 1));
         UpdateImageProperties();
         fRefreshOperation.Queue();
@@ -1098,7 +1098,7 @@ namespace OIV
             PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::Transformed);
             double minimum = std::min(std::max(minimumZoom.x, minimumZoom.y),1.0);
             
-            zoomValue = Utility::Clamp(zoomValue, minimum, MaxPixelSize);
+            zoomValue = std::clamp(zoomValue, minimum, MaxPixelSize);
         }
 
         PointF64 zoomPoint;

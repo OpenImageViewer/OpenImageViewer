@@ -31,10 +31,11 @@ namespace LLUtils
         template <class string_type>
         static bool EnsureDirectory(const string_type& path)
         {
-            if (std::experimental::filesystem::exists(path) == false)
-                return std::experimental::filesystem::create_directory(path);
+            using namespace std::experimental;
+            if (filesystem::exists(path) == false)
+                return filesystem::create_directory(path);
 
-            return std::experimental::filesystem::is_directory(path);
+            return filesystem::is_directory(path);
         }
 
         struct BlitBox
@@ -69,11 +70,6 @@ namespace LLUtils
                 dstPos += dst.rowPitch;
                 srcPos += src.rowPitch;
             }
-        }
-
-        template <class T> static  T Clamp(T val, T min, T max)
-        {
-            return std::max(min, std::min(val, max));
         }
 
         static ListWString FindFiles(ListWString& filesList, std::experimental::filesystem::path workingDir, std::wstring fileTypes,bool recursive)
