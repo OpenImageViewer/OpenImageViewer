@@ -47,8 +47,6 @@ namespace OIV
         void SetDebugMessage(const std::string& message);
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
         void PostInitOperations();
-        template<class T, class U>
-        ResultCode ExecuteCommand(CommandExecute command, T * request, U * response);
 #pragma region Commands
         void CMD_Zoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_SetScreenState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);

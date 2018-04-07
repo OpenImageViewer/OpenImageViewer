@@ -2,6 +2,7 @@
 #include "API/defs.h"
 #include "API/functions.h"
 #include <Rect.h>
+#include <Exception.h>
 
 namespace OIV
 {
@@ -128,6 +129,15 @@ namespace OIV
         {
             OIV_CMD_SetSelectionRect_Request request = { -1,-1,-1,-1 };
             ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &CmdNull());
+        }
+        static void Init(HANDLE hwnd)
+        {
+            // Init OIV renderer
+            CmdDataInit init;
+            init.parentHandle = reinterpret_cast<std::size_t>(hwnd);
+            if (ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull()) != RC_Success)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable initialize OIV library");
+            
         }
     };
 }

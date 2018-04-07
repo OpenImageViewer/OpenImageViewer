@@ -31,13 +31,6 @@
 
 namespace OIV
 {
-    //TODO: move to OIVCommands
-    template <class T,class U>
-    ResultCode TestApp::ExecuteCommand(CommandExecute command, T* request, U* response)
-    {
-        return OIV_Execute(command, sizeof(T), request, sizeof(U), response);
-    }
-
     void TestApp::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
 
@@ -134,7 +127,7 @@ namespace OIV
         requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
         requestText.fontSize = 22;
 
-        if (ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
+        if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
         {
             fKeybindingsHandle = responseText.imageHandle;
             OIV_CMD_ImageProperties_Request imageProperties;
@@ -145,7 +138,7 @@ namespace OIV
             imageProperties.scale = 1.0;
             imageProperties.opacity = 1.0;
  
-            if (ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
             {
                 fRefreshOperation.Queue();
             }
@@ -350,7 +343,7 @@ namespace OIV
         };
 
 
-       ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
+        OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
 
         LLUtils::Exception::OnException.Add([](LLUtils::Exception::EventArgs args)
         {
@@ -457,9 +450,6 @@ namespace OIV
         if (descriptor.imageHandle != ImageHandleNull)
         {
             LLUtils::StopWatch stopWatch(true);
-
-           
-
 
             OIVCommands::DisplayImage(descriptor.imageHandle
                 , static_cast<OIV_CMD_DisplayImage_Flags>(
@@ -610,7 +600,8 @@ namespace OIV
               (onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0)
             | OIV_CMD_LoadFile_Flags::Load_Exif_Data);
 
-        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse);
+        
+        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_LoadFile, &loadRequest, &loadResponse);
         if (result == RC_Success)
         {
             fImageBeingOpened.width = loadResponse.width;
@@ -700,10 +691,7 @@ namespace OIV
             fMutexWindowCreation.unlock();
         
         
-        // Init OIV renderer
-        CmdDataInit init;
-        init.parentHandle = reinterpret_cast<std::size_t>(fWindow.GetHandleClient());
-        ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull());
+        OIVCommands::Init(fWindow.GetHandleClient());
 
         // Update the window size manually since the window won't receive WM_SIZE till it's visible.
         fWindow.RefreshWindow();
@@ -741,7 +729,7 @@ namespace OIV
     void TestApp::Destroy()
     {
         // Destroy OIV when window is closed.
-        ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
     }
 
     double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
@@ -765,7 +753,7 @@ namespace OIV
 
     void TestApp::UpdateExposure()
     {
-        ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
         fRefreshOperation.Queue();
     }
 
@@ -892,7 +880,7 @@ namespace OIV
         CmdRequestTexelGrid grid;
         fIsGridEnabled = !fIsGridEnabled;
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
-        if (ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
+        if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
             fRefreshOperation.Queue();
         }
@@ -1082,7 +1070,7 @@ namespace OIV
 
     void TestApp::UpdateImageProperties()
     {
-        ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
     }
     
     void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY)
@@ -1193,7 +1181,7 @@ namespace OIV
             ,static_cast<int32_t>(storageImageSpace.y)};
             OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
-            if (ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
             fWindow.SetStatusBarText(OIVHelper::ParseTexelValue(texelInfoResponse), 5, 0);
         }
         else
@@ -1206,7 +1194,7 @@ namespace OIV
     void TestApp::UpdateWindowSize()
     {
         SIZE size = fWindow.GetClientSize();
-        ExecuteCommand(CMD_SetClientSize,
+        OIVCommands::ExecuteCommand(CMD_SetClientSize,
             &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
             static_cast<uint16_t>(size.cy) }, &CmdNull());
         UpdateCanvasSize();
@@ -1290,7 +1278,7 @@ namespace OIV
     {
         OIV_CMD_QueryImageInfo_Request loadRequest;
         loadRequest.handle = ImageHandleDisplayed;
-        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
+        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
     }
 
     void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
@@ -1307,7 +1295,7 @@ namespace OIV
         loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
         
         
-        ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);
+        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);
         if (result == RC_Success)
         {
             fImageBeingOpened = ImageDescriptor();
@@ -1414,7 +1402,7 @@ namespace OIV
 
             requestGetPixels.handle = croppedHandle;
 
-            if (ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
             {
                 struct hDibDelete
                 {
@@ -1655,11 +1643,11 @@ namespace OIV
             OIVCommands::UnloadImage(fUserMessageOverlayProperties.imageHandle);
         
 
-        if (ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
+        if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
         {
             fUserMessageOverlayProperties.imageHandle = response.imageHandle;
             fUserMessageOverlayProperties.opacity = 1.0;
-            if (ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull()) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull()) == RC_Success)
             {
                 fRefreshOperation.Queue();
                 SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, fDelayRemoveMessage, nullptr);
@@ -1685,11 +1673,11 @@ namespace OIV
             OIVCommands::UnloadImage(fDebugMessageOverlayProperties.imageHandle);
 
 
-        if (ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
+        if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &request, &response) == RC_Success)
         {
             fDebugMessageOverlayProperties.imageHandle = response.imageHandle;
             fDebugMessageOverlayProperties.opacity = 1.0;
-            if (ExecuteCommand(OIV_CMD_ImageProperties, &fDebugMessageOverlayProperties, &CmdNull()) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fDebugMessageOverlayProperties, &CmdNull()) == RC_Success)
                 fRefreshOperation.Queue();
         }
     }
@@ -1712,7 +1700,7 @@ namespace OIV
             KillTimer(fWindow.GetHandle(), cTimerIDHideUserMessage);
         }
 
-        ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull());
         fRefreshOperation.Queue();
     }
 
@@ -1751,12 +1739,12 @@ namespace OIV
 
         
 
-        if (ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
+        if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
         {
             OIV_CMD_QueryImageInfo_Request loadRequest;
             OIV_CMD_QueryImageInfo_Response textImageInfo;
             loadRequest.handle = responseText.imageHandle;
-            ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &textImageInfo);
+            ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &textImageInfo);
             
             using namespace LLUtils;
             PointI32 clientSize = fWindow.GetClientSize();
@@ -1774,7 +1762,7 @@ namespace OIV
             imageProperties.scale = 1.0;
             imageProperties.opacity = 1.0;
 
-            if (ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
+            if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
             {
                 fRefreshOperation.Queue();
             }
