@@ -623,7 +623,11 @@ namespace OIV
             return rect;
         }
 
-       
+        bool Win32WIndow::GetShowBorders() const
+        {
+            return fShowBorders;
+        }
+
         void Win32WIndow::HandleResize()
         {
             UpdateWindowStyles();

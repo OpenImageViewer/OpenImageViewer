@@ -54,30 +54,38 @@ namespace OIV
         result.resValue = ss.str();
     }
 
-    void TestApp::CMD_SetScreenState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_ViewState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
 
         string type = request.args.GetArgValue("type");
 
-        if (type == "toggle") // Toggle fullscreen
-            fWindow.ToggleFullScreen(false);
-
-        else if (type == "togglemulti") //Toggle multi fullscreen
-            fWindow.ToggleFullScreen(true);
-
-        switch (fWindow.GetFullScreenState())
+        if (type == "toggleBorders")
         {
-        case FullSceenState::MultiScreen:
-            result.resValue = "Multi full screen";
-            break;
-        case FullSceenState::SingleScreen:
-            result.resValue = "Full screen";
-            break;
-        case FullSceenState::Windowed:
-            result.resValue = "Windowed";
-            break;
+            ToggleBorders();
+            result.resValue = std::string("Borders ") + (fWindow.GetShowBorders() == true ? "On" : "Off" );
+        }
+        else
+        {
+            if (type == "toggleFullScreen") // Toggle fullscreen
+                fWindow.ToggleFullScreen(false);
+
+            else if (type == "toggleMultiFullScreen") //Toggle multi fullscreen
+                fWindow.ToggleFullScreen(true);
+
+            switch (fWindow.GetFullScreenState())
+            {
+            case FullSceenState::MultiScreen:
+                result.resValue = "Multi full screen";
+                break;
+            case FullSceenState::SingleScreen:
+                result.resValue = "Full screen";
+                break;
+            case FullSceenState::Windowed:
+                result.resValue = "Windowed";
+                break;
+            }
         }
 
     }
@@ -361,13 +369,14 @@ namespace OIV
         std::vector<CommandDesc> localDesc
 
         {
-            // general
+            //general
              { "Key bindings","cmd_toggle_keybindings","" ,"F1" }
             ,{ "Open file","cmd_open_file","" ,"Control+O" }
 
-            //Screen state
-            ,{ "Toggle full screen","cmd_screen_state","type=toggle" ,"Alt+Enter" }
-            ,{ "Toggle multi full screen","cmd_screen_state","type=togglemulti" ,"Alt+Shift+Enter" }
+            //View state
+            ,{ "Toggle full screen","cmd_view_state","type=toggleFullScreen" ,"Alt+Enter" }
+            ,{ "Toggle multi full screen","cmd_view_state","type=toggleMultiFullScreen" ,"Alt+Shift+Enter" }
+            ,{ "Borders","cmd_view_state","type=toggleBorders" ,"B" }
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
             ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
@@ -406,7 +415,7 @@ namespace OIV
         using namespace placeholders;
         
         fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::CMD_ColorCorrection, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_screen_state", std::bind(&TestApp::CMD_SetScreenState, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_view_state", std::bind(&TestApp::CMD_ViewState, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
@@ -958,9 +967,6 @@ namespace OIV
             break;
         case VK_SPACE:
             ToggleSlideShow();
-            break;
-        case 'B':
-            ToggleBorders();
             break;
         case VK_OEM_PERIOD:
             SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(GetFilterType()) + 1));

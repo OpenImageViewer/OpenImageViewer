@@ -23,6 +23,7 @@ namespace OIV
             HWND GetHandleClient() const;
             SIZE GetClientSize() const;
             RECT GetClientRectangle() const;
+            bool GetShowBorders() const;
             bool IsInFocus() const;
             bool IsMouseCursorInClientRect() const;
             LRESULT GetCorner(const POINTS& tag_points) const;
