@@ -306,6 +306,8 @@ namespace OIV
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
     {
         
+        fWindow.SetMenuChar(false);
+
         fImageProperties.imageHandle = ImageHandleDisplayed;
         fImageProperties.position = 0;
         fImageProperties.filterType = OIV_Filter_type::FT_None;

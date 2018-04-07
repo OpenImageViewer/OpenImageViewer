@@ -337,6 +337,13 @@ namespace OIV
             bool defaultProc = true;
             switch (message)
             {
+            case WM_MENUCHAR:
+                if (window->fEnableMenuChar == false)
+                {
+                    defaultProc = false;
+                    retValue = MAKELONG(0, MNC_CLOSE);
+                }
+                break;
             case WM_NCHITTEST:
             {
                 if (true 
@@ -655,6 +662,11 @@ namespace OIV
             fShowBorders = show_borders;
             fShowStatusBar = show_borders;
             RefreshWindow();
+        }
+
+        void Win32WIndow::SetMenuChar(bool enabled)
+        {
+            fEnableMenuChar = enabled;
         }
     }
 }

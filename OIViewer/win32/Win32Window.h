@@ -42,6 +42,7 @@ namespace OIV
             void HandleResize();
             void ShowStatusBar(bool show);
             void ShowBorders(bool show_borders);
+            void SetMenuChar(bool enabled);
             void FlushInput(bool calledFromIdleTimer);
             void Win32WIndow::HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
@@ -81,6 +82,7 @@ namespace OIV
             bool fShowBorders = true;
             RawInputMouseWindow fMouseState = RawInputMouseWindow(this);
             bool fInputFlushTimerEnabled = false;
+            bool fEnableMenuChar = true;
             static const int cTimerIDRawInputFlush = 2500;
             uint16_t fRawInputInterval = 5;
             LLUtils::StopWatch fRawInputTimer = (true);
