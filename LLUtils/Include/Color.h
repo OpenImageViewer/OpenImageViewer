@@ -17,10 +17,10 @@ namespace LLUtils
         {
             static_assert(std::is_floating_point<T>(), "Only floating point support normilization");
             static thread_local T normalizedColor[4];
-            normalizedColor[0] = R / 255.0;
-            normalizedColor[1] = G / 255.0;
-            normalizedColor[2] = B / 255.0;
-            normalizedColor[3] = A / 255.0;
+            normalizedColor[0] = R / static_cast<T>(255.0);
+            normalizedColor[1] = G / static_cast<T>(255.0);
+            normalizedColor[2] = B / static_cast<T>(255.0);
+            normalizedColor[3] = A / static_cast<T>(255.0);
             return normalizedColor;
         }
         Color() {}
@@ -68,7 +68,7 @@ namespace LLUtils
                         {
                             strByteColor[0] = hexValues[i];
                             strByteColor[1] = hexValues[i + 1];
-                            uint8_t val = std::strtol(strByteColor, nullptr, 16);
+                            uint8_t val = static_cast<uint8_t>(std::strtoul(strByteColor, nullptr, 16));
                             *(reinterpret_cast<uint8_t*>(&c.colorValue) + i / 2) = val;
                             i += 2;
                         }
@@ -76,7 +76,7 @@ namespace LLUtils
                         {
                             strByteColor[0] = '0';
                             strByteColor[1] = hexValues[i];
-                            uint8_t val = std::strtol(strByteColor, nullptr, 16);
+                            uint8_t val = static_cast<uint8_t>(std::strtoul(strByteColor, nullptr, 16));
                             *(reinterpret_cast<uint8_t*>(&c.colorValue) + i / 2) = val;
                             i += 2;
                         }

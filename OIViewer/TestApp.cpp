@@ -1183,8 +1183,8 @@ namespace OIV
             ))
         {
                  OIV_CMD_TexelInfo_Request texelInfoRequest = {fOpenedImage.imageHandle
-            ,static_cast<int32_t>(storageImageSpace.x)
-            ,static_cast<int32_t>(storageImageSpace.y)};
+            ,static_cast<uint32_t>(storageImageSpace.x)
+            ,static_cast<uint32_t>(storageImageSpace.y)};
             OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
             if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)

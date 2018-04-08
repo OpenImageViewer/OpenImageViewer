@@ -6,7 +6,7 @@ class CodePoint
 public:
     static int codepoint(const std::string &u)
     {
-        int l = u.length();
+        size_t l = u.length();
         if (l<1) return -1; unsigned char u0 = u[0]; if (u0 >= 0 && u0 <= 127) return u0;
         if (l<2) return -1; unsigned char u1 = u[1]; if (u0 >= 192 && u0 <= 223) return (u0 - 192) * 64 + (u1 - 128);
         if (u[0] == 0xed && (u[1] & 0xa0) == 0xa0) return -1; //code points, 0xd800 to 0xdfff

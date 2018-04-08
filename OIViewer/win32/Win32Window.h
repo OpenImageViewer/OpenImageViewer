@@ -50,7 +50,7 @@ namespace OIV
             
             void Move(const int16_t delta_x, const int16_t delta_y);
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-            HWND DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts);
+            HWND DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts);
             void SetStatusBarText(std::wstring message, int part, int type);
             int WINAPI Create(HINSTANCE hInstance, int nCmdShow);
 

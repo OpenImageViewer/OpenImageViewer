@@ -102,7 +102,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;dxguid.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;dxguid.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,14 +114,13 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;dxguid.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;dxguid.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -143,7 +142,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;dxguid.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;dxguid.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -160,7 +159,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3dcompiler.lib;d3d11.lib;dxguid.lib</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;dxguid.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>

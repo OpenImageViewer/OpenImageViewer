@@ -286,7 +286,7 @@ namespace IMUtil
             PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.GetBuffer());
 
 
-            float length = max - min;
+            double length = max - min;
 
             for (uint32_t i = 0; i < totalPixels; i++)
             {

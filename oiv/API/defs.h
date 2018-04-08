@@ -144,8 +144,8 @@ extern "C"
     struct OIV_CMD_TexelInfo_Request
     {
         ImageHandle handle;
-        int32_t x;
-        int32_t y;
+        uint32_t x;
+        uint32_t y;
     };
 
     struct OIV_Exception_Args

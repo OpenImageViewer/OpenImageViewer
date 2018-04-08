@@ -437,7 +437,7 @@ namespace OIV
             return (defaultProc == false ? retValue : DefWindowProc(hWnd, message, wParam, lParam));
         }
 
-        HWND Win32WIndow::DoCreateStatusBar(HWND hwndParent, int idStatus, HINSTANCE hinst, int cParts)
+        HWND Win32WIndow::DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts)
         {
             HWND hwndStatus;
 
@@ -450,7 +450,7 @@ namespace OIV
                 WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, // creates a visible child window
                 0, 0, 0, 0, // ignores size and position
                 hwndParent, // handle to parent window
-                reinterpret_cast<HMENU>(idStatus), // child window identifier
+                reinterpret_cast<HMENU>(static_cast<size_t>(idStatus)), // child window identifier
                 hinst, // handle to application instance
                 nullptr); // no window creation data
 

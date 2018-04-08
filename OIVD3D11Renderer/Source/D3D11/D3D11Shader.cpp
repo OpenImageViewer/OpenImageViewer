@@ -23,7 +23,7 @@ namespace  OIV
             uint8_t* buffer;
             size_t bufferSize;
             LLUtils::File::ReadAllBytes(p,bufferSize,buffer);
-            *pBytes = bufferSize;
+            *pBytes = static_cast<UINT>(bufferSize);
             *ppData = buffer;
             return S_OK;
             

@@ -108,7 +108,6 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>d:\DevelopmentExternal\libpsd\include;..\..\Image\Include;..\..\Imageloader\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

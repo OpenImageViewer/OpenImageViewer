@@ -73,8 +73,8 @@ FreeTypeConnector::~FreeTypeConnector()
 std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormattedText(std::string text, int fontSize)
 {
     using namespace std;
-    int beginTag = -1;
-    int endTag = -1;
+    ptrdiff_t beginTag = -1;
+    ptrdiff_t endTag = -1;
     vector<FormattedTextEntry> formattedText;
     for (int i = 0; i < text.length(); i++)
     {
@@ -109,7 +109,8 @@ std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormatt
     }
 
    
-        int i = text.length() - 1;
+    
+        ptrdiff_t i = text.length() - 1;
         string tagContents = text.substr(beginTag, endTag - beginTag + 1);
 
         string textInsideTag = text.substr(endTag + 1, i - endTag );
@@ -215,7 +216,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     const uint32_t destRowPitch = destWidth * destPixelSize;
     const uint32_t sizeOFDestBuffer = destHeight * destRowPitch;
     uint8_t* imageBuffer = new uint8_t[sizeOFDestBuffer];
-    for (int i = 0 ;i < destWidth * destHeight; i++)
+    for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
     {
         reinterpret_cast<uint32_t*>(imageBuffer)[i] = backgroundColor.colorValue;
     }
@@ -272,14 +273,14 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
             
             // Fill glyph background with background color.
             uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.get());
-            for (int i = 0; i < bitmap.width * bitmap.rows; i++)
+            for (uint32_t i = 0; i < bitmap.width * bitmap.rows; i++)
             {
                 RGBABitmapPtr[i] = backgroundColor.colorValue;
             }
 
             
             //Blend source bitmap with the new RGBA bitmap
-            for (int i = 0; i < bitmap.rows * bitmap.width; i++)
+            for (uint32_t i = 0; i < bitmap.rows * bitmap.width; i++)
             {
                 //Make the text overlay color transparent for text blending.
                 LLUtils::Color textOverlayColor = el.color;

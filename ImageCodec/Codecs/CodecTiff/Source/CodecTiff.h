@@ -104,7 +104,7 @@ namespace IMCodec
 
                 uint32_t numberOfStripts = TIFFNumberOfStrips(tiff);
                 tmsize_t stripSize = TIFFStripSize(tiff);
-                rowPitch = TIFFScanlineSize(tiff);
+                rowPitch = static_cast<uint32_t>(TIFFScanlineSize(tiff));
                 
                 switch (photoMetric)
                 {
@@ -127,7 +127,7 @@ namespace IMCodec
                         LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");
 
 
-                    for (int i = 0; i < numberOfStripts; i++)
+                    for (uint32_t i = 0; i < numberOfStripts; i++)
                     {
                         TIFFReadEncodedStrip(tiff, i, currensPos, stripSize);
                         currensPos += rowPitch * rowsPerStrip;

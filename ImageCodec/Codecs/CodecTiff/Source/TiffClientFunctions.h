@@ -10,8 +10,8 @@ namespace IMCodec
     struct tiff_bufferInfo
     {
         const uint8_t* buffer;
-        uint32_t size;
-        uint32_t currentPos;
+        tsize_t size;
+        tsize_t currentPos;
     };
 
 
@@ -31,7 +31,7 @@ namespace IMCodec
     toff_t tiff_seek(thandle_t handle, toff_t offset, int whence)
     {
         tiff_bufferInfo* bufferInfo = reinterpret_cast<tiff_bufferInfo*>(handle);
-        uint32_t& currentPos = bufferInfo->currentPos;
+        tsize_t& currentPos = bufferInfo->currentPos;
 
         switch (whence)
         {

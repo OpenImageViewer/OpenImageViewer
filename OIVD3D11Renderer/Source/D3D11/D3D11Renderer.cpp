@@ -287,17 +287,17 @@ namespace OIV
             //TODO: change to switch statement and unify constant buffres.
 
             CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
-            gpuBuffer.uImageOffset[0] = props.position.x;
-            gpuBuffer.uImageOffset[1] = props.position.y;
-            gpuBuffer.uvViewportSize[0] = fViewport.Width;
-            gpuBuffer.uvViewportSize[1] = fViewport.Height;
-            gpuBuffer.uvViewportSize[2] = 1.0 / fViewport.Width;
-            gpuBuffer.uvViewportSize[3] = 1.0 / fViewport.Height;
-            gpuBuffer.uImageSize[0] = entry.texture->GetCreateParams().width;
-            gpuBuffer.uImageSize[1] = entry.texture->GetCreateParams().height;
-            gpuBuffer.uScale[0] = props.scale.x;
-            gpuBuffer.uScale[1] = props.scale.y;
-            gpuBuffer.opacity = props.opacity;
+            gpuBuffer.uImageOffset[0] = static_cast<float>(props.position.x);
+            gpuBuffer.uImageOffset[1] = static_cast<float>(props.position.y);
+            gpuBuffer.uvViewportSize[0] = static_cast<float>(fViewport.Width);
+            gpuBuffer.uvViewportSize[1] = static_cast<float>(fViewport.Height);
+            gpuBuffer.uvViewportSize[2] = static_cast<float>(1.0 / fViewport.Width);
+            gpuBuffer.uvViewportSize[3] = static_cast<float>(1.0 / fViewport.Height);
+            gpuBuffer.uImageSize[0] = static_cast<float>(entry.texture->GetCreateParams().width);
+            gpuBuffer.uImageSize[1] = static_cast<float>(entry.texture->GetCreateParams().height);
+            gpuBuffer.uScale[0] = static_cast<float>(props.scale.x);
+            gpuBuffer.uScale[1] = static_cast<float>(props.scale.y);
+            gpuBuffer.opacity = static_cast<float>(props.opacity);
 
             fBufferImageCommon->Update();
             fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);

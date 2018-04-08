@@ -14,6 +14,7 @@
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDIr)\LLUtils\Include</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4091</DisableSpecificWarnings>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
