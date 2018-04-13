@@ -1,6 +1,7 @@
 #include "KeyCombination.h"
 #include <StringUtility.h>
 #include "KeyCodeHelper.h"
+#include <Exception.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -38,7 +39,13 @@ namespace OIV
             else if (key == "ENTER")
                 duplicateCombinations2Darray.push_back({ KeyCode::ENTERMAIN, KeyCode::KEYPADENTER});
             else
-                combination.AssignKey(KeyCodeHelper::KeyNameToKeyCode(key));
+            {
+                KeyCode keyCode = KeyCodeHelper::KeyNameToKeyCode(key);
+                if (keyCode == KeyCode::UNASSIGNED)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::BadParameters, std::string("The key name '") + key + "' could not be found");
+                combination.AssignKey(keyCode);
+            }
+
         }
 
         if (duplicateCombinations2Darray.empty() == false)
