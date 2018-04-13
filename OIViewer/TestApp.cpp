@@ -66,8 +66,27 @@ namespace OIV
             ToggleBorders();
             result.resValue = std::string("Borders ") + (fWindow.GetShowBorders() == true ? "On" : "Off" );
         }
+        else if (type=="quit")
+        {
+            PostQuitMessage(0);
+        }
+        else if (type == "grid")
+        {
+            ToggleGrid();
+            result.resValue = "Grid ";
+            result.resValue += fIsGridEnabled == true ? "on" : "off";
+        }
+        else if (type =="slideShow")
+        {
+            ToggleSlideShow();
+            result.resValue = "Slideshow ";
+            result.resValue += fIsSlideShowActive == true ? "on" : "off";
+        }
+
         else
         {
+            // full screen 
+
             if (type == "toggleFullScreen") // Toggle fullscreen
                 fWindow.ToggleFullScreen(false);
 
@@ -133,7 +152,7 @@ namespace OIV
         requestText.text = const_cast<wchar_t*>(wmsg.c_str());
         requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216);
         requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
-        requestText.fontSize = 22;
+        requestText.fontSize = 18;
 
         if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
         {
@@ -160,7 +179,7 @@ namespace OIV
         if (fileName.empty() == false)
         {
             LoadFile(fileName, false);
-            response.resValue = "Open file: " + LLUtils::StringUtility::ToAString(fileName);
+            //response.resValue = "Open file: " + LLUtils::StringUtility::ToAString(fileName);
         }
     }
 
@@ -264,6 +283,45 @@ namespace OIV
         
     }
 
+    void TestApp::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
+        CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string cmd = request.args.GetArgValue("cmd");
+
+        if (cmd == "fileName")
+        {
+            if (fOpenedImage.source == ImageSource::File)
+            {
+                LLUtils::PlatformUtility::CopyTextToClipBoard(fOpenedImage.fileName);
+                result.resValue = request.description;
+            }
+        }
+        else if (cmd == "selectedArea" )
+        {
+            CopyVisibleToClipBoard();
+            result.resValue = request.description;
+        }
+    }
+    
+
+    void TestApp::CMD_PasteFromClipboard(const CommandManager::CommandRequest& request,
+        CommandManager::CommandResult& result)
+    {
+        PasteFromClipBoard();
+        result.resValue = request.description;
+    }
+
+    void TestApp::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
+        CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string cmd = request.args.GetArgValue("cmd");
+        if (cmd == "cropSelectedArea")
+            CropVisibleImage();
+    }
+
+
     void TestApp::CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace std;
@@ -285,6 +343,23 @@ namespace OIV
 
     }
 
+    void TestApp::CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string amount = request.args.GetArgValue("amount");
+        if (amount == "start")
+            JumpFiles(FileIndexStart);
+
+        else if (amount == "end")
+            JumpFiles(FileIndexEnd);
+        else
+        {
+            int amountVal = std::stoi(amount, nullptr);
+            JumpFiles(amountVal);
+        }
+
+    }
+    
 
     void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
     {
@@ -377,6 +452,10 @@ namespace OIV
             ,{ "Toggle full screen","cmd_view_state","type=toggleFullScreen" ,"Alt+Enter" }
             ,{ "Toggle multi full screen","cmd_view_state","type=toggleMultiFullScreen" ,"Alt+Shift+Enter" }
             ,{ "Borders","cmd_view_state","type=toggleBorders" ,"B" }
+            ,{ "Quit","cmd_view_state","type=quit" ,"Escape" }
+            ,{ "Grid","cmd_view_state","type=grid" ,"G" }
+            ,{ "Slide show","cmd_view_state","type=slideShow" ,"Space" }
+
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
             ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
@@ -406,7 +485,21 @@ namespace OIV
             ,{ "Fit to screen","cmd_placement","cmd=fitToScreen" ,"KeyPadDivide" }
             ,{ "Center","cmd_placement","cmd=center" ,"Numpad5" }
 
+            //Image manipulation
+            ,{ "Crop to selected area","cmd_imageManipulation","cmd=cropSelectedArea" ,"C" }
 
+            //Clipboard
+            ,{ "Copy selected area to clipboard","cmd_copyToClipboard","cmd=selectedArea" ,"Control+C" }
+            ,{ "Copy file name to clipboard","cmd_copyToClipboard","cmd=fileName" ,"Control+Shift+C" }
+            ,{ "Paste image from clipboard","cmd_pasteFromClipboard","" ,"Control+V" }
+            ,{ "Previous","cmd_navigate","amount=-1" ,"GREYLEFT" }
+            ,{ "Previous","cmd_navigate","amount=-1" ,"GREYPGUP" }
+            ,{ "Next","cmd_navigate","amount=1" ,"GREYRIGHT" }
+            ,{ "Next","cmd_navigate","amount=1" ,"GREYPGDN" }
+
+
+            ,{ "First","cmd_navigate","amount=start" ,"GREYHOME" }
+            ,{ "Last","cmd_navigate","amount=end" ,"GREYEND" }
         };
 
         fCommandDescription = localDesc;
@@ -423,6 +516,10 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_zoom", std::bind(&TestApp::CMD_Zoom, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_pan", std::bind(&TestApp::CMD_Pan, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_placement", std::bind(&TestApp::CMD_Placement, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_copyToClipboard", std::bind(&TestApp::CMD_CopyToClipboard, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_pasteFromClipboard", std::bind(&TestApp::CMD_PasteFromClipboard, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_imageManipulation", std::bind(&TestApp::CMD_ImageManipulation, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)));
 
 
         for (const CommandDesc& desc : fCommandDescription)
@@ -506,8 +603,6 @@ namespace OIV
             , nullptr
         };
 
-
-        int currentIndex = fCurrentFileIndex;
         int shResult = SHFileOperation(&file_op);
 
 
@@ -547,6 +642,17 @@ namespace OIV
 
             if (fIsInitialLoad == false)
                 UpdateUIFileIndex();
+            
+
+            if (fOpenedImage.source == ImageSource::File)
+            {
+                std::wstringstream ss;
+                ss << L"File: ";
+                using namespace std::experimental;
+                filesystem::path p = fOpenedImage.fileName;
+                ss << p.parent_path() << "\\" << "<textcolor=#ff00ff>" << p.stem() << "<textcolor=#00ff00>" << p.extension();
+                SetUserMessage(LLUtils::StringUtility::ToAString(ss.str()));
+            }
 
             //Unload old image
             OIVCommands::UnloadImage(oldImage);
@@ -648,7 +754,7 @@ namespace OIV
     {
         using namespace std::experimental::filesystem;
         fListFiles.clear();
-        fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
+        fCurrentFileIndex = FileIndexStart;
 
         std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
@@ -793,7 +899,7 @@ namespace OIV
     void TestApp::UpdateUIFileIndex()
     {
         std::wstringstream ss;
-        ss << L"File " << (fCurrentFileIndex == std::numeric_limits<LLUtils::ListWString::size_type>::max() ? 
+        ss << L"File " << (fCurrentFileIndex == FileIndexStart ? 
             0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
 
         fWindow.SetStatusBarText(ss.str(), 1, 0);
@@ -805,17 +911,17 @@ namespace OIV
             return false;
 
         LLUtils::ListWString::size_type totalFiles = fListFiles.size();
-        int32_t fileIndex = static_cast<int32_t>(fCurrentFileIndex);
+        int fileIndex = fCurrentFileIndex;
 
 
         int sign;
-        if (step == std::numeric_limits<int>::max())
+        if (step == FileIndexEnd)
         {
             // Last
             fileIndex = static_cast<int32_t>(fListFiles.size());
             sign = -1;
         }
-        else if (step == std::numeric_limits<int>::min())
+        else if (step == FileIndexStart)
         {
             // first
             fileIndex = -1;
@@ -846,7 +952,7 @@ namespace OIV
         if (isLoaded)
         {
             assert(fileIndex >= 0 && fileIndex < totalFiles);
-            fCurrentFileIndex = static_cast<LLUtils::ListWString::size_type>(fileIndex);
+            fCurrentFileIndex = fileIndex;
             UpdateUIFileIndex();
         }
         return isLoaded;
@@ -926,48 +1032,6 @@ namespace OIV
                 DisplayImage(fOpenedImage, false);
             }
             break;
-        case 'C':
-            if (IsControl == true)
-            {
-                if (IsShift && fOpenedImage.source == ImageSource::File)
-                    LLUtils::PlatformUtility::CopyTextToClipBoard(fOpenedImage.fileName);
-                else
-                    CopyVisibleToClipBoard();
-            }
-            else
-                CropVisibleImage();
-            break;
-        case 'V':
-            if (IsControl == true)
-                PasteFromClipBoard();
-                break;
-        case VK_ESCAPE:
-            PostQuitMessage(0);
-            break;
-        case VK_NEXT:
-                JumpFiles(1);
-            break;
-
-        case VK_DOWN:
-        case VK_RIGHT:
-            JumpFiles(1);
-            break;
-        case VK_UP:
-        case VK_LEFT:
-            JumpFiles(-1);
-            break;
-        case VK_PRIOR:
-                JumpFiles(1);
-            break;
-        case VK_HOME:
-            JumpFiles(std::numeric_limits<int>::min());
-            break;
-        case VK_END:
-            JumpFiles(std::numeric_limits<int>::max());
-            break;
-        case VK_SPACE:
-            ToggleSlideShow();
-            break;
         case VK_OEM_PERIOD:
             SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(GetFilterType()) + 1));
             break;
@@ -978,9 +1042,6 @@ namespace OIV
         case VK_DELETE:
          
              DeleteOpenedFile(IsShift);
-            break;
-        case 'G':
-            ToggleGrid();
             break;
         case 'P':
         {
@@ -1656,7 +1717,8 @@ namespace OIV
             if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fUserMessageOverlayProperties, &CmdNull()) == RC_Success)
             {
                 fRefreshOperation.Queue();
-                SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, fDelayRemoveMessage, nullptr);
+                const uint32_t delayMessageBeforeHide = std::max<uint32_t>(fMinDelayRemoveMessage, message.length() * fDelayPerCharacter);
+                SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, delayMessageBeforeHide, nullptr);
             }
         }
     }

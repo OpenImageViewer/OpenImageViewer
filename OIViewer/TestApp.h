@@ -55,9 +55,14 @@ namespace OIV
         void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&,CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
         void CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
-        double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
+        void CMD_CopyToClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_PasteFromClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_ImageManipulation(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        
 #pragma endregion //Commands
         void OnRefresh();
         HWND GetWindowHandle() const;
@@ -121,7 +126,7 @@ namespace OIV
         bool fIsSlideShowActive = false;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
-        double fIsGridEnabled = false;
+        bool fIsGridEnabled = false;
         ImageDescriptor fImageBeingOpened;
         ImageDescriptor fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
@@ -129,8 +134,12 @@ namespace OIV
         SelectionRect fSelectionRect;
         const int cTimerID = 1500;
         const int cTimerIDHideUserMessage = 1000;
-        uint32_t fDelayRemoveMessage = 1000;
-        LLUtils::ListWString::size_type fCurrentFileIndex = std::numeric_limits<LLUtils::ListWString::size_type>::max();
+        uint32_t fMinDelayRemoveMessage = 1000;
+        uint32_t fDelayPerCharacter = 40;
+
+        static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
+        static constexpr int FileIndexStart = std::numeric_limits<int>::min();
+        int fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
