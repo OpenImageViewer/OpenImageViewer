@@ -24,16 +24,16 @@ namespace IMCodec
 
             if (status == psd_status_done)
             {
-                out_properties.fData.AllocateAndWrite(reinterpret_cast<uint8_t*>(context->merged_image_data), size);
+                const uint32_t numChannels = 4;
+                size_t mergedImageSize = context->per_channel_length * numChannels;
+                out_properties.fData.AllocateAndWrite(reinterpret_cast<uint8_t*>(context->merged_image_data), mergedImageSize);
 
                 out_properties.fProperties.NumSubImages = 0;
                 out_properties.fProperties.Width = context->width;
                 out_properties.fProperties.Height = context->height;
                 out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_B8_G8_R8_A8;
-                out_properties.fProperties.RowPitchInBytes = 4 * context->width;
+                out_properties.fProperties.RowPitchInBytes = numChannels * context->width;
                 
-                // 'merged_image_data' ownership has been delegated to image properties - do not free memory.
-                context->merged_image_data = nullptr;
                 psd_image_free(context);
                 success = true;
             }
