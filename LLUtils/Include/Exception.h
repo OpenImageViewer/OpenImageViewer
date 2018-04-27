@@ -1,6 +1,7 @@
 #pragma once
 #include <exception>
 #include <string>
+#include <array>
 #include "Event.h"
 #include "PlatformUtility.h"
 
@@ -21,6 +22,7 @@ namespace LLUtils
             , BadParameters
             , NotImplemented
             , SystemError
+            , __Count__
         };
 
         struct EventArgs
@@ -67,39 +69,25 @@ namespace LLUtils
 
         static std::wstring ExceptionErrorCodeToString(ErrorCode errorCode)
         {
-            switch (errorCode)
+            static std::array<std::wstring, static_cast<size_t>( ErrorCode::__Count__)> errorcodeToString =
             {
-            case ErrorCode::Unspecified:
-                return L"Unspecified";
-                break;
-            case ErrorCode::Unknown:
-                return L"Unknown";
-                break;
-            case ErrorCode::CorruptedValue:
-                return L"Corrupted value";
-                break;
-            case ErrorCode::LogicError:
-                return L"Logic error";
-                break;
-            case ErrorCode::RuntimeError:
-                return L"Runtime error";
-                break;
-            case ErrorCode::DuplicateItem:
-                return L"Duplicate item";
-                break;
-            case ErrorCode::BadParameters:
-                return L"Bad parameters";
-                break;
-            case ErrorCode::NotImplemented:
-                return L"Missing implmentation";
-                break;
-            case ErrorCode::SystemError:
-                return L"System error";
-                break;
-            default:
-                return L"Unspecified";
+                 L"Unspecified"
+                ,L"Unknown"
+                ,L"Corrupted value"
+                ,L"Logic error"
+                ,L"Runtime error"
+                ,L"Duplicate item"
+                ,L"Bad parameters"
+                ,L"Missing implmentation"
+                ,L"System error"
+            };
 
-            }
+            int errorCodeInt = static_cast<int>(errorCode);
+
+            if (errorCodeInt >= 0 && errorCodeInt < errorcodeToString.size())
+                return errorcodeToString[errorCodeInt];
+            else
+                return L"Unspecified";
         }
     };
 
