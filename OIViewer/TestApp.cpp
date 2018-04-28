@@ -764,7 +764,7 @@ namespace OIV
          
         std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
 
-        LLUtils::Utility::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false);
+        LLUtils::Utility::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
 
 
         UpdateOpenedFileIndex();
