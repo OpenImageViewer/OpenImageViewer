@@ -27,6 +27,7 @@
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
 #include "SelectionRect.h"
+#include "Helpers\PhotoshopFinder.h"
 
 
 namespace OIV
@@ -1044,8 +1045,9 @@ namespace OIV
             break;
         case 'P':
         {
-            std::wstring command = LR"(c:\Program Files\Adobe\Adobe Photoshop CC 2017\Photoshop.exe)";
-            ShellExecute(nullptr, L"open", command.c_str(),  fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+            std::wstring photoshopApplicationPath = PhotoShopFinder::FindPhotoShop();
+            if (photoshopApplicationPath.empty() == false)
+                ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
         }
         default:
             handled = false;
