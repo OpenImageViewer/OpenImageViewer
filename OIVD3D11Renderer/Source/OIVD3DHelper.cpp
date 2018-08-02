@@ -5,7 +5,7 @@
 
 namespace OIV
 {
-        D3D11TextureSharedPtr OIVD3DHelper::CreateTexture(D3D11DeviceSharedPtr device, const IMCodec::ImageSharedPtr image)
+        D3D11TextureSharedPtr OIVD3DHelper::CreateTexture(D3D11DeviceSharedPtr device, const IMCodec::ImageSharedPtr image, bool createMipMaps)
         {
 
             if (image->GetImageType() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
@@ -16,6 +16,8 @@ namespace OIV
             params.format = DXGI_FORMAT_R8G8B8A8_UNORM;
             params.width = image->GetWidth();
             params.height = image->GetHeight();
+            params.mips = createMipMaps ? -1 : -2;
+
 
             D3D11Texture::InitialBuffer buffer;
             buffer.buffer = image->GetBuffer();

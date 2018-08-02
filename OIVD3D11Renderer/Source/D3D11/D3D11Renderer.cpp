@@ -394,7 +394,7 @@ namespace OIV
     int D3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image)
     {
         ImageEntry& entry = fImageEntries[id];
-        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image);
+        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image, true);
         return 0; 
     }
 

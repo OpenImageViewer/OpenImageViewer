@@ -13,6 +13,7 @@ namespace OIV
             uint32_t width;
             uint32_t height;
             DXGI_FORMAT format;
+            int32_t mips;
         };
 
         struct InitialBuffer
