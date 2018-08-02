@@ -35,7 +35,6 @@ namespace LLUtils
         static void ReadAllBytes(std::wstring filePath,std::size_t& size, uint8_t*& buffer)
         {
             using namespace std;
-            using namespace std::experimental;
             std::size_t fileSize = filesystem::file_size(filePath);
             uint8_t* buf = new uint8_t[fileSize];
             ifstream t(filePath, std::ios::binary);
@@ -48,7 +47,6 @@ namespace LLUtils
         static void WriteAllBytes(const std::wstring& filePath, const std::size_t size, const uint8_t* const buffer)
         {
             using namespace std;
-            using namespace std::experimental;
             filesystem::path parent = filesystem::path(filePath).parent_path();
             if (filesystem::exists(parent) == false)
                 filesystem::create_directory(parent);
