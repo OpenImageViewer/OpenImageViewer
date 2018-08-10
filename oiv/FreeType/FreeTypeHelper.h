@@ -15,7 +15,12 @@ namespace OIV
         {
             FreeTypeConnector::Bitmap rasterizedText;
             FreeTypeConnector::GetSingleton().CreateBitmap(text, fontPath, fontSize, backGroundColor, rasterizedText);
-            return BitmapToRGBAImage(rasterizedText);
+
+            if (rasterizedText.width != 0 && rasterizedText.height != 0)
+                return BitmapToRGBAImage(rasterizedText);
+            else
+                return IMCodec::ImageSharedPtr();
+
         }
 
         static IMCodec::ImageSharedPtr BitmapToRGBAImage(const FreeTypeConnector::Bitmap& rasterizedText)
