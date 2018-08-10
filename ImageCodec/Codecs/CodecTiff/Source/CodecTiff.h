@@ -98,7 +98,19 @@ namespace IMCodec
                 TIFFGetField(tiff, TIFFTAG_COMPRESSION, &compression);
                 TIFFGetField(tiff, TIFFTAG_PHOTOMETRIC, &photoMetric);
                 TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
-                TIFFGetField(tiff, TIFFTAG_SAMPLEFORMAT, &sampleFormat);
+                
+                /* Default sample format is unsigned integer.
+                   From tiff specification: 
+                   Section 19: Data Sample Format
+                    This section describes a scheme for specifying data sample type information.
+                    TIFF implicitly types all data samples as unsigned integer values.Certain applications,
+                    however, require the ability to store image - related data in other formats
+                    such as floating point.This section presents a scheme for describing a variety of
+                    data sample formats.*/
+
+                if (TIFFGetField(tiff, TIFFTAG_SAMPLEFORMAT, &sampleFormat) == 0)
+                    sampleFormat = SAMPLEFORMAT_UINT;
+                
                 TIFFGetField(tiff, TIFFTAG_ROWSPERSTRIP, &rowsPerStrip);
                 TIFFGetField(tiff, TIFFTAG_STRIPROWCOUNTS, &stripRowCount);
 
