@@ -1,9 +1,10 @@
 #pragma once
-#include "Configuration.h"
-#if OIV_BUILD_FREETYPE == 1
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include "FreeTypeHeaders.h"
 
+
+#if OIV_BUILD_FREETYPE == 1
+#include "FreeTypeFont.h"
+#include <map>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -26,7 +27,7 @@ public:
     {
         uint32_t color;
         uint32_t size;
-        std::string text;
+        u8string text;
     };
 
 
@@ -35,7 +36,7 @@ public:
         uint32_t color;
         uint32_t backgroundColor;
         uint32_t size;
-        static Format Parse(const std::string& format);
+        static Format Parse(const u8string& format);
     };
 
     using ListFormattedTextEntry = std::vector<FormattedTextEntry>;
@@ -43,10 +44,10 @@ public:
     using ListListFormattedTextEntry = std::vector<ListFormattedTextEntry>;
     
     ~FreeTypeConnector();
-    std::vector<FreeTypeConnector::FormattedTextEntry> GetFormattedText(std::string text, int fontSize);
+    std::vector<FreeTypeConnector::FormattedTextEntry> GetFormattedText(u8string text, int fontSize);
     
-    void CreateBitmap(const std::string& text
-        , const std::string& fontPath
+    void CreateBitmap(const u8string& text
+        , const u8string& fontPath
         , uint16_t fontSize
         , LLUtils::Color color
         , Bitmap &bitmap
@@ -60,6 +61,7 @@ private:
 
 private:
     FT_Library  fLibrary;
+    std::map<std::string, FreeTypeFontUniquePtr> fFontNameToFont;
     
 };
 

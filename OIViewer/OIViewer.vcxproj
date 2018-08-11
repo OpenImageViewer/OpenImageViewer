@@ -177,7 +177,6 @@
     <ClInclude Include="Helpers\PhotoshopFinder.h" />
     <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="FullScreenState.h" />
-    <ClInclude Include="Helpers\FileSystemHelper.h" />
     <ClInclude Include="Keyboard\KeyBindings.h" />
     <ClInclude Include="Keyboard\KeyCodeHelper.h" />
     <ClInclude Include="Keyboard\KeyCombination.h" />

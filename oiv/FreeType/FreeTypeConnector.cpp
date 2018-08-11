@@ -1,12 +1,16 @@
+﻿#include "FreeTypeHeaders.h"
 
+#if OIV_BUILD_FREETYPE == 1
 #include "FreeTypeConnector.h"
 #include "Exception.h"
-#if OIV_BUILD_FREETYPE == 1
 #include "CodePoint.h"
 #include <vector>
 #include <StringUtility.h>
 #include <Utility.h>
 #include <Color.h>
+#include <locale>
+#include <string>
+#include <iostream>
 
 
 FreeTypeConnector FreeTypeConnector::sInstance;
@@ -24,36 +28,40 @@ FreeTypeConnector& FreeTypeConnector::GetSingleton()
     return sInstance;
 }
 
-FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const std::string& format)
+FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const u8string& format)
 {
     using namespace std;
     using namespace LLUtils;
 
     Format result = {};
-    string trimmed = StringUtility::ToLower(format);
-    trimmed.erase(trimmed.find_last_not_of(" >") + 1);
-    trimmed.erase(0,trimmed.find_first_not_of(" <"));
+    u8string trimmed = StringUtility::ToLower(format);
+    trimmed.erase(trimmed.find_last_not_of(u8" >") + 1);
+    trimmed.erase(0,trimmed.find_first_not_of(u8" <"));
 
-    ListAString properties = StringUtility::split<char>(trimmed, ';');
+    using u8StringList = ListString<u8string>;
+    using u8char = u8string::value_type;
+
+    
+    u8StringList properties = StringUtility::split<u8char>(trimmed, ';');
     stringstream ss;
-    for (const string& prop : properties)
+    for (const u8string& prop : properties)
     {
-        ListAString trimmedList = StringUtility::split<char>(prop, '=');
-        const string& key = trimmedList[0];
-        const string& value = trimmedList[1];
-        if (key == "textcolor")
+        u8StringList trimmedList = StringUtility::split<u8char>(prop, '=');
+        const u8string& key = trimmedList[0];
+        const u8string& value = trimmedList[1];
+        if (key == u8"textcolor")
         {
-            Color c = Color::FromString(value);
+            Color c = Color::FromString(StringUtility::ToAString(value) );
             result.color = c.colorValue;
         }
-        else if (key == "backgroundcolor")
+        else if (key == u8"backgroundcolor")
         {
-            Color c = Color::FromString(value);
+            Color c = Color::FromString(StringUtility::ToAString(value));
             result.backgroundColor = c.colorValue;
         }
-        else if (key == "textSize")
+        else if (key == u8"textSize")
         {
-            result.size = std::atoi(value.c_str());
+            result.size = std::atoi(StringUtility::ToAString(value).c_str());
         }
     }
 
@@ -62,6 +70,7 @@ FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const std::string& fo
 
 FreeTypeConnector::~FreeTypeConnector()
 {
+    fFontNameToFont.clear();
     FT_Error error = FT_Done_FreeType(fLibrary);
     if (error)
     {
@@ -70,21 +79,27 @@ FreeTypeConnector::~FreeTypeConnector()
     }
 }
 
-std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormattedText(std::string text, int fontSize)
+std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormattedText(u8string text, int fontSize)
 {
+
     using namespace std;
     ptrdiff_t beginTag = -1;
     ptrdiff_t endTag = -1;
     vector<FormattedTextEntry> formattedText;
+    
+    if (text.empty() == true)
+        return formattedText;
+
+
     for (int i = 0; i < text.length(); i++)
     {
         if (text[i] == '<')
         {
             if (endTag != -1)
             {
-                string tagContents = text.substr(beginTag, endTag - beginTag + 1);
-
-                string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
+                u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
+                
+                u8string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
                 beginTag = i;
                 endTag = -1;
 
@@ -111,9 +126,9 @@ std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormatt
    
     
         ptrdiff_t i = text.length() - 1;
-        string tagContents = text.substr(beginTag, endTag - beginTag + 1);
+        u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
 
-        string textInsideTag = text.substr(endTag + 1, i - endTag );
+        u8string textInsideTag = text.substr(endTag + 1, i - endTag );
         beginTag = i;
         endTag = -1;
 
@@ -128,6 +143,13 @@ std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormatt
 }
 
 
+
+
+//void FreeTypeConnector::GetFontParams(const std::string& fontPath, uint16_t fontSize)
+//{
+//    
+//}
+
 void FreeTypeConnector::CreateBitmap(const std::string& text
     , const std::string& fontPath
     , uint16_t fontSize
@@ -136,32 +158,47 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     
 )
 {
+    FreeTypeFont* font = nullptr;
+    auto it = fFontNameToFont.find(fontPath);
+    if (it != fFontNameToFont.end())
+    {
+        font = it->second.get();
+    }
+    else
+    {
+        font = new FreeTypeFont(fLibrary, fontPath);
+        fFontNameToFont.insert(std::make_pair(fontPath, FreeTypeFontUniquePtr(font)));
+        
+    }
+
     using namespace std;
-    FT_Face face;
-    FT_Error error = FT_New_Face(fLibrary, fontPath.c_str() ,0, &face);
+    
+    FT_Error error;
+    //FT_Error error = FT_New_Face(fLibrary, fontPath.c_str() ,0, &face);
 
-    if (error == FT_Err_Unknown_File_Format)
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error Unknown file format");
-    else if (error)
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::Unknown,"FreeType unkown error Unknown file format");
+    font->SetSize(fontSize);
+    //if (error == FT_Err_Unknown_File_Format)
+    //    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error Unknown file format");
+    //else if (error)
+    //    LL_EXCEPTION(LLUtils::Exception::ErrorCode::Unknown,"FreeType unkown error Unknown file format");
 
 
-    error = FT_Set_Char_Size(
-        face,    /* handle to face object           */
-        0,       /* char_width in 1/64th of points  */
-        fontSize << 6,   /* char_height in 1/64th of points */
-        0,     /* horizontal device resolution    */
-        0);   /* vertical device resolution      */
+    //error = FT_Set_Char_Size(
+    //    face,    /* handle to face object           */
+    //    0,       /* char_width in 1/64th of points  */
+    //    fontSize << 6,   /* char_height in 1/64th of points */
+    //    0,     /* horizontal device resolution    */
+    //    0);   /* vertical device resolution      */
 
-   
+    FT_Face face = font->GetFace();
 
               //Height in pixels (using a double for sub-pixel precision)
     double baseline_height = abs(face->descender) * (double)fontSize / face->units_per_EM;
     baseline_height = std::ceil(baseline_height);
 
 
-     if (error)
-         LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not set char height");
+     /*if (error)
+         LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not set char height");*/
 
     const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
 
@@ -175,7 +212,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     int maxRow = 0;
     for (const FormattedTextEntry& el : formattedText)
     {
-        for (const string::value_type & e : el.text)
+        for (const wstring::value_type & e : el.text)
         {
             if (e == '\n')
             {
@@ -185,10 +222,20 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
                 continue;
             }
 
-            std::string codePointChar;
-            codePointChar.push_back(e);
+            
+            /*u16string str;
+            u32string str1;
 
-            const int codePoint = CodePoint::codepoint(codePointChar);
+            wstring_convert<std::codecvt_utf8_utf16<char32_t>, char16_t> conversion;
+            string multiBytesCodePOint = conversion.to_bytes(e);*/
+            
+            
+            
+
+
+            //string mbs = conversion.to_bytes(u"\u4f60\u597d");  // ni hao (你好
+
+            const int codePoint = e;  //CodePoint::codepoint(u"\u4f60");
             const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
             error = FT_Load_Glyph(
                 face,          /* handle to face object */
@@ -243,11 +290,11 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
                 continue;
             }
 
-            string codePointChar;
-            codePointChar.push_back(e);
+            //wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> conversion;
+            //string multiBytesCodePOint = conversion.to_bytes(e);
 
 
-            int codePoint = CodePoint::codepoint(codePointChar);
+            int codePoint = e; // CodePoint::codepoint(multiBytesCodePOint);
             const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
             error = FT_Load_Glyph(
                 face,          /* handle to face object */
@@ -314,9 +361,9 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     out_bitmap.rowPitch = destRowPitch;
     
 
-    error = FT_Done_Face(face);
+  /*  error = FT_Done_Face(face);
     if (error)
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, can not destroy face");
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, can not destroy face");*/
  
 }
 #endif // endif

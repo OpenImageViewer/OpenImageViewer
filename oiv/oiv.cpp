@@ -248,21 +248,32 @@ namespace OIV
     ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
     {
     #if OIV_BUILD_FREETYPE == 1
-        std::string text = LLUtils::StringUtility::ToAString(request.text);
-        std::string fontPath = LLUtils::StringUtility::ToAString(request.fontPath);
 
+        OIVString text = request.text;
+        OIVString fontPath = request.fontPath;
+
+        //std::string u8Text = LLUtils::StringUtility::ToUTF8<OIVCHAR>(text);
+        //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
 
         IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(
-            text,
-            fontPath,
+            LLUtils::StringUtility::ToAString(text),
+            LLUtils::StringUtility::ToAString(fontPath),
             request.fontSize,
             request.backgroundColor);
 
-        ImageHandle handle = fImageManager.AddImage(imageText);
+        if (imageText != nullptr)
+        {
+            ImageHandle handle = fImageManager.AddImage(imageText);
+            response.imageHandle = handle;
+            fRenderer->SetImageBuffer(response.imageHandle, imageText);
+            return RC_Success;
+        }
+        else
+        {
+            return RC_InvalidParameters;
+        }
 
-        response.imageHandle = handle;
-        fRenderer->SetImageBuffer(response.imageHandle, imageText);
-        return RC_Success;
+
 #else
         return RC_NotImplemented;
 #endif

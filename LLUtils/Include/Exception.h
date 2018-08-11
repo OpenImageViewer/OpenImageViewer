@@ -4,6 +4,7 @@
 #include <array>
 #include "Event.h"
 #include "PlatformUtility.h"
+#include "StringUtility.h"
 
 namespace LLUtils
 {

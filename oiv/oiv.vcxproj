@@ -93,7 +93,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OIV_NO_CLIENT_BUILD;OGRE_SOURCE_DIR="$(OGRESOURCE)";%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.3.5-1-bin\include\;E:\Downloads\freetype-2.3.5-1-bin\include\freetype2\;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <MinimalRebuild>false</MinimalRebuild>
@@ -205,6 +205,7 @@
     <ClInclude Include="APIImpl.h" />
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
+    <ClInclude Include="API\StringHelper.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerAxisAlignedTransform.h" />
@@ -233,6 +234,8 @@
     <ClInclude Include="External\easyexif\exif.h" />
     <ClInclude Include="FreeType\CodePoint.h" />
     <ClInclude Include="FreeType\FreeTypeConnector.h" />
+    <ClInclude Include="FreeType\FreeTypeFont.h" />
+    <ClInclude Include="FreeType\FreeTypeHeaders.h" />
     <ClInclude Include="FreeType\FreeTypeHelper.h" />
     <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />

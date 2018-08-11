@@ -62,6 +62,9 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerGetKnownFileTypes.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRegisterCallbacks.h" />
+    <ClInclude Include="FreeType\FreeTypeFont.h" />
+    <ClInclude Include="FreeType\FreeTypeHeaders.h" />
+    <ClInclude Include="API\StringHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

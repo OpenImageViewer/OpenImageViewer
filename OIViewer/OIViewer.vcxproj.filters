@@ -86,9 +86,6 @@
     <ClInclude Include="BuildConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Helpers\FileSystemHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ImageDescriptor.h">
       <Filter>Header Files</Filter>
     </ClInclude>

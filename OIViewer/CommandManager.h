@@ -19,7 +19,7 @@ namespace OIV
 
         struct CommandResult
         {
-            std::string resValue;
+            std::wstring resValue;
         };
 
         struct CommandArgs

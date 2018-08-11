@@ -4,6 +4,7 @@
 
 #include "win32/Win32Window.h"
 #include "API/defs.h"
+#include "API/StringHelper.h"
 #include <Utility.h>
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
@@ -43,7 +44,7 @@ namespace OIV
         bool HandleMessages(const Win32::Event* evnt);
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
-        void SetUserMessage(const std::string& message);
+        void SetUserMessage(const std::wstring& message);
         void SetDebugMessage(const std::string& message);
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
         void PostInitOperations();
@@ -136,6 +137,8 @@ namespace OIV
         const int cTimerIDHideUserMessage = 1000;
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
+        inline static const OIVString sFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\consola.ttf");
+        inline static const OIVCHAR* sFontPathCstr = sFontPath.c_str();
 
         static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
         static constexpr int FileIndexStart = std::numeric_limits<int>::min();

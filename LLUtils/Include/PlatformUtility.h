@@ -1,9 +1,10 @@
 #pragma once
 #include <windows.h>
 #include <Shlobj.h>
-#include "StringUtility.h"
+#include "StringDefs.h"
 #include "Utility.h"
 #include <DbgHelp.h>
+#include <StringUtility.h>
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
@@ -101,11 +102,10 @@ namespace LLUtils
 
         static default_string_type GetModulePath(HMODULE hModule)
         {
-            TCHAR ownPth[MAX_PATH];
-
+            native_char_type ownPth[MAX_PATH];
             if (hModule != nullptr && GetModuleFileName(hModule, ownPth, (sizeof(ownPth) / sizeof(ownPth[0]))) > 0)
 
-                return default_string_type(ownPth);
+                return StringUtility::ToDefaultString(native_string_type(ownPth));
             else
                 return default_string_type();
         }
@@ -118,7 +118,7 @@ namespace LLUtils
         static default_string_type GetDllFolder()
         {
             using namespace std::experimental;
-            return filesystem::path(GetDllPath()).parent_path().wstring();
+            return StringUtility::ToDefaultString(filesystem::path(GetDllPath()).parent_path().wstring());
         }
 
         static default_string_type GetExePath()
@@ -129,12 +129,12 @@ namespace LLUtils
         static default_string_type GetExeFolder()
         {
             using namespace std::experimental;
-            return filesystem::path(GetExePath()).parent_path().wstring();
+            return StringUtility::ToDefaultString(filesystem::path(GetExePath()).parent_path().wstring());
         }
 
         static default_string_type GetAppDataFolder()
         {
-            TCHAR szPath[MAX_PATH];
+            native_char_type szPath[MAX_PATH];
 
             if (SUCCEEDED(SHGetFolderPath(nullptr,
                 CSIDL_APPDATA | CSIDL_FLAG_CREATE,
@@ -142,19 +142,19 @@ namespace LLUtils
                 0,
                 szPath)))
             {
-                default_string_type result = szPath;
+                native_string_type result = szPath;
                 result += TEXT("\\OIV");
                 LLUtils::Utility::EnsureDirectory(result);
-                return result;
+                return StringUtility::ToDefaultString(result);
             }
 
             return default_string_type();
         }
 
-        
+        /*
         static void find_files(default_string_type wrkdir, ListWString &lstFileData, bool recursive = false)
         {
-            default_string_type wrkdirtemp = wrkdir;
+            native_string_type wrkdirtemp = wrkdir;
             if (!wrkdirtemp.empty() && (wrkdirtemp[wrkdirtemp.length() - 1] != L'\\'))
             {
                 wrkdirtemp += TEXT("\\");
@@ -193,7 +193,7 @@ namespace LLUtils
 
             FindClose(hFile);
         }
-
+        */
 
         
         //Returns the last Win32 error, in string format. Returns an empty string if there is no error.

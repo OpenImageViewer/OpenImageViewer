@@ -3,26 +3,11 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
+#include <locale>
+#include "StringDefs.h"
 
 namespace LLUtils
 {
-    
-    using default_char_type = wchar_t;
-    using default_string_type = std::basic_string<default_char_type>;
-    using stringstream_type = std::basic_stringstream<default_char_type>;
-    
-    template <class string_type>
-    using ListString = std::vector<string_type>;
-    
-
-    using ListAString = ListString<std::string>;
-    using ListWString = ListString<std::wstring>;
-
-   using  ListStringIterator = ListString<std::wstring>::iterator;
-
-    /*template <class string_type = default_string_type, typename ListString<string_type>::iterator>
-    using  ListStringIterator = ListString<string_type>::iterator;*/
-
     class StringUtility
     {
     public:
@@ -40,6 +25,26 @@ namespace LLUtils
                     elems.push_back(item);
 
             return elems;
+        }
+
+        static inline default_string_type ToDefaultString(const native_string_type& str)
+        {
+
+            if (sizeof(default_string_type::value_type) != sizeof(native_string_type::value_type))
+                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
+
+            // a work around till the string convertions wil be fixed.
+            return default_string_type(reinterpret_cast<const default_string_type::value_type*>(str.data()));
+
+
+        }
+
+        static inline native_string_type ToNativeString(const default_string_type& str)
+        {
+            if (sizeof(default_string_type::value_type) != sizeof(native_string_type::value_type))
+                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
+
+            return native_string_type(reinterpret_cast<const native_string_type::value_type*>(str.data()));
         }
 
 		static inline std::wstring ToWString( const std::string& str )
@@ -81,7 +86,8 @@ namespace LLUtils
             using namespace std;
             string_type extension;
             
-            string_type::size_type pos = str.find_last_of(46);
+            
+            typename string_type::size_type pos = str.find_last_of(46);
             if (pos != string_type::npos)
                 extension = str.substr(pos + 1, str.length() - pos - 1);
 
@@ -104,6 +110,42 @@ namespace LLUtils
             string_type localStr = str;
             std::transform(localStr.begin(), localStr.end(), localStr.begin(), ::toupper);
             return localStr;
+        }
+
+        template <typename SRC, typename SourceString = std::basic_string<SRC>, typename DestString = std::basic_string<char>>
+        static DestString ToUTF8(const SourceString& source)
+        {
+            throw std::logic_error("not implemented");
+            //DestString result;
+            //std::wstring_convert<std::codecvt<SRC, char, std::mbstate_t>, SRC> convertor;
+            //result = convertor.to_bytes(source);
+
+            //return result;
+
+        }
+
+        template <typename SRC, typename SourceString = std::basic_string<SRC>, typename DestString = std::basic_string<char>>
+        static void FromUTF8(const SourceString& source, DestString& result)
+        {
+            throw std::logic_error("not implemented");
+            //std::wstring_convert<std::codecvt<SRC,char, std::mbstate_t>, SRC> convertor;
+            //result = convertor.from_bytes(source);
+        }
+
+        template <typename SourceString, typename DestString, typename SRC = SourceString::value_type, typename DST = DestString::value_type>
+        static void ConvertString(const SourceString& source, DestString& dest)
+        {
+        
+            if (sizeof(SRC) != sizeof(DST))
+                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
+
+            dest = DestString(reinterpret_cast<const DestString::value_type*>(source.data()));
+            
+
+            //TODO: complete string conversions functions and uncomment the following two lines
+
+            // std::string u8String = ToUTF8<SRC>(source);
+             //FromUTF8<DST>(u8String, dest);
         }
     };
 }

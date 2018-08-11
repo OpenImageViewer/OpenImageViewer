@@ -9,12 +9,7 @@ extern "C"
 {
 #endif
 
-#ifdef UNICODE
-    typedef wchar_t OIVCHAR;
-#else
-    typedef char OIVCHAR;
-#endif
-
+typedef wchar_t OIVCHAR;
 
 
     // Naming convention.
@@ -215,8 +210,8 @@ extern "C"
 
     struct OIV_CMD_CreateText_Request
     {
-        OIVCHAR* text;
-        OIVCHAR* fontPath;
+        const OIVCHAR* text;
+        const OIVCHAR* fontPath;
         uint16_t fontSize;
         LLUtils::Color backgroundColor;
     };
@@ -450,4 +445,10 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+using OIVString = std::basic_string<OIVCHAR>;
+#endif
+
+
 

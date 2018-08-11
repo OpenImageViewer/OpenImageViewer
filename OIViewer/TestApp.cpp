@@ -11,6 +11,7 @@
 #include "win32/Win32Window.h"
 #include <windows.h>
 #include "win32/MonitorInfo.h"
+#include <FileSystemHelper.h>
 
 #include <API\functions.h>
 #include "Exception.h"
@@ -20,7 +21,6 @@
 #include <PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
-#include "Helpers/FileSystemHelper.h"
 #include "OIVCommands.h"
 #include <Rect.h>
 #include "Helpers/OIVHelper.h"
@@ -28,7 +28,7 @@
 #include "Keyboard/KeyBindings.h"
 #include "SelectionRect.h"
 #include "Helpers\PhotoshopFinder.h"
-
+#include "API/StringHelper.h"
 
 namespace OIV
 {
@@ -48,7 +48,7 @@ namespace OIV
 
         ZoomInternal(val, cx, cy);
         
-        stringstream ss;
+        wstringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
             <<fixed << setprecision(2) << fImageProperties.scale.x * 100.0 << "%)";
 
@@ -65,7 +65,7 @@ namespace OIV
         if (type == "toggleBorders")
         {
             ToggleBorders();
-            result.resValue = std::string("Borders ") + (fWindow.GetShowBorders() == true ? "On" : "Off" );
+            result.resValue = std::wstring(L"Borders ") + (fWindow.GetShowBorders() == true ? L"On" : L"Off" );
         }
         else if (type=="quit")
         {
@@ -74,14 +74,14 @@ namespace OIV
         else if (type == "grid")
         {
             ToggleGrid();
-            result.resValue = "Grid ";
-            result.resValue += fIsGridEnabled == true ? "on" : "off";
+            result.resValue = L"Grid ";
+            result.resValue += fIsGridEnabled == true ? L"on" : L"off";
         }
         else if (type =="slideShow")
         {
             ToggleSlideShow();
-            result.resValue = "Slideshow ";
-            result.resValue += fIsSlideShowActive == true ? "on" : "off";
+            result.resValue = L"Slideshow ";
+            result.resValue += fIsSlideShowActive == true ? L"on" : L"off";
         }
 
         else
@@ -97,13 +97,13 @@ namespace OIV
             switch (fWindow.GetFullScreenState())
             {
             case FullSceenState::MultiScreen:
-                result.resValue = "Multi full screen";
+                result.resValue = L"Multi full screen";
                 break;
             case FullSceenState::SingleScreen:
-                result.resValue = "Full screen";
+                result.resValue = L"Full screen";
                 break;
             case FullSceenState::Windowed:
-                result.resValue = "Windowed";
+                result.resValue = L"Windowed";
                 break;
             }
         }
@@ -150,9 +150,11 @@ namespace OIV
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += LLUtils::StringUtility::ToWString(message);
 
-        requestText.text = const_cast<wchar_t*>(wmsg.c_str());
+
+        OIVString txt = OIV_ToOIVString(wmsg);
+        requestText.text = txt.c_str();
         requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216);
-        requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        requestText.fontPath = sFontPathCstr;
         requestText.fontSize = 18;
 
         if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
@@ -204,7 +206,7 @@ namespace OIV
         if (transform != OIV_AxisAlignedRTransform::AAT_None)
         {
             TransformImage(transform);
-            response.resValue = request.description;
+            response.resValue = LLUtils::StringUtility::ToWString(request.description);
         }
        
     }
@@ -216,9 +218,9 @@ namespace OIV
         using namespace std;
         
         if (ToggleColorCorrection())
-            result.resValue = "Reset color correction to previous";
+            result.resValue = L"Reset color correction to previous";
         else
-            result.resValue = "Reset color correction to default";
+            result.resValue = L"Reset color correction to default";
     }
 
 
@@ -243,9 +245,10 @@ namespace OIV
         else if (type == "contrast")
             newValue = PerformColorOp(fColorExposure.contrast, op, val);
             
-            std::stringstream ss;
+            std::wstringstream ss;
             
-            ss <<"<textcolor=#00ff00>"<< type << "<textcolor=#7672ff>" <<" " << op << " " << val;
+            ss <<L"<textcolor=#00ff00>"<< LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" <<" " 
+            << LLUtils::StringUtility::ToWString(op) << L" " << LLUtils::StringUtility::ToWString(val);
             
             if (op == "increase" || op == "decrease")
                 ss << "%";
@@ -276,9 +279,9 @@ namespace OIV
             Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-amountVal), 0));
 
         
-        std::stringstream ss;
+        std::wstringstream ss;
 
-        ss << "<textcolor=#00ff00>" << request.description << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.description) << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
 
         result.resValue = ss.str();
         
@@ -295,13 +298,13 @@ namespace OIV
             if (fOpenedImage.source == ImageSource::File)
             {
                 LLUtils::PlatformUtility::CopyTextToClipBoard(fOpenedImage.fileName);
-                result.resValue = request.description;
+                result.resValue = LLUtils::StringUtility::ToWString(request.description);
             }
         }
         else if (cmd == "selectedArea" )
         {
             CopyVisibleToClipBoard();
-            result.resValue = request.description;
+            result.resValue = LLUtils::StringUtility::ToWString(request.description);
         }
     }
     
@@ -310,7 +313,7 @@ namespace OIV
         CommandManager::CommandResult& result)
     {
         PasteFromClipBoard();
-        result.resValue = request.description;
+        result.resValue = LLUtils::StringUtility::ToWString(request.description);
     }
 
     void TestApp::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
@@ -336,9 +339,9 @@ namespace OIV
         else if (cmd == "center")
             Center();
 
-        stringstream ss;
+        wstringstream ss;
 
-        ss << "<textcolor=#00ff00>" << request.description;// << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.description);// << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
 
         result.resValue = ss.str();
 
@@ -376,6 +379,7 @@ namespace OIV
         ss << "call stack:" << endl << args.callstack;
 
         MessageBoxW(nullptr, ss.str().c_str(), L"Unhandled exception has occured.", MB_OK);
+        DebugBreak();
     }
 
     
@@ -652,7 +656,7 @@ namespace OIV
                 using namespace std::experimental;
                 filesystem::path p = fOpenedImage.fileName;
                 ss << p.parent_path() << "\\" << "<textcolor=#ff00ff>" << p.stem() << "<textcolor=#00ff00>" << p.extension();
-                SetUserMessage(LLUtils::StringUtility::ToAString(ss.str()));
+                SetUserMessage(ss.str());
             }
 
             //Unload old image
@@ -744,7 +748,7 @@ namespace OIV
     {
         if (fOpenedImage.source == ImageSource::File)
         {
-            LLUtils::ListStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fOpenedImage.fileName);
+            LLUtils::ListWStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), fOpenedImage.fileName);
 
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
@@ -765,7 +769,7 @@ namespace OIV
          
         std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
 
-        LLUtils::Utility::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
+        LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
 
 
         UpdateOpenedFileIndex();
@@ -783,7 +787,7 @@ namespace OIV
         using namespace std;
         using namespace placeholders;
         
-        wstring filePath = FileSystemHelper::ResolveFullPath(relativeFilePath);
+        wstring filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
 
         const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
         
@@ -933,7 +937,7 @@ namespace OIV
         }
 
         bool isLoaded = false;
-        LLUtils::ListStringIterator it;
+        LLUtils::ListWStringIterator it;
 
         do
         {
@@ -1021,8 +1025,9 @@ namespace OIV
         case 'N':
             if (IsControl == true)
             {
+                using namespace LLUtils;
                 //Open new window
-                ShellExecute(nullptr, L"open", LLUtils::PlatformUtility::GetExePath().c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+                ShellExecute(nullptr, L"open", StringUtility::ToNativeString(PlatformUtility::GetExePath()).c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
 
             }
             else
@@ -1693,17 +1698,18 @@ namespace OIV
         return false;
     }
 
-    void TestApp::SetUserMessage(const std::string& message)
+    void TestApp::SetUserMessage(const std::wstring& message)
     {
         OIV_CMD_CreateText_Request request;
         OIV_CMD_CreateText_Response response;
         
         std::wstring wmsg = L"<textcolor=#ff8930>";
-        wmsg += LLUtils::StringUtility::ToWString(message);
+        wmsg += message;
         
-        request.text = const_cast<wchar_t*>( wmsg.c_str());
+        OIVString txt = OIV_ToOIVString(wmsg);
+        request.text = txt.c_str();
         request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
-        request.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        request.fontPath = sFontPathCstr;
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
         request.fontSize = 22;
 
@@ -1732,9 +1738,10 @@ namespace OIV
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += LLUtils::StringUtility::ToWString(message);
 
-        request.text = const_cast<wchar_t*>(wmsg.c_str());
+        OIVString txt = OIV_ToOIVString(wmsg);
+        request.text = txt.c_str();
         request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
-        request.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        request.fontPath = sFontPathCstr;
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
         request.fontSize = 26;
 
@@ -1800,10 +1807,10 @@ namespace OIV
         
         std::wstring wmsg; ;
         wmsg += LLUtils::StringUtility::ToWString(message);
-
-        requestText.text = const_cast<wchar_t*>(wmsg.c_str());
+        OIVString txt = OIV_ToOIVString(wmsg);
+        requestText.text = txt.c_str();
         requestText.backgroundColor = LLUtils::Color(0, 0, 0, 0);
-        requestText.fontPath = L"C:\\Windows\\Fonts\\consola.ttf";
+        requestText.fontPath = sFontPathCstr;
         requestText.fontSize = 72;
 
         
