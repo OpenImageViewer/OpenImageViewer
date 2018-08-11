@@ -68,8 +68,8 @@ namespace LLUtils
             return *this;
         }
 
-        int32_t GetWidth() const { return p1.x - p0.x; }
-        int32_t GetHeight() const { return p1.y - p0.y; }
+        T GetWidth() const { return p1.x - p0.x; }
+        T GetHeight() const { return p1.y - p0.y; }
 
         Point_Type GetCorner(const Corner corner) const
         {
