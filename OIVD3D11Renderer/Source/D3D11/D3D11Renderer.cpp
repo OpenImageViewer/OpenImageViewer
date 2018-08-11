@@ -269,6 +269,50 @@ namespace OIV
         }
     }
 
+    void D3D11Renderer::DrawImage(const ImageEntry& entry)
+    {
+        if (entry.texture == nullptr)
+            return;
+
+
+        const OIV_CMD_ImageProperties_Request& props = entry.properties;
+        //TODO: change to switch statement and unify constant buffres.
+
+        CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
+        gpuBuffer.uImageOffset[0] = static_cast<float>(props.position.x);
+        gpuBuffer.uImageOffset[1] = static_cast<float>(props.position.y);
+        gpuBuffer.uvViewportSize[0] = static_cast<float>(fViewport.Width);
+        gpuBuffer.uvViewportSize[1] = static_cast<float>(fViewport.Height);
+        gpuBuffer.uvViewportSize[2] = static_cast<float>(1.0 / fViewport.Width);
+        gpuBuffer.uvViewportSize[3] = static_cast<float>(1.0 / fViewport.Height);
+        gpuBuffer.uImageSize[0] = static_cast<float>(entry.texture->GetCreateParams().width);
+        gpuBuffer.uImageSize[1] = static_cast<float>(entry.texture->GetCreateParams().height);
+        gpuBuffer.uScale[0] = static_cast<float>(props.scale.x);
+        gpuBuffer.uScale[1] = static_cast<float>(props.scale.y);
+        gpuBuffer.opacity = static_cast<float>(props.opacity);
+
+        fBufferImageCommon->Update();
+        fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
+
+
+        switch (props.imageRenderMode)
+        {
+        case OIV_Image_Render_mode::IRM_Overlay:
+            fImageSimpleFragmentShader->Use();
+            break;
+        case  OIV_Image_Render_mode::IRM_MainImage:
+            fBufferImageMain->Use(ShaderStage::FragmentShader, 1);
+            fImageFragmentShader->Use();
+            break;
+        default:
+            LL_EXCEPTION_UNEXPECTED_VALUE;
+        }
+
+        SetFilterLevel(props.filterType);
+        entry.texture->Use();
+        fDevice->GetContext()->Draw(4, 0);
+    }
+
 
     int D3D11Renderer::Redraw()
     {
@@ -279,48 +323,10 @@ namespace OIV
         for (const MapImageEntry::value_type& idEntryPair : fImageEntries)
         {
             const ImageEntry& entry = idEntryPair.second;
-            if (entry.texture == nullptr)
-                continue;
-            
-
-            const OIV_CMD_ImageProperties_Request& props = entry.properties;
-            //TODO: change to switch statement and unify constant buffres.
-
-            CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
-            gpuBuffer.uImageOffset[0] = static_cast<float>(props.position.x);
-            gpuBuffer.uImageOffset[1] = static_cast<float>(props.position.y);
-            gpuBuffer.uvViewportSize[0] = static_cast<float>(fViewport.Width);
-            gpuBuffer.uvViewportSize[1] = static_cast<float>(fViewport.Height);
-            gpuBuffer.uvViewportSize[2] = static_cast<float>(1.0 / fViewport.Width);
-            gpuBuffer.uvViewportSize[3] = static_cast<float>(1.0 / fViewport.Height);
-            gpuBuffer.uImageSize[0] = static_cast<float>(entry.texture->GetCreateParams().width);
-            gpuBuffer.uImageSize[1] = static_cast<float>(entry.texture->GetCreateParams().height);
-            gpuBuffer.uScale[0] = static_cast<float>(props.scale.x);
-            gpuBuffer.uScale[1] = static_cast<float>(props.scale.y);
-            gpuBuffer.opacity = static_cast<float>(props.opacity);
-
-            fBufferImageCommon->Update();
-            fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
-            
-
-            switch (props.imageRenderMode)
-            {
-             case OIV_Image_Render_mode::IRM_Overlay:
-                 fImageSimpleFragmentShader->Use();
-                 break;
-             case  OIV_Image_Render_mode::IRM_MainImage:
-                 fBufferImageMain->Use(ShaderStage::FragmentShader,1);
-                 fImageFragmentShader->Use();
-                 break;
-             default:
-                 LL_EXCEPTION_UNEXPECTED_VALUE;
-            }
-
-            SetFilterLevel(props.filterType);
-            entry.texture->Use();
-            context->Draw(4, 0);
+            if (entry.properties.imageRenderMode == OIV_Image_Render_mode::IRM_MainImage)
+                DrawImage(entry);
         }
-
+        
         //Draw selection rect.
         if (fBufferSelection->GetBuffer().uSelectionRect[0] != -1)
         {
@@ -329,6 +335,13 @@ namespace OIV
             context->Draw(4, 0);
         }
 
+        //Draw Overlays
+        for (const MapImageEntry::value_type& idEntryPair : fImageEntries)
+        {
+            const ImageEntry& entry = idEntryPair.second;
+            if (entry.properties.imageRenderMode == OIV_Image_Render_mode::IRM_Overlay)
+                DrawImage(entry);
+        }
 
         fDevice->GetSwapChain()->Present(0, 0);
         return 0;
@@ -394,7 +407,7 @@ namespace OIV
     int D3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image)
     {
         ImageEntry& entry = fImageEntries[id];
-        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image, true);
+        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image, false);
         return 0; 
     }
 

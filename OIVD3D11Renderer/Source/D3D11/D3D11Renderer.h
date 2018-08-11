@@ -76,6 +76,7 @@ namespace OIV
         void CreateBuffers();
         void UpdateViewportSize(int x, int y);
         void SetDevicestate();
+        void DrawImage(const ImageEntry& entry);
 #pragma endregion
     private:
         D3D11DeviceSharedPtr fDevice;
