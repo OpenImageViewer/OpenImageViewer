@@ -28,11 +28,10 @@ namespace LLUtils
         template <class string_type>
         static bool EnsureDirectory(const string_type& path)
         {
-            using namespace std::experimental;
-            if (filesystem::exists(path) == false)
-                return filesystem::create_directory(path);
-
-            return filesystem::is_directory(path);
+            using namespace std;
+            filesystem::path directoryName = path;
+            directoryName.remove_filename();
+            return filesystem::exists(directoryName) || filesystem::create_directories(directoryName);
         }
 
         struct BlitBox
