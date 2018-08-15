@@ -13,7 +13,7 @@ namespace OIV
         
 #pragma region /****IRenderer Overrides************/
     public:
-        int Init(std::size_t container) override;
+        int Init(const OIV_RendererInitializationParams& initParams) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         void UpdateGpuParameters();
         int Redraw() override;

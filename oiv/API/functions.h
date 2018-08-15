@@ -1,5 +1,5 @@
 #pragma once
-#include "..\ApiImpl.h"
+#include "platform.h"
 #include "defs.h"
 
 #ifdef _MSC_VER

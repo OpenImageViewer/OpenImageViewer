@@ -143,8 +143,6 @@ namespace LLUtils
                 szPath)))
             {
                 native_string_type result = szPath;
-                result += TEXT("\\OIV");
-                LLUtils::Utility::EnsureDirectory(result);
                 return StringUtility::ToDefaultString(result);
             }
 

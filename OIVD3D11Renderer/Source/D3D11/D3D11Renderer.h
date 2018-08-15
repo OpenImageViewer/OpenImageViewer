@@ -58,7 +58,7 @@ namespace OIV
     public:
          D3D11Renderer();
     public:
-        int Init(std::size_t container);
+        int Init(const OIV_RendererInitializationParams& initParams);
         int SetViewParams(const ViewParameters& viewParams);
         void UpdateGpuParameters();
         int Redraw();
@@ -88,6 +88,7 @@ namespace OIV
         SelectionRect fSelectionRect;
         using MapImageEntry = std::map<uint16_t,ImageEntry>;
         MapImageEntry fImageEntries;
+        OIVString fDataPath;
         LLUtils::Color fBackgroundColor = { 45,45,48,255 };
 
 #pragma region /* Direct3D111 resources*/

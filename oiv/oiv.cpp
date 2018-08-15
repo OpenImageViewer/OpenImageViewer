@@ -8,6 +8,9 @@
 #include <ImageUtil.h>
 #include "Configuration.h"
 #include "API/functions.h"
+#include "API/StringHelper.h"
+#include "API/Version.h"
+
 #include "FreeType/FreeTypeConnector.h"
 #include "FreeType/FreeTypeHelper.h"
 #include "Interfaces/IRendererDefs.h"
@@ -439,7 +442,23 @@ namespace OIV
         );
 
         fRenderer = CreateBestRenderer();
-        fRenderer->Init(fParent);
+        OIV_RendererInitializationParams params = {};
+
+        auto GetVersionAsString = []
+        {
+            constexpr auto dot = OIV_TEXT(".");
+            OIVStringStream ss;
+            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_REVISON << dot << OIV_VERSION_BUILD;
+            return ss.str();
+
+        };
+
+        //TODO: add renderer properties to get a unique renderer name instead of hard coded "D3D11"
+        OIVString appDataPath = OIV_ToOIVString(LLUtils::PlatformUtility::GetAppDataFolder()) + OIV_TEXT("/OIV/") + GetVersionAsString() + OIV_TEXT("/Renderer/D3D11/.");
+        params.container = fParent;
+        
+        params.dataPath = appDataPath.c_str();
+        fRenderer->Init(params);
         return 0;
     }
 

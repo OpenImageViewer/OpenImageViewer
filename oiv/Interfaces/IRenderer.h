@@ -8,7 +8,7 @@ namespace OIV
     class IRenderer
     {
     public:
-        virtual int Init(std::size_t container) = 0;
+        virtual int Init(const OIV_RendererInitializationParams& initParams) = 0;
         virtual int SetViewParams(const ViewParameters& viewParams) = 0;
         virtual int Redraw() = 0;
         virtual int SetFilterLevel(OIV_Filter_type filterType) = 0;

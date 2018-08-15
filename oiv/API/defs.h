@@ -10,6 +10,7 @@ extern "C"
 #endif
 
 typedef wchar_t OIVCHAR;
+#define OIV_TEXT(T) (L ## T)
 
 
     // Naming convention.
@@ -118,6 +119,12 @@ typedef wchar_t OIVCHAR;
     struct CmdNull
     {
 
+    };
+
+    struct OIV_RendererInitializationParams
+    {
+        size_t container;
+        const OIVCHAR* dataPath;
     };
 
     struct OIV_RECT_I
@@ -448,6 +455,7 @@ typedef wchar_t OIVCHAR;
 
 #ifdef __cplusplus
 using OIVString = std::basic_string<OIVCHAR>;
+using OIVStringStream = std::basic_stringstream<OIVCHAR>;
 #endif
 
 

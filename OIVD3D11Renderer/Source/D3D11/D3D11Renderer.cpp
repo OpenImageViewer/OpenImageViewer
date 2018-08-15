@@ -215,19 +215,22 @@ namespace OIV
         fImageSimpleFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
         fImageSimpleFragmentShader->SetSourceFileName(programsPath / L"quad_simple_fp.shader");
 
+        std::filesystem::path shaderCachePath = std::filesystem::path(fDataPath) / L"ShaderCache/.";
+        
      
 
-        D3D11Utility::LoadShader(fImageVertexShader);
-        D3D11Utility::LoadShader(fImageFragmentShader);
-        D3D11Utility::LoadShader(fSelectionFragmentShaer);
-        D3D11Utility::LoadShader(fImageSimpleFragmentShader);
+        D3D11Utility::LoadShader(fImageVertexShader, shaderCachePath);
+        D3D11Utility::LoadShader(fImageFragmentShader, shaderCachePath);
+        D3D11Utility::LoadShader(fSelectionFragmentShaer , shaderCachePath);
+        D3D11Utility::LoadShader(fImageSimpleFragmentShader , shaderCachePath);
 
     }
 
-    int D3D11Renderer::Init(std::size_t container)
+    int D3D11Renderer::Init(const OIV_RendererInitializationParams& initParams)
     {
+        fDataPath = initParams.dataPath;
         fDevice = D3D11DeviceSharedPtr(new D3D11Device());
-        fDevice->Create(reinterpret_cast<HWND>(container));
+        fDevice->Create(reinterpret_cast<HWND>(initParams.container));
         
         ResizeBackBuffer(1280, 800);
         CreateShaders();

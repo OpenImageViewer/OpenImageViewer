@@ -40,17 +40,18 @@ namespace OIV
             sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
         }
 
-        static void D3D11Utility::LoadShader(D3D11ShaderUniquePtr& shader)
+        static void D3D11Utility::LoadShader(D3D11ShaderUniquePtr& shader, OIVString cacheFolder)
         {
-            using namespace std::experimental;
-
-            filesystem::path oivAppDataFolder = LLUtils::PlatformUtility::GetAppDataFolder();
-            
             //Try cache first;
-            filesystem::path shaderPath = shader->GetsourceFileName();
-            filesystem::path cachePath = (oivAppDataFolder / L"ShaderCache" / shaderPath.filename() ).replace_extension(L"bin");
+
+            using path = std::filesystem::path;
+
+            path shaderPath = shader->GetsourceFileName();
+            path cachePath = (path(cacheFolder) / shaderPath.filename() ).replace_extension(L"bin");
 #ifndef _DEBUG
-            if (filesystem::exists(cachePath))
+            // Load from cache only in release
+            // In debug mode always recompile shaders.
+            if (std::filesystem::exists(cachePath))
             {
                 //Load from cache 
                 BlobSharedPtr blob = BlobSharedPtr(new Blob());
@@ -64,6 +65,7 @@ namespace OIV
             {
                 shader->Load();
                 BlobSharedPtr blob = shader->GetShaderData();
+                LLUtils::Utility::EnsureDirectory(cachePath);
                 LLUtils::File::WriteAllBytes(cachePath, blob->size, blob->buffer);
             }
         }

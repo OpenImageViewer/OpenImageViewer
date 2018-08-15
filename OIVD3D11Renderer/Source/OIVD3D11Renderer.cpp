@@ -12,9 +12,9 @@ namespace OIV
     {
         return fD3D11Renderer->SetselectionRect(selectionRect);
     }
-    int OIVD3D11Renderer::Init(std::size_t container)
+    int OIVD3D11Renderer::Init(const OIV_RendererInitializationParams& initParams)
     {
-        return fD3D11Renderer->Init(container);
+        return fD3D11Renderer->Init(initParams);
     }
 
      int OIVD3D11Renderer::SetViewParams(const ViewParameters& viewParams)
