@@ -1,5 +1,6 @@
 #pragma once
 #include "Point.h"
+#include "Exception.h"
 namespace LLUtils
 {
     enum Corner
@@ -16,12 +17,7 @@ namespace LLUtils
     {
     public:
         using Point_Type = Point<T>;
-        
-        Rect()
-        {
-            
-        }
-
+        Rect() = default;
 
         Rect(Point_Type point1, Point_Type point2)
         {
@@ -35,7 +31,6 @@ namespace LLUtils
             p1 = point2;
         }
 
-
         Rect Intersection(const Rect& rect)
         {
             T x0 = std::max(p0.x, rect.p0.x);
@@ -46,7 +41,17 @@ namespace LLUtils
             return{ {x0,y0},{x1,y1}};
             
         }
-        
+        Rect Infalte(T x, T y)
+        {
+            //TODO: solve specific case for integers when inflating using odd numbers.
+            Rect infalted = *this;
+            infalted.p0.x -= x / 2;
+            infalted.p0.y -= y / 2;
+            infalted.p1.x += x / 2;
+            infalted.p1.y += y / 2;
+            return infalted;
+        }
+
         bool IsNonNegative() const
         {
             return p0.x >= 0 && p1.x >= 0 && p0.y >= 0 && p1.y >= 0;
@@ -59,6 +64,13 @@ namespace LLUtils
                 && p0.y >= rect.p0.y
                 && p1.y <= rect.p1.y;
 
+        }
+
+        bool IsInside(const Point_Type& point) const
+        {
+            return
+                point.x >= p0.x && point.x <= p1.x &&
+                point.y >= p0.y && point.y <= p1.y;
         }
 
         Rect& operator +=(Point_Type translation)
@@ -84,8 +96,7 @@ namespace LLUtils
             case Corner::TopRight:
                 return Point_Type(p1.x, p0.y);
             default:
-                throw std::logic_error("Unexpected or corrupted value");
-                
+                LL_EXCEPTION_UNEXPECTED_VALUE;
             }
         }
 

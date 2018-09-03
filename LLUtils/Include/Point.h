@@ -55,7 +55,7 @@ namespace LLUtils
             return{ static_cast<POINT_TYPE>(std::sqrt(x)), static_cast<POINT_TYPE>(std::sqrt(y)) };
         }
 
-        double DistanceSquared(const Point& rhs) const
+        POINT_TYPE DistanceSquared(const Point& rhs) const
         {
             return (x - rhs.x) * (x - rhs.x) + (y - rhs.y) * (y - rhs.y);
         }
