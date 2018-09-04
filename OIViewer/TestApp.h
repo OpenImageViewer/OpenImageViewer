@@ -66,6 +66,7 @@ namespace OIV
         
 #pragma endregion //Commands
         void OnRefresh();
+        void OnPreserveSelectionRect();
         HWND GetWindowHandle() const;
         void UpdateTitle();
         void UpdateStatusBar();
@@ -84,9 +85,13 @@ namespace OIV
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void UpdateUIZoom();
         void UpdateImageProperties();
+        void SaveImageSpaceSelection();
+        void LoadImageSpaceSelection();
         void SetZoomInternal(double zoom, int x = -1, int y = -1);
         double GetScale() const;
         LLUtils::PointF64 GetOffset() const;
+        LLUtils::PointF64 ImageToClient(LLUtils::PointF64 imagepos) const;
+        LLUtils::RectF64 ImageToClient(LLUtils::RectF64 clientRect) const;
         void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
@@ -124,6 +129,7 @@ namespace OIV
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
         RecrusiveDelayedOp fRefreshOperation;
+        RecrusiveDelayedOp fPreserveImageSpaceSelection;
         bool fIsSlideShowActive = false;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
@@ -137,6 +143,8 @@ namespace OIV
         const int cTimerIDHideUserMessage = 1000;
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
+        LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
+
         inline static const OIVString sFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\consola.ttf");
         inline static const OIVCHAR* sFontPathCstr = sFontPath.c_str();
 

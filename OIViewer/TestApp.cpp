@@ -385,6 +385,7 @@ namespace OIV
     
     TestApp::TestApp()
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
+        , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect,this))
     {
         
         fWindow.SetMenuChar(false);
@@ -535,6 +536,11 @@ namespace OIV
     void TestApp::OnRefresh()
     {
         OIVCommands::Refresh();
+    }
+
+    void TestApp::OnPreserveSelectionRect()
+    {
+        LoadImageSpaceSelection();
     }
 
     HWND TestApp::GetWindowHandle() const
@@ -1067,6 +1073,7 @@ namespace OIV
     {
         fImageProperties.position = ResolveOffset(offset);
         UpdateImageProperties();
+        fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
         fIsLockFitToScreen = false;
@@ -1146,6 +1153,21 @@ namespace OIV
         OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
     }
     
+    void TestApp::SaveImageSpaceSelection()
+    {
+            if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+             fImageSpaceSelection =  static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round());
+    }
+
+    void TestApp::LoadImageSpaceSelection()
+    { 
+        if (fImageSpaceSelection.IsEmpty() == false)
+        {
+            LLUtils::RectI32 r = static_cast<LLUtils::RectI32>(ImageToClient(static_cast<LLUtils::RectF64>(fImageSpaceSelection)));
+            fSelectionRect.UpdateSelection(r);
+        }
+    }
+
     void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY)
     {
         using namespace LLUtils;
@@ -1164,6 +1186,9 @@ namespace OIV
             zoomValue = std::clamp(zoomValue, minimum, MaxPixelSize);
         }
 
+        //Save image selection before view change
+        fPreserveImageSpaceSelection.Begin();
+
         PointF64 zoomPoint;
         PointF64 clientSize = static_cast<PointF64>(fWindow.GetClientSize());
         
@@ -1181,6 +1206,7 @@ namespace OIV
         fRefreshOperation.Begin();
         
         SetOffset(GetOffset() + offset);
+        fPreserveImageSpaceSelection.End();
         
         fRefreshOperation.End();
 
@@ -1213,6 +1239,22 @@ namespace OIV
     {
         return fImageProperties.position;
     }
+
+    LLUtils::PointF64 TestApp::ImageToClient(LLUtils::PointF64 imagepos) const
+    {
+        using namespace LLUtils;
+        return imagepos * GetScale() + GetOffset();
+    }
+
+    LLUtils::RectF64 TestApp::ImageToClient(LLUtils::RectF64 clientRect) const
+    {
+        using namespace LLUtils;
+        return {
+              ImageToClient(clientRect.GetCorner(Corner::TopLeft))
+            , ImageToClient(clientRect.GetCorner(Corner::BottomRight))
+        };
+    }
+
 
     LLUtils::PointF64 TestApp::ClientToImage(LLUtils::PointI32 clientPos) const
     {
@@ -1630,14 +1672,9 @@ namespace OIV
                 op = SelectionRect::Operation::Drag;
 
             fSelectionRect.SetSelection(op, evnt->window->GetMousePosition());
+            SaveImageSpaceSelection();
         }
-        else
-        {
-            if (IsLeftPressed)
-                fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, evnt->window->GetMousePosition());
-        }
-            
-
+      
         
         /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
             evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/
@@ -1664,14 +1701,22 @@ namespace OIV
             }
         }
         
-        if (isMouseUnderCursor  && evnt->window->IsMouseCursorInClientRect())
+        if (isMouseUnderCursor && evnt->window->IsMouseCursorInClientRect())
         {
             if (IsMiddlePressed)
                 fAutoScroll.ToggleAutoScroll();
 
             if (IsLeftDoubleClick)
             {
-                ToggleFullScreen();
+                if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+                {
+                    fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, evnt->window->GetMousePosition());
+                    fImageSpaceSelection = decltype(fImageSpaceSelection)::Zero;
+                }
+                else
+                {
+                    ToggleFullScreen();
+                }
             }
         }
 

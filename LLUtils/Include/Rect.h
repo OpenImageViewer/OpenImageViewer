@@ -73,6 +73,13 @@ namespace LLUtils
                 point.y >= p0.y && point.y <= p1.y;
         }
 
+        
+        template< typename = std::enable_if< std::is_floating_point<T>::value>::type >
+        Rect Round() const
+        {
+            return { p0.Round() , p1.Round() };
+        }
+
         Rect& operator +=(Point_Type translation)
         {
             p0 += translation;
@@ -82,6 +89,7 @@ namespace LLUtils
 
         T GetWidth() const { return p1.x - p0.x; }
         T GetHeight() const { return p1.y - p0.y; }
+        bool IsEmpty() const { return GetWidth() == 0 || GetHeight() == 0; }
 
         Point_Type GetCorner(const Corner corner) const
         {
@@ -111,9 +119,16 @@ namespace LLUtils
 
         Point_Type p0;
         Point_Type p1;
+        
+    public:
+        static const Rect Zero;
     };
 
-    typedef Rect<int32_t> RectI32;
-    typedef Rect<float>   RectF32;
-    typedef Rect<double>  RectF64;
+    template <class T>
+    const Rect<T>  Rect<T>::Zero = Rect<T>(Point<T>::Zero , Point<T>::Zero);
+
+
+    using RectI32 = Rect<int32_t>;
+    using RectF32 = Rect<float>;
+    using RectF64 = Rect<double>;
 }

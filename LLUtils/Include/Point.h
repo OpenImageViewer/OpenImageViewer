@@ -14,10 +14,11 @@ namespace LLUtils
     public:
         static const Point<POINT_TYPE> Zero;
         static const Point<POINT_TYPE> One;
-        using point_type = POINT_TYPE;
         
-        POINT_TYPE x = 0;
-        POINT_TYPE y = 0;
+        POINT_TYPE x;
+        POINT_TYPE y;
+
+        using point_type = POINT_TYPE;
 
         uint32_t abs(const uint32_t val) const
         {
@@ -49,6 +50,13 @@ namespace LLUtils
             using namespace std;
             return Point(abs(x), abs(y));
         }
+        
+        template< typename = std::enable_if< std::is_floating_point< POINT_TYPE >::value>::type >
+            Point Round() const
+            {
+                return { std::round(x) , std::round(y) };
+            }
+
 
         Point Sqrt() const
         {
