@@ -40,7 +40,6 @@ namespace IMCodec
                     break;
                 case 24:
                     texelFormat = TexelFormat::F_X24;
-                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: 24bit floating point format is not implemented.");
                     break;
                 case 32:
                     texelFormat = TexelFormat::F_X32;

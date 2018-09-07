@@ -14,6 +14,7 @@
 #include "FreeType/FreeTypeConnector.h"
 #include "FreeType/FreeTypeHelper.h"
 #include "Interfaces/IRendererDefs.h"
+#include <Float24.h>
 
 
 #if OIV_BUILD_RENDERER_D3D11 == 1
@@ -201,8 +202,7 @@ namespace OIV
                 break;
 
             case IMCodec::TexelFormat::F_X24:
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff, 24 bit float is not implemented");
-                //image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                image = IMUtil::ImageUtil::Normalize<float,Float24>(image, targetTexelFormat);
                 break;
 
             case IMCodec::TexelFormat::F_X32:

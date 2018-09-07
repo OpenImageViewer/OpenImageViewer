@@ -260,10 +260,12 @@ namespace IMUtil
             , RainBow    = 2
         };
 
-        template <class T>
+
+
+        template <class T, class SampleType = T>
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NormalizeMode::Default)
         {
-            const T* sampleData = reinterpret_cast<const T*> (sourceImage->GetConstBuffer());
+            const SampleType* sampleData = reinterpret_cast<const SampleType*> (sourceImage->GetConstBuffer());
 
             T min = std::numeric_limits<T>::max();
             T max = std::numeric_limits<T>::min();
@@ -271,7 +273,7 @@ namespace IMUtil
             uint32_t totalPixels = sourceImage->GetTotalPixels();
             for (uint32_t i = 0 ; i < totalPixels ;i++)
             {
-                T currentSample = sampleData[i];
+                T currentSample = static_cast< const T>(sampleData[i]);
                 min = std::min(min, currentSample);
                 max = std::max(max, currentSample);
             }
