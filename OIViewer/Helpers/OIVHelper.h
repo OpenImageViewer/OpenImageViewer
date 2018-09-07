@@ -2,6 +2,8 @@
 #include <string>
 #include <API\defs.h>
 #include <sstream>
+#include <../ImageUtil/Include/half.hpp>
+#include <../ImageUtil/Include/Float24.h>
 
 
 class OIVHelper
@@ -28,6 +30,12 @@ public:
             break;
         case OIV_TexelFormat::TF_F_X32:
             ss << "value: " << *reinterpret_cast<const float*>(buffer);
+            break;
+        case OIV_TexelFormat::TF_F_X24:
+            ss << "value: " << static_cast<const float>(*reinterpret_cast<const Float24*>(buffer));
+            break;
+        case OIV_TexelFormat::TF_F_X16:
+            ss << "value: " << static_cast<const float>(*reinterpret_cast<const half_float::half*>(buffer));
             break;
         case OIV_TexelFormat::TF_I_X8:
             ss << "value: " << *reinterpret_cast<const uint8_t*>(buffer);
