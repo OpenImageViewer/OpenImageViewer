@@ -22,6 +22,12 @@
 #include "Codecs/CodecTiff/Include/CodecTiffFactory.h"
 #endif
 
+#if IMCODEC_BUILD_CODEC_GIF == 1
+#include "Codecs/CodecGif/Include/CodecGifFactory.h"
+#endif
+
+
+
 
 
 
@@ -45,6 +51,11 @@ namespace IMCodec
 #if IMCODEC_BUILD_CODEC_TIFF == 1
         imageLoader->InstallPlugin(CodecTiffFactory::Create());
 #endif
+#if IMCODEC_BUILD_CODEC_GIF == 1
+        imageLoader->InstallPlugin(CodecGifFactory::Create());
+#endif
+
+// keep freeimage the last priority codec as it's inferior
 #if IMCODEC_BUILD_CODEC_FREE_IMAGE == 1
         imageLoader->InstallPlugin(CodecFreeImageFactory::Create());
 #endif

@@ -1,5 +1,5 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{585C252A-75DA-435D-ACCB-DFF914F4F732}</ProjectGuid>
-    <Keyword>Win32Proj</Keyword>
-    <RootNamespace>ImageLoader</RootNamespace>
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{29709723-6AC4-4FE9-B48C-20DB80E6FD29}</ProjectGuid>
+    <RootNamespace>CodecGif</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -57,123 +57,76 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\oiv.props" />
+    <Import Project="..\..\..\oiv.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\oiv.props" />
-    <Import Project="..\..\release.props" />
+    <Import Project="..\..\..\oiv.props" />
+    <Import Project="..\..\..\release.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\oiv.props" />
+    <Import Project="..\..\..\oiv.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\oiv.props" />
-    <Import Project="..\..\release.props" />
+    <Import Project="..\..\..\oiv.props" />
+    <Import Project="..\..\..\release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
-    </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalIncludeDirectories>..\..\Imageloader\Include;..\..\Image\Include;D:\DevelopmentExternal\GifLib\GifLib\GifLib\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
-    <Link>
-      <SubSystem>Windows</SubSystem>
-    </Link>
+    <Lib>
+      <AdditionalDependencies>D:\DevelopmentExternal\GifLib\GifLib\x64\Debug\GifLib.lib</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\..\Imageloader\Include;..\..\Image\Include;D:\DevelopmentExternal\GifLib\GifLib\GifLib\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\Imageloader\Include;..\..\Image\Include;D:\DevelopmentExternal\GifLib\GifLib\GifLib\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>./include;..\..\LLUtils\Include;$(solutiondir);..\Image\Include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\..\Imageloader\Include;..\..\Image\Include;D:\DevelopmentExternal\GifLib\GifLib\GifLib\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <Lib>
+      <AdditionalDependencies>D:\DevelopmentExternal\GifLib\GifLib\x64\Release\GifLib.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Image\Include\Image.h" />
-    <ClInclude Include="..\Image\Include\imageproperties.h" />
-    <ClInclude Include="..\Image\Include\TexelFormat.h" />
-    <ClInclude Include="Buffer.h" />
-    <ClInclude Include="Include\DefaultPluginInstaller.h" />
-    <ClInclude Include="Include\IImagePlugin.h" />
-    <ClInclude Include="Include\ImageLoader.h" />
-    <ClInclude Include="Source\BuildConfig.h" />
-    <ClInclude Include="Source\EmbeddedPluginInstaller.h" />
+    <ClInclude Include="Include\CodecGifFactory.h" />
+    <ClInclude Include="Source\CodecGif.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\EmbeddedPluginInstaller.cpp" />
-    <ClCompile Include="Source\ImageLoader.cpp" />
-    <ClCompile Include="Source\ImageProperties.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Codecs\CodecDDS\CodecDDS.vcxproj">
-      <Project>{faa6e433-c27b-4b00-ae54-87f611191cbf}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecFreeImage\CodecFreeImage.vcxproj">
-      <Project>{02888425-78b9-4ede-9577-21ce73872c6f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecGif\CodecGif.vcxproj">
-      <Project>{29709723-6ac4-4fe9-b48c-20db80e6fd29}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecJPG\CodecJPG.vcxproj">
-      <Project>{b10f5658-a86c-44c2-883f-8648235e721f}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecPNG\CodecPNG.vcxproj">
-      <Project>{21bbf272-404d-4bc6-b67a-d9bb3d34f32e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecPSD\CodecPSD.vcxproj">
-      <Project>{d0ea563a-a39d-4402-9ee9-f4e427da4591}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Codecs\CodecTiff\CodecTiff.vcxproj">
-      <Project>{d22358a3-4e82-4c28-9a38-24a1775d8be2}</Project>
-    </ProjectReference>
+    <ClCompile Include="Source\CodecGifactory.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

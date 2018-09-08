@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2016
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oiv", "oiv\oiv.vcxproj", "{77C6D668-7536-4E2C-8730-54663FACD39E}"
 EndProject
@@ -30,6 +30,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Codecs", "Codecs", "{C9393936-03B2-4B8F-BD6D-E3AB76BD01B1}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecTiff", "ImageCodec\Codecs\CodecTiff\CodecTiff.vcxproj", "{D22358A3-4E82-4C28-9A38-24A1775D8BE2}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CodecGif", "ImageCodec\Codecs\CodecGif\CodecGif.vcxproj", "{29709723-6AC4-4FE9-B48C-20DB80E6FD29}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -173,6 +175,16 @@ Global
 		{D22358A3-4E82-4C28-9A38-24A1775D8BE2}.Release|x64.Build.0 = Release|x64
 		{D22358A3-4E82-4C28-9A38-24A1775D8BE2}.Release|x86.ActiveCfg = Release|Win32
 		{D22358A3-4E82-4C28-9A38-24A1775D8BE2}.Release|x86.Build.0 = Release|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Debug|x64.ActiveCfg = Debug|x64
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Debug|x64.Build.0 = Debug|x64
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Debug|x86.ActiveCfg = Debug|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Debug|x86.Build.0 = Debug|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Release|Any CPU.ActiveCfg = Release|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Release|x64.ActiveCfg = Release|x64
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Release|x64.Build.0 = Release|x64
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Release|x86.ActiveCfg = Release|Win32
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -184,5 +196,9 @@ Global
 		{02888425-78B9-4EDE-9577-21CE73872C6F} = {C9393936-03B2-4B8F-BD6D-E3AB76BD01B1}
 		{FAA6E433-C27B-4B00-AE54-87F611191CBF} = {C9393936-03B2-4B8F-BD6D-E3AB76BD01B1}
 		{D22358A3-4E82-4C28-9A38-24A1775D8BE2} = {C9393936-03B2-4B8F-BD6D-E3AB76BD01B1}
+		{29709723-6AC4-4FE9-B48C-20DB80E6FD29} = {C9393936-03B2-4B8F-BD6D-E3AB76BD01B1}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B2D17DEF-50DB-427D-8835-E883BE790EE4}
 	EndGlobalSection
 EndGlobal
