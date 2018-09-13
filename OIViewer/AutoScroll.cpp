@@ -24,6 +24,7 @@ namespace OIV
         const long double elapsed = fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
         fAutoScrollStopWatch.Start();
         ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(fAutoScrollPosition - PointI32(fWindow->GetMousePosition()) );
+        UpdateCursorFromDeltaVector(deltaFromScrollPosition);
 
         ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
         deltaAbs.x = deltaAbs.x < fAutoScrollDeadZone ? 0 : (deltaAbs.x - (fAutoScrollDeadZone - 1));
@@ -43,14 +44,34 @@ namespace OIV
         fAutoScrolling = !fAutoScrolling;
         if (fAutoScrolling == true)
         {
+            // start auto scroll
             fTimer.SetDelay(fScrollTimeDelay);
             fAutoScrollPosition = fWindow->GetMousePosition();
         }
         else
         {
+            // Stop auto scroll
             fAutoScrollPosition = LLUtils::PointI32::Zero;
-        }
+            fWindow->SetCursorType(Win32::Win32WIndow::CursorType::SystemDefault);
 
+        }
+        
         fTimer.Enable(fAutoScrolling);
     }
+
+    void AutoScroll::UpdateCursorFromDeltaVector(LLUtils::PointF64  aDeltaVector)
+    {
+
+        const double PI = 3.14159265358979323846;
+
+        double rad = atan2(-aDeltaVector.y, aDeltaVector.x);
+        double deg = (rad * 180) / PI + 180;
+        const int numDirections = 8;
+        const int step = 360 / numDirections;
+
+        int index = (static_cast<int>(deg) + step / 2) % 360 / step;
+        fWindow->SetCursorType((Win32::Win32WIndow::CursorType)((int)index + 2));
+    }
+
+
 }

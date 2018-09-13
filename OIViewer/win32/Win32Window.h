@@ -16,6 +16,22 @@ namespace OIV
     {
         class Win32WIndow
         {
+        public: // Types
+            enum class CursorType
+            {
+                  SystemDefault
+                , Arrow
+                , East
+                , NorthEast
+                , North
+                , NorthWest
+                , West
+                , SouthWest
+                , South
+                , SouthEast
+                , Count
+            };
+
         public: // constant methods
             DWORD GetWindowStyles() const;
             bool IsFullScreen() const;
@@ -29,12 +45,15 @@ namespace OIV
             LRESULT GetCorner(const POINTS& tag_points) const;
             LLUtils::PointI32 GetWindowSize() const;
             void Show(bool show) const;
+            void UpdateCurrentCursor();
             POINT GetMousePosition() const;
             const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
             bool IsUnderMouseCursor() const;
             FullSceenState GetFullScreenState() const { return fFullSceenState; }
 
         public: // methods
+            void SetCursorType(CursorType type);
+
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void RefreshWindow();
             void ToggleFullScreen(bool multiMonitor = false);
@@ -89,6 +108,9 @@ namespace OIV
             LLUtils::StopWatch fRawInputTimer = (true);
             uint64_t fRawInputLastEventDisptchTime = 0;;
             EventCallbackCollection fListeners;
+            CursorType fCurrentCursorType = CursorType::SystemDefault;
+            std::array<HCURSOR, static_cast<int>(CursorType::Count)> fCursors;
+            bool fCursorsInitialized = false;
         };
     }
 }

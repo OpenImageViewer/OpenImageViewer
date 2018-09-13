@@ -118,6 +118,32 @@ namespace OIV
             RefreshWindow();
         }
 
+        void Win32WIndow::SetCursorType(CursorType type)
+        {
+            if (type != fCurrentCursorType && type >= CursorType::SystemDefault)
+            {
+                fCurrentCursorType = type;
+
+                if (fCursorsInitialized == false)
+                {
+                    const std::wstring CursorsPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/";
+                    
+                    fCursors[0] = nullptr;
+                    fCursors[1] = LoadCursor(nullptr, IDC_ARROW);
+                    fCursors[2] = LoadCursorFromFile((CursorsPath + L"arrow-E.cur" ).c_str());
+                    fCursors[3] = LoadCursorFromFile((CursorsPath + L"arrow-NE.cur").c_str());
+                    fCursors[4] = LoadCursorFromFile((CursorsPath + L"arrow-N.cur" ).c_str());
+                    fCursors[5] = LoadCursorFromFile((CursorsPath + L"arrow-NW.cur").c_str());
+                    fCursors[6] = LoadCursorFromFile((CursorsPath + L"arrow-W.cur" ).c_str());
+                    fCursors[7] = LoadCursorFromFile((CursorsPath + L"arrow-SW.cur").c_str());
+                    fCursors[8] = LoadCursorFromFile((CursorsPath + L"arrow-S.cur" ).c_str());
+                    fCursors[9] = LoadCursorFromFile((CursorsPath + L"arrow-SE.cur").c_str());
+                    fCursorsInitialized = true;
+                }
+                fCurrentCursorType = type;
+            }
+        }
+
         void Win32WIndow::ToggleFullScreen(bool multiMonitor)
         {
             HWND hwnd = fHandleWindow;
@@ -326,6 +352,14 @@ namespace OIV
             ShowWindow(fHandleWindow, show == true ?SW_SHOW : SW_HIDE);
         }
 
+        void Win32WIndow::UpdateCurrentCursor()
+        {
+            if (fCursorsInitialized == true)
+            {
+                 ::SetCursor(fCursors[static_cast<int>(fCurrentCursorType)]);
+            }
+        }
+
         LRESULT Win32WIndow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             Win32WIndow* window = reinterpret_cast<Win32WIndow*>(GetProp(hWnd, _T("windowClass")));
@@ -337,6 +371,14 @@ namespace OIV
             bool defaultProc = true;
             switch (message)
             {
+            case WM_SETCURSOR:
+                if (window->fCurrentCursorType != CursorType::SystemDefault)
+                {
+                    window->UpdateCurrentCursor();
+                    retValue = 1;
+                    defaultProc = false;
+                }
+              break;
             case WM_MENUCHAR:
                 if (window->fEnableMenuChar == false)
                 {
