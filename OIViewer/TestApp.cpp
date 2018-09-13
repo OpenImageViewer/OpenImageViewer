@@ -386,6 +386,7 @@ namespace OIV
     TestApp::TestApp()
         :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect,this))
+        , fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
     {
         
         fWindow.SetMenuChar(false);
@@ -533,11 +534,69 @@ namespace OIV
                 , { desc.description, desc.command,desc.arguments });
     }
 
-    void TestApp::OnRefresh()
+    void TestApp::UpdateRefreshRate()
     {
-        OIVCommands::Refresh();
+        // update refresh rate after application has fully initializaes to boost startup time.
+        if (fAppFullyInitialized == true)
+        {
+            HMONITOR hmonitor = MonitorFromWindow(fWindow.GetHandle(), 0);
+            if (hmonitor != fLastMonitor) // update frame rate only if monitor has changed.
+            {
+                const MonitorDesc* const desc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
+                if (desc != nullptr)
+                {
+                    fRefreshRateTimes1000 = desc->DisplaySettings.dmDisplayFrequency == 59 ? 59940 : desc->DisplaySettings.dmDisplayFrequency * 1000;
+                }
+
+                fLastMonitor = hmonitor;
+            }
+        }
     }
 
+    void TestApp::PerformRefresh()
+    {
+        if (EnableFrameLimiter == true)
+        {
+            using namespace std::chrono;
+            UpdateRefreshRate();
+            high_resolution_clock::time_point now = high_resolution_clock::now();
+            auto windowTimeInMicroSeconds = 1'000'000'000 / fRefreshRateTimes1000;
+            auto microsecSinceLastRefresh = duration_cast<microseconds>(now - fLastRefreshTime).count();
+            
+            fRefreshTimer.Enable(false);
+
+            if (microsecSinceLastRefresh > windowTimeInMicroSeconds)
+            {
+                //Refresh immediately
+                OIVCommands::Refresh();
+                fLastRefreshTime = now;
+            }
+            else
+            {
+                //Don't refresh now, restrat refresh timer
+                fRefreshTimer.SetDelay((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000);
+                fRefreshTimer.Enable(true);
+            }
+        }
+        else
+        {
+            OIVCommands::Refresh();
+        }
+    }
+
+    // callback from queued operation
+    void TestApp::OnRefresh()
+    {
+        PerformRefresh();
+    }
+
+    // callback from a too early refresh operation 
+    void TestApp::OnRefreshTimer()
+    {
+        //Perform refresh in the main thread.
+        PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER, 0, 0);
+    }
+    
     void TestApp::OnPreserveSelectionRect()
     {
         LoadImageSpaceSelection();
@@ -786,8 +845,7 @@ namespace OIV
     {
         Pan(panAmount);
     }
-
-
+    
     void TestApp::Init(std::wstring relativeFilePath)
     {
         using namespace std;
@@ -849,6 +907,7 @@ namespace OIV
             ShowWelcomeMessage();
 
         AddCommandsAndKeyBindings();
+        fAppFullyInitialized = true;
     }
 
     void TestApp::Destroy()
@@ -1615,6 +1674,10 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
             fAutoScroll.PerformAutoScroll(evnt);
             break;
+        case Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER:
+            PerformRefresh();
+            break;
+
 
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:

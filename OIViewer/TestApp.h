@@ -3,6 +3,7 @@
 #include <mutex>
 
 #include "win32/Win32Window.h"
+#include "win32/HighPrecisionTimer.h"
 #include "API/defs.h"
 #include "API/StringHelper.h"
 #include <Utility.h>
@@ -44,6 +45,8 @@ namespace OIV
         bool HandleMessages(const Win32::Event* evnt);
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
+        void UpdateRefreshRate();
+        void PerformRefresh();
         void SetUserMessage(const std::wstring& message);
         void SetDebugMessage(const std::string& message);
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
@@ -66,6 +69,7 @@ namespace OIV
         
 #pragma endregion //Commands
         void OnRefresh();
+        void OnRefreshTimer();
         void OnPreserveSelectionRect();
         HWND GetWindowHandle() const;
         void UpdateTitle();
@@ -126,6 +130,14 @@ namespace OIV
         
 
     private: // member fields
+#pragma region FrameLimiter
+        const bool EnableFrameLimiter = true;
+        std::chrono::high_resolution_clock::time_point fLastRefreshTime;
+        Win32::HighPrecisionTimer fRefreshTimer;
+        HMONITOR fLastMonitor = nullptr;
+        bool fAppFullyInitialized = false;
+        uint32_t fRefreshRateTimes1000 = 60'000;
+#pragma endregion FrameLimiter
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
         RecrusiveDelayedOp fRefreshOperation;
