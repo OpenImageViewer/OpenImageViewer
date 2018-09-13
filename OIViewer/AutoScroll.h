@@ -1,9 +1,12 @@
 #pragma once
+#include <memory>
+
 #include <windows.h>
 #include "Point.h"
 #include "StopWatch.h"
 #include "win32/Win32Window.h"
-#include <memory>
+#include "win32/HighPrecisionTimer.h"
+
 
 namespace OIV
 {
@@ -11,13 +14,7 @@ namespace OIV
     {
     public:
         typedef std::function< void(const LLUtils::PointF64&) > OnScrollFunction;
-        AutoScroll(Win32::Win32WIndow* window, OnScrollFunction scrollFunc) :
-               fWindow(window)
-             , fOnScroll(scrollFunc)
-
-        {
-            
-        }
+        AutoScroll(Win32::Win32WIndow* window, OnScrollFunction scrollFunc);
 
         void ToggleAutoScroll();
         void PerformAutoScroll(const Win32::EventWinMessage* evnt);
@@ -25,7 +22,7 @@ namespace OIV
 #pragma region Private member methods
         private:
         void UpdateCursorFromDeltaVector(LLUtils::PointF64 aDeltaVector);
-        static void OnScroll(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
+        void OnScroll();
 #pragma endregion
         
         typedef LLUtils::PointF64 ScrollPointType;
@@ -40,7 +37,7 @@ namespace OIV
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        
+        Win32::HighPrecisionTimer fTimer = std::bind(&AutoScroll::OnScroll, this);
         HANDLE fAutoScrollTimerID = nullptr;
         Win32::Win32WIndow* fWindow;
         OnScrollFunction fOnScroll;

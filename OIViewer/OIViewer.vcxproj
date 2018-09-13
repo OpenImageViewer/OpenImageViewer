@@ -188,6 +188,7 @@
     <ClInclude Include="SelectionRect.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
+    <ClInclude Include="win32\HighPrecisionTimer.h" />
     <ClInclude Include="win32\UserMessages.h" />
     <ClInclude Include="win32\DragAndDrop.h" />
     <ClInclude Include="win32\Event.h" />
