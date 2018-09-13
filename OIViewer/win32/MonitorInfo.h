@@ -2,29 +2,32 @@
 #include <windows.h>
 #include <map>
 #include <vector>
+#include <Singleton.h>
 namespace OIV
 {
-    class MonitorInfo 
+
+    struct MonitorDesc
     {
-    private:
-        static MonitorInfo sInstance;
-        MonitorInfo();
+        DISPLAY_DEVICE DisplayInfo;
+        DEVMODE DisplaySettings;
+        MONITORINFOEX monitorInfo;
+        HMONITOR handle;
+    };
+
+    class MonitorInfo  : public Singleton<MonitorInfo>
+    {
     public:
-        static MonitorInfo& GetSingleton();
-        
+        MonitorInfo();
         void Refresh();
 
-        unsigned short getMonitorSequentialNumberFromHMonitor(HMONITOR hMonitor, bool allowRefresh = false);
-        const MONITORINFO * const getMonitorInfo(unsigned short monitorIndex, bool allowRefresh = false);
+        const MonitorDesc * const getMonitorInfo(unsigned short monitorIndex, bool allowRefresh = false);
+        const MonitorDesc * const getMonitorInfo(HMONITOR hMonitor, bool allowRefresh = false);
         const unsigned short getMonitorsCount() const;
         RECT getBoundingMonitorArea();
     private:
-        typedef std::map<HMONITOR, unsigned short> MapMonitorToSequentialNumber;
-        typedef std::vector<MONITORINFO> ListMonitorInfo;
-
-        MapMonitorToSequentialNumber mMapMonitors;
-        ListMonitorInfo mListMonitorInfo;
-        unsigned short mMonitorsCount;
+        using MapHMonitorToDesc = std::map<HMONITOR, MonitorDesc>;
+        std::vector<MonitorDesc> mDisplayDevices;
+        MapHMonitorToDesc mHMonitorToDesc;
 
         static BOOL CALLBACK MonitorEnumProc(
             _In_  HMONITOR hMonitor,

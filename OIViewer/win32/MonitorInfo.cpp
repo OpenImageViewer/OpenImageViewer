@@ -3,13 +3,6 @@
 
 namespace OIV
 {
-    MonitorInfo MonitorInfo::sInstance;
-
-    MonitorInfo& MonitorInfo::GetSingleton()
-    {
-        return sInstance;
-    }
-
     //---------------------------------------------------------------------
     MonitorInfo::MonitorInfo()
     {
@@ -18,55 +11,70 @@ namespace OIV
     //---------------------------------------------------------------------
     void MonitorInfo::Refresh()
     {
-        mMapMonitors.clear();
-        mListMonitorInfo.clear();
-        mMonitorsCount = 0;
+        mDisplayDevices.clear();
+        mHMonitorToDesc.clear();
+        DISPLAY_DEVICE disp;
+        disp.cb = sizeof(disp);;
+        DWORD devNum = 0;
+        while (EnumDisplayDevices(nullptr, devNum++, &disp, 0) == TRUE)
+        {
+            if ((disp.StateFlags & DISPLAY_DEVICE_ACTIVE) == DISPLAY_DEVICE_ACTIVE) // only connected
+            {
+                mDisplayDevices.push_back(MonitorDesc());
+                MonitorDesc& desc = mDisplayDevices.back();
+                desc.DisplayInfo = disp;
+                desc.DisplaySettings.dmSize = sizeof(desc.DisplaySettings.dmSize);
+                EnumDisplaySettings(disp.DeviceName, ENUM_CURRENT_SETTINGS, &desc.DisplaySettings);
+            }
+        }
         EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc, (LPARAM)this);
     }
     //---------------------------------------------------------------------
-    const MONITORINFO * const MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
+    const MonitorDesc * const MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
     {
-        LPMONITORINFO result = nullptr;
-        if (monitorIndex >= mListMonitorInfo.size() && allowRefresh)
+        MonitorDesc* result = nullptr;
+        if (monitorIndex >= mDisplayDevices.size() && allowRefresh)
             Refresh();
 
-        if (monitorIndex < mListMonitorInfo.size())
-            result = &mListMonitorInfo[monitorIndex];
+        if (monitorIndex < mDisplayDevices.size())
+            result = &mDisplayDevices[monitorIndex];
 
         return result;
     }
     //---------------------------------------------------------------------
-    unsigned short MonitorInfo::getMonitorSequentialNumberFromHMonitor(HMONITOR hMonitor, bool allowRefresh /*= false*/)
+    const MonitorDesc * const MonitorInfo::getMonitorInfo(HMONITOR hMonitor, bool allowRefresh )
     {
-        MapMonitorToSequentialNumber::const_iterator it = mMapMonitors.find(hMonitor);
-        bool found = it != mMapMonitors.end();
-        if (!found && allowRefresh)
-        {
+        if (allowRefresh)
             Refresh();
-            it = mMapMonitors.find(hMonitor);
-            found = it != mMapMonitors.end();
-        }
 
-        if (found)
-            return it->second;
-        else
-            return -1;
+        auto it = mHMonitorToDesc.find(hMonitor);
+        return it == mHMonitorToDesc.end() ? nullptr : &it->second;
+
     }
     //---------------------------------------------------------------------
     BOOL CALLBACK MonitorInfo::MonitorEnumProc(_In_ HMONITOR hMonitor, _In_ HDC hdcMonitor, _In_ LPRECT lprcMonitor, _In_ LPARAM dwData)
     {
         MonitorInfo* _this = (MonitorInfo*)dwData;
-        MONITORINFO monitorInfo;
+        MONITORINFOEX monitorInfo;
         monitorInfo.cbSize = sizeof(monitorInfo);
         GetMonitorInfo(hMonitor, &monitorInfo);
-        _this->mListMonitorInfo.push_back(monitorInfo);
-        _this->mMapMonitors.insert(std::make_pair(hMonitor, _this->mMonitorsCount++));
+        for (MonitorDesc& desc : _this->mDisplayDevices)
+        {
+            if (std::wstring(desc.DisplayInfo.DeviceName) == monitorInfo.szDevice)
+            {
+                desc.monitorInfo = monitorInfo;
+                desc.handle = hMonitor;
+                _this->mHMonitorToDesc.insert(std::make_pair(hMonitor, desc));
+                break;
+            }
+        }
+
         return true;
     }
     //---------------------------------------------------------------------
     const unsigned short MonitorInfo::getMonitorsCount() const
     {
-        return mMonitorsCount;
+        return mDisplayDevices.size();
     }
 
     RECT MonitorInfo::getBoundingMonitorArea()
@@ -76,8 +84,8 @@ namespace OIV
         int count = getMonitorsCount();
         for (int i = 0; i < count; i++)
         {
-            const MONITORINFO* info = getMonitorInfo(i);
-            const RECT& monRect = info->rcMonitor;
+            const MONITORINFOEX&  info = getMonitorInfo(i)->monitorInfo;
+            const RECT& monRect = info.rcMonitor;
             rect.left = min(rect.left, monRect.left);
             rect.top = min(rect.top, monRect.top);
             rect.right = max(rect.right, monRect.right);
