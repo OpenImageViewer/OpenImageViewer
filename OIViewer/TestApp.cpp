@@ -1455,13 +1455,13 @@ namespace OIV
         ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
     }
 
-    void TestApp::LoadRaw(const uint8_t* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
+    void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
     {
         using namespace LLUtils;
         
         OIV_CMD_LoadRaw_Response loadResponse;
         OIV_CMD_LoadRaw_Request loadRequest = {};
-        loadRequest.buffer = const_cast<uint8_t*>(buffer);
+        loadRequest.buffer = const_cast<std::byte*>(buffer);
         loadRequest.width = width;
         loadRequest.height = height;
         loadRequest.rowPitch = rowPitch;
@@ -1514,8 +1514,8 @@ namespace OIV
                         const BITMAPINFOHEADER* info = &(bitmapInfo->bmiHeader);
                         uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / 8), 4);
 
-                        const uint8_t* bitmapBitsconst = reinterpret_cast<const uint8_t*>(info + 1);
-                        uint8_t* bitmapBits = const_cast<uint8_t*>(bitmapBitsconst);
+                        const std::byte* bitmapBitsconst = reinterpret_cast<const std::byte*>(info + 1);
+                        std::byte* bitmapBits = const_cast<std::byte*>(bitmapBitsconst);
 
                         switch (info->biCompression)
                         {

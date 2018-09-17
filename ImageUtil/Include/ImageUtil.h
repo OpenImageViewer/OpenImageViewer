@@ -63,7 +63,7 @@ namespace IMUtil
                 ImageDescriptor transformedProperties;
                 transformedProperties.fProperties = image->GetDescriptor().fProperties;
                 transformedProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
-                uint8_t* dest = transformedProperties.fData.GetBuffer();
+                std::byte* dest = transformedProperties.fData.GetBuffer();
 
                 const size_t MegaBytesPerThread = 6;
                 static const uint8_t MaxGlobalThrads = 32;
@@ -147,11 +147,11 @@ namespace IMUtil
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "image already normalized.");
 
 
-            const uint8_t* oldBuffer = image->GetBuffer();
+            const std::byte* oldBuffer = image->GetBuffer();
             normalizedImageProperties.fProperties = image->GetDescriptor().fProperties;
             normalizedImageProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
             uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
-            uint8_t* newBuffer = normalizedImageProperties.fData.GetBuffer();
+            std::byte* newBuffer = normalizedImageProperties.fData.GetBuffer();
             
             for (std::size_t y = 0; y < image->GetHeight(); y++)
                 for (std::size_t x = 0; x < targetRowPitch; x++)
@@ -185,7 +185,7 @@ namespace IMUtil
                 {
                     uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
                     properties.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
-                    uint8_t* dest = properties.fData.GetBuffer();
+                    std::byte* dest = properties.fData.GetBuffer();
                     
                     //TODO: convert without normalization.
                     convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : Normalize(sourceImage);
@@ -218,13 +218,13 @@ namespace IMUtil
             if (subimage.IsNonNegative() && subimage.IsInside(image))
             {
                 using namespace IMCodec;
-                const uint8_t* sourceBuffer = sourceImage->GetBuffer();
+                const std::byte* sourceBuffer = sourceImage->GetBuffer();
 
                 const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
                 ImageDescriptor props;
                 props.fProperties = sourceImage->GetDescriptor().fProperties;
                 props.fData.Allocate(destBufferSize);
-                uint8_t* destBuffer = props.fData.GetBuffer();
+                std::byte* destBuffer = props.fData.GetBuffer();
 
                 for (int32_t y = 0; y < subimage.GetHeight(); y++)
                 {
@@ -265,7 +265,7 @@ namespace IMUtil
         template <class T, class SampleType = T>
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NormalizeMode::Default)
         {
-            const SampleType* sampleData = reinterpret_cast<const SampleType*> (sourceImage->GetConstBuffer());
+            const SampleType* sampleData = reinterpret_cast<const SampleType*> (sourceImage->GetBuffer());
 
             T min = std::numeric_limits<T>::max();
             T max = std::numeric_limits<T>::min();

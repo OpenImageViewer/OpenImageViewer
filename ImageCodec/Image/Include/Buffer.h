@@ -6,11 +6,9 @@
 class Buffer
 {
 public:
+    static constexpr int Alignment = 16;
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
-
-
-
     Buffer() = default;
 
 
@@ -25,36 +23,19 @@ public:
     }
 
 
-    void Swap(Buffer&& rhs)
-    {
-        std::swap(fData, rhs.fData);
-        _aligned_free(rhs.fData);
-        rhs.fData = nullptr;
-    }
-
-    const uint8_t* GetConstBuffer() const
+    const std::byte* GetBuffer() const
     {
         return fData;
     }
 
-    uint8_t* GetBuffer() const
+    std::byte* GetBuffer()
     {
         return fData;
     }
 
     void Free()
     {
-        if (fData != nullptr)
-        {
-            _aligned_free(fData);
-            fData = nullptr;
-        }
-    }
-
-    void AllocateAndWrite(const uint8_t* buffer, size_t size)
-    {
-        Allocate(size);
-        Write(buffer, size);
+        FreeImpl();
     }
 
     void Allocate(size_t size)
@@ -62,22 +43,60 @@ public:
         AllocateImp(size);
     }
 
-    void Write(const uint8_t* buffer, size_t size)
+    void Read(std::byte* dest, size_t offset, size_t size) const
     {
-        memcpy(fData, buffer, size);
+        if (offset + size <= fSize)
+            memcpy(dest ,fData + offset, size);
+        else
+            throw std::runtime_error("Memory read overflow");
+    }
+
+    void Write(const std::byte* buffer, size_t offset, size_t size)
+    {
+        if (offset + size <= fSize)
+            memcpy(fData + offset, buffer, size);
+        else
+            throw std::runtime_error("Memory write overflow");
     }
 
     ~Buffer()
     {
         Free();
     }
+    
+    size_t Size() const
+    {
+        return fSize;
+    }
 private:
+    // private methods
+    void Swap(Buffer&& rhs)
+    {
+        std::swap(fSize, rhs.fSize);
+        rhs.fSize = 0;
+        std::swap(fData, rhs.fData);
+        _aligned_free(rhs.fData);
+        rhs.fData = nullptr;
+    }
+
     void AllocateImp(size_t size)
     {
         Free();
-        fData = reinterpret_cast<uint8_t*>(_aligned_malloc(size, 16));
-
+        fData = reinterpret_cast<std::byte*>(_aligned_malloc(size, Alignment));
+        fSize = size;
     }
 
-    uint8_t* fData = nullptr;
+    void FreeImpl()
+    {
+        if (fData != nullptr)
+        {
+            _aligned_free(fData);
+            fData = nullptr;
+            fSize = 0;
+        }
+    }
+
+    // private member fields
+    std::byte* fData = nullptr;
+    size_t fSize = 0;
 };

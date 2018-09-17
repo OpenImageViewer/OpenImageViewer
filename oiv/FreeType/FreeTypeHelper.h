@@ -29,7 +29,9 @@ namespace OIV
             ImageDescriptor props;
             props.fProperties.NumSubImages = 0;
             props.fProperties.Height = rasterizedText.height;
-            props.fData.AllocateAndWrite(rasterizedText.buffer, rasterizedText.rowPitch * rasterizedText.height);
+            const size_t bufferSize = rasterizedText.rowPitch * rasterizedText.height;
+            props.fData.Allocate(bufferSize);
+            props.fData.Write(rasterizedText.buffer, 0, bufferSize);
             props.fProperties.RowPitchInBytes = rasterizedText.rowPitch;
             props.fProperties.Width = rasterizedText.width;
             props.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;

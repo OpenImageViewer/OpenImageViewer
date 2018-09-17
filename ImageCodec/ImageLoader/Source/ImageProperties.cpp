@@ -6,7 +6,7 @@ namespace IMCodec
     bool ImageDescriptor::IsInitialized() const
     {
         return true
-            && fData.GetConstBuffer() != nullptr
+            && fData.GetBuffer() != nullptr
             && fProperties.IsInitialized() == true;
     }
 }

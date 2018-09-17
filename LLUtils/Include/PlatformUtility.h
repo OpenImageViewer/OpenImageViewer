@@ -63,7 +63,7 @@ namespace LLUtils
             return stackTrace;
         }
 
-        static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const uint8_t* buffer)
+        static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const std::byte* buffer)
         {
             BITMAPINFOHEADER bi = { 0 };
 

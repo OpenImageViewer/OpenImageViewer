@@ -44,7 +44,8 @@ namespace IMCodec
                 out_properties.fProperties.NumSubImages = 0;
 
                 std::size_t imageSizeInMemory = header.biHeight * out_properties.fProperties.RowPitchInBytes;
-                out_properties.fData.AllocateAndWrite(FreeImage_GetBits(freeImageHandle), imageSizeInMemory);
+                out_properties.fData.Allocate(imageSizeInMemory);
+                out_properties.fData.Write(reinterpret_cast<std::byte*>(FreeImage_GetBits(freeImageHandle)), 0, imageSizeInMemory);
 
 
                 switch (TexelFormat)

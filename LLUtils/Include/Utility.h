@@ -36,7 +36,7 @@ namespace LLUtils
 
         struct BlitBox
         {
-            uint8_t* buffer;
+            std::byte* buffer;
             uint32_t rowPitch;
             uint32_t width;
             uint32_t height;
@@ -55,8 +55,8 @@ namespace LLUtils
 
         static void Blit(BlitBox& dst, const BlitBox& src)
         {
-            const uint8_t* srcPos = src.buffer + src.GetStartOffset();
-            uint8_t* dstPos = dst.buffer + dst.GetStartOffset();
+            const std::byte* srcPos = src.buffer + src.GetStartOffset();
+            std::byte* dstPos = dst.buffer + dst.GetStartOffset();
 
             const uint32_t bytesPerCopy = src.pixelSizeInbytes * src.width;
 

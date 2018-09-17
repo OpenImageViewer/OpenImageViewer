@@ -18,7 +18,7 @@ namespace OIV
 
         struct InitialBuffer
         {
-            uint8_t* buffer;
+            const std::byte* buffer;
             uint32_t rowPitchInBytes;
         };
     

@@ -26,7 +26,8 @@ namespace IMCodec
             {
                 const uint32_t numChannels = 4;
                 size_t mergedImageSize = context->per_channel_length * numChannels;
-                out_properties.fData.AllocateAndWrite(reinterpret_cast<uint8_t*>(context->merged_image_data), mergedImageSize);
+                out_properties.fData.Allocate(mergedImageSize);
+                out_properties.fData.Write(reinterpret_cast<std::byte*>(context->merged_image_data), 0, mergedImageSize);
 
                 out_properties.fProperties.NumSubImages = 0;
                 out_properties.fProperties.Width = context->width;

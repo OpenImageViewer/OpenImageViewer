@@ -18,7 +18,7 @@ public:
     {
         uint32_t width;
         uint32_t height;
-        uint8_t* buffer;
+        std::byte* buffer;
         uint32_t PixelSize;
         uint32_t rowPitch;
     };

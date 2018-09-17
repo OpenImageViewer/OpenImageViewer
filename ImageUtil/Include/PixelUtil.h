@@ -8,7 +8,7 @@
 
 namespace IMUtil
 {
-    typedef void(*PixelConvertFunc)(uint8_t* i_dest, const uint8_t* i_src, size_t start, size_t end);
+    typedef void(*PixelConvertFunc)(std::byte* i_dest, const std::byte* i_src, size_t start, size_t end);
     class PixelUtil
     {
     public:
@@ -52,7 +52,7 @@ namespace IMUtil
 
         }
 
-        static void Convert(PixelConvertFunc convertFunc, uint8_t** i_dest, const uint8_t* i_src, const uint8_t dstTexelSizeinBits, const size_t numTexels)
+        static void Convert(PixelConvertFunc convertFunc, std::byte** i_dest, const std::byte* i_src, const uint8_t dstTexelSizeinBits, const size_t numTexels)
         {
             using namespace std;
             //TODO: fine tune the minimum size required to open helper threads
@@ -69,7 +69,7 @@ namespace IMUtil
             
             const uint8_t totalThreads = (std::min)(maxThreads, static_cast<uint8_t>(numTexels / texelsPerThread));
 
-            uint8_t* dest = *i_dest;
+            std::byte* dest = *i_dest;
             if (totalThreads > 0)
             {
                 const size_t segmentSize = numTexels / (totalThreads + 1);
@@ -103,7 +103,7 @@ namespace IMUtil
 
         }
 
-        static void BGR24ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        static void BGR24ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             uint32_t* dst = (uint32_t*)i_dest;
             BitTexel24 * src = (BitTexel24*)i_src;
@@ -115,7 +115,7 @@ namespace IMUtil
         }
 
 
-        static void RGB24ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        static void RGB24ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             uint32_t* dst = (uint32_t*)i_dest;
             BitTexel24 * src = (BitTexel24*)i_src;
@@ -126,7 +126,7 @@ namespace IMUtil
             }
         }
 
-        static void RGBA32ToBGRA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        static void RGBA32ToBGRA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
             BitTexel32 * src = (BitTexel32*)i_src;
@@ -141,7 +141,7 @@ namespace IMUtil
         }
 
 
-        static void A8ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        static void A8ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
             BitTexel8 * src = (BitTexel8*)i_src;
@@ -159,7 +159,7 @@ namespace IMUtil
 
         
 
-        static void BGRA32ToRGBA32(uint8_t* i_dest, const uint8_t* i_src, std::size_t start, std::size_t end)
+        static void BGRA32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
             BitTexel32 * src = (BitTexel32*)i_src;
@@ -181,8 +181,8 @@ namespace IMUtil
             size_t endCol;
             size_t width;
             size_t height;
-            uint8_t* srcBuffer;
-            uint8_t* dstBuffer;
+            const std::byte* srcBuffer;
+            std::byte* dstBuffer;
             IMUtil::AxisAlignedRTransform transform;
             size_t srcRowPitch;
             size_t bytesPerTexel;
@@ -193,7 +193,7 @@ namespace IMUtil
             for (std::size_t y = transformInfo.startRow; y < transformInfo.endRow; y++)
                 for (std::size_t x = transformInfo.startCol; x < transformInfo.endCol; x++)
                 {
-                    const uint8_t* srcRow = transformInfo.srcBuffer + y * transformInfo.srcRowPitch;
+                    const std::byte* srcRow = transformInfo.srcBuffer + y * transformInfo.srcRowPitch;
                     std::size_t idxDest;
 
                     switch (transformInfo.transform)

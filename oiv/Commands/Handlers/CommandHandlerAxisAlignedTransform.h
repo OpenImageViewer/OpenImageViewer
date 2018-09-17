@@ -28,7 +28,4 @@ namespace OIV
             return result;
         }
     };
-
-
 }
-

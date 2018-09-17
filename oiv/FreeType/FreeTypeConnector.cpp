@@ -262,7 +262,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     const uint32_t destPixelSize = 4;
     const uint32_t destRowPitch = destWidth * destPixelSize;
     const uint32_t sizeOFDestBuffer = destHeight * destRowPitch;
-    uint8_t* imageBuffer = new uint8_t[sizeOFDestBuffer];
+    std::byte* imageBuffer = new std::byte[sizeOFDestBuffer];
     for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
     {
         reinterpret_cast<uint32_t*>(imageBuffer)[i] = backgroundColor.colorValue;
@@ -316,7 +316,7 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
             FT_Bitmap bitmap = slot->bitmap;
 
             //Create a copy of the bitmap in RGBA.
-            unique_ptr<uint8_t> RGBABitmap = unique_ptr<uint8_t>(new uint8_t[bitmap.width * bitmap.rows * destPixelSize]);
+            unique_ptr<std::byte> RGBABitmap = unique_ptr<std::byte>(new std::byte[bitmap.width * bitmap.rows * destPixelSize]);
             
             // Fill glyph background with background color.
             uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.get());

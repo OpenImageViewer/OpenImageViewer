@@ -132,7 +132,7 @@ namespace IMCodec
                     texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
                     out_properties.fData.Allocate(height * rowPitch);
                     
-                    uint8_t* currensPos = out_properties.fData.GetBuffer();
+                    uint8_t* currensPos = reinterpret_cast<uint8_t*>( out_properties.fData.GetBuffer());
 
                     if (stripSize != rowPitch * rowsPerStrip)
                         LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");

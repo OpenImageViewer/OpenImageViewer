@@ -24,9 +24,8 @@ namespace IMCodec
         const ImageDescriptor& GetDescriptor() const { return fDescriptor; }
 
         // Query methods
-        uint8_t* GetBufferAt(int32_t x, int32_t y) const { return &fDescriptor.fData.GetBuffer()[y * GetRowPitchInBytes() + x * GetBytesPerTexel()]; }
-        uint8_t* GetBuffer() const { return fDescriptor.fData.GetBuffer(); }
-        const uint8_t* GetConstBuffer() const { return fDescriptor.fData.GetBuffer(); }
+        const std::byte* GetBufferAt(int32_t x, int32_t y) const { return fDescriptor.fData.GetBuffer() + (y * GetRowPitchInBytes() + x * GetBytesPerTexel()); }
+        const std::byte* GetBuffer() const { return fDescriptor.fData.GetBuffer(); }
         uint32_t GetNumSubImages() const {return fDescriptor.fProperties.NumSubImages;}
         uint32_t GetWidth() const { return fDescriptor.fProperties.Width; }
         uint32_t GetHeight() const { return fDescriptor.fProperties.Height; }

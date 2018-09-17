@@ -185,7 +185,7 @@ typedef wchar_t OIVCHAR;
 
     struct OIV_CMD_GetPixels_Response
     {
-        const uint8_t* pixelBuffer;
+        const std::byte* pixelBuffer;
         uint32_t width;
         uint32_t height;
         uint32_t rowPitch;
@@ -242,7 +242,7 @@ typedef wchar_t OIVCHAR;
         uint32_t height;
         uint32_t rowPitch;
         OIV_TexelFormat texelFormat;
-        uint8_t* buffer;
+        std::byte* buffer;
         OIV_AxisAlignedRTransform transformation;
     };
 

@@ -150,8 +150,9 @@ namespace OIV
         props.fProperties.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
         props.fProperties.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
         props.fProperties.RowPitchInBytes = loadRawRequest.rowPitch;
-
-        props.fData.AllocateAndWrite(loadRawRequest.buffer, props.fProperties.RowPitchInBytes * props.fProperties.Height);
+        const size_t bufferSize = props.fProperties.RowPitchInBytes * props.fProperties.Height;
+        props.fData.Allocate(bufferSize);
+        props.fData.Write(loadRawRequest.buffer, 0, bufferSize);
 
 
         ImageSharedPtr image = ImageSharedPtr(new Image(props));
@@ -320,7 +321,7 @@ namespace OIV
             res.height = image->GetHeight();
             res.rowPitch = image->GetRowPitchInBytes();
             res.texelFormat = static_cast<OIV_TexelFormat>( image->GetImageType());
-            res.pixelBuffer = image->GetConstBuffer();
+            res.pixelBuffer = image->GetBuffer();
             return RC_Success;
         }
 
