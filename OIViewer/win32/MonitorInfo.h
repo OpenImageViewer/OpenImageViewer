@@ -14,7 +14,7 @@ namespace OIV
         HMONITOR handle;
     };
 
-    class MonitorInfo  : public Singleton<MonitorInfo>
+    class MonitorInfo  : public LLUtils::Singleton<MonitorInfo>
     {
     public:
         MonitorInfo();

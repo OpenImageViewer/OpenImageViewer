@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 namespace LLUtils
 {
     class FileSystemHelper
@@ -47,6 +48,15 @@ namespace LLUtils
             }
 
             return p.wstring();
+        }
+
+        template <class string_type>
+        static bool EnsureDirectory(const string_type& path)
+        {
+            using namespace std;
+            filesystem::path directoryName = path;
+            directoryName.remove_filename();
+            return filesystem::exists(directoryName) || filesystem::create_directories(directoryName);
         }
 
     };

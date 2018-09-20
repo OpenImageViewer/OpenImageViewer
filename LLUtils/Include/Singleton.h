@@ -1,37 +1,45 @@
 #pragma once
 #include <memory>
-template <class T> class Singleton
+namespace LLUtils
 {
-public:    
-   
-    static T& GetSingleton() 
+    template <class T> class Singleton
     {
-        sContext.Create();
-        return *sContext.instance.get();
-    }
-
-    static void DeleteSingleton()
-    {
-        sContext = Context();
-    }
-
-private:
-    struct Context
-    {
-        std::unique_ptr<T> instance;
-
-        void Create()
+    public:
+        class Context
         {
-            if (instance == nullptr)
-                instance = std::make_unique<T>();
+        public:
+            std::unique_ptr<T> instance;
+
+            void Create()
+            {
+                if (instance == nullptr)
+                    instance = std::make_unique<T>();
+                
+            }
+
+            ~Context()
+            {
+                instance.reset();
+            }
+        };
+
+        
+    public:
+        static T& GetSingleton()
+        {
+            sContext.Create();
+            return *sContext.instance.get();
         }
 
-        ~Context()
+        static void DeleteSingleton()
         {
-            instance.reset();
+            sContext = Context();
         }
+
+    protected:
+        Singleton() = default;
+
+    private:
+        static inline Context sContext;
     };
-
-    static inline Context sContext;
-
-};         
+}

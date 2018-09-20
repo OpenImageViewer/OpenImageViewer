@@ -9,9 +9,11 @@
 #include <string>
 #include <vector>
 #include <Color.h>
+#include <Singleton.h>
 
-class FreeTypeConnector
+class FreeTypeConnector : public LLUtils::Singleton<FreeTypeConnector>
 {
+    friend class LLUtils::Singleton<FreeTypeConnector>;
 public:
 
     struct Bitmap

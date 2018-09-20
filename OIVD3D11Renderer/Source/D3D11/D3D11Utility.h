@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D11Shader.h"
 #include <FileHelper.h>
+#include <FileSystemHelper.h>
 #include "D3D11Blob.h"
 
 namespace OIV
@@ -65,7 +66,7 @@ namespace OIV
             {
                 shader->Load();
                 BlobSharedPtr blob = shader->GetShaderData();
-                LLUtils::Utility::EnsureDirectory(cachePath);
+                LLUtils::FileSystemHelper::EnsureDirectory(cachePath);
                 LLUtils::File::WriteAllBytes(cachePath, blob->size, blob->buffer);
             }
         }
