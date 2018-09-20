@@ -182,7 +182,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MT.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent />
     <PostBuildEvent>
@@ -197,6 +197,7 @@
     <ClCompile Include="Commands\Handlers\CommandHandlerInit.cpp" />
     <ClCompile Include="External\easyexif\exif.cpp" />
     <ClCompile Include="FreeType\FreeTypeConnector.cpp" />
+    <ClCompile Include="FreeType\MetaTextParser.cpp" />
     <ClCompile Include="ImageManager.cpp" />
     <ClCompile Include="oiv.cpp" />
   </ItemGroup>
@@ -234,11 +235,14 @@
     <ClInclude Include="Common\linux.h" />
     <ClInclude Include="Configuration.h" />
     <ClInclude Include="External\easyexif\exif.h" />
+    <ClInclude Include="FreeType\BlitBox.h" />
     <ClInclude Include="FreeType\CodePoint.h" />
     <ClInclude Include="FreeType\FreeTypeConnector.h" />
     <ClInclude Include="FreeType\FreeTypeFont.h" />
     <ClInclude Include="FreeType\FreeTypeHeaders.h" />
     <ClInclude Include="FreeType\FreeTypeHelper.h" />
+    <ClInclude Include="FreeType\FreeTypeRenderer.h" />
+    <ClInclude Include="FreeType\MetaTextParser.h" />
     <ClInclude Include="ImageManager.h" />
     <ClInclude Include="Interfaces\IRenderer.h" />
     <ClInclude Include="Interfaces\IRendererDefs.h" />

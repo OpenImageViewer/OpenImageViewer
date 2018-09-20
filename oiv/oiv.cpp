@@ -259,11 +259,19 @@ namespace OIV
         //std::string u8Text = LLUtils::StringUtility::ToUTF8<OIVCHAR>(text);
         //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
 
-        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(
-            LLUtils::StringUtility::ToAString(text),
-            LLUtils::StringUtility::ToAString(fontPath),
-            request.fontSize,
-            request.backgroundColor);
+        FreeTypeConnector::TextCreateParams createParams = {};
+        createParams.backgroundColor = request.backgroundColor;
+        createParams.fontPath = LLUtils::StringUtility::ToAString(fontPath);
+        createParams.fontSize = request.fontSize;
+        createParams.outlineColor = request.outlineColor;
+        createParams.outlineWidth = request.outlineWidth;
+        createParams.text = LLUtils::StringUtility::ToAString(text);
+        createParams.renderMode = static_cast<FreeTypeConnector::RenderMode>(request.renderMode);
+        createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
+        createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
+
+        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
+            
 
         if (imageText != nullptr)
         {

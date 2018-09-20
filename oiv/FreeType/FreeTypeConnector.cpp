@@ -2,6 +2,7 @@
 
 #if OIV_BUILD_FREETYPE == 1
 #include "FreeTypeConnector.h"
+#include "FreeTypeRenderer.h"
 #include "Exception.h"
 #include "CodePoint.h"
 #include <vector>
@@ -11,61 +12,18 @@
 #include <locale>
 #include <string>
 #include <iostream>
+#include <Buffer.h>
+#include "BlitBox.h"
+#include "MetaTextParser.h"
 
 
-FreeTypeConnector FreeTypeConnector::sInstance;
 
 FreeTypeConnector::FreeTypeConnector()
 {
-    FT_Error  error = FT_Init_FreeType(&fLibrary);
-    if (error)
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Can no initialize freetype library");
+    FT_Error  error;
+    if (error = FT_Init_FreeType(&fLibrary))
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError,GenerateFreeTypeErrorString("can not load glyph", error));
 
-}
-
-FreeTypeConnector& FreeTypeConnector::GetSingleton()
-{
-    return sInstance;
-}
-
-FreeTypeConnector::Format FreeTypeConnector::Format::Parse(const u8string& format)
-{
-    using namespace std;
-    using namespace LLUtils;
-
-    Format result = {};
-    u8string trimmed = StringUtility::ToLower(format);
-    trimmed.erase(trimmed.find_last_not_of(u8" >") + 1);
-    trimmed.erase(0,trimmed.find_first_not_of(u8" <"));
-
-    using u8StringList = ListString<u8string>;
-    using u8char = u8string::value_type;
-
-    
-    u8StringList properties = StringUtility::split<u8char>(trimmed, ';');
-    stringstream ss;
-    for (const u8string& prop : properties)
-    {
-        u8StringList trimmedList = StringUtility::split<u8char>(prop, '=');
-        const u8string& key = trimmedList[0];
-        const u8string& value = trimmedList[1];
-        if (key == u8"textcolor")
-        {
-            Color c = Color::FromString(StringUtility::ToAString(value) );
-            result.color = c.colorValue;
-        }
-        else if (key == u8"backgroundcolor")
-        {
-            Color c = Color::FromString(StringUtility::ToAString(value));
-            result.backgroundColor = c.colorValue;
-        }
-        else if (key == u8"textSize")
-        {
-            result.size = std::atoi(StringUtility::ToAString(value).c_str());
-        }
-    }
-
-    return result;
 }
 
 FreeTypeConnector::~FreeTypeConnector()
@@ -79,86 +37,84 @@ FreeTypeConnector::~FreeTypeConnector()
     }
 }
 
-std::vector<FreeTypeConnector::FormattedTextEntry> FreeTypeConnector::GetFormattedText(u8string text, int fontSize)
+
+std::string FreeTypeConnector::GenerateFreeTypeErrorString(std::string userMessage, FT_Error  error)
 {
-
-    using namespace std;
-    ptrdiff_t beginTag = -1;
-    ptrdiff_t endTag = -1;
-    vector<FormattedTextEntry> formattedText;
-    
-    if (text.empty() == true)
-        return formattedText;
-
-
-    for (int i = 0; i < text.length(); i++)
-    {
-        if (text[i] == '<')
-        {
-            if (endTag != -1)
-            {
-                u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
-                
-                u8string textInsideTag = text.substr(endTag + 1, i - (endTag + 1));
-                beginTag = i;
-                endTag = -1;
-
-                Format format = Format::Parse(tagContents);
-                FormattedTextEntry entry;
-                entry.size = fontSize;
-                entry.text = textInsideTag;
-                entry.color = format.color;
-                formattedText.push_back(entry);
-            }
-            else
-            {
-                beginTag = i;
-            }
-
-
-        }
-        if (text[i] == '>')
-        {
-            endTag = i;
-        }
-    }
-
-   
-    
-        ptrdiff_t i = text.length() - 1;
-        u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
-
-        u8string textInsideTag = text.substr(endTag + 1, i - endTag );
-        beginTag = i;
-        endTag = -1;
-
-        Format format = Format::Parse(tagContents);
-        FormattedTextEntry entry;
-        entry.size = fontSize;
-        entry.text = textInsideTag;
-        entry.color = format.color;
-        formattedText.push_back(entry);
-    
-    return formattedText;
+    return std::string("FreeType error: " + std::to_string(error) + ", " + userMessage);
 }
 
 
+void FreeTypeConnector::MesaureText(const TextMesureParams& measureParams, TextMesureResult& mesureResult)
+{
+    using namespace std;
+    FT_Face face = measureParams.font->GetFace();
+    uint32_t fontSize = measureParams.createParams.fontSize;
+    const std::string& text = measureParams.createParams.text;
 
+    //Height in pixels (using a double for sub-pixel precision)
+    double baseline_height = abs(face->descender) * (double)fontSize / face->units_per_EM;
+    baseline_height = std::ceil(baseline_height);
 
-//void FreeTypeConnector::GetFontParams(const std::string& fontPath, uint16_t fontSize)
-//{
-//    
-//}
-
-void FreeTypeConnector::CreateBitmap(const std::string& text
-    , const std::string& fontPath
-    , uint16_t fontSize
-    , LLUtils::Color backgroundColor
-    , Bitmap &out_bitmap
+    const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
+    const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
     
-)
+    FT_Error error = 0;
+
+    vector<FormattedTextEntry> formattedText = MetaText::GetFormattedText(text, fontSize);
+
+    int penX = 0;
+    int penY = 0; 
+    
+    int maxRow = 0;
+    for (const FormattedTextEntry& el : formattedText)
+    {
+        for (const wstring::value_type & e : el.text)
+        {
+            if (e == '\n')
+            {
+
+                penY += rowHeight;
+                maxRow = std::max(penX, maxRow);
+                penX = 0;
+                continue;
+            }
+
+            //string mbs = conversion.to_bytes(u"\u4f60\u597d");  // ni hao (你好
+
+            const int codePoint = e;  //CodePoint::codepoint(u"\u4f60");
+            const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
+
+            if (error = FT_Load_Glyph(
+                face,          /* handle to face object */
+                glyph_index,   /* glyph index           */
+                FT_LOAD_DEFAULT))  /* load flags, see below */
+            {
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, GenerateFreeTypeErrorString("can not load glyph", error));
+            }
+
+            penX += face->glyph->advance.x >> 6;
+            penY += face->glyph->advance.y >> 6;
+        }
+    }
+
+
+    penY += rowHeight;
+    maxRow = std::max(penX, maxRow);
+
+    // Add outline width on all sides of the rectangle
+    maxRow += measureParams.createParams.outlineWidth * 2;
+    penY += measureParams.createParams.outlineWidth * 2;
+
+    mesureResult.height = penY;
+    mesureResult.width = maxRow;
+    mesureResult.rowHeight = rowHeight;
+    mesureResult.baselineHeight = baselineHeight;
+}
+
+FreeTypeFont* FreeTypeConnector::GetOrCreateFont(std::string fontPath)
 {
     FreeTypeFont* font = nullptr;
+
     auto it = fFontNameToFont.find(fontPath);
     if (it != fFontNameToFont.end())
     {
@@ -168,117 +124,92 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
     {
         font = new FreeTypeFont(fLibrary, fontPath);
         fFontNameToFont.insert(std::make_pair(fontPath, FreeTypeFontUniquePtr(font)));
-        
     }
 
+    return font;
+}
+
+
+
+
+
+void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, Bitmap &out_bitmap)
+{
     using namespace std;
+
+    std::string text = textCreateParams.text;
+    const std::string& fontPath = textCreateParams.fontPath;
+    uint16_t fontSize = textCreateParams.fontSize;
+    uint32_t OutlineWidth = textCreateParams.outlineWidth;
+    const LLUtils::Color outlineColor = textCreateParams.outlineColor;
+    const LLUtils::Color backgroundColor = textCreateParams.backgroundColor;
+    RenderMode renderMode = textCreateParams.renderMode;
+
+    //Force normal anti aliasing for now.
+    //TODO: Fix subpixel antialiasing rendering 
+    renderMode = RenderMode::Antialiased;
+
+
+    FreeTypeFont* font = GetOrCreateFont(fontPath);
     
     FT_Error error;
-    //FT_Error error = FT_New_Face(fLibrary, fontPath.c_str() ,0, &face);
-
-    font->SetSize(fontSize);
-    //if (error == FT_Err_Unknown_File_Format)
-    //    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error Unknown file format");
-    //else if (error)
-    //    LL_EXCEPTION(LLUtils::Exception::ErrorCode::Unknown,"FreeType unkown error Unknown file format");
-
-
-    //error = FT_Set_Char_Size(
-    //    face,    /* handle to face object           */
-    //    0,       /* char_width in 1/64th of points  */
-    //    fontSize << 6,   /* char_height in 1/64th of points */
-    //    0,     /* horizontal device resolution    */
-    //    0);   /* vertical device resolution      */
-
-    FT_Face face = font->GetFace();
-
-              //Height in pixels (using a double for sub-pixel precision)
-    double baseline_height = abs(face->descender) * (double)fontSize / face->units_per_EM;
-    baseline_height = std::ceil(baseline_height);
-
-
-     /*if (error)
-         LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not set char height");*/
-
-    const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
-
-    const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
-
     
-    vector<FormattedTextEntry> formattedText = GetFormattedText(text,fontSize);
+    if (error = FT_Library_SetLcdFilter(fLibrary, FT_LCD_FILTER_DEFAULT))
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, GenerateFreeTypeErrorString("can not set LCD Filter", error));
 
-    int penX = 0, penY = 0;
-    //First mesure text
-    int maxRow = 0;
-    for (const FormattedTextEntry& el : formattedText)
-    {
-        for (const wstring::value_type & e : el.text)
-        {
-            if (e == '\n')
-            {
-                penY += rowHeight;
-                maxRow = std::max(penX, maxRow);
-                penX = 0;
-                continue;
-            }
+    font->SetSize(fontSize, textCreateParams.DPIx, textCreateParams.DPIy);
 
-            
-            /*u16string str;
-            u32string str1;
+    TextMesureParams params;
+    params.createParams = textCreateParams;
+    params.font = font;
 
-            wstring_convert<std::codecvt_utf8_utf16<char32_t>, char16_t> conversion;
-            string multiBytesCodePOint = conversion.to_bytes(e);*/
-            
-            
-            
+    TextMesureResult mesaureResult;
+
+    MesaureText(params, mesaureResult);
+    uint32_t destWidth = mesaureResult.width;
+    uint32_t destHeight = mesaureResult.height;
 
 
-            //string mbs = conversion.to_bytes(u"\u4f60\u597d");  // ni hao (你好
-
-            const int codePoint = e;  //CodePoint::codepoint(u"\u4f60");
-            const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
-            error = FT_Load_Glyph(
-                face,          /* handle to face object */
-                glyph_index,   /* glyph index           */
-                FT_LOAD_DEFAULT);  /* load flags, see below */
-
-            if (error)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error can not load glyph");
-
-            penX += face->glyph->advance.x >> 6;
-            penY += face->glyph->advance.y >> 6;
-            //face->glyph->
-            //int height1 = face->max_advance_height >> 6;// glyph->metrics.vertAdvance >> 6;
-            int k = 0;
-        }
-    }
-    penY += rowHeight;
-    maxRow = std::max(penX, maxRow);
+    // ****** temporary workaround for placing the text correctly.
+    const int workaroundHeightIssue = -fontSize / 4;
+    destWidth += 1;
+    //***************
 
 
-    const uint32_t destWidth = maxRow;
-    const uint32_t destHeight = penY;
 
+
+    vector<FormattedTextEntry> formattedText = MetaText::GetFormattedText(text,fontSize);
+
+    const FT_Render_Mode textRenderMOde = (renderMode == RenderMode::SubpixelAntiAliased ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL);
+;
     const uint32_t destPixelSize = 4;
     const uint32_t destRowPitch = destWidth * destPixelSize;
     const uint32_t sizeOFDestBuffer = destHeight * destRowPitch;
-    std::byte* imageBuffer = new std::byte[sizeOFDestBuffer];
-    for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
-    {
-        reinterpret_cast<uint32_t*>(imageBuffer)[i] = backgroundColor.colorValue;
-    }
-    
-    LLUtils::Utility::BlitBox  dest = {};
+    LLUtils::Buffer imageBuffer(sizeOFDestBuffer);
 
-    dest.buffer = imageBuffer;
-    dest.width = destWidth;
+    //Reset final text buffer to background color.
+    for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
+        reinterpret_cast<uint32_t*>(imageBuffer.GetBuffer())[i] =  backgroundColor.colorValue;
+    
+    BlitBox  dest = {};
+
+    //const int 
+
+    dest.buffer = imageBuffer.GetBuffer();
+    dest.width = destWidth; 
     dest.height = destHeight;
+
+
+    
     dest.pixelSizeInbytes = destPixelSize;
     dest.rowPitch = destRowPitch;
 
-    penX = 0;
-    penY = 0;
-    
+    int penX =  OutlineWidth;
+    int penY = 0;
+    int rowHeight = mesaureResult.rowHeight;
+    int baselineHeight = mesaureResult.baselineHeight;
+    FT_Face face = font->GetFace();
+
     for (const FormattedTextEntry& el : formattedText)
     {
         for (const string::value_type & e : el.text)
@@ -286,84 +217,88 @@ void FreeTypeConnector::CreateBitmap(const std::string& text
             if (e == '\n')
             {
                 penY += rowHeight;
-                penX = 0;
+                penX = OutlineWidth;
                 continue;
             }
 
-            //wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> conversion;
-            //string multiBytesCodePOint = conversion.to_bytes(e);
-
-
             int codePoint = e; // CodePoint::codepoint(multiBytesCodePOint);
             const FT_UInt glyph_index = FT_Get_Char_Index(face, codePoint);
-            error = FT_Load_Glyph(
+            if (error = FT_Load_Glyph(
                 face,          /* handle to face object */
                 glyph_index,   /* glyph index           */
-                FT_LOAD_DEFAULT);  /* load flags, see below */
-
-            if (error)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to load glyph");
-
-
-            error = FT_Render_Glyph(face->glyph,   /* glyph slot  */
-                FT_RENDER_MODE_NORMAL); /* render mode */
-
-            if (error)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to render glyph");
-
-
-            FT_GlyphSlot  slot = face->glyph;
-            FT_Bitmap bitmap = slot->bitmap;
-
-            //Create a copy of the bitmap in RGBA.
-            unique_ptr<std::byte> RGBABitmap = unique_ptr<std::byte>(new std::byte[bitmap.width * bitmap.rows * destPixelSize]);
-            
-            // Fill glyph background with background color.
-            uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.get());
-            for (uint32_t i = 0; i < bitmap.width * bitmap.rows; i++)
+                FT_LOAD_DEFAULT))/* load flags, see below */
             {
-                RGBABitmapPtr[i] = backgroundColor.colorValue;
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, GenerateFreeTypeErrorString("can not Load glyph", error));
+            }
+         
+            if (OutlineWidth > 0) // render outline
+            {
+                //initialize stroker, so you can create outline font
+                FT_Stroker stroker;
+                FT_Stroker_New(fLibrary, &stroker);
+                //  2 * 64 result in 2px outline
+                FT_Stroker_Set(stroker, OutlineWidth * 64, FT_STROKER_LINECAP_SQUARE, FT_STROKER_LINEJOIN_BEVEL, 0);
+                FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+                FT_Glyph glyph;
+                FT_Get_Glyph(face->glyph, &glyph);
+                FT_Glyph_StrokeBorder(&glyph, stroker, false, true);
+                FT_Glyph_To_Bitmap(&glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
+                FT_BitmapGlyph bitmapGlyph = reinterpret_cast<FT_BitmapGlyph>(glyph);
+                FreeTypeRenderer::BitmapProperties bitmapProperties = FreeTypeRenderer::GetBitmapGlyphProperties(bitmapGlyph->bitmap);
+                 
+                FreeTypeRenderer::GlyphRGBAParams params = { bitmapGlyph , backgroundColor,outlineColor, bitmapProperties };
+                LLUtils::Buffer rasterizedGlyph = std::move(FreeTypeRenderer::RenderGlyphToBuffer(params));
+
+                BlitBox source = {};
+                source.buffer = rasterizedGlyph.GetBuffer();
+                source.width = bitmapProperties.width;
+                source.height = bitmapProperties.height;
+                source.pixelSizeInbytes = destPixelSize;
+                source.rowPitch = destPixelSize * bitmapProperties.width;
+
+                dest.left = penX + bitmapGlyph->left;
+                dest.top = penY + rowHeight - bitmapGlyph->top - baselineHeight + workaroundHeightIssue;
+                BlitBox::Blit(dest, source);
             }
 
-            
-            //Blend source bitmap with the new RGBA bitmap
-            for (uint32_t i = 0; i < bitmap.rows * bitmap.width; i++)
+            if (true) // render text
             {
-                //Make the text overlay color transparent for text blending.
-                LLUtils::Color textOverlayColor = el.color;
-                textOverlayColor.A = 0;
+             
+                FT_Glyph glyph;
+                FT_Get_Glyph(face->glyph, &glyph);
+                FT_Glyph_To_Bitmap(&glyph, textRenderMOde, nullptr, true);
+                FT_BitmapGlyph bitmapGlyph = reinterpret_cast<FT_BitmapGlyph>(glyph);
+                FreeTypeRenderer::BitmapProperties bitmapProperties = FreeTypeRenderer::GetBitmapGlyphProperties(bitmapGlyph->bitmap);
+                 
+                FreeTypeRenderer::GlyphRGBAParams params = { bitmapGlyph , backgroundColor, el.textColor , bitmapProperties };
 
-                LLUtils::Color source(bitmap.buffer[i] << 24 | textOverlayColor.colorValue);
-                RGBABitmapPtr[i] = LLUtils::Color(RGBABitmapPtr[i]).Blend(source).colorValue;
+                LLUtils::Buffer rasterizedGlyph = std::move(FreeTypeRenderer::RenderGlyphToBuffer(params));
+
+                if (error)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to render glyph");
+
+                BlitBox source = {};
+                source.buffer = rasterizedGlyph.GetBuffer();
+                source.width = bitmapProperties.width;
+                source.height = bitmapProperties.height;
+                source.pixelSizeInbytes = destPixelSize;
+                source.rowPitch = destPixelSize * bitmapProperties.width;
+
+                dest.left = penX + bitmapGlyph->left;
+                dest.top = penY + rowHeight - bitmapGlyph->top - baselineHeight + workaroundHeightIssue;
+                FT_GlyphSlot  slot = face->glyph;
+                penX += slot->advance.x >> 6;
+                penY += slot->advance.y >> 6;
+
+                BlitBox::Blit(dest, source);
             }
-
-            LLUtils::Utility::BlitBox source = {};
-            source.buffer = RGBABitmap.get();
-            source.width = bitmap.width;
-            source.height = bitmap.rows;
-            source.pixelSizeInbytes = destPixelSize;
-            source.rowPitch = destPixelSize * bitmap.width;//
-
-            int bitmapTop = slot->bitmap_top;
-
-            dest.left = penX + slot->bitmap_left;
-            dest.top = penY + rowHeight - bitmapTop  - 1 - baselineHeight;
-            penX += slot->advance.x >> 6;
-            penY += slot->advance.y >> 6;
-
-            LLUtils::Utility::Blit(dest, source);
         }
     }
     out_bitmap.width = destWidth;
     out_bitmap.height = destHeight;
-    out_bitmap.buffer = imageBuffer;
+    out_bitmap.buffer = std::move(imageBuffer);
     out_bitmap.PixelSize = destPixelSize;
     out_bitmap.rowPitch = destRowPitch;
-    
-
-  /*  error = FT_Done_Face(face);
-    if (error)
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, can not destroy face");*/
  
 }
-#endif // endif
+#endif // endif OIV_BUILD_FREETYPE

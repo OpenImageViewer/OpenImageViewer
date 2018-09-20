@@ -1,5 +1,12 @@
 #pragma once
 #include <algorithm>
+#include <string>
+
+inline constexpr uint8_t operator "" _u8(unsigned long long int arg) noexcept
+{
+    return static_cast<uint8_t>(arg);
+}
+
 namespace LLUtils
 {
     struct Color
@@ -23,12 +30,20 @@ namespace LLUtils
             normalizedColor[3] = A / static_cast<T>(255.0);
             return normalizedColor;
         }
-        Color() {}
+        Color() = default;
+		
+        Color (double r, double g, double b, double a = 1.0)
+        {
+            R = static_cast<uint8_t>(std::round(r * 255.0));
+            G = static_cast<uint8_t>(std::round(g * 255.0));
+			B = static_cast<uint8_t>(std::round(b * 255.0));
+            A = static_cast<uint8_t>(std::round(a * 255.0));
+        }
         Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
         {
             R = r;
-            B = b;
             G = g;
+            B = b;
             A = a;
         }
         Color(uint32_t color)

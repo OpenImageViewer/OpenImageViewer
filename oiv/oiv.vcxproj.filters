@@ -12,6 +12,7 @@
     <ClCompile Include="ImageManager.cpp" />
     <ClCompile Include="ApiGlobal.cpp" />
     <ClCompile Include="FreeType\FreeTypeConnector.cpp" />
+    <ClCompile Include="FreeType\MetaTextParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="oiv.h" />
@@ -67,6 +68,9 @@
     <ClInclude Include="API\StringHelper.h" />
     <ClInclude Include="API\platform.h" />
     <ClInclude Include="API\Version.h" />
+    <ClInclude Include="FreeType\FreeTypeRenderer.h" />
+    <ClInclude Include="FreeType\BlitBox.h" />
+    <ClInclude Include="FreeType\MetaTextParser.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

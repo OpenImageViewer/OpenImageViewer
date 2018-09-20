@@ -43,14 +43,14 @@ namespace OIV
         string cyStr = request.args.GetArgValue("cy");
         double val = std::atof(request.args.GetArgValue("val").c_str());
 
-        int32_t cx = cxStr.empty() ? - 1 :  std::atoi(cxStr.c_str());
+        int32_t cx = cxStr.empty() ? -1 : std::atoi(cxStr.c_str());
         int32_t cy = cyStr.empty() ? -1 : std::atoi(cyStr.c_str());
 
         ZoomInternal(val, cx, cy);
-        
+
         wstringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
-            <<fixed << setprecision(2) << fImageProperties.scale.x * 100.0 << "%)";
+            << fixed << setprecision(2) << fImageProperties.scale.x * 100.0 << "%)";
 
         result.resValue = ss.str();
     }
@@ -65,9 +65,9 @@ namespace OIV
         if (type == "toggleBorders")
         {
             ToggleBorders();
-            result.resValue = std::wstring(L"Borders ") + (fWindow.GetShowBorders() == true ? L"On" : L"Off" );
+            result.resValue = std::wstring(L"Borders ") + (fWindow.GetShowBorders() == true ? L"On" : L"Off");
         }
-        else if (type=="quit")
+        else if (type == "quit")
         {
             PostQuitMessage(0);
         }
@@ -77,7 +77,7 @@ namespace OIV
             result.resValue = L"Grid ";
             result.resValue += fIsGridEnabled == true ? L"on" : L"off";
         }
-        else if (type =="slideShow")
+        else if (type == "slideShow")
         {
             ToggleSlideShow();
             result.resValue = L"Slideshow ";
@@ -144,7 +144,7 @@ namespace OIV
 
 
 
-        OIV_CMD_CreateText_Request requestText;
+        OIV_CMD_CreateText_Request requestText = {};
         OIV_CMD_CreateText_Response responseText;
 
         std::wstring wmsg = L"<textcolor=#ff8930>";
@@ -153,9 +153,16 @@ namespace OIV
 
         OIVString txt = OIV_ToOIVString(wmsg);
         requestText.text = txt.c_str();
-        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216);
-        requestText.fontPath = sFontPathCstr;
-        requestText.fontSize = 18;
+        requestText.backgroundColor = LLUtils::Color(0_u8, 0, 0, 216).colorValue;
+        requestText.fontPath = sFixedFontPathCstr;
+        requestText.fontSize = 12;
+        requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        requestText.outlineWidth = 2;
+
+        auto dpi = GetCurrentMonitorDPI();
+        requestText.DPIx = std::get<0>(dpi);
+        requestText.DPIy = std::get<1>(dpi);
+        
 
         if (OIVCommands::ExecuteCommand(OIV_CMD_CreateText, &requestText, &responseText) == RC_Success)
         {
@@ -167,13 +174,13 @@ namespace OIV
             imageProperties.imageRenderMode = IRM_Overlay;
             imageProperties.scale = 1.0;
             imageProperties.opacity = 1.0;
- 
+
             if (OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &imageProperties, &CmdNull()) == RC_Success)
             {
                 fRefreshOperation.Queue();
             }
         }
-        
+
     }
 
     void TestApp::CMD_OpenFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
@@ -191,16 +198,16 @@ namespace OIV
         OIV_AxisAlignedRTransform transform = OIV_AxisAlignedRTransform::AAT_None;
 
         std::string type = request.args.GetArgValue("type");
-        
-            if (false);
-            else if (type == "hflip")
-                transform = AAT_FlipHorizontal;
-            else if (type == "vflip")
-                transform = AAT_FlipVertical;
-            else if (type == "rotatecw")
-                transform = AAT_Rotate90CW;
-            else if (type == "rotateccw")
-                transform = AAT_Rotate90CCW;
+
+        if (false);
+        else if (type == "hflip")
+            transform = AAT_FlipHorizontal;
+        else if (type == "vflip")
+            transform = AAT_FlipVertical;
+        else if (type == "rotatecw")
+            transform = AAT_Rotate90CW;
+        else if (type == "rotateccw")
+            transform = AAT_Rotate90CCW;
 
 
         if (transform != OIV_AxisAlignedRTransform::AAT_None)
@@ -244,19 +251,19 @@ namespace OIV
             newValue = PerformColorOp(fColorExposure.saturation, op, val);
         else if (type == "contrast")
             newValue = PerformColorOp(fColorExposure.contrast, op, val);
-            
-            std::wstringstream ss;
-            
-            ss <<L"<textcolor=#00ff00>"<< LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" <<" " 
+
+        std::wstringstream ss;
+
+        ss << L"<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" << " "
             << LLUtils::StringUtility::ToWString(op) << L" " << LLUtils::StringUtility::ToWString(val);
-            
-            if (op == "increase" || op == "decrease")
-                ss << "%";
-        
-            
-        ss << "<textcolor=#00ff00> ("<< std::fixed << std::setprecision(0) << newValue * 100 << "%)";
-            result.resValue = ss.str();
-            UpdateExposure();
+
+        if (op == "increase" || op == "decrease")
+            ss << "%";
+
+
+        ss << "<textcolor=#00ff00> (" << std::fixed << std::setprecision(0) << newValue * 100 << "%)";
+        result.resValue = ss.str();
+        UpdateExposure();
     }
 
     void TestApp::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
@@ -266,7 +273,7 @@ namespace OIV
         string amount = request.args.GetArgValue("amount");;
 
         double amountVal = std::stod(amount, nullptr);
-            
+
 
 
         if (direction == "up")
@@ -278,13 +285,13 @@ namespace OIV
         else if (direction == "right")
             Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-amountVal), 0));
 
-        
+
         std::wstringstream ss;
 
         ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.description) << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
 
         result.resValue = ss.str();
-        
+
     }
 
     void TestApp::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
@@ -301,13 +308,13 @@ namespace OIV
                 result.resValue = LLUtils::StringUtility::ToWString(request.description);
             }
         }
-        else if (cmd == "selectedArea" )
+        else if (cmd == "selectedArea")
         {
             CopyVisibleToClipBoard();
             result.resValue = LLUtils::StringUtility::ToWString(request.description);
         }
     }
-    
+
 
     void TestApp::CMD_PasteFromClipboard(const CommandManager::CommandRequest& request,
         CommandManager::CommandResult& result)
@@ -363,14 +370,14 @@ namespace OIV
         }
 
     }
-    
+
 
     void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
     {
         using namespace std;
         wstringstream ss;
         std::wstring source = isFromLibrary ? L"OIV library" : L"OIV viewer";
-        ss << LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " << args.functionName << L" at "<< source << L"." << endl;
+        ss << LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " << args.functionName << L" at " << source << L"." << endl;
         ss << "Description: " << args.description << endl;
 
         if (args.systemErrorMessage.empty() == false)
@@ -382,13 +389,13 @@ namespace OIV
         DebugBreak();
     }
 
-    
+
     TestApp::TestApp()
-        :fRefreshOperation(std::bind(&TestApp::OnRefresh,this))
-        , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect,this))
+        :fRefreshOperation(std::bind(&TestApp::OnRefresh, this))
+        , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
         , fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
     {
-        
+
         fWindow.SetMenuChar(false);
 
         fImageProperties.imageHandle = ImageHandleDisplayed;
@@ -414,9 +421,9 @@ namespace OIV
         fDebugMessageOverlayProperties.scale = 1.0;
         fDebugMessageOverlayProperties.opacity = 1.0;
 
-        
+
         OIV_CMD_RegisterCallbacks_Request request;
-        
+
         request.OnException = [](OIV_Exception_Args args)
         {
 
@@ -440,8 +447,8 @@ namespace OIV
             HandleException(false, args);
         }
         );
-        
-     }
+
+    }
 
 
     void TestApp::AddCommandsAndKeyBindings()
@@ -473,7 +480,7 @@ namespace OIV
             ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
             ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
             ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
-            
+
             //Axis aligned transformations
             ,{ "Horizontal flip","cmd_axis_aligned_transform","type=hflip" ,"H" }
             ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
@@ -513,7 +520,7 @@ namespace OIV
 
         using namespace std;
         using namespace placeholders;
-        
+
         fCommandManager.AddCommand(CommandManager::Command("cmd_color_correction", std::bind(&TestApp::CMD_ColorCorrection, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_view_state", std::bind(&TestApp::CMD_ViewState, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
@@ -534,22 +541,27 @@ namespace OIV
                 , { desc.description, desc.command,desc.arguments });
     }
 
-    void TestApp::UpdateRefreshRate()
+    void TestApp::UpdateCurrentMonitorDescription()
     {
-        // update refresh rate after application has fully initializaes to boost startup time.
-        if (fAppFullyInitialized == true)
+        if (fIsFirstFrameDisplayed == true)
+
         {
             HMONITOR hmonitor = MonitorFromWindow(fWindow.GetHandle(), 0);
             if (hmonitor != fLastMonitor) // update frame rate only if monitor has changed.
             {
-                const MonitorDesc* const desc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
-                if (desc != nullptr)
-                {
-                    fRefreshRateTimes1000 = desc->DisplaySettings.dmDisplayFrequency == 59 ? 59940 : desc->DisplaySettings.dmDisplayFrequency * 1000;
-                }
-
+                fCurrentMonitorDesc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
                 fLastMonitor = hmonitor;
             }
+        }
+    }
+
+
+    void TestApp::UpdateRefreshRate()
+    {
+        UpdateCurrentMonitorDescription();
+        if (fCurrentMonitorDesc != nullptr)
+        {
+            fRefreshRateTimes1000 = fCurrentMonitorDesc->DisplaySettings.dmDisplayFrequency == 59 ? 59940 : fCurrentMonitorDesc->DisplaySettings.dmDisplayFrequency * 1000;
         }
     }
 
@@ -1806,9 +1818,19 @@ namespace OIV
         return false;
     }
 
+    std::tuple<uint16_t,uint16_t> TestApp::GetCurrentMonitorDPI() const
+    {
+     //   return { 96, 96 };
+        if (fCurrentMonitorDesc == nullptr)
+            return { 96, 96 };
+        else 
+            return { fCurrentMonitorDesc->DPIx, fCurrentMonitorDesc->DPIy };
+       //return fCurrentMonitorDesc == nullptr ? { 96, 96 } : {0, 0};// 
+    }
+
     void TestApp::SetUserMessage(const std::wstring& message)
     {
-        OIV_CMD_CreateText_Request request;
+        OIV_CMD_CreateText_Request request = {};
         OIV_CMD_CreateText_Response response;
         
         std::wstring wmsg = L"<textcolor=#ff8930>";
@@ -1816,10 +1838,14 @@ namespace OIV
         
         OIVString txt = OIV_ToOIVString(wmsg);
         request.text = txt.c_str();
-        request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        request.backgroundColor = 0; // LLUtils::Color(0, 0, 0, 180).colorValue;
         request.fontPath = sFontPathCstr;
-        //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
-        request.fontSize = 22;
+        request.fontSize = 12;
+        request.outlineWidth = 2;
+        request.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        auto dpi = GetCurrentMonitorDPI();
+        request.DPIx = std::get<0>(dpi);
+        request.DPIy = std::get<1>(dpi);
 
         if (fUserMessageOverlayProperties.imageHandle != ImageHandleNull)
             OIVCommands::UnloadImage(fUserMessageOverlayProperties.imageHandle);
@@ -1840,7 +1866,7 @@ namespace OIV
 
     void TestApp::SetDebugMessage(const std::string& message)
     {
-        OIV_CMD_CreateText_Request request;
+        OIV_CMD_CreateText_Request request = {};
         OIV_CMD_CreateText_Response response;
 
         std::wstring wmsg = L"<textcolor=#ff8930>";
@@ -1848,10 +1874,12 @@ namespace OIV
 
         OIVString txt = OIV_ToOIVString(wmsg);
         request.text = txt.c_str();
-        request.backgroundColor = LLUtils::Color(0, 0, 0, 180);
+        request.backgroundColor = LLUtils::Color(0_u8, 0, 0, 180).colorValue;
         request.fontPath = sFontPathCstr;
         //request.fontPath = L"C:\\Windows\\Fonts\\ahronbd.ttf";
-        request.fontSize = 26;
+        request.fontSize = 12;
+        request.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        request.outlineWidth = 2;
 
         if (fDebugMessageOverlayProperties.imageHandle != ImageHandleNull)
             OIVCommands::UnloadImage(fDebugMessageOverlayProperties.imageHandle);
@@ -1909,7 +1937,7 @@ namespace OIV
                          "Press <textcolor=#25bc25>F1<textcolor=#4a80e2> to show key bindings";
         
 
-        OIV_CMD_CreateText_Request requestText;
+        OIV_CMD_CreateText_Request requestText = { };
         OIV_CMD_CreateText_Response responseText;
 
         
@@ -1917,9 +1945,12 @@ namespace OIV
         wmsg += LLUtils::StringUtility::ToWString(message);
         OIVString txt = OIV_ToOIVString(wmsg);
         requestText.text = txt.c_str();
-        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 0);
+        requestText.backgroundColor = LLUtils::Color(0).colorValue;
         requestText.fontPath = sFontPathCstr;
-        requestText.fontSize = 72;
+        requestText.fontSize = 44;
+        requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        requestText.outlineWidth = 3;
+
 
         
 

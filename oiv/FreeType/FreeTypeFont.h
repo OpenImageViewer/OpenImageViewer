@@ -24,7 +24,7 @@ public:
   //          LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, can not destroy face");
     }
 
-    void SetSize(uint16_t fontSize)
+    void SetSize(uint16_t fontSize, uint16_t DPIx, uint16_t DPIy)
     {
         fFontSize = fontSize;
         FT_Error error =
@@ -32,8 +32,9 @@ public:
                 fFace,    /* handle to face object           */
                 0,       /* char_width in 1/64th of points  */
                 fontSize << 6,   /* char_height in 1/64th of points */
-                0,     /* horizontal device resolution    */
-                0);   /* vertical device resolution      */
+                DPIx,     /* horizontal device resolution    */
+                DPIy);   /* vertical device resolution      */
+
     }
 
     FT_Face GetFace()

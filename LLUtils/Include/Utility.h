@@ -22,42 +22,5 @@ namespace LLUtils
         {
             return (T(0) < val) - (val < T(0));
         }
-
-
-        struct BlitBox
-        {
-            std::byte* buffer;
-            uint32_t rowPitch;
-            uint32_t width;
-            uint32_t height;
-            uint32_t left;
-            uint32_t top;
-            uint32_t pixelSizeInbytes;
-            
-            int32_t GetStartOffset() const
-            {
-                return (top * rowPitch) + (left * pixelSizeInbytes);
-                
-            }
-
-
-        };
-
-        static void Blit(BlitBox& dst, const BlitBox& src)
-        {
-            const std::byte* srcPos = src.buffer + src.GetStartOffset();
-            std::byte* dstPos = dst.buffer + dst.GetStartOffset();
-
-            const uint32_t bytesPerCopy = src.pixelSizeInbytes * src.width;
-
-            for (uint32_t y = src.top; y < src.height; y++)
-            {
-                memcpy(dstPos, srcPos, bytesPerCopy);
-                dstPos += dst.rowPitch;
-                srcPos += src.rowPitch;
-            }
-        }
-
-      
     };
 }

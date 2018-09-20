@@ -12,6 +12,8 @@ namespace OIV
         DEVMODE DisplaySettings;
         MONITORINFOEX monitorInfo;
         HMONITOR handle;
+        uint16_t DPIx;
+        uint16_t DPIy;
     };
 
     class MonitorInfo  : public LLUtils::Singleton<MonitorInfo>

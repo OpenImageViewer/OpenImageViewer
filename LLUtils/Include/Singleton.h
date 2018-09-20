@@ -13,7 +13,7 @@ namespace LLUtils
             void Create()
             {
                 if (instance == nullptr)
-                    instance = std::make_unique<T>();
+                    instance = std::unique_ptr<T>(new T());// std::make_unique<T>();
                 
             }
 

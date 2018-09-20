@@ -17,8 +17,11 @@
 #include "Keyboard/KeyBindings.h"
 #include "SelectionRect.h"
 
+
+
 namespace OIV
 {
+    struct MonitorDesc;
     enum class ImageSizeType
     {
           Original
@@ -43,8 +46,10 @@ namespace OIV
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
+        std::tuple<uint16_t, uint16_t> GetCurrentMonitorDPI() const;
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
+        void UpdateCurrentMonitorDescription();
         void UpdateRefreshRate();
         void PerformRefresh();
         void SetUserMessage(const std::wstring& message);
@@ -137,6 +142,7 @@ namespace OIV
         HMONITOR fLastMonitor = nullptr;
         bool fAppFullyInitialized = false;
         uint32_t fRefreshRateTimes1000 = 60'000;
+        const MonitorDesc* fCurrentMonitorDesc = nullptr;
 #pragma endregion FrameLimiter
         Win32::Win32WIndow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
@@ -157,8 +163,10 @@ namespace OIV
         uint32_t fDelayPerCharacter = 40;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
 
-        inline static const OIVString sFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\consola.ttf");
+        inline static const OIVString sFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\segoeuib.ttf");
         inline static const OIVCHAR* sFontPathCstr = sFontPath.c_str();
+        inline static const OIVString sFixedFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\consola.ttf");
+        inline static const OIVCHAR* sFixedFontPathCstr = sFixedFontPath.c_str();
 
         static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
         static constexpr int FileIndexStart = std::numeric_limits<int>::min();

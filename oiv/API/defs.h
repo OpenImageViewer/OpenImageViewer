@@ -215,12 +215,24 @@ typedef wchar_t OIVCHAR;
     };
 
 
+    enum OIV_PROP_CreateText_Mode
+    {
+          CTM_None = 0 << 0
+        , CTM_AntiAliased = 1 << 0
+        , CTM_SubpixelAntiAliased = 1 << 1
+    };
+
     struct OIV_CMD_CreateText_Request
     {
         const OIVCHAR* text;
         const OIVCHAR* fontPath;
         uint16_t fontSize;
-        LLUtils::Color backgroundColor;
+        uint32_t backgroundColor;
+        uint8_t outlineWidth;
+        uint8_t outlineColor;
+        uint16_t DPIx;
+        uint16_t DPIy;
+        OIV_PROP_CreateText_Mode renderMode;
     };
 
     

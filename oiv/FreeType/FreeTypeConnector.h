@@ -9,56 +9,69 @@
 #include <string>
 #include <vector>
 #include <Color.h>
+#include <Buffer.h>
 #include <Singleton.h>
+
 
 class FreeTypeConnector : public LLUtils::Singleton<FreeTypeConnector>
 {
     friend class LLUtils::Singleton<FreeTypeConnector>;
 public:
+    ~FreeTypeConnector();
 
     struct Bitmap
     {
         uint32_t width;
         uint32_t height;
-        std::byte* buffer;
+        LLUtils::Buffer buffer;
         uint32_t PixelSize;
         uint32_t rowPitch;
     };
     
-    struct FormattedTextEntry
+    enum class RenderMode
     {
-        uint32_t color;
-        uint32_t size;
-        u8string text;
+          Default
+        , Antialiased
+        , SubpixelAntiAliased
     };
 
-
-    struct Format
+    struct TextCreateParams
     {
-        uint32_t color;
-        uint32_t backgroundColor;
-        uint32_t size;
-        static Format Parse(const u8string& format);
+        std::string fontPath;
+        std::string text;
+        uint16_t fontSize;
+        LLUtils::Color backgroundColor;
+        LLUtils::Color outlineColor;
+        uint32_t outlineWidth;
+        RenderMode renderMode;
+        uint16_t DPIx;
+        uint16_t DPIy;
     };
 
-    using ListFormattedTextEntry = std::vector<FormattedTextEntry>;
+    void CreateBitmap(const TextCreateParams& textCreateParams, Bitmap & out_bitmap);
 
-    using ListListFormattedTextEntry = std::vector<ListFormattedTextEntry>;
-    
-    ~FreeTypeConnector();
-    std::vector<FreeTypeConnector::FormattedTextEntry> GetFormattedText(u8string text, int fontSize);
-    
-    void CreateBitmap(const u8string& text
-        , const u8string& fontPath
-        , uint16_t fontSize
-        , LLUtils::Color color
-        , Bitmap &bitmap
-        
-    );
-    static FreeTypeConnector& GetSingleton();
+
 private:
-    static FreeTypeConnector sInstance;
+       // private types
+    struct TextMesureParams
+    {
+        TextCreateParams createParams;
+        FreeTypeFont* font;
+    };
+
+    struct TextMesureResult
+    {
+        uint32_t width;
+        uint32_t height;
+        uint32_t rowHeight;
+        uint32_t baselineHeight;
+    };
+    //private member methods
+
     FreeTypeConnector();
+    FreeTypeFont* GetOrCreateFont(std::string fontPath);
+    std::string GenerateFreeTypeErrorString(std::string userMessage, FT_Error error);
+    void MesaureText(const TextMesureParams& measureParams, TextMesureResult& out_result);
     
 
 private:

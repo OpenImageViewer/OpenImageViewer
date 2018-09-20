@@ -7,14 +7,10 @@ namespace OIV
     class FreeTypeHelper
     {
     public:
-        static IMCodec::ImageSharedPtr CreateRGBAText(const std::string& text
-            , const std::string& fontPath
-            , uint16_t fontSize
-            , LLUtils::Color backGroundColor
-        )
+        static IMCodec::ImageSharedPtr CreateRGBAText(const FreeTypeConnector::TextCreateParams& createParams)
         {
             FreeTypeConnector::Bitmap rasterizedText;
-            FreeTypeConnector::GetSingleton().CreateBitmap(text, fontPath, fontSize, backGroundColor, rasterizedText);
+            FreeTypeConnector::GetSingleton().CreateBitmap(createParams, rasterizedText);
 
             if (rasterizedText.width != 0 && rasterizedText.height != 0)
                 return BitmapToRGBAImage(rasterizedText);
@@ -29,9 +25,7 @@ namespace OIV
             ImageDescriptor props;
             props.fProperties.NumSubImages = 0;
             props.fProperties.Height = rasterizedText.height;
-            const size_t bufferSize = rasterizedText.rowPitch * rasterizedText.height;
-            props.fData.Allocate(bufferSize);
-            props.fData.Write(rasterizedText.buffer, 0, bufferSize);
+            props.fData = rasterizedText.buffer.Clone();
             props.fProperties.RowPitchInBytes = rasterizedText.rowPitch;
             props.fProperties.Width = rasterizedText.width;
             props.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;

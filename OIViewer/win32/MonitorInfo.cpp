@@ -1,5 +1,6 @@
 #include "MonitorInfo.h"
 #include <algorithm>
+#include <shellscalingapi.h>
 
 namespace OIV
 {
@@ -64,6 +65,13 @@ namespace OIV
             {
                 desc.monitorInfo = monitorInfo;
                 desc.handle = hMonitor;
+
+                UINT dpix;
+                UINT dpiy;
+                GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy);
+                desc.DPIx = dpix;
+                desc.DPIy = dpiy;
+
                 _this->mHMonitorToDesc.insert(std::make_pair(hMonitor, desc));
                 break;
             }
