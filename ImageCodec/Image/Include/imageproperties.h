@@ -50,7 +50,7 @@ namespace IMCodec
         };
 
         Properties fProperties;
-        Buffer fData;
+        LLUtils::Buffer fData;
         MetaData fMetaData;
 
 		bool IsInitialized() const;
