@@ -127,6 +127,7 @@ namespace OIV
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
+        void AfterFirstFrameDisplayed();
         void DisplayImage(ImageDescriptor& descriptor, bool resetScrollState) ;
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
@@ -140,7 +141,6 @@ namespace OIV
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
         Win32::HighPrecisionTimer fRefreshTimer;
         HMONITOR fLastMonitor = nullptr;
-        bool fAppFullyInitialized = false;
         uint32_t fRefreshRateTimes1000 = 60'000;
         const MonitorDesc* fCurrentMonitorDesc = nullptr;
 #pragma endregion FrameLimiter
@@ -175,6 +175,7 @@ namespace OIV
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
         bool fIsInitialLoad = false;
+        bool fIsFirstFrameDisplayed = false;
         bool fUseRainbowNormalization = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;

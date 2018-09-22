@@ -544,7 +544,6 @@ namespace OIV
     void TestApp::UpdateCurrentMonitorDescription()
     {
         if (fIsFirstFrameDisplayed == true)
-
         {
             HMONITOR hmonitor = MonitorFromWindow(fWindow.GetHandle(), 0);
             if (hmonitor != fLastMonitor) // update frame rate only if monitor has changed.
@@ -712,7 +711,7 @@ namespace OIV
             ImageHandle oldImage = fOpenedImage.imageHandle;
 
             fRefreshOperation.Begin();
-            DisplayImage(fImageBeingOpened,true);
+            DisplayImage(fImageBeingOpened, true);
             SetOpenImage(fImageBeingOpened);
             FitToClientAreaAndCenter();
             UnloadWelcomeMessage();
@@ -741,10 +740,7 @@ namespace OIV
         }
 
         if (fIsInitialLoad == true)
-        {
-            fIsInitialLoad = false;
-            PostInitOperations();
-        }
+            fWindow.Show(true);
     }
 
     void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
@@ -901,16 +897,17 @@ namespace OIV
             asyncResult.wait();
 
         //If there is no initial file, perform post init operations at the beginning
-        if (isInitialFile == false)
-            PostInitOperations();
-
+        if (fIsInitialLoad == false)
+            fWindow.Show(true);
+        
+            
     }
 
     void TestApp::PostInitOperations()
     {
-        fWindow.Show(true);
         // load settings
         fSettings.Load();
+        fSettings.Save();
 
         //If a file has been succesfuly loaded, index all the file in the folder
         if (fOpenedImage.source == ImageSource::File)
@@ -919,7 +916,6 @@ namespace OIV
             ShowWelcomeMessage();
 
         AddCommandsAndKeyBindings();
-        fAppFullyInitialized = true;
     }
 
     void TestApp::Destroy()
@@ -1660,6 +1656,13 @@ namespace OIV
 
     }
 
+
+    void TestApp::AfterFirstFrameDisplayed()
+    {
+        PostInitOperations();
+    }
+    
+
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         bool handled = false;
@@ -1671,7 +1674,17 @@ namespace OIV
             UpdateWindowSize();
             fRefreshOperation.Queue();
             break;
+        case WM_SHOWWINDOW:
+            if (fIsFirstFrameDisplayed == false)
+            {
+                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED, 0, 0);
+                fIsFirstFrameDisplayed = true;
+            }
+            break;
+        case Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED:
+            AfterFirstFrameDisplayed();
 
+            break;
         case WM_TIMER:
             if (uMsg.wParam == cTimerID)
             
