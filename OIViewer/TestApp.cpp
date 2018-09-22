@@ -329,7 +329,24 @@ namespace OIV
         using namespace std;
         string cmd = request.args.GetArgValue("cmd");
         if (cmd == "cropSelectedArea")
+        {
             CropVisibleImage();
+        }
+        else if (cmd == "selectAll")
+        {
+            result.resValue = LLUtils::StringUtility::ToWString(request.description);
+            using namespace LLUtils;
+            RectI32 imageInScreenSpace = static_cast<LLUtils::RectI32>(ImageToClient({ { 0.0,0.0 }, { GetImageSize(ImageSizeType::Transformed) } }));
+
+            fRefreshOperation.Begin();
+            fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, { 0,0 });
+            fSelectionRect.SetSelection(SelectionRect::Operation::BeginDrag, imageInScreenSpace.GetCorner(Corner::TopLeft));
+            fSelectionRect.SetSelection(SelectionRect::Operation::Drag, imageInScreenSpace.GetCorner(Corner::BottomRight));
+            fSelectionRect.SetSelection(SelectionRect::Operation::EndDrag, imageInScreenSpace.GetCorner(Corner::BottomRight));
+            SaveImageSpaceSelection();
+            fRefreshOperation.End();
+        }
+            
     }
 
 
@@ -501,6 +518,7 @@ namespace OIV
 
             //Image manipulation
             ,{ "Crop to selected area","cmd_imageManipulation","cmd=cropSelectedArea" ,"C" }
+            ,{ "Select all","cmd_imageManipulation","cmd=selectAll" ,"Control+A" }
 
             //Clipboard
             ,{ "Copy selected area to clipboard","cmd_copyToClipboard","cmd=selectedArea" ,"Control+C" }
