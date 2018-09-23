@@ -263,7 +263,7 @@ namespace IMUtil
 
 
         template <class T, class SampleType = T>
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode = NormalizeMode::Default)
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode)
         {
             const SampleType* sampleData = reinterpret_cast<const SampleType*> (sourceImage->GetBuffer());
 

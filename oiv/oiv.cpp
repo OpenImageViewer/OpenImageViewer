@@ -195,22 +195,23 @@ namespace OIV
             // Texel format supported by the renderer is currently RGBA.
             // support for other texel formats may save conversion.
             const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+            const IMUtil::ImageUtil::NormalizeMode normalizeMode = static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode);
 
             switch (image->GetImageType())
             {
             case IMCodec::TexelFormat::F_X16:
-                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat);
+                image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::F_X24:
-                image = IMUtil::ImageUtil::Normalize<float,Float24>(image, targetTexelFormat);
+                image = IMUtil::ImageUtil::Normalize<float,Float24>(image, targetTexelFormat, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::F_X32:
-                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat,static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
+                image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
                 break;
             case IMCodec::TexelFormat::I_X8:
-                image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat, static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode));
+                image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat, normalizeMode);
                 break;
 
             default:
