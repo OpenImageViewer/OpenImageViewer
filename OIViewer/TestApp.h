@@ -71,6 +71,8 @@ namespace OIV
         void CMD_PasteFromClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_ImageManipulation(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         
 #pragma endregion //Commands
         void OnRefresh();

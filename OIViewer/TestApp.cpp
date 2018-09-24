@@ -62,6 +62,9 @@ namespace OIV
 
         string type = request.args.GetArgValue("type");
 
+        bool fullscreenModeChanged = false;
+        bool filterTypeChanged = false;
+
         if (type == "toggleBorders")
         {
             ToggleBorders();
@@ -83,17 +86,37 @@ namespace OIV
             result.resValue = L"Slideshow ";
             result.resValue += fIsSlideShowActive == true ? L"on" : L"off";
         }
-
-        else
+        else if (type == "toggleNormalization")
         {
-            // full screen 
+            // Change normalization mode
+            fUseRainbowNormalization = !fUseRainbowNormalization;
+            DisplayImage(fOpenedImage, false);
+            result.resValue = fUseRainbowNormalization ? L"Rainbow normalization" : L"Grayscale normalization";
+        }
+        else if (type == "imageFilterUp")
+        {
+            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) + 1));
+            filterTypeChanged = true;
+        }
+        else if (type == "imageFilterDown")
+        {
+            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
+            filterTypeChanged = true;
+        }
+        else if (type == "toggleFullScreen") // Toggle fullscreen
+        {
+            fWindow.ToggleFullScreen(false);
+            fullscreenModeChanged = true;
+        }
+        else if (type == "toggleMultiFullScreen") //Toggle multi fullscreen
+        {
+            fWindow.ToggleFullScreen(true);
+            fullscreenModeChanged = true;
+        }
 
-            if (type == "toggleFullScreen") // Toggle fullscreen
-                fWindow.ToggleFullScreen(false);
 
-            else if (type == "toggleMultiFullScreen") //Toggle multi fullscreen
-                fWindow.ToggleFullScreen(true);
-
+        if (fullscreenModeChanged == true)
+        {
             switch (fWindow.GetFullScreenState())
             {
             case FullSceenState::MultiScreen:
@@ -108,6 +131,21 @@ namespace OIV
             }
         }
 
+        if (filterTypeChanged == true)
+        {
+            switch (GetFilterType())
+            {
+            case FT_None:
+                result.resValue = L"No filtering";
+                break;
+            case FT_Linear:
+                result.resValue = L"Linear filtering";
+                break;
+            case FT_Lanczos3:
+                result.resValue = L"Lanczos3 filtering";
+                break;
+            }
+        }
     }
 
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
@@ -280,6 +318,20 @@ namespace OIV
             result.resValue = L"Reset color correction to default";
     }
 
+    void TestApp::CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace LLUtils;
+        using namespace std;
+        string type = request.args.GetArgValue("type");
+
+        if (type == "recyclebin")
+            DeleteOpenedFile(false);
+        else if (type == "permanently")
+            DeleteOpenedFile(true);
+
+        result.resValue = LLUtils::StringUtility::ToWString(request.description);
+    }
+
 
 
     void TestApp::CMD_ColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
@@ -438,6 +490,27 @@ namespace OIV
 
     }
 
+    void TestApp::CMD_Shell(const CommandManager::CommandRequest& request,
+        CommandManager::CommandResult& result)
+    {
+        using namespace std;
+        string cmd = request.args.GetArgValue("cmd");
+        result.resValue = LLUtils::StringUtility::ToWString(request.description);
+
+        if (cmd == "newWindow")
+        {
+            using namespace LLUtils;
+            //Open new window
+            ShellExecute(nullptr, L"open", StringUtility::ToNativeString(PlatformUtility::GetExePath()).c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+        }
+        else if (cmd == "openPhotoshop")
+        {
+            std::wstring photoshopApplicationPath = PhotoShopFinder::FindPhotoShop();
+            if (photoshopApplicationPath.empty() == false)
+                ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
+        }
+    }
+
 
     void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
     {
@@ -528,6 +601,8 @@ namespace OIV
             //general
              { "Key bindings","cmd_toggle_keybindings","" ,"F1" }
             ,{ "Open file","cmd_open_file","" ,"Control+O" }
+            ,{ "Delete file","cmd_delete_file","type=recyclebin" ,"GreyDelete" }
+            ,{ "Delete file permanently","cmd_delete_file","type=permanently" ,"Shift+GreyDelete" }
 
             //View state
             ,{ "Toggle full screen","cmd_view_state","type=toggleFullScreen" ,"Alt+Enter" }
@@ -536,6 +611,14 @@ namespace OIV
             ,{ "Quit","cmd_view_state","type=quit" ,"Escape" }
             ,{ "Grid","cmd_view_state","type=grid" ,"G" }
             ,{ "Slide show","cmd_view_state","type=slideShow" ,"Space" }
+            ,{ "Toggle normalization","cmd_view_state","type=toggleNormalization" ,"N" }
+            ,{ "Image filter up","cmd_view_state","type=imageFilterUp" ,"Period" }
+            ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
+
+
+        
+            
+
 
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
@@ -553,14 +636,17 @@ namespace OIV
             ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
             ,{ "Rotate clockwise","cmd_axis_aligned_transform","type=rotatecw" ,"RBracket" }
             ,{ "Rotate counter clockwise","cmd_axis_aligned_transform","type=rotateccw" ,"LBracket" }
+
             //Pan
             ,{ "Pan up","cmd_pan","direction=up;amount=1" ,"Numpad8" }
             ,{ "Pan down","cmd_pan","direction=down;amount=1" ,"Numpad2" }
             ,{ "Pan left","cmd_pan","direction=left;amount=1" ,"Numpad4" }
             ,{ "Pan right","cmd_pan","direction=right;amount=1" ,"Numpad6" }
+
             //Zoom
             ,{ "Zoom in ","cmd_zoom","val=0.1" ,"Add" }
             ,{ "Zoom out","cmd_zoom","val=-0.1" ,"Subtract" }
+
             //Image placement
             ,{ "Original size","cmd_placement","cmd=originalSize" ,"Multiply" }
             ,{ "Fit to screen","cmd_placement","cmd=fitToScreen" ,"KeyPadDivide" }
@@ -569,6 +655,10 @@ namespace OIV
             //Image manipulation
             ,{ "Crop to selected area","cmd_imageManipulation","cmd=cropSelectedArea" ,"C" }
             ,{ "Select all","cmd_imageManipulation","cmd=selectAll" ,"Control+A" }
+
+            //Shell
+            ,{ "Open new window","cmd_shell","cmd=newWindow" ,"Control+N" }
+            ,{ "Open in photoshop","cmd_shell","cmd=openPhotoshop" ,"P" }
 
             //Clipboard
             ,{ "Copy selected area to clipboard","cmd_copyToClipboard","cmd=selectedArea" ,"Control+C" }
@@ -602,6 +692,8 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_pasteFromClipboard", std::bind(&TestApp::CMD_PasteFromClipboard, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_imageManipulation", std::bind(&TestApp::CMD_ImageManipulation, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)));
 
 
         for (const CommandDesc& desc : fCommandDescription)
@@ -1150,58 +1242,11 @@ namespace OIV
     bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
         const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam, evnt->message.lParam));
-
-
         if (bindings.command.empty() == false
             && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
                 return true; // return if operation has been handled.
         
-        bool handled = true;
-        bool IsAlt =  (GetKeyState(VK_MENU) & static_cast<USHORT>(0x8000)) != 0;
-        bool IsControl = (GetKeyState(VK_CONTROL) & static_cast<USHORT>(0x8000)) != 0;
-        bool IsShift = (GetKeyState(VK_SHIFT) & static_cast<USHORT>(0x8000)) != 0;
-
-        switch (evnt->message.wParam)
-        {
-        case 'N':
-            if (IsControl == true)
-            {
-                using namespace LLUtils;
-                //Open new window
-                ShellExecute(nullptr, L"open", StringUtility::ToNativeString(PlatformUtility::GetExePath()).c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
-
-            }
-            else
-            {
-                // Change normalization mode
-                fUseRainbowNormalization = !fUseRainbowNormalization;
-                DisplayImage(fOpenedImage, false);
-            }
-            break;
-        case VK_OEM_PERIOD:
-            SetFilterLevel(static_cast<OIV_Filter_type>( static_cast<int>(GetFilterType()) + 1));
-            break;
-        case VK_OEM_COMMA:
-            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
-            break;
-        
-        case VK_DELETE:
-         
-             DeleteOpenedFile(IsShift);
-            break;
-        case 'P':
-        {
-            std::wstring photoshopApplicationPath = PhotoShopFinder::FindPhotoShop();
-            if (photoshopApplicationPath.empty() == false)
-                ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), fOpenedImage.fileName.c_str(), nullptr, SW_SHOWDEFAULT);
-        }
-        default:
-            handled = false;
-        break;
-
-        }
-
-        return handled;
+        return false;
     }
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
