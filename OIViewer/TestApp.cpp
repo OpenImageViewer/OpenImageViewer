@@ -121,24 +121,74 @@ namespace OIV
         }
 
         using namespace std;
-        stringstream ss;
-        size_t maxLength = 0;
+
+        
+        struct ColumnInfo
+        {
+             size_t maxFirstLength;
+             size_t maxSecondLength;
+        };
+        //TODO: get max lines from window height
+        const int MaxLines = 24;
+        const int totalColumns = std::ceil(static_cast<double>(fCommandDescription.size()) / MaxLines);
+        std::vector<ColumnInfo> columnInfo(totalColumns);
+        int currentcolumn = 0;
+        int currentLine = 0;
+        
         for (const CommandDesc& desc : fCommandDescription)
-            maxLength = std::max(maxLength, desc.description.length());
+        {
+            
+            columnInfo[currentcolumn].maxFirstLength = std::max(columnInfo[currentcolumn].maxFirstLength, desc.description.length());
+            columnInfo[currentcolumn].maxSecondLength = std::max(columnInfo[currentcolumn].maxSecondLength, desc.keybindings.length());
+            currentLine++;
+            if (currentLine >= MaxLines)
+            {
+                currentLine = 0;
+                currentcolumn++;
+            }
+        }
+        
+        currentcolumn = 0;
+        currentLine = 0;
+
+        vector<std::string> lines(MaxLines);
+
 
         for (const CommandDesc& desc : fCommandDescription)
         {
+            stringstream ss;
             ss << "<textcolor=#ff8930>" << desc.description;
+            
 
             size_t currentLength = desc.description.length();
-            while (currentLength++ < maxLength)
+            while (currentLength++ < columnInfo[currentcolumn].maxFirstLength)
                 ss << ".";
 
-            ss << "..." << "<textcolor=#98f733>" << desc.keybindings << "\n";
+            ss << "..." << "<textcolor=#98f733>" << desc.keybindings ;
+            if (currentcolumn < totalColumns - 1)
+            {
+                size_t currentLength = desc.keybindings.length();
+                while (currentLength++ < columnInfo[currentcolumn].maxSecondLength)
+                    ss << " ";
+                
+                ss << "      ";
+            }
 
+            lines[currentLine] += ss.str();
+
+            currentLine++;
+            if (currentLine >= MaxLines)
+            {
+                currentLine = 0;
+                currentcolumn++;
+            }
         }
 
-        std::string message = ss.str();
+        stringstream ss1;
+        for (const std::string& line : lines)
+            ss1 << line << "\n";
+
+        std::string message = ss1.str();
         if (message[message.size() - 1] == '\n')
             message.erase(message.size() - 1);
 
