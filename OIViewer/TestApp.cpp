@@ -113,6 +113,12 @@ namespace OIV
             fWindow.ToggleFullScreen(true);
             fullscreenModeChanged = true;
         }
+        else if (type == "toggleresetoffset")
+        {
+            fResetTransformationMode = static_cast<ResetTransformationMode>((static_cast<int>(fResetTransformationMode) + 1) % static_cast<int>(ResetTransformationMode::Count));
+            result.resValue = fResetTransformationMode == ResetTransformationMode::DoNothing ? L"Don't auto reset image state" : L"Auto reset image state";
+        }
+
 
 
         if (fullscreenModeChanged == true)
@@ -614,11 +620,7 @@ namespace OIV
             ,{ "Toggle normalization","cmd_view_state","type=toggleNormalization" ,"N" }
             ,{ "Image filter up","cmd_view_state","type=imageFilterUp" ,"Period" }
             ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
-
-
-        
-            
-
+            ,{ "Toggle reset offset on load","cmd_view_state","type=toggleresetoffset" ,"Backslash" }
 
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
@@ -873,7 +875,10 @@ namespace OIV
             fRefreshOperation.Begin();
             DisplayImage(fImageBeingOpened, true);
             SetOpenImage(fImageBeingOpened);
-            FitToClientAreaAndCenter();
+			
+            if (fResetTransformationMode == ResetTransformationMode::ResetAll)
+                FitToClientAreaAndCenter();
+
             UnloadWelcomeMessage();
             
             //Don't refresh on initial file, wait for WM_SIZE
