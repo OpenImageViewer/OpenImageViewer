@@ -388,9 +388,7 @@ namespace OIV
         buffer.uSelectionRect[2] = fSelectionRect.p1.x;
         buffer.uSelectionRect[3] = fSelectionRect.p1.y;
         fBufferSelection->Update();
-    
-      
-        Redraw();
+        
         return 0;
     }
 

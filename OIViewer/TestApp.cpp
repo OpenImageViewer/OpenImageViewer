@@ -540,6 +540,7 @@ namespace OIV
         :fRefreshOperation(std::bind(&TestApp::OnRefresh, this))
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
         , fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
+        , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
     {
 
         fWindow.SetMenuChar(false);
@@ -755,6 +756,16 @@ namespace OIV
         {
             OIVCommands::Refresh();
         }
+    }
+
+    void TestApp::OnSelectionRectChanged(const LLUtils::RectI32& selectionRect, bool isVisible)
+    {
+        if (isVisible)
+            OIVCommands::SetSelectionRect(selectionRect);
+        else
+            OIVCommands::CancelSelectionRect();
+
+        fRefreshOperation.Queue();
     }
 
     // callback from queued operation

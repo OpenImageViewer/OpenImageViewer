@@ -7,7 +7,7 @@ namespace OIV
     {
 
     public:
-
+        using SelectionRectChangedCallback = std::function<void(const LLUtils::RectI32&, bool)>;
         enum class Operation
         {
               NoOp
@@ -24,13 +24,14 @@ namespace OIV
             , LockHeight
         };
 
+        SelectionRect(SelectionRectChangedCallback callback);
         void SetSelection(const Operation operation, const LLUtils::PointI32& posWindowSpace);
         void UpdateSelection(const LLUtils::RectI32& selectionRect);
         const LLUtils::RectI32& GetSelectionRect() const;
         Operation GetOperation() const { return fOperation; }
 
     private: // methods
-        void UpdateVisualSelectionRect() const;
+        void NotifySelectionRectChanged(bool isVisible) const;
         LLUtils::Corner OppositeCorner(const LLUtils::Corner corner) const;
         LLUtils::Corner GetClosestCorner(const LLUtils::PointI32& point) const;
 
@@ -43,5 +44,6 @@ namespace OIV
         const uint16_t pixelsThreshold = 15;
         const uint16_t pixelsThresholdSquare = pixelsThreshold * pixelsThreshold;
         LockMode fLockMode = LockMode::NoLock;
+        SelectionRectChangedCallback fCallback;
     };
 }

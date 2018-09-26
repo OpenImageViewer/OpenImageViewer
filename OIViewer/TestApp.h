@@ -83,6 +83,7 @@ namespace OIV
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         
 #pragma endregion //Commands
+        void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
         void OnRefresh();
         void OnRefreshTimer();
         void OnPreserveSelectionRect();

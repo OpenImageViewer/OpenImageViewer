@@ -3,9 +3,9 @@
 
 namespace OIV
 {
-    void SelectionRect::UpdateVisualSelectionRect() const
+    void SelectionRect::NotifySelectionRectChanged(bool isVisible) const
     {
-        OIVCommands::SetSelectionRect(fSelectionRect);
+        fCallback(fSelectionRect, isVisible);
     }
 
     const LLUtils::RectI32& SelectionRect::GetSelectionRect() const
@@ -59,6 +59,11 @@ namespace OIV
         }
 
         LL_EXCEPTION(Exception::ErrorCode::LogicError, "Unexpected value");
+    }
+
+    SelectionRect::SelectionRect(SelectionRectChangedCallback callback) : fCallback(callback)
+    {
+
     }
 
     void SelectionRect::SetSelection(const Operation operation, const LLUtils::PointI32& posWindowSpace)
@@ -185,7 +190,7 @@ namespace OIV
                        fLockMode == LockMode::LockHeight ? bottomRight.y : std::max<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
                     };
                     fSelectionRect = {p0,p1};
-                    UpdateVisualSelectionRect();
+                    NotifySelectionRectChanged(true);
                     fOperation = operation;
                 }
 
@@ -195,7 +200,7 @@ namespace OIV
                     // Dragging the selection rect in the client window
                     fSelectionRect += posWindowSpace - fSelectEndPoint;
                     fSelectEndPoint = posWindowSpace;
-                    UpdateVisualSelectionRect();
+                    NotifySelectionRectChanged(true);
                 }
             }
             break;
@@ -210,14 +215,14 @@ namespace OIV
         case Operation::CancelSelection:
             fOperation = Operation::NoOp;
             fLockMode = LockMode::NoLock;
-            OIVCommands::CancelSelectionRect();
+            NotifySelectionRectChanged(false);
             break;
         }
     }
+
     void SelectionRect::UpdateSelection(const LLUtils::RectI32 & selectionRect)
     {
-        //fOperation = Operation::NoOp;
         fSelectionRect = selectionRect;
-        UpdateVisualSelectionRect();
+        NotifySelectionRectChanged(true);
     }
 }
