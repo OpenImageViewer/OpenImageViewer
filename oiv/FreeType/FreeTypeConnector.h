@@ -64,7 +64,7 @@ private:
         uint32_t width;
         uint32_t height;
         uint32_t rowHeight;
-        uint32_t baselineHeight;
+        int32_t descender;
     };
     //private member methods
 

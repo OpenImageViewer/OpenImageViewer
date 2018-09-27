@@ -50,22 +50,15 @@ void FreeTypeConnector::MesaureText(const TextMesureParams& measureParams, TextM
     FT_Face face = measureParams.font->GetFace();
     uint32_t fontSize = measureParams.createParams.fontSize;
     const std::string& text = measureParams.createParams.text;
-
-    //Height in pixels (using a double for sub-pixel precision)
-    double baseline_height = abs(face->descender) * (double)fontSize / face->units_per_EM;
-    baseline_height = std::ceil(baseline_height);
-
-    const uint32_t baselineHeight = static_cast<uint32_t>(baseline_height);
-    const uint32_t rowHeight = (face->size->metrics.height >> 6) + baselineHeight;
+    const uint32_t rowHeight = ((face->size->metrics.ascender - face->size->metrics.descender) >> 6) + measureParams.createParams.outlineWidth *2;
     
     FT_Error error = 0;
 
     vector<FormattedTextEntry> formattedText = MetaText::GetFormattedText(text, fontSize);
 
     int penX = 0;
-    int penY = 0; 
-    
-    int maxRow = 0;
+    int numberOfLines = 1;
+    int maxRowWidth = 0;
     for (const FormattedTextEntry& el : formattedText)
     {
         for (const wstring::value_type & e : el.text)
@@ -73,8 +66,8 @@ void FreeTypeConnector::MesaureText(const TextMesureParams& measureParams, TextM
             if (e == '\n')
             {
 
-                penY += rowHeight;
-                maxRow = std::max(penX, maxRow);
+                numberOfLines++;
+                maxRowWidth = std::max(penX, maxRowWidth);
                 penX = 0;
                 continue;
             }
@@ -93,22 +86,20 @@ void FreeTypeConnector::MesaureText(const TextMesureParams& measureParams, TextM
             }
 
             penX += face->glyph->advance.x >> 6;
-            penY += face->glyph->advance.y >> 6;
         }
     }
 
 
-    penY += rowHeight;
-    maxRow = std::max(penX, maxRow);
+    
+    maxRowWidth = std::max(penX, maxRowWidth);
 
-    // Add outline width on all sides of the rectangle
-    maxRow += measureParams.createParams.outlineWidth * 2;
-    penY += measureParams.createParams.outlineWidth * 2;
+    // Add outline width to the final width of the rasterized text.
+    maxRowWidth += measureParams.createParams.outlineWidth * 2;
 
-    mesureResult.height = penY;
-    mesureResult.width = maxRow;
+    mesureResult.height = numberOfLines * rowHeight;
+    mesureResult.width = maxRowWidth;
     mesureResult.rowHeight = rowHeight;
-    mesureResult.baselineHeight = baselineHeight;
+    mesureResult.descender = (face->size->metrics.descender >> 6) - measureParams.createParams.outlineWidth;
 }
 
 FreeTypeFont* FreeTypeConnector::GetOrCreateFont(std::string fontPath)
@@ -140,7 +131,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
     std::string text = textCreateParams.text;
     const std::string& fontPath = textCreateParams.fontPath;
     uint16_t fontSize = textCreateParams.fontSize;
-    uint32_t OutlineWidth = textCreateParams.outlineWidth;
+    uint32_t OutlineWidth =  textCreateParams.outlineWidth;
     const LLUtils::Color outlineColor = textCreateParams.outlineColor;
     const LLUtils::Color backgroundColor = textCreateParams.backgroundColor;
     RenderMode renderMode = textCreateParams.renderMode;
@@ -171,7 +162,6 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
 
 
     // ****** temporary workaround for placing the text correctly.
-    const int workaroundHeightIssue = -fontSize / 4;
     destWidth += 1;
     //***************
 
@@ -193,7 +183,6 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
     
     BlitBox  dest = {};
 
-    //const int 
 
     dest.buffer = imageBuffer.GetBuffer();
     dest.width = destWidth; 
@@ -207,7 +196,6 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
     int penX =  OutlineWidth;
     int penY = 0;
     int rowHeight = mesaureResult.rowHeight;
-    int baselineHeight = mesaureResult.baselineHeight;
     FT_Face face = font->GetFace();
 
     for (const FormattedTextEntry& el : formattedText)
@@ -257,7 +245,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 source.rowPitch = destPixelSize * bitmapProperties.width;
 
                 dest.left = penX + bitmapGlyph->left;
-                dest.top = penY + rowHeight - bitmapGlyph->top - baselineHeight + workaroundHeightIssue;
+                dest.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
                 BlitBox::Blit(dest, source);
             }
 
@@ -285,10 +273,9 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 source.rowPitch = destPixelSize * bitmapProperties.width;
 
                 dest.left = penX + bitmapGlyph->left;
-                dest.top = penY + rowHeight - bitmapGlyph->top - baselineHeight + workaroundHeightIssue;
+                dest.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
                 FT_GlyphSlot  slot = face->glyph;
                 penX += slot->advance.x >> 6;
-                penY += slot->advance.y >> 6;
 
                 BlitBox::Blit(dest, source);
             }
