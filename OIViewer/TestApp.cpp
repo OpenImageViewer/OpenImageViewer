@@ -29,6 +29,7 @@
 #include "SelectionRect.h"
 #include "Helpers\PhotoshopFinder.h"
 #include "API/StringHelper.h"
+#include <API/Version.h>
 
 namespace OIV
 {
@@ -794,7 +795,7 @@ namespace OIV
     void TestApp::UpdateTitle()
     {
         std::wstringstream ss;
-        ss << fOpenedImage.GetName() << L" - OpenImageViewer";
+        ss << fOpenedImage.GetName() << L" - OpenImageViewer " << OIV_VERSION_MAJOR << L"." << OIV_VERSION_MINOR;
         HWND handle = GetWindowHandle();
         SetWindowTextW(handle, ss.str().c_str());   
     }
