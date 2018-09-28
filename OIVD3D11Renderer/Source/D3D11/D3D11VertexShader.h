@@ -1,6 +1,5 @@
 #pragma once
 #include "D3D11Shader.h"
-#include "D3D11Blob.h"
 
 namespace OIV
 {
@@ -23,7 +22,7 @@ namespace OIV
         
         void CreateImpl()  override
         {
-            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData()->buffer, GetShaderData()->size, nullptr, fVertexShader.ReleaseAndGetAddressOf())
+            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData().GetBuffer(), GetShaderData().Size(), nullptr, fVertexShader.ReleaseAndGetAddressOf())
                 , " could not create vertex shader from microcode");
 
             OIV_D3D_SET_OBJECT_NAME(fVertexShader, "Vertex shader");

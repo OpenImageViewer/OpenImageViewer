@@ -1,8 +1,9 @@
 #pragma once
+#include <memory>
 #include "D3D11Common.h"
 #include <d3dcompiler.h>
-#include <memory>
 #include "D3D11Error.h"
+#include <Buffer.h>
 
 namespace OIV
 {
@@ -11,13 +12,13 @@ namespace OIV
     {
     public:
         D3D11Shader(D3D11DeviceSharedPtr d3dDevice);
-        void SetMicroCode(BlobSharedPtr blob);
+        void SetMicroCode(LLUtils::Buffer&& blob);
         void SetSourceFileName(const std::wstring& fileName);
         void SetSourceCode(const std::string& sourceCode);
         void Load();
         const std::string& Getsource() const;
         const std::wstring& GetsourceFileName() const;
-        const BlobSharedPtr GetShaderData() const;
+        const LLUtils::Buffer& GetShaderData() const;
         void Use();
 
     protected: // types
@@ -43,7 +44,7 @@ namespace OIV
         D3D11DeviceSharedPtr fDevice;
         std::string fSourceCode;
         std::wstring fSourceFileName;
-        BlobSharedPtr fShaderData;
+        LLUtils::Buffer fShaderData;
     };
 
     typedef std::shared_ptr<D3D11Shader> D3D11ShaderUniquePtr;

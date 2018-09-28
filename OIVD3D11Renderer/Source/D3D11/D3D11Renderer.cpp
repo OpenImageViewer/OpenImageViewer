@@ -101,8 +101,8 @@ namespace OIV
 
     D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateInputLayout(ied
         , 1
-            , fImageVertexShader->GetShaderData()->buffer
-            , fImageVertexShader->GetShaderData()->size, fInputLayout.ReleaseAndGetAddressOf())
+            , fImageVertexShader->GetShaderData().GetBuffer()
+            , fImageVertexShader->GetShaderData().Size(), fInputLayout.ReleaseAndGetAddressOf())
     , "Could not crate Input layout");
 
         //******** Create constant buffer *********/

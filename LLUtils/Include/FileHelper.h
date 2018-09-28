@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include "Buffer.h"
 
 namespace LLUtils
 {
@@ -44,7 +45,18 @@ namespace LLUtils
             size = fileSize;
         }
 
-        static void WriteAllBytes(const std::wstring& filePath, const std::size_t size, const uint8_t* const buffer)
+        static LLUtils::Buffer ReadAllBytes(std::wstring filePath)
+        {
+            using namespace std;
+            std::size_t fileSize = filesystem::file_size(filePath);
+            LLUtils::Buffer buf(fileSize);
+            ifstream t(filePath, std::ios::binary);
+            t.read((char*)buf.GetBuffer(), fileSize);
+            return buf;
+        }
+
+
+        static void WriteAllBytes(const std::wstring& filePath, const std::size_t size, const std::byte* const buffer)
         {
             using namespace std;
             filesystem::path parent = filesystem::path(filePath).parent_path();

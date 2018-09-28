@@ -163,7 +163,6 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Source\D3D11\D3D11Blob.h" />
     <ClInclude Include="Source\D3D11\D3D11Buffer.h" />
     <ClInclude Include="Source\D3D11\D3D11Common.h" />
     <ClInclude Include="Source\D3D11\D3D11Device.h" />

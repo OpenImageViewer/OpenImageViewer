@@ -15,8 +15,6 @@ namespace OIV
     class D3D11Device;
     typedef std::shared_ptr<D3D11Device>  D3D11DeviceSharedPtr;
     
-    struct Blob;
-    typedef std::shared_ptr<Blob>  BlobSharedPtr;
     
     template < typename T >
     using ComPtr = Microsoft::WRL::ComPtr<T>;

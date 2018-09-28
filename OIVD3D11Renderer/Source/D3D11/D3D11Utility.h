@@ -1,14 +1,23 @@
 #pragma once
-#include "D3D11Shader.h"
+#include <d3d11.h>
+#include <API/defs.h>
 #include <FileHelper.h>
 #include <FileSystemHelper.h>
-#include "D3D11Blob.h"
+#include "D3D11Shader.h"
+
 
 namespace OIV
 {
     class D3D11Utility
     {
     public:
+
+        static LLUtils::Buffer D3D11Utility::BufferFromBlob(ID3D10Blob* blob)
+        {
+            LLUtils::Buffer buffer(blob->GetBufferSize());
+            buffer.Write(static_cast<std::byte*>(blob->GetBufferPointer()), 0, buffer.Size());
+            return buffer;
+        }
 
         static void D3D11Utility::CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend)
         {
@@ -49,25 +58,29 @@ namespace OIV
 
             path shaderPath = shader->GetsourceFileName();
             path cachePath = (path(cacheFolder) / shaderPath.filename() ).replace_extension(L"bin");
-#ifndef _DEBUG
-            // Load from cache only in release
-            // In debug mode always recompile shaders.
-            if (std::filesystem::exists(cachePath))
-            {
-                //Load from cache 
-                BlobSharedPtr blob = BlobSharedPtr(new Blob());
-                LLUtils::File::ReadAllBytes(cachePath, blob->size, blob->buffer);
-                shader->SetMicroCode(blob);
-                shader->Load();
 
+#ifdef _DEBUG
+            constexpr bool IsDebug = true;
+#else
+            constexpr bool IsDebug = false;
+#endif
+            // Change this value to allow loading from cache in debug mode.
+            constexpr bool UseCacheInDebugMode = false;
+
+            constexpr bool LoadFromCache = IsDebug == false || (IsDebug == true && UseCacheInDebugMode == true);
+            
+
+            if (LoadFromCache == true && std::filesystem::exists(cachePath))
+            {
+                    //Load from cache 
+                    shader->SetMicroCode(LLUtils::File::ReadAllBytes(cachePath));
+                    shader->Load();
             }
             else
-#endif
             {
                 shader->Load();
-                BlobSharedPtr blob = shader->GetShaderData();
                 LLUtils::FileSystemHelper::EnsureDirectory(cachePath);
-                LLUtils::File::WriteAllBytes(cachePath, blob->size, blob->buffer);
+                LLUtils::File::WriteAllBytes(cachePath, shader->GetShaderData().Size() , shader->GetShaderData().GetBuffer());
             }
         }
     };

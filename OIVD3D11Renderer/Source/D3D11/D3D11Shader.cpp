@@ -1,6 +1,6 @@
 #include "d3d11shader.h"
-#include "D3D11Blob.h"
 #include <FileHelper.h>
+#include "D3D11Utility.h"
 
 namespace  OIV
 {
@@ -47,9 +47,9 @@ namespace  OIV
 
     }
 
-    void D3D11Shader::SetMicroCode(BlobSharedPtr blob)
+    void D3D11Shader::SetMicroCode(LLUtils::Buffer&& blob)
     {
-        fShaderData = blob;
+        fShaderData = std::move(blob);
     }
 
 
@@ -97,7 +97,7 @@ namespace  OIV
         return fSourceFileName;
     }
 
-    const BlobSharedPtr D3D11Shader::GetShaderData() const
+    const LLUtils::Buffer& D3D11Shader::GetShaderData() const
     {
         return fShaderData;
     }
@@ -163,7 +163,7 @@ namespace  OIV
         if (SUCCEEDED(res) == false)
             HandleCompileError(errors.Get());
 
-        fShaderData = BlobSharedPtr(new Blob(microCode.Get()));
+        fShaderData = D3D11Utility::BufferFromBlob(microCode.Get());
     }
 
     void D3D11Shader::HandleCompileError(ID3DBlob* errors) const

@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <stdexcept>
 namespace LLUtils
 {
     class Buffer
@@ -25,6 +26,11 @@ namespace LLUtils
             Swap(std::move(rhs));
         }
 
+
+        bool operator==(nullptr_t null) const
+        {
+            return fData == null;
+        }
 
         Buffer Clone() const
         {
