@@ -161,8 +161,9 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
     uint32_t destHeight = mesaureResult.height;
 
 
-    // ****** temporary workaround for placing the text correctly.
-    destWidth += 1;
+    // ****** temporary workaround for outline text.
+    //TODO: calculate better the destination width
+     destWidth += 1;
     //***************
 
 
@@ -174,22 +175,39 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
 ;
     const uint32_t destPixelSize = 4;
     const uint32_t destRowPitch = destWidth * destPixelSize;
-    const uint32_t sizeOFDestBuffer = destHeight * destRowPitch;
-    LLUtils::Buffer imageBuffer(sizeOFDestBuffer);
+    const uint32_t sizeOfDestBuffer = destHeight * destRowPitch;
+    const bool renderOutline = OutlineWidth > 0;
+    const bool renderText = true;
+    
+    LLUtils::Buffer textBuffer(sizeOfDestBuffer);
+
+    // when rendering with outline, the outline buffer is the final buffer, otherwise the text buffer is the final buffer.
 
     //Reset final text buffer to background color.
     for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
-        reinterpret_cast<uint32_t*>(imageBuffer.GetBuffer())[i] =  backgroundColor.colorValue;
+        reinterpret_cast<uint32_t*>(textBuffer.GetBuffer())[i] =  backgroundColor.colorValue;
+
+    LLUtils::Buffer outlineBuffer;
+    BlitBox  destOutline = {};
+    if (renderOutline)
+    {
+        outlineBuffer.Allocate(sizeOfDestBuffer);
+        //Reset outline buffer to background color.
+        for (uint32_t i = 0; i < destWidth * destHeight; i++)
+            reinterpret_cast<uint32_t*>(outlineBuffer.GetBuffer())[i] = backgroundColor.colorValue;
+
+        destOutline.buffer = outlineBuffer.GetBuffer();
+        destOutline.width = destWidth;
+        destOutline.height = destHeight;
+        destOutline.pixelSizeInbytes = destPixelSize;
+        destOutline.rowPitch = destRowPitch;
+    }
+
     
     BlitBox  dest = {};
-
-
-    dest.buffer = imageBuffer.GetBuffer();
+    dest.buffer = textBuffer.GetBuffer();
     dest.width = destWidth; 
     dest.height = destHeight;
-
-
-    
     dest.pixelSizeInbytes = destPixelSize;
     dest.rowPitch = destRowPitch;
 
@@ -219,7 +237,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, GenerateFreeTypeErrorString("can not Load glyph", error));
             }
          
-            if (OutlineWidth > 0) // render outline
+            if (renderOutline) // render outline
             {
                 //initialize stroker, so you can create outline font
                 FT_Stroker stroker;
@@ -244,12 +262,12 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 source.pixelSizeInbytes = destPixelSize;
                 source.rowPitch = destPixelSize * bitmapProperties.width;
 
-                dest.left = penX + bitmapGlyph->left;
-                dest.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
-                BlitBox::Blit(dest, source);
+                destOutline.left = penX + bitmapGlyph->left;
+                destOutline.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
+                BlitBox::Blit(destOutline, source);
             }
 
-            if (true) // render text
+            if (renderText)
             {
              
                 FT_Glyph glyph;
@@ -281,9 +299,20 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
             }
         }
     }
+
+    if (renderOutline)
+    {
+        //Blend text buffer onto outline buffer.
+        dest.left = 0;
+        dest.top = 0;
+        destOutline.left = 0;
+        destOutline.top = 0;
+        BlitBox::Blit(destOutline, dest);
+    }
+
     out_bitmap.width = destWidth;
     out_bitmap.height = destHeight;
-    out_bitmap.buffer = std::move(imageBuffer);
+    out_bitmap.buffer = renderOutline ? std::move(outlineBuffer) : std::move(textBuffer);
     out_bitmap.PixelSize = destPixelSize;
     out_bitmap.rowPitch = destRowPitch;
  
