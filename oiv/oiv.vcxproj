@@ -280,9 +280,6 @@
     <ProjectReference Include="..\OIVD3D11Renderer\OIVD3D11Renderer.vcxproj">
       <Project>{c049ed5b-7b0b-4693-a0ed-aa4afe1a1437}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\OIVGLRenderer\OIVGLRenderer.vcxproj">
-      <Project>{d50bd30c-bcd9-4d5e-8416-700f10541792}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
