@@ -1882,7 +1882,7 @@ namespace OIV
         if (Win32Helper::IsKeyPressed(VK_MENU))
         {
             SelectionRect::Operation op = SelectionRect::Operation::NoOp;
-            if (IsLeftPressed)
+            if (IsLeftPressed && isMouseUnderCursor)
                 op = SelectionRect::Operation::BeginDrag;
             else if (IsLeftReleased)
                 op = SelectionRect::Operation::EndDrag;
