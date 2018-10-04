@@ -20,9 +20,12 @@ namespace  OIV
             using namespace std::experimental;
             filesystem::path p = fShader->GetsourceFileName();
             p = p.parent_path() / pFileName;
-            uint8_t* buffer;
+            
+            LLUtils::Buffer buf = LLUtils::File::ReadAllBytes(p);
+
+            std::byte* buffer;
             size_t bufferSize;
-            LLUtils::File::ReadAllBytes(p,bufferSize,buffer);
+            buf.RemoveOwnership(bufferSize, buffer);
             *pBytes = static_cast<UINT>(bufferSize);
             *ppData = buffer;
             return S_OK;
@@ -31,7 +34,7 @@ namespace  OIV
 
         HRESULT __stdcall Close(LPCVOID pData) override
         {
-            delete [] reinterpret_cast<const uint8_t*>(pData);
+            LLUtils::Buffer::GlobalDealocate(reinterpret_cast<std::byte*>( const_cast<void*>(pData)));
             return S_OK;
         }
 

@@ -7,6 +7,18 @@ namespace LLUtils
     {
     public:
         static constexpr int Alignment = 16;
+
+        static std::byte * GlobalAllocate(size_t size)
+        {
+            return reinterpret_cast<std::byte*>(_aligned_malloc(size, Alignment));
+        }
+
+        static void GlobalDealocate(std::byte* buffer)
+        {
+            _aligned_free(buffer);
+        }
+
+
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
         Buffer() = default;
@@ -85,6 +97,25 @@ namespace LLUtils
         {
             return fSize;
         }
+
+        // buffer must have been allocated with Buffer::GlobalAllocate
+
+        void TransferOwnership(size_t size, std::byte*& data)
+        {
+            fSize = size;
+            fData = data;
+            data = nullptr;
+        }
+
+        // buffer must be freed  with Buffer::GlobalDealocate
+        void RemoveOwnership(size_t& size , std::byte*& data)
+        {
+            size = fSize;
+            fSize = 0;
+            data = fData;
+            fData = nullptr;
+        }
+
     private:
         // private methods
         void Swap(Buffer&& rhs)
@@ -99,15 +130,17 @@ namespace LLUtils
         void AllocateImp(size_t size)
         {
             Free();
-            fData = reinterpret_cast<std::byte*>(_aligned_malloc(size, Alignment));
+            fData = GlobalAllocate(size);
             fSize = size;
         }
+
+
 
         void FreeImpl()
         {
             if (fData != nullptr)
             {
-                _aligned_free(fData);
+                GlobalDealocate(fData);
                 fData = nullptr;
                 fSize = 0;
             }

@@ -33,18 +33,6 @@ namespace LLUtils
             file << text;
         }
 
-        static void ReadAllBytes(std::wstring filePath,std::size_t& size, uint8_t*& buffer)
-        {
-            using namespace std;
-            std::size_t fileSize = filesystem::file_size(filePath);
-            uint8_t* buf = new uint8_t[fileSize];
-            ifstream t(filePath, std::ios::binary);
-            t.read((char*)buf, fileSize);
-
-            buffer = buf;
-            size = fileSize;
-        }
-
         static LLUtils::Buffer ReadAllBytes(std::wstring filePath)
         {
             using namespace std;
