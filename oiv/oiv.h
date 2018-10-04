@@ -28,6 +28,7 @@ namespace OIV
         ResultCode SetImageProperties(const OIV_CMD_ImageProperties_Request&) override;
         ResultCode GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res) override;
         ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) override;
+        ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request, OIV_CMD_GetSubImages_Response& res) override;
         
         int Init() override;
         int SetParent(std::size_t handle) override;
@@ -60,6 +61,7 @@ namespace OIV
         std::set<ImageHandle> fImagesUploadToRenderer;
         IMCodec::ImageLoader fImageLoader;
         ImageManager fImageManager;
+        std::map<ImageHandle, std::vector<ImageHandle>> fImageToChildren;
         IRendererSharedPtr fRenderer = nullptr;
         ViewParameters fViewParams = {};
         std::size_t fParent = 0;

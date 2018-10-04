@@ -115,31 +115,47 @@ namespace OIV
             return RC_InvalidParameters;
 
         using namespace IMCodec;
-        ImageSharedPtr image = ImageSharedPtr(fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0));
+        VecImageSharedPtr images;
 
-        if (image != nullptr)
+        fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0, images);
+
+        ImageSharedPtr mainImage = images.empty() == false ? images[0] : nullptr;
+        if (mainImage != nullptr)
         {
-            if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data)
+            int exifOrientation = 0;
+            easyexif::EXIFInfo exifInfo;
+            if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data
+                &&  exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
+                exifOrientation = exifInfo.Orientation;
+
+
+            if (exifOrientation != 0 )
             {
-                easyexif::EXIFInfo exifInfo;
-                if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-                {
-                    const_cast<ImageDescriptor::MetaData&>(image->GetDescriptor().fMetaData).exifOrientation = exifInfo.Orientation;
+                    const_cast<ImageDescriptor::MetaData&>(mainImage->GetDescriptor().fMetaData).exifOrientation = exifOrientation;
 
                     // I see no use of using the original image, discard source image and use the image with exif rotation applied. 
                     // If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
-                    image = ApplyExifRotation(image);
-                }
+                    mainImage = ApplyExifRotation(mainImage);
+            
             }
-                
-            handle = fImageManager.AddImage(image);
+            handle = fImageManager.AddImage(mainImage);
 
+            for (int i = 1; i < images.size(); i++)
+            {
+
+                if (exifOrientation != 0)
+                    images[i] = ApplyExifRotation(images[i]);
+
+                fImageManager.AddChildImage(images[i], handle);
+            }
             return RC_Success;
         }
+    
         else
         {
             return RC_FileNotSupported;
         }
+        
     }
 
     ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
@@ -180,98 +196,7 @@ namespace OIV
     }
 
 
-    //ResultCode OIV::DisplayFile(const OIV_CMD_DisplayImage_Request& display_request)
-    //{
-    //    
-    //    ResultCode result = RC_Success;
-    //    const OIV_CMD_DisplayImage_Flags display_flags = display_request.displayFlags;
-    //    const bool hide = (display_flags & OIV_CMD_DisplayImage_Flags::DF_Hide) != 0;
-    //    const bool useSpecialDisplayHandle = (display_flags & OIV_CMD_DisplayImage_Flags::DF_UseFixedDisplayHandle) != 0;
-    //    ImageHandle targetDisplayhandle = useSpecialDisplayHandle ? ImageHandleDisplayed : display_request.handle;
-    //        
-    //    if (hide == true)
-    //    {
-    //        fImageManager.RemoveImage(targetDisplayhandle);
-    //        return result;
-    //    }
-
-
-    //    IMCodec::ImageSharedPtr image = fImageManager.GetImage(display_request.handle);
-
-    //    if (useSpecialDisplayHandle == false)
-    //    {
-    //        if (fRenderer->SetImageBuffer(targetDisplayhandle, image) == RC_Success)
-    //            return RC_Success;
-    //    else
-    //        return RC_UnknownCommand;
-    //    }
-
-
-    //    if (image != nullptr)
-    //    {
-
-
-    //        const bool applyExif = (display_flags & OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation) != 0;
-    //        if (applyExif)
-    //            image = ApplyExifRotation(image);
-    //        
-
-    //        // Texel format supported by the renderer is currently RGBA.
-    //        // support for other texel formats may save conversion.
-    //    /*    const IMCodec::TexelFormat targetTexelFormat = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-    //        const IMUtil::ImageUtil::NormalizeMode normalizeMode = static_cast<IMUtil::ImageUtil::NormalizeMode>(display_request.normalizeMode);
-
-    //        switch (image->GetImageType())
-    //        {
-    //        case IMCodec::TexelFormat::F_X16:
-    //            image = IMUtil::ImageUtil::Normalize<half_float::half>(image, targetTexelFormat, normalizeMode);
-    //            break;
-
-    //        case IMCodec::TexelFormat::F_X24:
-    //            image = IMUtil::ImageUtil::Normalize<float,Float24>(image, targetTexelFormat, normalizeMode);
-    //            break;
-
-    //        case IMCodec::TexelFormat::F_X32:
-    //            image = IMUtil::ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
-    //            break;
-    //        case IMCodec::TexelFormat::I_X8:
-    //            image = IMUtil::ImageUtil::Normalize<int8_t>(image, targetTexelFormat, normalizeMode);
-    //            break;
-
-    //        default:
-    //            image = IMUtil::ImageUtil::Convert(image, targetTexelFormat);
-    //        }*/
-
-
-    //        if (image != nullptr)
-    //        {
-    //            if (fRenderer->SetImageBuffer(ImageHandleDisplayed, image) == RC_Success)
-    //            {
-    //                fImageManager.ReplaceImage(ImageHandleDisplayed, image);
-
-    //                const bool refreshRenderer = (display_flags & OIV_CMD_DisplayImage_Flags::DF_RefreshRenderer) != 0;
-
-
-    //                if (refreshRenderer)
-    //                    RefreshRenderer();
-    //            }
-    //            else
-    //            {
-    //                result = RC_RenderError;
-    //            }
-    //        }
-    //        else
-    //        {
-    //            result = RC_PixelFormatConversionFailed;
-    //        }
-    //    }
-    //    else
-    //    {
-    //        result = RC_InvalidImageHandle;
-    //    }
-    // 
-    //    return result;
-    //}
+  
 
 
 
@@ -483,6 +408,17 @@ namespace OIV
     {
         fCallBacks = callbacks;
         return RC_Success;
+    }
+
+    ResultCode OIV::GetSubImages(const OIV_CMD_GetSubImages_Request& req, OIV_CMD_GetSubImages_Response & res)
+    {
+         ImageManager::VecImageHandles children = fImageManager.GetChildrenOf(req.handle);
+
+         //Copy no more then res.sizeOfArray elements-
+         res.copiedElements = std::min<uint32_t>(req.arraySize, children.size());
+         memcpy(req.childrenArray, children.data(), res.copiedElements * sizeof(ImageHandle));
+
+        return ResultCode::RC_Success;
     }
 
     ResultCode OIV::UnloadFile(const ImageHandle handle)

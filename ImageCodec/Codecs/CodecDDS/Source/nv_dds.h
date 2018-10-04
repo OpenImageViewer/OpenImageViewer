@@ -195,6 +195,12 @@ public:
         return m_images[face];
     }
 
+    const CTexture &get_surface() const {
+        assert(m_valid);
+        return m_images[0];
+    }
+
+
     unsigned int get_components() {
         return m_components;
     }

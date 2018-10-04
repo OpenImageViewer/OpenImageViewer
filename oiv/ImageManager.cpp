@@ -45,16 +45,48 @@ namespace OIV
         return ImageHandleNull;
     }
 
+    ImageHandle ImageManager::AddChildImage(const IMCodec::ImageSharedPtr& image,ImageHandle parent)
+    {
+        IMCodec::ImageSharedPtr parentImage = GetImage(parent);
+        if (parentImage == nullptr)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "Image manager, parent image not found");
+
+        ImageHandle childHandle = AddImage(image);
+        fMapHandleToChildren[parent].push_back(childHandle);
+        return childHandle;
+    }
+
+
     bool ImageManager::RemoveImage(ImageHandle handle)
     {
         auto it = fMapHandleToImage.find(handle);
         if (it != fMapHandleToImage.end())
         {
+            RemoveChildren(handle);
             DeallocateHandle(handle);
             fMapHandleToImage.erase(it);
             return true;
         }
         return false;
+    }
+
+
+    bool ImageManager::RemoveChildren(ImageHandle handle)
+    {
+        auto it = fMapHandleToChildren.find(handle);
+
+        if (it != fMapHandleToChildren.end())
+        {
+            auto& children = it->second;
+            for (ImageHandle handle : children)
+                RemoveImage(handle);
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
     }
 
     IMCodec::ImageSharedPtr ImageManager::GetImage(ImageHandle handle) const
@@ -73,5 +105,15 @@ namespace OIV
     void ImageManager::ReplaceImage(ImageHandle handle, IMCodec::ImageSharedPtr image)
     {
         fMapHandleToImage[handle] = image;
+    }
+
+    ImageManager::VecImageHandles ImageManager::GetChildrenOf(ImageHandle handle)
+    {
+        auto it = fMapHandleToChildren.find(handle);
+
+        if (it != fMapHandleToChildren.end())
+            return it->second;
+        else
+            return VecImageHandles();
     }
 }

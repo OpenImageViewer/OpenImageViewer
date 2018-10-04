@@ -176,6 +176,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AutoScroll.cpp" />
+    <ClCompile Include="ImageState.cpp" />
     <ClCompile Include="Keyboard\KeyCombination.cpp" />
     <ClCompile Include="LabelManager.cpp" />
     <ClCompile Include="main.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="Helpers\PhotoshopFinder.h" />
     <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="FullScreenState.h" />
+    <ClInclude Include="ImageState.h" />
     <ClInclude Include="Keyboard\KeyBindings.h" />
     <ClInclude Include="Keyboard\KeyCodeHelper.h" />
     <ClInclude Include="Keyboard\KeyCombination.h" />
@@ -225,6 +227,8 @@
     <ClInclude Include="VirtualStatusBar.h" />
     <ClInclude Include="win32\BitmapHelper.h" />
     <ClInclude Include="win32\HighPrecisionTimer.h" />
+    <ClInclude Include="win32\ImageControl.h" />
+    <ClInclude Include="win32\ImageLIst.h" />
     <ClInclude Include="win32\MainWindow.h" />
     <ClInclude Include="win32\UserMessages.h" />
     <ClInclude Include="win32\DragAndDrop.h" />

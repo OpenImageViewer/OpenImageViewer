@@ -14,11 +14,11 @@ namespace IMCodec
         MapStringListPlugin fMapPlugins;
         ListPlugin fListPlugins;
         IImagePlugin* GetFirstPlugin(const std::wstring& hint) const;
-        Image* TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size) const;
+        bool TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size, VecImageSharedPtr& out_images) const;
 
     public: // const methods
         std::wstring GetKnownFileTypes() const;
-        Image* Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension = true) const;
+        bool Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension , VecImageSharedPtr& out_images) const;
         
     public: // methods
         ImageLoader();

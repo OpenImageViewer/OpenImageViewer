@@ -56,7 +56,7 @@ namespace OIV
         
         wstringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
-            << fixed << setprecision(2) << fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale.x * 100.0 << "%)";
+            << fixed << setprecision(2) << fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale.x * 100.0 << "%)";
 
         result.resValue = ss.str();
     }
@@ -95,10 +95,9 @@ namespace OIV
         else if (type == "toggleNormalization")
         {
             // Change normalization mode
-            fUseRainbowNormalization = !fUseRainbowNormalization;
-            
-            DisplayImage(fCurrentImageChain.Get(ImageChainStage::Resampled));
-            result.resValue = fUseRainbowNormalization ? L"Rainbow normalization" : L"Grayscale normalization";
+            fImageState.SetUseRainbowNormalization(!fImageState.GetUseRainbowNormalization());
+            RefreshImage();
+            result.resValue = fImageState.GetUseRainbowNormalization() ? L"Rainbow normalization" : L"Grayscale normalization";
         }
         else if (type == "imageFilterUp")
         {
@@ -781,35 +780,12 @@ namespace OIV
 
     void TestApp::UpdateStatusBar()
     {
-        
-        fWindow.SetStatusBarText(fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescription(), 0, 0);
+        fWindow.SetStatusBarText(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription(), 0, 0);
     }
-
-    void TestApp::DisplayImage(OIVBaseImageSharedPtr& image) 
-    {
-
-        image->GetImageProperties().opacity = 1.0;
-        if ( image->Update() == RC_Success)
-            fRefreshOperation.Queue();
-
-
-        /*DisplayOptions options = {};
-        
-        options.fUseRainbowNormalization = fUseRainbowNormalization;
-        options.fUseReservedDisplayHandle = true;
-
-
-        if (image->Display(options) == RC_Success)
-            fRefreshOperation.Queue();*/
-
-        //The visible image is different from loaded image.
-        //UpdateVisibleImageInfo();
-      
-    }
-
+   
     void TestApp::UnloadOpenedImaged()
     {
-        fCurrentImageChain.Reset();
+        fImageState.GetWorkingImageChain().Reset();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
     }
@@ -855,47 +831,13 @@ namespace OIV
 
     void TestApp::RefreshImage()
     {
-        
-        if (fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr)
-        {
-            fPreviousImageChain = fCurrentImageChain;
-
-
-            //just hide old display image
-            if (fPreviousImageChain.Get(ImageChainStage::Resampled) != nullptr)
-            {
-                fPreviousImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().opacity = 0.0;
-                fPreviousImageChain.Get(ImageChainStage::Resampled)->Update();
-            }
-
-            fRefreshOperation.Begin();
-
-            if (fAxisAlignedTransform != OIV_AxisAlignedRotation::AAT_None || fAxisAlignedFlip != OIV_AxisAlignedFlip::AAF_None)
-            {
-
-                ImageHandle transformedHandle = ImageHandleNull;
-                OIVCommands::TransformImage(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().ImageHandle
-                    , fAxisAlignedTransform,fAxisAlignedFlip, transformedHandle);
-                
-                fCurrentImageChain.Get(ImageChainStage::Deformed) = std::make_shared<OIVHandleImage>(transformedHandle);
-            }
-            else
-            {
-                fCurrentImageChain.Get(ImageChainStage::Deformed) = fCurrentImageChain.Get(ImageChainStage::Opened);
-            }
-
-            fCurrentImageChain.Get(ImageChainStage::Rasterized) = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Deformed), fUseRainbowNormalization);
-            fCurrentImageChain.Get(ImageChainStage::Resampled) = fCurrentImageChain.Get(ImageChainStage::Rasterized);
-            fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().opacity = 1.0;
-            fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
-            AutoPlaceImage();
-            fRefreshOperation.End(true);
-            fPreviousImageChain.Reset();
-
-            UpdateOpenImageUI();
-
-            //todo: if success reset previous image, if failed keep existing image
-        }
+        fRefreshOperation.Begin();
+        fImageState.Refresh();
+        AutoPlaceImage();
+        fRefreshOperation.End(true);
+        //Unload previous image
+        fImageState.ResetPreviousImageChain();
+        UpdateOpenImageUI();
     }
 
     void TestApp::DisplayOpenedFileName()
@@ -949,6 +891,57 @@ namespace OIV
         }
     }
 
+
+    void TestApp::AddImageToControl(ImageHandle handle, uint16_t imageSlot, uint16_t totalImages)
+    {
+        OIV_CMD_GetPixels_Request pixelsRequest;
+        OIV_CMD_GetPixels_Response pixelsResponse;
+        pixelsRequest.handle = handle;
+        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
+        uint8_t bpp;
+        OIV_Util_GetBPPFromTexelFormat(pixelsResponse.texelFormat, &bpp);
+
+
+        BitmapBuffer bitmapBuffer = {};
+        bitmapBuffer.bitsPerPixel = bpp;
+        bitmapBuffer.buffer = pixelsResponse.pixelBuffer;
+        bitmapBuffer.height = pixelsResponse.height;
+        bitmapBuffer.width = pixelsResponse.width;
+        bitmapBuffer.rowPitch = pixelsResponse.rowPitch;
+
+        std::wstringstream ss;
+        ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
+
+        fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(), Bitmap::FromMemory(bitmapBuffer) });
+
+    }
+
+
+    void TestApp::LoadSubImages()
+    {
+        auto mainImage = fImageState.GetOpenedImage();
+        mainImage->FetchSubImages();
+        auto subImages = mainImage->GetSubImages();
+        
+        if (subImages.empty() == true)
+        {
+            fWindow.SetShowImageControl(false);
+        }
+        else
+        {
+            const auto totalImages = subImages .size() + 1;
+
+            AddImageToControl(mainImage->GetDescriptor().ImageHandle, 0, totalImages);
+
+            for (int i = 0; i < subImages.size(); i++)
+            {
+                auto& currentSubImage = subImages[i];
+                AddImageToControl(currentSubImage->GetDescriptor().ImageHandle, i + 1, totalImages);
+            }
+            fWindow.SetShowImageControl(true);
+        }
+    }
+
     void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
     {
         if (GetCurrentThreadId() == fMainThreadID)
@@ -971,11 +964,9 @@ namespace OIV
         FileLoadOptions loadOptions;
         loadOptions.onlyRegisteredExtension = onlyRegisteredExtension;
         ResultCode result = file->Load(loadOptions);
-        fCurrentImageChain.Get(ImageChainStage::Opened) = file;
-        //Save last display image so it won't be released.
-        //TODO: add dirty mode.
-        /*fPreviousImageChain.Get(ImageChainStage::Resampled) = fCurrentImageChain.Get(ImageChainStage::Resampled);
-        fCurrentImageChain.Get(ImageChainStage::Resampled) = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Opening),fUseRainbowNormalization);*/
+        fImageState.SetOpenedImage(file);
+        //TODO: Load Sub images after finalizing image for faster experience.
+        LoadSubImages();
         FinalizeImageLoadThreadSafe(result);
         return result == RC_Success;
     }
@@ -984,20 +975,20 @@ namespace OIV
     {
         UpdateTitle();
         UpdateStatusBar();
-        fVirtualStatusBar.SetText("imageDescription", fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescription());
+        fVirtualStatusBar.SetText("imageDescription", fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription());
     }
 
 
     const std::wstring& TestApp::GetOpenedFileName() const
     {
         static const std::wstring emptyString;
-        std::shared_ptr<OIVFileImage> file = std::dynamic_pointer_cast<OIVFileImage>(fCurrentImageChain.Get(ImageChainStage::Opened));
+        std::shared_ptr<OIVFileImage> file = std::dynamic_pointer_cast<OIVFileImage>(fImageState.GetOpenedImage());
         return file != nullptr ? file->GetFileName() : emptyString;
     }
 
     bool TestApp::IsOpenedImageIsAFile() const
     {
-        return fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr && fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Source == ImageSource::File;
+        return fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->GetDescriptor().Source == ImageSource::File;
     }
     
     void TestApp::ReloadFileInFolder()
@@ -1127,6 +1118,18 @@ namespace OIV
             
     }
 
+    void TestApp::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
+    {
+        int index = ImageSelectionChangeArgs.imageIndex - 1;
+        
+        auto image = index == -1 ? fImageState.GetOpenedImage() : fImageState.GetOpenedImage()->GetSubImages()[index];
+        fImageState.SetImageChainRoot(image);
+        fRefreshOperation.Begin();
+        Center();
+        RefreshImage();
+        fRefreshOperation.End();
+    }
+
     void TestApp::PostInitOperations()
     {
         // load settings
@@ -1140,13 +1143,16 @@ namespace OIV
             ShowWelcomeMessage();
 
         AddCommandsAndKeyBindings();
+
+        fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Add(std::bind(&TestApp::OnImageSelectionChanged, this, std::placeholders::_1));
+
+
     }
 
     void TestApp::Destroy()
     {
         // destroy OIV resources before destroying OIV.
-        fPreviousImageChain.Reset();
-        fCurrentImageChain.Reset();
+        fImageState.ClearAll();
         fLabelManager.RemoveAll();
         // Destroy OIV when window is closed.
         OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
@@ -1168,7 +1174,7 @@ namespace OIV
 
     OIV_Filter_type TestApp::GetFilterType() const
     {
-        return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().filterType;
+        return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().filterType;
     }
 
     void TestApp::UpdateExposure()
@@ -1292,10 +1298,10 @@ namespace OIV
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().filterType =  std::clamp(filterType
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().filterType =  std::clamp(filterType
             , FT_None, static_cast<OIV_Filter_type>( FT_Count - 1));
 
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
         fRefreshOperation.Queue();
     }
 
@@ -1323,8 +1329,8 @@ namespace OIV
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position = ResolveOffset(offset);
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position = ResolveOffset(offset);
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
@@ -1340,7 +1346,7 @@ namespace OIV
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         using namespace LLUtils;
-        SetOffset(panAmount + fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position);
+        SetOffset(panAmount + fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position);
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
@@ -1374,15 +1380,16 @@ namespace OIV
     
     LLUtils::PointF64 TestApp::GetImageSize(ImageSizeType imageSizeType)
     {
+        
         using namespace LLUtils;
         switch (imageSizeType)
         {
         case ImageSizeType::Original:
-            return fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr ? PointF64(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Height) : PointF64(0, 0);
+            return  fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage) != nullptr ? PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage)->GetDescriptor().Height) : PointF64(0, 0);
         case ImageSizeType::Transformed:
-            return PointF64(fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().Height);
+            return PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Height);
         case ImageSizeType::Visible:
-            return PointF64(fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().Height) * GetScale();
+            return PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().Height) * GetScale();
         default:
             LL_EXCEPTION_UNEXPECTED_VALUE;
         }
@@ -1455,8 +1462,8 @@ namespace OIV
 
         zoomPoint = ClientToImage(PointI32(clientX, clientY));
         PointF64 offset = (zoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale = zoomValue;
-        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale = zoomValue;
+        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
 
         fRefreshOperation.Begin();
         
@@ -1473,15 +1480,15 @@ namespace OIV
 
     double TestApp::GetScale() const
     {
-        if (fCurrentImageChain.Get(ImageChainStage::Resampled) != nullptr)
-            return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale.x;
+        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled) != nullptr)
+            return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale.x;
         else
             return 1.0;
     }
 
     void TestApp::UpdateCanvasSize()
     {
-        if (fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr)
+        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed) != nullptr)
         {
             using namespace  LLUtils;
             PointF64 canvasSize = (PointF64)fWindow.GetCanvasSize() / GetScale();
@@ -1498,7 +1505,7 @@ namespace OIV
 
     LLUtils::PointF64 TestApp::GetOffset() const
     {
-        return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position;
+        return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position;
     }
 
     LLUtils::PointF64 TestApp::ImageToClient(LLUtils::PointF64 imagepos) const
@@ -1535,7 +1542,7 @@ namespace OIV
     void TestApp::UpdateTexelPos()
     {
 
-        if (fCurrentImageChain.Get(ImageChainStage::Deformed) != nullptr)
+        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed) != nullptr)
         {
             using namespace LLUtils;
             PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
@@ -1557,7 +1564,7 @@ namespace OIV
                 || storageImageSpace.y >= storageImageSize.y
                 ))
             {
-                OIV_CMD_TexelInfo_Request texelInfoRequest = { fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
+                OIV_CMD_TexelInfo_Request texelInfoRequest = { fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
            ,static_cast<uint32_t>(storageImageSpace.x)
            ,static_cast<uint32_t>(storageImageSpace.y) };
                 OIV_CMD_TexelInfo_Response  texelInfoResponse;
@@ -1658,35 +1665,12 @@ namespace OIV
 
     void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
-
-        const bool isHorizontalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Horizontal)) != 0;
-        const bool isVerticalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Vertical)) != 0;
-        const bool isFlip = isVerticalFlip || isHorizontalFlip;
-
-        // the two options to manage axes aligned transofrmation are either
-        //1. modify the original image so transformation would cumulative - not the case here.
-        //2. preserve the original image and add compute the desired transformation - the case here.
-        // for simplicity the code accepts only 90 degrees rotations. 
-
-        if (relativeRotation != OIV_AxisAlignedRotation::AAT_None)
-        {
-            if (relativeRotation != AAT_Rotate90CW && relativeRotation != AAT_Rotate90CCW)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "Rotating image is currently limited to 90 degrees in CW/CCW");
-
-            fAxisAlignedTransform = static_cast<OIV_AxisAlignedRotation>((static_cast<int>(relativeRotation + fAxisAlignedTransform) % 4));
-            //If switching axes by rotating 90 degrees and flip is applied, then flip the flip axes.
-            if (isFlip == true)
-                fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(3));
-        }
-
-        fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(flip));
-
+       fImageState.Transform(relativeRotation, flip);
        RefreshImage();
     }
 
     void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
     {
-        fCurrentImageChain.Get(ImageChainStage::Opened).reset();
         std::shared_ptr<OIVRawImage>  rawImage = std::make_shared<OIVRawImage>(ImageSource::Clipboard);
         RawBufferParams params;
         params.width = width;
@@ -1696,7 +1680,7 @@ namespace OIV
         params.buffer = buffer;
 
         ResultCode result = rawImage->Load(params);
-        fCurrentImageChain.Get(ImageChainStage::Opened) = rawImage;
+        fImageState.SetOpenedImage(rawImage);
 
         FinalizeImageLoadThreadSafe(result);
     }
@@ -1764,7 +1748,7 @@ namespace OIV
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         ImageHandle croppedHandle = ImageHandleNull;
         ImageHandle clipboardCompatibleHandle = ImageHandleNull;
-        ResultCode result = OIVCommands::CropImage(fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+        ResultCode result = OIVCommands::CropImage(fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
 
         if (result == RC_Success)
         {
@@ -1840,13 +1824,12 @@ namespace OIV
         ImageHandle croppedHandle;
 
         
-        ResultCode result = OIVCommands::CropImage(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+        ResultCode result = OIVCommands::CropImage(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
         
         if (result == RC_Success)
         {
             std::shared_ptr<OIVHandleImage> handleImage = std::make_shared<OIVHandleImage>(croppedHandle);
-            fPreviousImageChain = fCurrentImageChain;
-            fCurrentImageChain.Get(ImageChainStage::Opened) = handleImage;
+            fImageState.SetImageChainRoot(handleImage);
             CancelSelection();
         }
 

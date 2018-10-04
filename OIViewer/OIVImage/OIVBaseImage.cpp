@@ -1,5 +1,7 @@
 #include "OIVBaseImage.h"
 #include "../OIVCommands.h"
+#include "OIVHandleImage.h"
+
 namespace OIV
 {
     OIVBaseImage::OIVBaseImage()
@@ -45,6 +47,37 @@ namespace OIV
 
         return ss.str();
     }
+
+    void OIVBaseImage::FetchSubImages()
+    {
+        const uint8_t numSubImages = GetDescriptor().NumSubImages;
+        if (numSubImages > 0)
+        {
+            fSubImages.resize(numSubImages);
+
+            std::unique_ptr<ImageHandle[]> imageArray = std::make_unique<ImageHandle[]>(numSubImages);
+
+            OIV_CMD_GetSubImages_Request request = {};
+            OIV_CMD_GetSubImages_Response response;
+            request.handle = GetDescriptor().ImageHandle;
+            request.arraySize = numSubImages;
+            request.childrenArray = imageArray.get();
+
+            if (OIVCommands::ExecuteCommand(OIV_CMD_GetSubImages, &request, &response) == RC_Success)
+            {
+                fSubImages.resize(response.copiedElements);
+
+                //assert(response.copiedElements == numSubImages)
+
+                for (int i = 0 ; i < fSubImages.size(); i++)
+                {
+                    fSubImages[i] = std::make_shared<OIVHandleImage>(imageArray[i]);
+                }
+
+            }
+        }
+    }
+        
     
     OIV_CMD_ImageProperties_Request & OIVBaseImage::GetImagePropertiesCurrent() { return fImageProperties; }
 
@@ -66,6 +99,8 @@ namespace OIV
         GetDescriptorMutable().Height = textImageInfo.height;
         GetDescriptorMutable().Width = textImageInfo.width;
         GetDescriptorMutable().texelFormat = textImageInfo.texelFormat;
+        GetDescriptorMutable().NumSubImages = textImageInfo.NumSubImages;
+
     }
     void OIVBaseImage::ResetActiveImageProperties()
     {

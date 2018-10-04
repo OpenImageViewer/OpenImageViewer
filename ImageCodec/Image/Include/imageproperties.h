@@ -61,4 +61,6 @@ namespace IMCodec
                 && fProperties.IsInitialized() == true;
         }
     };
+
+    using VecImageDescriptors = std::vector<ImageDescriptor>;
 }

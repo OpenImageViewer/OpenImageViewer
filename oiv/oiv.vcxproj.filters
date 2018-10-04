@@ -70,6 +70,7 @@
     <ClInclude Include="FreeType\FreeTypeRenderer.h" />
     <ClInclude Include="FreeType\BlitBox.h" />
     <ClInclude Include="FreeType\MetaTextParser.h" />
+    <ClInclude Include="Commands\Handlers\CommandHandlerGetSubImages.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\programs\quad_fp.hlsl">

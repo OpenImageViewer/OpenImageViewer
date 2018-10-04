@@ -41,6 +41,7 @@ namespace OIV
                     loadResponse->loadTime = image->GetDescriptor().fMetaData.LoadTime;
                     loadResponse->sizeInMemory = image->GetSizeInMemory();
                     loadResponse->handle = handle;
+                    loadResponse->numSubImages = image->GetNumSubImages();
                 }
 
             

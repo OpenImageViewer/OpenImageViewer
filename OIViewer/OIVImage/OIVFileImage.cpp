@@ -25,7 +25,7 @@ namespace OIV
         loadRequest.buffer = (void*)buffer;
         loadRequest.length = size;
         std::string fileExtension = extension;
-        strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::EXTENSION_SIZE, fileExtension.c_str());
+        strcpy_s(loadRequest.extension, OIV_CMD_LoadFile_Request::MAX_EXTENSION_SIZE, fileExtension.c_str());
         loadRequest.flags = static_cast<OIV_CMD_LoadFile_Flags>(
             (loadOptions.onlyRegisteredExtension ? OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension : 0)
             | OIV_CMD_LoadFile_Flags::Load_Exif_Data);

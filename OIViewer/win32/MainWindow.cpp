@@ -78,7 +78,6 @@ namespace OIV
             ResizeStatusBar();
 
             fCanvasWindow.Create();
-            fCanvasWindow.SetWindowStyles(WindowStyle::ChildWindow, true);
             fCanvasWindow.SetParent(this);
             fCanvasWindow.SetVisible(true);
             fCanvasWindow.SetTransparent(true);
@@ -87,6 +86,8 @@ namespace OIV
             SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
             SetStatusBarText(L"File: ", 1, 0);
 
+            fImageControl.Create();
+            fImageControl.SetParent(this);
 
             RawInput::ResiterWindow(GetHandle());
         }
@@ -238,6 +239,11 @@ namespace OIV
 
 
 
+        bool MainWindow::GetShowImageControl() const
+        {
+            return fShowImageControl;
+        }
+
         bool MainWindow::GetShowStatusBar() const
         {
             // show status bar if explicity not visible and caption is visible
@@ -250,7 +256,9 @@ namespace OIV
             RECT rect;
             GetClientRect(GetHandle(), &rect);
             SIZE clientSize;
-            clientSize.cx = rect.right - rect.left;
+            const int ImageListWidth = 200;
+            const bool isImageControlVisible = GetShowImageControl();
+            clientSize.cx = rect.right - rect.left - (isImageControlVisible ?  ImageListWidth : 0 );
             clientSize.cy = rect.bottom - rect.top;
 
 
@@ -268,6 +276,11 @@ namespace OIV
             }
 
             SetWindowPos(fCanvasWindow.GetHandle(), nullptr, 0, 0, clientSize.cx, clientSize.cy, 0);
+            fImageControl.SetVisible(isImageControlVisible);
+
+            if (isImageControlVisible)
+                SetWindowPos(fImageControl.GetHandle(), nullptr, clientSize.cx, 0, ImageListWidth, clientSize.cy, SWP_NOACTIVATE | SWP_NOZORDER);
+
             ShowWindow(fHandleStatusBar, GetFullScreenState() == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
         }
 
@@ -276,6 +289,15 @@ namespace OIV
             if (show != fShowStatusBar)
             {
                 fShowStatusBar = show;
+                HandleResize();
+            }
+        }
+
+        void MainWindow::SetShowImageControl(bool show)
+        {
+            if (show != fShowImageControl)
+            {
+                fShowImageControl = show;
                 HandleResize();
             }
         }

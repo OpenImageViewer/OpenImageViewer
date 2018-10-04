@@ -21,6 +21,8 @@
 #include "win32/MonitorInfo.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
+#include "Helpers/OIVImageHelper.h"
+#include "ImageState.h"
 
 
 namespace OIV
@@ -42,37 +44,7 @@ namespace OIV
         , Count
     };
 
-    enum class ImageChainStage
-    {
-          Opened
-        , Begin = Opened
-        , Deformed
-        , Rasterized
-        , Resampled
-        , Count
-    };
-
-    struct ImageChain
-    {
-        std::array<OIVBaseImageSharedPtr, static_cast<size_t>(ImageChainStage::Count)> Chain;
-        OIVBaseImageSharedPtr& Get(ImageChainStage stage)
-        {
-            return Chain[static_cast<size_t>(stage)];
-        }
-
-        const OIVBaseImageSharedPtr& Get(ImageChainStage stage) const
-        {
-            return const_cast<ImageChain*>(this)->Get(stage);
-            //return Chain[static_cast<size_t>(stage)];
-        }
-
-        void Reset()
-        {
-            for (auto& e : Chain)
-                e.reset();
-        }
-    };
-
+   
 
     
 
@@ -160,6 +132,7 @@ namespace OIV
         void SetOffset(LLUtils::PointF64 offset);
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
+        void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
         void UpdateOpenImageUI();
         void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
@@ -178,7 +151,6 @@ namespace OIV
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
-        void DisplayImage(OIVBaseImageSharedPtr& descriptor);
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
         void RefreshImage();
@@ -186,6 +158,8 @@ namespace OIV
         void UpdateExposure();
         bool ToggleColorCorrection(); 
         void CancelSelection();
+        void LoadSubImages();
+        void AddImageToControl(ImageHandle handle, uint16_t imageSlot, uint16_t totalImages);
         
 
     private: // member fields
@@ -213,8 +187,7 @@ namespace OIV
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
-        OIV_AxisAlignedRotation fAxisAlignedTransform = OIV_AxisAlignedRotation::AAT_None;
-        OIV_AxisAlignedFlip     fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
+        
 
         static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
         static constexpr int FileIndexStart = std::numeric_limits<int>::min();
@@ -224,7 +197,6 @@ namespace OIV
         UserSettings fSettings;
         bool fIsInitialLoad = false;
         bool fIsFirstFrameDisplayed = false;
-        bool fUseRainbowNormalization = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         bool fShowBorders = true;
@@ -237,8 +209,7 @@ namespace OIV
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
-        ImageChain fCurrentImageChain;
-        ImageChain fPreviousImageChain;
+        ImageState fImageState;
 
 
         CommandManager fCommandManager;

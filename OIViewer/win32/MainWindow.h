@@ -1,5 +1,6 @@
 #pragma once
 #include "Win32Window.h"
+#include "ImageControl.h"
 namespace OIV
 {
     namespace Win32
@@ -26,14 +27,17 @@ namespace OIV
             MainWindow();
         public: // constant methods
             const RawInputMouseWindow& GetMouseState() const { return fMouseState; }
+            bool GetShowImageControl() const;
             bool GetShowStatusBar() const;
             SIZE GetCanvasSize() const;
             HWND GetCanvasHandle() const;
 
 
         public: // mutating methods
+            ImageControl& GetImageControl() { return fImageControl; }
             void SetCursorType(CursorType type);
             void ShowStatusBar(bool show);
+            void SetShowImageControl(bool show);
             void FlushInput(bool calledFromIdleTimer);
             void HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
@@ -56,6 +60,7 @@ namespace OIV
             HWND fHandleStatusBar = nullptr;
             int fStatusWindowParts = 6;
             bool fShowStatusBar = true;
+            bool fShowImageControl = false;
             bool fInputFlushTimerEnabled = false;
             static const int cTimerIDRawInputFlush = 2500;
             uint16_t fRawInputInterval = 0;
@@ -64,6 +69,7 @@ namespace OIV
             CursorType fCurrentCursorType = CursorType::SystemDefault;
             std::array<HCURSOR, static_cast<int>(CursorType::Count)> fCursors;
             bool fCursorsInitialized = false;
+            ImageControl fImageControl;
         };
     }
 }

@@ -22,6 +22,7 @@ namespace OIV
         uint32_t Width = 0;
         uint32_t Height = 0;
         uint8_t Bpp = 0;
+        uint8_t NumSubImages = 0;
         LLUtils::StopWatch::time_type_real DisplayTime = 0.0;
         double LoadTime = 0.0;
 
@@ -39,7 +40,11 @@ namespace OIV
         const ImageDescriptor& GetDescriptor() {return fDescriptor; }
         std::wstring GetDescription() const;
         OIV_CMD_ImageProperties_Request& GetImageProperties()  { return fImageProperties; }
-
+        void FetchSubImages();
+        std::vector<std::shared_ptr<OIVBaseImage>>& GetSubImages()
+        {
+            return fSubImages;
+        }
     protected:
         OIV_CMD_ImageProperties_Request& GetImagePropertiesCurrent();
         void FreeImage();
@@ -55,6 +60,7 @@ namespace OIV
         OIV_CMD_ImageProperties_Request fImagePropertiesCached = {};
         OIV_CMD_ImageProperties_Request fImageProperties = {};
         ImageDescriptor fDescriptor;
+        std::vector<std::shared_ptr<OIVBaseImage>> fSubImages;
     };
 
     using OIVBaseImageUniquePtr = std::shared_ptr<OIVBaseImage>;

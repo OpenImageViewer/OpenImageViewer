@@ -40,7 +40,6 @@ typedef wchar_t OIVCHAR;
         , OIV_CMD_Destroy
         , OIV_CMD_AxisAlignedTransform
         , OIV_CMD_SetSelectionRect
-        , OIV_CMD_GetPixelBuffer
         , OIV_CMD_CropImage
         , OIV_CMD_GetPixels
         , OIV_CMD_ConvertFormat
@@ -49,6 +48,7 @@ typedef wchar_t OIVCHAR;
         , OIV_CMD_CreateText
         , OIV_CMD_GetKnownFileTypes
         , OIV_CMD_RegisterCallbacks
+        , OIV_CMD_GetSubImages
     };
 
     
@@ -383,20 +383,35 @@ typedef wchar_t OIVCHAR;
           None = 0 << 1
         , OnlyRegisteredExtension = 1 << 0
         , Load_Exif_Data = 1 << 1
+        , Load_Sub_Images = 1 << 2
+        , Load_Main_Image = 1 << 3
     };
 
     struct OIV_CMD_LoadFile_Request
     {
-        static const uint8_t EXTENSION_SIZE = 16;
-        static const uint8_t MAX_SUBIMAGE_HIERARCHY = 10;
+        static constexpr uint8_t MAX_EXTENSION_SIZE = 16;
         void* buffer;
         std::size_t length;
-        char extension[EXTENSION_SIZE];
+        char extension[MAX_EXTENSION_SIZE];
         OIV_CMD_LoadFile_Flags flags;
-        int16_t subImageIndices[MAX_SUBIMAGE_HIERARCHY];
         
     };
 
+
+    struct OIV_CMD_LoadFile_Response
+    {
+        double loadTime;
+        uint32_t width;
+        uint32_t height;
+        uint8_t bpp;
+        uint32_t sizeInMemory;
+        ImageHandle handle;
+        uint32_t numSubImages;
+
+        //user pointer for subimages
+        OIV_CMD_LoadFile_Response* subImages;
+
+    };
 
     enum OIV_Image_Render_mode
     {
@@ -417,19 +432,25 @@ typedef wchar_t OIVCHAR;
     };
 
 
-    struct OIV_CMD_LoadFile_Response
-    {
-        double loadTime;
-        uint32_t width;
-        uint32_t height;
-        uint8_t bpp;
-        uint32_t sizeInMemory;
-        ImageHandle handle;
-    };
 
     struct OIV_CMD_UnloadFile_Request
     {
         ImageHandle handle;
+    };
+
+
+    struct OIV_CMD_GetSubImages_Request
+    {
+        ImageHandle handle;
+        ImageHandle *childrenArray;
+        uint32_t arraySize;
+        
+
+    };
+
+    struct OIV_CMD_GetSubImages_Response
+    {
+        uint32_t copiedElements;
     };
 
     ////

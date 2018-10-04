@@ -50,6 +50,7 @@ namespace IMCodec
         const ImageDescriptor fDescriptor;
     };
 
-    typedef std::shared_ptr<Image> ImageSharedPtr;
+    using ImageSharedPtr = std::shared_ptr<Image>;
+    using VecImageSharedPtr = std::vector< ImageSharedPtr>;
  
 }

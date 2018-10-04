@@ -43,39 +43,54 @@ namespace IMCodec
         }
     }
 
-    Image* ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size) const
+    bool ImageLoader::TryLoad(IImagePlugin* plugin, uint8_t* buffer, std::size_t size, VecImageSharedPtr& out_images) const
     {
-        ImageDescriptor props;
+        VecImageDescriptors descriptors(1);
         LLUtils::StopWatch stopWatch(true);
-        Image* loadedImage = nullptr;
-        if (plugin->LoadImage(buffer, size, props))
+        
+        bool loaded = false;
+
+        if (plugin->GetPluginProperties().hasMultipleImages)
         {
             
-            props.fMetaData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-            if ((props.IsInitialized() == true))
-                loadedImage = new Image(props);
-
+            loaded = plugin->LoadImages(buffer, size, descriptors);
+        }
+        else 
+        {
+            loaded = plugin->LoadImage(buffer, size, descriptors[0]);
+            descriptors[0].fMetaData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
         }
 
-        return loadedImage;
+        if (loaded == true)
+        {
+            for (const ImageDescriptor& imageDescriptor : descriptors)
+                if ((imageDescriptor.IsInitialized() == true)) // verify image descriptor is properly initialized
+                    out_images.push_back(std::make_shared<Image>(imageDescriptor));
+        }
+
+        return loaded;
     }
 
-    Image* ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension) const
+    bool ImageLoader::Load(uint8_t* buffer, std::size_t size, char* extension, bool onlyRegisteredExtension, VecImageSharedPtr& out_images) const
     {
-        Image* loadedImage = nullptr;
+       VecImageDescriptors imageDescriptors;
+
+       bool loaded = false;
+
         
         IImagePlugin* choosenPlugin = GetFirstPlugin(LLUtils::StringUtility::ToLower(LLUtils::StringUtility::ToWString(extension)));
         if (choosenPlugin != nullptr)
-            loadedImage = TryLoad(choosenPlugin, buffer, size);
+            loaded = TryLoad(choosenPlugin, buffer, size, out_images);
+
         
         // If image not loaded and allow to load using unregistred file extensions, iterate over all image plugins.
-        if (loadedImage == nullptr && onlyRegisteredExtension == false)
+        if (loaded == false && onlyRegisteredExtension == false)
             for (auto plugin : fListPlugins)
                 // In case we try to a choosen plugin and it failed. don't try again.
                 if (plugin != choosenPlugin)
-                    loadedImage = TryLoad(plugin, buffer, size);
+                    loaded = TryLoad(plugin, buffer, size, out_images);
 
-        return loadedImage;
+        return loaded;
     }
 
     std::wstring ImageLoader::GetKnownFileTypes() const
