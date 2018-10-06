@@ -156,7 +156,7 @@ namespace OIV
         const MonitorDesc* fCurrentMonitorDesc = nullptr;
 #pragma endregion FrameLimiter
         Win32::MainWindow fWindow;
-        AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
+        AutoScrollUniquePtr fAutoScroll;
         RecrusiveDelayedOp fRefreshOperation;
         RecrusiveDelayedOp fPreserveImageSpaceSelection;
         bool fIsSlideShowActive = false;

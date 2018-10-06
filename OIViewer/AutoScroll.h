@@ -1,10 +1,8 @@
 #pragma once
 #include <memory>
-
 #include <windows.h>
 #include "Point.h"
 #include "StopWatch.h"
-#include "win32/Win32Window.h"
 #include "win32/HighPrecisionTimer.h"
 
 
@@ -13,15 +11,27 @@ namespace OIV
     class AutoScroll
     {
     public:
-        typedef std::function< void(const LLUtils::PointF64&) > OnScrollFunction;
-        AutoScroll(Win32::MainWindow* window, OnScrollFunction scrollFunc);
 
+        using OnScrollFunction = std::function< void(const LLUtils::PointF64&)>;
+        
+        struct CreateParams
+        {
+            HWND windowHandle;
+            DWORD windowMessage;
+            OnScrollFunction scrollFunc;
+        };
+
+
+        
+        AutoScroll(const CreateParams& createParams);
+        bool IsAutoScrolling()const { return fAutoScrolling; }
+
+        LLUtils::PointI32 GetMousePosition();
         void ToggleAutoScroll();
-        void PerformAutoScroll(const Win32::EventWinMessage* evnt);
+        void PerformAutoScroll();
 
 #pragma region Private member methods
         private:
-        void UpdateCursorFromDeltaVector(LLUtils::PointF64 aDeltaVector);
         void OnScroll();
 #pragma endregion
         
@@ -39,8 +49,7 @@ namespace OIV
         LLUtils::StopWatch fAutoScrollStopWatch;
         Win32::HighPrecisionTimer fTimer = std::bind(&AutoScroll::OnScroll, this);
         HANDLE fAutoScrollTimerID = nullptr;
-        Win32::MainWindow* fWindow;
-        OnScrollFunction fOnScroll;
+        CreateParams fCreateParams = {};
         
 #pragma endregion
     };

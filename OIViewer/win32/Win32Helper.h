@@ -36,6 +36,14 @@ namespace OIV
             }
         }
 
+
+        static POINT GetMouseCursorPosition(HWND handle)
+        {
+            POINT clientMousePos = GetMouseCursorPosition();
+            ScreenToClient(handle, &clientMousePos);
+            return clientMousePos;
+        }
+
         static POINT GetMouseCursorPosition()
         {
             POINT mousePos;

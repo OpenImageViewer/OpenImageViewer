@@ -105,6 +105,7 @@ namespace OIV
                 , SouthWest
                 , South
                 , SouthEast
+                , SizeAll
                 , Count
             };
 

@@ -1029,6 +1029,24 @@ namespace OIV
     void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
     {
         Pan(panAmount);
+        
+        Win32::MainWindow::CursorType cursorType = Win32::MainWindow::CursorType::SystemDefault;
+
+        if (panAmount == LLUtils::PointF64::Zero)
+        {
+            cursorType = Win32::MainWindow::CursorType::SizeAll;
+        }
+        else
+        {
+            const double PI = 3.14159265358979323846;
+            double rad = atan2(-panAmount.y, panAmount.x);
+            double deg = (rad * 180) / PI + 180;
+            const int numDirections = 8;
+            const int step = 360 / numDirections;
+            int index = (static_cast<int>(deg) + step / 2) % 360 / step;
+            cursorType = static_cast<Win32::MainWindow::CursorType>(index + 2);
+        }
+        fWindow.SetCursorType(cursorType);
     }
     
     void TestApp::Init(std::wstring relativeFilePath)
@@ -1055,12 +1073,10 @@ namespace OIV
         fWindow.SetMenuChar(false);
         fWindow.EnableDragAndDrop(true);
         fWindow.SetEraseBackground(false);
-            //TODO: drag window
-        
+    
+        AutoScroll::CreateParams params = { fWindow.GetHandle(),Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, std::bind(&TestApp::OnScroll, this, std::placeholders::_1) };
+        fAutoScroll = std::make_unique<AutoScroll>(params);
 
-        
-
-        
 
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
 
@@ -1834,7 +1850,7 @@ namespace OIV
         break;
         
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
-            fAutoScroll.PerformAutoScroll(evnt);
+            fAutoScroll->PerformAutoScroll();
             break;
         case Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER:
             PerformRefresh();
@@ -1929,7 +1945,11 @@ namespace OIV
         if (isMouseUnderCursor && evnt->window->IsMouseCursorInClientRect())
         {
             if (IsMiddlePressed)
-                fAutoScroll.ToggleAutoScroll();
+            {
+                fAutoScroll->ToggleAutoScroll();
+                if (fAutoScroll->IsAutoScrolling() == false)
+                    fWindow.SetCursorType(OIV::Win32::MainWindow::CursorType::SystemDefault);
+            }
 
             if (IsLeftDoubleClick)
             {

@@ -445,10 +445,8 @@ namespace OIV
 
         POINT Win32Window::GetMousePosition() const
         {
-            POINT clientMousePos;
-            GetCursorPos(&clientMousePos);
-            ScreenToClient(GetHandle(), &clientMousePos);
-            return clientMousePos;
+            return Win32Helper::GetMouseCursorPosition(GetHandle());
+            
         }
 
 
@@ -486,7 +484,6 @@ namespace OIV
             AddEventListener(std::bind(&MainWindow::HandleWindwMessage, this, std::placeholders::_1));
         }
 
-        
 
         void MainWindow::SetCursorType(CursorType type)
         {
@@ -499,15 +496,16 @@ namespace OIV
                     const std::wstring CursorsPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/";
 
                     fCursors[0] = nullptr;
-                    fCursors[1] = LoadCursor(nullptr, IDC_ARROW);
-                    fCursors[2] = LoadCursorFromFile((CursorsPath + L"arrow-E.cur").c_str());
-                    fCursors[3] = LoadCursorFromFile((CursorsPath + L"arrow-NE.cur").c_str());
-                    fCursors[4] = LoadCursorFromFile((CursorsPath + L"arrow-N.cur").c_str());
-                    fCursors[5] = LoadCursorFromFile((CursorsPath + L"arrow-NW.cur").c_str());
-                    fCursors[6] = LoadCursorFromFile((CursorsPath + L"arrow-W.cur").c_str());
-                    fCursors[7] = LoadCursorFromFile((CursorsPath + L"arrow-SW.cur").c_str());
-                    fCursors[8] = LoadCursorFromFile((CursorsPath + L"arrow-S.cur").c_str());
-                    fCursors[9] = LoadCursorFromFile((CursorsPath + L"arrow-SE.cur").c_str());
+                    fCursors[(size_t)CursorType::SystemDefault ] = LoadCursor(nullptr, IDC_ARROW);
+                    fCursors[(size_t)CursorType::East] = LoadCursorFromFile((CursorsPath + L"arrow-E.cur").c_str());
+                    fCursors[(size_t)CursorType::NorthEast] = LoadCursorFromFile((CursorsPath + L"arrow-NE.cur").c_str());
+                    fCursors[(size_t)CursorType::North] = LoadCursorFromFile((CursorsPath + L"arrow-N.cur").c_str());
+                    fCursors[(size_t)CursorType::NorthWest] = LoadCursorFromFile((CursorsPath + L"arrow-NW.cur").c_str());
+                    fCursors[(size_t)CursorType::West] = LoadCursorFromFile((CursorsPath + L"arrow-W.cur").c_str());
+                    fCursors[(size_t)CursorType::SouthWest] = LoadCursorFromFile((CursorsPath + L"arrow-SW.cur").c_str());
+                    fCursors[(size_t)CursorType::South] = LoadCursorFromFile((CursorsPath + L"arrow-S.cur").c_str());
+                    fCursors[(size_t)CursorType::SouthEast] = LoadCursorFromFile((CursorsPath + L"arrow-SE.cur").c_str());
+                    fCursors[(size_t)CursorType::SizeAll] = LoadCursorFromFile((CursorsPath + L"arrow-C.cur").c_str());
                     fCursorsInitialized = true;
                 }
                 fCurrentCursorType = type;
