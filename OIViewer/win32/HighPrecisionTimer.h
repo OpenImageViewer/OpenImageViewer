@@ -1,23 +1,28 @@
 #pragma once
 #include <windows.h>
 #include <Exception.h>
+#include <Templates.h>
 namespace OIV
 {
     namespace Win32
     {
-        class HighPrecisionTimer
+            
+        
+        class HighPrecisionTimer : public LLUtils::NoCopyable
         {
         public:
 
             using Callback = std::function<void()>;
-
-
             HighPrecisionTimer(Callback callback)
                 :
                 fCallback(callback)
             {
             }
 
+            ~HighPrecisionTimer()
+            {
+                Enable(false);
+            }
 
 
             void SetDelay(DWORD delay)
