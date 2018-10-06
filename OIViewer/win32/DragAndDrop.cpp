@@ -5,7 +5,7 @@ namespace OIV
 {
     namespace Win32
     {
-        DragAndDropTarget::DragAndDropTarget(Win32WIndow& parentWindow):
+        DragAndDropTarget::DragAndDropTarget(Win32Window& parentWindow):
             m_cRef(1)
             , fParentWindow(parentWindow)
         {

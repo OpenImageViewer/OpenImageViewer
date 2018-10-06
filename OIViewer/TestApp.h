@@ -155,7 +155,7 @@ namespace OIV
         uint32_t fRefreshRateTimes1000 = 60'000;
         const MonitorDesc* fCurrentMonitorDesc = nullptr;
 #pragma endregion FrameLimiter
-        Win32::Win32WIndow fWindow;
+        Win32::MainWindow fWindow;
         AutoScroll fAutoScroll = AutoScroll(&fWindow, std::bind(&TestApp::OnScroll, this, std::placeholders::_1));
         RecrusiveDelayedOp fRefreshOperation;
         RecrusiveDelayedOp fPreserveImageSpaceSelection;

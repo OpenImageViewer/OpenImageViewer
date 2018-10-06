@@ -2,22 +2,23 @@
 #include <functional>
 #include <vector>
 #include "RawInput/RawInputMouse.h"
+#include "Win32Common.h"
 namespace OIV
 {
     namespace Win32
     {
-        class Win32WIndow;
+        class Win32Window;
         class Event
         {
         public:
-            Win32WIndow* window = nullptr;
+            Win32Window* window = nullptr;
             virtual ~Event() {}
         };
 
         class EventWinMessage : public Event
         {
         public:
-            MSG message = { 0 };
+            WinMessage message = {};
         };
 
         class EventRawInputMouseStateChanged : public Event

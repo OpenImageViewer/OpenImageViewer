@@ -1052,6 +1052,16 @@ namespace OIV
         
         // initialize the windowing system of the window
         fWindow.Create(GetModuleHandle(nullptr), SW_HIDE);
+        fWindow.SetMenuChar(false);
+        fWindow.EnableDragAndDrop(true);
+        fWindow.SetEraseBackground(false);
+            //TODO: drag window
+        
+
+        
+
+        
+
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
 
 
@@ -1060,9 +1070,6 @@ namespace OIV
         
         
         OIVCommands::Init(fWindow.GetHandleClient());
-
-        // Update the window size manually since the window won't receive WM_SIZE till it's visible.
-        fWindow.RefreshWindow();
 
         fIsInitialLoad = isInitialFile;
 
@@ -1797,7 +1804,7 @@ namespace OIV
     {
         bool handled = false;
 
-        const MSG& uMsg = evnt->message;
+        const Win32::WinMessage & uMsg = evnt->message;
         switch (uMsg.message)
         {
         case WM_SIZE:
@@ -1863,7 +1870,7 @@ namespace OIV
     {
         using namespace Win32;
         
-        const RawInputMouseWindow& mouseState = evnt->window->GetMouseState();
+        const RawInputMouseWindow& mouseState = dynamic_cast<MainWindow*>(evnt->window)->GetMouseState();
 
         const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);

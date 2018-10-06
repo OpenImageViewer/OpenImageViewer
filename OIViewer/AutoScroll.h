@@ -14,7 +14,7 @@ namespace OIV
     {
     public:
         typedef std::function< void(const LLUtils::PointF64&) > OnScrollFunction;
-        AutoScroll(Win32::Win32WIndow* window, OnScrollFunction scrollFunc);
+        AutoScroll(Win32::MainWindow* window, OnScrollFunction scrollFunc);
 
         void ToggleAutoScroll();
         void PerformAutoScroll(const Win32::EventWinMessage* evnt);
@@ -39,7 +39,7 @@ namespace OIV
         LLUtils::StopWatch fAutoScrollStopWatch;
         Win32::HighPrecisionTimer fTimer = std::bind(&AutoScroll::OnScroll, this);
         HANDLE fAutoScrollTimerID = nullptr;
-        Win32::Win32WIndow* fWindow;
+        Win32::MainWindow* fWindow;
         OnScrollFunction fOnScroll;
         
 #pragma endregion

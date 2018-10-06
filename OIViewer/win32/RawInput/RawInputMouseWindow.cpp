@@ -5,7 +5,7 @@ namespace OIV
 {
     namespace Win32
     {
-        RawInputMouseWindow::RawInputMouseWindow(Win32WIndow* win)
+        RawInputMouseWindow::RawInputMouseWindow(Win32Window* win)
         {
             fWin = win;
         }

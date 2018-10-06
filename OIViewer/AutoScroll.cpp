@@ -5,7 +5,7 @@
 namespace OIV
 {
 
-    AutoScroll::AutoScroll(Win32::Win32WIndow * window, OnScrollFunction scrollFunc) :
+    AutoScroll::AutoScroll(Win32::MainWindow * window, OnScrollFunction scrollFunc) :
           fWindow(window)
         , fOnScroll(scrollFunc)
     {
@@ -52,7 +52,7 @@ namespace OIV
         {
             // Stop auto scroll
             fAutoScrollPosition = LLUtils::PointI32::Zero;
-            fWindow->SetCursorType(Win32::Win32WIndow::CursorType::SystemDefault);
+            fWindow->SetCursorType(Win32::MainWindow::CursorType::SystemDefault);
 
         }
         
@@ -70,7 +70,7 @@ namespace OIV
         const int step = 360 / numDirections;
 
         int index = (static_cast<int>(deg) + step / 2) % 360 / step;
-        fWindow->SetCursorType((Win32::Win32WIndow::CursorType)((int)index + 2));
+        fWindow->SetCursorType((Win32::MainWindow::CursorType)((int)index + 2));
     }
 
 

@@ -209,6 +209,7 @@
     <ClInclude Include="win32\MonitorInfo.h" />
     <ClInclude Include="win32\RawInput\RawInputMouse.h" />
     <ClInclude Include="win32\RawInput\RawInputMouseWindow.h" />
+    <ClInclude Include="win32\Win32Common.h" />
     <ClInclude Include="win32\Win32Helper.h" />
     <ClInclude Include="win32\Win32Window.h" />
   </ItemGroup>

@@ -11,10 +11,10 @@ namespace OIV
 #pragma region IUnkown
         private:
             LONG m_cRef;
-            Win32WIndow& fParentWindow;
+            Win32Window& fParentWindow;
         public:
 
-            DragAndDropTarget(Win32WIndow& parentWindow);
+            DragAndDropTarget(Win32Window& parentWindow);
             virtual ~DragAndDropTarget();
             void Detach();
             // *** IUnknown ***

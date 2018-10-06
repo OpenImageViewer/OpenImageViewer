@@ -131,6 +131,9 @@
     <ClInclude Include="win32\HighPrecisionTimer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="win32\Win32Common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">
