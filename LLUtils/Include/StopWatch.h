@@ -19,8 +19,8 @@ namespace LLUtils
         using base_clock_rep = typename base_clock::rep;
         using base_clock_time_point = typename base_clock::time_point;
         
-        const time_type_real multiplierMapReal      [TimeUnitCount] = { 0, 1 , 0.001 , 0.000001 ,0.000000001};
-        const base_clock_rep multiplierMapInteger   [TimeUnitCount] = { 0, 1 , 1000  , 1000000  ,1000000000 };
+        inline static const time_type_real multiplierMapReal      [TimeUnitCount] = { 0, 1 , 0.001 , 0.000001 ,0.000000001};
+        inline static const base_clock_rep multiplierMapInteger   [TimeUnitCount] = { 0, 1 , 1000  , 1000000  ,1000000000 };
         
     public:
         StopWatchBasic(bool start = false)
