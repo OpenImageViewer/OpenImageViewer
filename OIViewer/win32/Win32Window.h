@@ -17,12 +17,19 @@ namespace OIV
     {
         enum class DoubleClickMode
         {
-             EntireWindow
-            ,ClientArea
-            ,NonClientArea // e.g. title
+              NotSet // use the behaviour defined by the window
+            , Default //use the bevour defined by a default window.
+            , EntireWindow // Double click allowed on the entire window
+            , ClientArea // double click allows only on the client area.
+            , NonClientArea // e.g. title
         };
 
-     
+        enum class LockMouseToWindowMode
+        {
+              NoLock
+            , LockResize
+            , LockMove // e.g. title
+        };
 
         class Win32Window
         {
@@ -45,7 +52,8 @@ namespace OIV
             DoubleClickMode GetDoubleClickMode() const { return fDoubleClickMode; }
             bool GetEnableMenuChar() const { return fEnableMenuChar; }
             HCURSOR GetMouseCursor() const { return fMouseCursor; }
-            void ShowBorders(bool show_borders);
+            LockMouseToWindowMode GetLockMouseToWindowMode() const { return fLockMouseToWindowMode; }
+            
             virtual ~Win32Window() {};
 
         public: // mutating methods
@@ -58,9 +66,10 @@ namespace OIV
             void Move(const int16_t delta_x, const int16_t delta_y);
             void SetMouseCursor(HCURSOR cursor);
             void SetEraseBackground(bool eraseBackground) {fEraseBackground = eraseBackground;}
-            void SetDoubleClickMode(DoubleClickMode doubleClickMode){ doubleClickMode = fDoubleClickMode; }
+            void SetDoubleClickMode(DoubleClickMode doubleClickMode) { fDoubleClickMode = doubleClickMode; }
             void EnableDragAndDrop(bool enable);
-            LLUtils::Event<void()> ResizeEvent;
+            void SetLockMouseToWindowMode(LockMouseToWindowMode mode);
+            void ShowBorders(bool show_borders);
 
         protected:
             bool RaiseEvent(const Event& evnt);
@@ -84,9 +93,10 @@ namespace OIV
             WINDOWPLACEMENT fLastWindowPlacement = { 0 };
             Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
             bool fEraseBackground = true;
-            DoubleClickMode fDoubleClickMode = DoubleClickMode::EntireWindow;
+            DoubleClickMode fDoubleClickMode = DoubleClickMode::NotSet;
             friend DragAndDropTarget;
             bool fShowBorders = true;
+            LockMouseToWindowMode fLockMouseToWindowMode = LockMouseToWindowMode::NoLock;
         };
 
 
@@ -146,7 +156,7 @@ namespace OIV
             bool fShowStatusBar = true;
             bool fInputFlushTimerEnabled = false;
             static const int cTimerIDRawInputFlush = 2500;
-            uint16_t fRawInputInterval = 5;
+            uint16_t fRawInputInterval = 0;
             LLUtils::StopWatch fRawInputTimer = (true);
             uint64_t fRawInputLastEventDisptchTime = 0;;
             CursorType fCurrentCursorType = CursorType::SystemDefault;

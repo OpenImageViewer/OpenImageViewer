@@ -105,6 +105,11 @@ namespace OIV
             return 0;
         }
 
+        void Win32Window::SetLockMouseToWindowMode(LockMouseToWindowMode mode)
+        {
+			fLockMouseToWindowMode = mode;
+        }
+
         void Win32Window::SetMenuChar(bool enabled)
         {
             fEnableMenuChar = enabled;
@@ -364,6 +369,29 @@ namespace OIV
             bool defaultProc = true;
             switch (message.message)
             {
+            case WM_NCHITTEST:
+                if (DefWindowProc(message.hWnd, message.message, message.wParam, message.lParam) == HTCLIENT)
+                {
+                    switch (fLockMouseToWindowMode)
+                    {
+                    case LockMouseToWindowMode::NoLock:
+                        //Do nothing
+                        break;
+                    case LockMouseToWindowMode::LockResize:
+                        defaultProc = false;
+                        retValue = GetCorner(*(POINTS*)&message.lParam);
+                        break;
+                    case LockMouseToWindowMode::LockMove:
+                    {
+                        retValue = HTCAPTION;
+                        defaultProc = false;
+                    }
+                    break;
+                    default:
+                        LL_EXCEPTION_UNEXPECTED_VALUE;
+                    }
+                }
+                break;
             case WM_SETCURSOR:
                 if (GetMouseCursor() != nullptr)
                 {
@@ -381,22 +409,24 @@ namespace OIV
                 break;
 
             case WM_NCLBUTTONDBLCLK:
-                if (GetDoubleClickMode() != DoubleClickMode::EntireWindow)
+                
+                switch (GetDoubleClickMode())
                 {
-                    const bool isInClientArea = DefWindowProc(message.hWnd, WM_NCHITTEST, message.wParam, message.lParam) != message.wParam;
-
-                    switch (GetDoubleClickMode())
-                    {
-                    case DoubleClickMode::NonClientArea:
-                        defaultProc = !isInClientArea;
-                        break;
-                    case DoubleClickMode::ClientArea:
-                        defaultProc = isInClientArea;
-                        break;
-                    }
+                case DoubleClickMode::NotSet:
+                    //Do nothing
+                    break;
+                case DoubleClickMode::Default:
+                    if (DefWindowProc(message.hWnd, WM_NCHITTEST, message.wParam, message.lParam) != message.wParam)
+                        defaultProc = false;
+                    break;
+                case DoubleClickMode::NonClientArea:
+                case DoubleClickMode::ClientArea:
+                case DoubleClickMode::EntireWindow:
+                default:
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "");
+                    break;
                 }
                 break;
-            
          
             case WM_ERASEBKGND:
                 defaultProc = GetEraseBackground();
@@ -596,7 +626,7 @@ namespace OIV
 
             uint64_t currentTime = static_cast<uint64_t>(fRawInputTimer.GetElapsedTimeInteger(LLUtils::StopWatch::TimeUnit::Milliseconds));
 
-            if (currentTime - fRawInputLastEventDisptchTime > fRawInputInterval)
+            if (currentTime - fRawInputLastEventDisptchTime >= fRawInputInterval)
             {
                 // Raise events and flush input
 
@@ -829,27 +859,7 @@ namespace OIV
         case WM_CREATE:
             OnCreate();
             break;
-        //case WM_NCHITTEST:
-        //{
-        //    if (true
-        //        && window->fMouseState.IsCaptured(MouseState::Button::Left) == true
-        //        && Win32Helper::IsKeyPressed(VK_MENU) == false
-        //        && DefWindowProc(hWnd, message, wParam, lParam) == HTCLIENT
-        //        && window->IsFullScreen() == false
-        //        )
-        //    {
-        //        defaultProc = false;
 
-        //        if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
-        //            // Resize window.
-        //            retValue = window->GetCorner(*(POINTS*)&lParam);
-        //        else
-        //            // Drag window.
-        //            retValue = HTCAPTION;
-        //    }
-        //}
-
-        //break;
         case WM_TIMER:
             if (message.wParam == cTimerIDRawInputFlush)
                 FlushInput(true);

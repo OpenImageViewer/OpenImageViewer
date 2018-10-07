@@ -1073,6 +1073,7 @@ namespace OIV
         fWindow.SetMenuChar(false);
         fWindow.EnableDragAndDrop(true);
         fWindow.SetEraseBackground(false);
+        fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
     
         AutoScroll::CreateParams params = { fWindow.GetHandle(),Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, std::bind(&TestApp::OnScroll, this, std::placeholders::_1) };
         fAutoScroll = std::make_unique<AutoScroll>(params);
@@ -1901,7 +1902,38 @@ namespace OIV
         const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::DoublePressed;
         const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
 
+
+
+        using namespace Win32;
+        LockMouseToWindowMode LockMode = LockMouseToWindowMode::NoLock;
         
+        if (IsLeftPressed)
+        {
+            //Window drag and resize
+            if (true
+                && Win32Helper::IsKeyPressed(VK_MENU) == false
+                && fWindow.IsFullScreen() == false
+                )
+            {
+                if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
+                    LockMode = LockMouseToWindowMode::LockResize;
+                else
+                    LockMode = LockMouseToWindowMode::LockMove;
+
+            }
+        }
+        else if (IsLeftReleased)
+        {
+            LockMode = LockMouseToWindowMode::NoLock;
+        }
+
+
+
+        fWindow.SetLockMouseToWindowMode(LockMode);
+
+
+
+        //Selection rect
         if (Win32Helper::IsKeyPressed(VK_MENU))
         {
             SelectionRect::Operation op = SelectionRect::Operation::NoOp;
