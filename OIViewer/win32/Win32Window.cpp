@@ -156,29 +156,50 @@ namespace OIV
 
 
 
-        DWORD Win32Window::GetWindowStyles() const
+        DWORD Win32Window::ComposeWindowStyles() const
         {
-            DWORD currentStyles = GetWindowLong(fHandleWindow, GWL_STYLE);
+            DWORD currentStyles = 0
+            | (WS_CLIPCHILDREN | WS_CLIPSIBLINGS) 
+            | (GetVisible() ? WS_VISIBLE : 0)
+            ;
 
-            currentStyles &= (WS_MAXIMIZE | WS_VISIBLE);
-            currentStyles |= WS_CLIPCHILDREN;
 
-
-            if (fFullSceenState != FullSceenState::Windowed || fShowBorders == false)
-                return currentStyles;
-            else
-                return currentStyles
-                | WS_BORDER
-                | WS_DLGFRAME
-                | WS_SYSMENU
-                | WS_THICKFRAME
-                | WS_MINIMIZEBOX
-                | WS_MAXIMIZEBOX;
+            if (GetFullScreenState() == FullSceenState::Windowed)
+            {
+                currentStyles |= 0
+                    | (((fWindowStyles & WindowStyle::ChildWindow) == WindowStyle::ChildWindow) ? WS_CHILD : 0)
+                    | (((fWindowStyles & WindowStyle::Caption) == WindowStyle::Caption) ? WS_CAPTION : 0)
+                    | (((fWindowStyles & WindowStyle::CloseButton) == WindowStyle::CloseButton) ? WS_SYSMENU | WS_CAPTION: 0)
+                    | (((fWindowStyles & WindowStyle::MinimizeButton) == WindowStyle::MinimizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX : 0)
+                    | (((fWindowStyles & WindowStyle::MaximizeButton) == WindowStyle::MaximizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MAXIMIZEBOX : 0)
+                    | (((fWindowStyles & WindowStyle::ResizableBorder) == WindowStyle::ResizableBorder) ? WS_SIZEBOX : 0)
+                    ;
+            }
+            
+            return currentStyles;
+                
         }
 
         bool Win32Window::IsUnderMouseCursor() const
         {
             return WindowFromPoint(Win32Helper::GetMouseCursorPosition()) == GetHandle() == true;
+        }
+
+        void Win32Window::SetWindowStyles(WindowStyle styles, bool enable)
+        {
+            WindowStyle oldStyles = fWindowStyles;
+
+            if (enable == true)
+                fWindowStyles |= styles;
+            else
+                fWindowStyles &= ~styles;
+
+
+            if (oldStyles != fWindowStyles)
+                UpdateWindowStyles();
+                
+                
+            
         }
 
         void Win32Window::SetMouseCursor(HCURSOR cursor)
@@ -221,19 +242,13 @@ namespace OIV
 
         void Win32Window::UpdateWindowStyles()
         {
-            DWORD current = GetWindowStyles();
-            if (current != fWindowStyles)
-            {
-                fWindowStyles = current;
-                HWND hwnd = fHandleWindow;
-                //Set styles
-                SetWindowLong(hwnd, GWL_STYLE, fWindowStyles);
+            //Set styles
+            SetWindowLong(GetHandle(), GWL_STYLE, ComposeWindowStyles());
 
-                //Refresh
-                SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-            }
+            //Refresh frame
+            SetWindowPos(GetHandle(), nullptr, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         }
 
 
@@ -343,11 +358,13 @@ namespace OIV
             return corner;
         }
 
-
-        void Win32Window::ShowBorders(bool show_borders)
+        void Win32Window::SetVisible(bool visible)
         {
-            fShowBorders = show_borders;
-            UpdateWindowStyles();
+            if (GetVisible() != visible)
+            {
+                fVisible = visible;
+                ShowWindow(fHandleWindow, visible == true ? SW_SHOW : SW_HIDE);
+            }
         }
 
         LLUtils::PointI32 Win32Window::GetWindowSize() const
@@ -355,12 +372,6 @@ namespace OIV
             RECT r;
             GetWindowRect(fHandleWindow, &r);
             return{ r.right - r.left, r.bottom - r.top };
-        }
-
-
-        void Win32Window::Show(bool show) const
-        {
-            ShowWindow(fHandleWindow, show == true ? SW_SHOW : SW_HIDE);
         }
 
         LRESULT Win32Window::WindowProc(const WinMessage& message)
@@ -431,12 +442,20 @@ namespace OIV
             case WM_ERASEBKGND:
                 defaultProc = GetEraseBackground();
                 break;
-
-            case WM_SIZE:
-                UpdateWindowStyles();
-                break;
             case WM_DESTROY:
                     DestroyResources();
+                break;
+
+            case WM_SYSCOMMAND:
+                switch (message.wParam)
+                {
+                case SC_MAXIMIZE:
+                    fIsMaximized = true;
+                    break;
+                case SC_RESTORE:
+                    fIsMaximized = false;
+                    break;
+                }
                 break;
             }
 
@@ -499,12 +518,6 @@ namespace OIV
                 handled |= callback(&evnt);
 
             return handled;
-        }
-
-
-        bool Win32Window::GetShowBorders() const
-        {
-            return fShowBorders;
         }
 
         // WIn32 Window
@@ -792,8 +805,9 @@ namespace OIV
 
     bool MainWindow::GetShowStatusBar() const
     {
-        // show status bar if explicity not visible and borders are visible.
-        return fShowStatusBar == true && GetShowBorders() == true;
+        // show status bar if explicity not visible and caption is visible
+        return fShowStatusBar == true &&   
+            ((GetWindowStyles() & (WindowStyle::Caption | WindowStyle::CloseButton | WindowStyle::MinimizeButton | WindowStyle::MaximizeButton) ) != WindowStyle::NoStyle);
     }
 
     void MainWindow::HandleResize()

@@ -69,7 +69,7 @@ namespace OIV
         if (type == "toggleBorders")
         {
             ToggleBorders();
-            result.resValue = std::wstring(L"Borders ") + (fWindow.GetShowBorders() == true ? L"On" : L"Off");
+            result.resValue = std::wstring(L"Borders ") + (fShowBorders == true ? L"On" : L"Off");
         }
         else if (type == "quit")
         {
@@ -917,7 +917,7 @@ namespace OIV
         }
 
         if (fIsInitialLoad == true)
-            fWindow.Show(true);
+            fWindow.SetVisible(true);
     }
 
     void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
@@ -1074,6 +1074,10 @@ namespace OIV
         fWindow.EnableDragAndDrop(true);
         fWindow.SetEraseBackground(false);
         fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
+        {
+            using namespace OIV::Win32;
+            fWindow.SetWindowStyles(WindowStyle::ResizableBorder | WindowStyle::MaximizeButton | WindowStyle::MinimizeButton, true);
+        }
     
         AutoScroll::CreateParams params = { fWindow.GetHandle(),Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, std::bind(&TestApp::OnScroll, this, std::placeholders::_1) };
         fAutoScroll = std::make_unique<AutoScroll>(params);
@@ -1099,7 +1103,7 @@ namespace OIV
 
         //If there is no initial file, perform post init operations at the beginning
         if (fIsInitialLoad == false)
-            fWindow.Show(true);
+            fWindow.SetVisible(true);
         
             
     }
@@ -1243,9 +1247,12 @@ namespace OIV
 
     void TestApp::ToggleBorders()
     {
-        static bool showBorders = true;
-        showBorders = !showBorders;
-        fWindow.ShowBorders(showBorders);
+        fShowBorders = !fShowBorders;
+        {
+            using namespace OIV::Win32;
+            fWindow.SetWindowStyles(WindowStyle::ResizableBorder | WindowStyle::MaximizeButton | WindowStyle::MinimizeButton, fShowBorders);
+        }
+        
     }
 
     void TestApp::ToggleSlideShow()

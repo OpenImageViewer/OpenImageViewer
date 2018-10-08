@@ -10,6 +10,7 @@
 #include "StopWatch.h"
 #include <wrl/client.h>
 #include "Win32Common.h"
+#include <EnumClassBitwise.h>
 
 namespace OIV
 {
@@ -30,22 +31,31 @@ namespace OIV
             , LockResize
             , LockMove // e.g. title
         };
-
+        
+        enum class WindowStyle : uint32_t
+        {
+              NoStyle        = 0 << 0 // WS_CAPTION
+            , Caption        = 1 << 0 // WS_CAPTION
+            , CloseButton    = 1 << 1 // WS_SYSMENU
+            , ResizableBorder= 1 << 2 // WS_SIZEBOX
+            , MinimizeButton = 1 << 3 // WS_MINIMIZEBOX
+            , MaximizeButton = 1 << 4 // WS_MAXIMIZEBOX;
+            , ChildWindow    = 1 << 5 // WS_CHILD
+        };
+        
         class Win32Window
         {
         public:
-            // mutating methods
+            // const methods
             HWND GetHandle() const;
             bool IsInFocus() const;
             bool IsMouseCursorInClientRect() const;
             POINT GetMousePosition() const;
-            DWORD GetWindowStyles() const;
             bool IsFullScreen() const;
             SIZE GetClientSize() const;
             RECT GetClientRectangle() const;
             LRESULT GetCorner(const POINTS& tag_points) const;
             LLUtils::PointI32 GetWindowSize() const;
-            void Show(bool show) const;
             FullSceenState GetFullScreenState() const { return fFullSceenState; } ;
             bool IsUnderMouseCursor() const;
             bool GetEraseBackground() const { return fEraseBackground; }
@@ -53,6 +63,9 @@ namespace OIV
             bool GetEnableMenuChar() const { return fEnableMenuChar; }
             HCURSOR GetMouseCursor() const { return fMouseCursor; }
             LockMouseToWindowMode GetLockMouseToWindowMode() const { return fLockMouseToWindowMode; }
+            bool GetVisible() const  { return fVisible; }
+            WindowStyle GetWindowStyles() const {return fWindowStyles;}
+            
             
             virtual ~Win32Window() {};
 
@@ -62,17 +75,21 @@ namespace OIV
             void AddEventListener(EventCallback callback);
             void SetMenuChar(bool enabled);
             void ToggleFullScreen(bool multiMonitor = false);
-            bool GetShowBorders() const;
             void Move(const int16_t delta_x, const int16_t delta_y);
             void SetMouseCursor(HCURSOR cursor);
             void SetEraseBackground(bool eraseBackground) {fEraseBackground = eraseBackground;}
             void SetDoubleClickMode(DoubleClickMode doubleClickMode) { fDoubleClickMode = doubleClickMode; }
             void EnableDragAndDrop(bool enable);
             void SetLockMouseToWindowMode(LockMouseToWindowMode mode);
-            void ShowBorders(bool show_borders);
+            void SetVisible(bool visible);
+            void SetWindowStyles(WindowStyle styles, bool enable);
 
         protected:
             bool RaiseEvent(const Event& evnt);
+            DWORD ComposeWindowStyles() const;
+
+        private: // const methods:
+
         private: //methods:
             static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             LRESULT WindowProc(const WinMessage& message);
@@ -88,17 +105,21 @@ namespace OIV
             HWND fHandleWindow = nullptr;
             EventCallbackCollection fListeners;
             bool fEnableMenuChar = true;
-            DWORD fWindowStyles = 0;
             FullSceenState fFullSceenState = FullSceenState::Windowed;
             WINDOWPLACEMENT fLastWindowPlacement = { 0 };
             Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
             bool fEraseBackground = true;
             DoubleClickMode fDoubleClickMode = DoubleClickMode::NotSet;
             friend DragAndDropTarget;
-            bool fShowBorders = true;
             LockMouseToWindowMode fLockMouseToWindowMode = LockMouseToWindowMode::NoLock;
+            bool fVisible = false;
+            bool fIsMaximized = false;
+            WindowStyle fWindowStyles = WindowStyle::NoStyle;
         };
 
+
+
+        // MAIN WINDOW
 
         class MainWindow : public Win32Window
         {
@@ -165,3 +186,4 @@ namespace OIV
         };
     }
 }
+

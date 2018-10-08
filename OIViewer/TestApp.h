@@ -190,6 +190,7 @@ namespace OIV
         bool fUseRainbowNormalization = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
+        bool fShowBorders = true;
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
