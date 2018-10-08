@@ -171,12 +171,12 @@ namespace OIV
             if (GetFullScreenState() == FullSceenState::Windowed)
             {
                 currentStyles |= 0
-                    | (((fWindowStyles & WindowStyle::ChildWindow) == WindowStyle::ChildWindow) ? WS_CHILD : 0)
-                    | (((fWindowStyles & WindowStyle::Caption) == WindowStyle::Caption) ? WS_CAPTION : 0)
-                    | (((fWindowStyles & WindowStyle::CloseButton) == WindowStyle::CloseButton) ? WS_SYSMENU | WS_CAPTION : 0)
-                    | (((fWindowStyles & WindowStyle::MinimizeButton) == WindowStyle::MinimizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX : 0)
-                    | (((fWindowStyles & WindowStyle::MaximizeButton) == WindowStyle::MaximizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MAXIMIZEBOX : 0)
-                    | (((fWindowStyles & WindowStyle::ResizableBorder) == WindowStyle::ResizableBorder) ? WS_SIZEBOX : 0)
+                    | (fWindowStyles.test(WindowStyle::ChildWindow) ? WS_CHILD : 0)
+                    | (fWindowStyles.test(WindowStyle::Caption) ? WS_CAPTION : 0)
+                    | (fWindowStyles.test(WindowStyle::CloseButton) ? WS_SYSMENU | WS_CAPTION : 0)
+                    | (fWindowStyles.test(WindowStyle::MinimizeButton)  ? WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX : 0)
+                    | (fWindowStyles.test(WindowStyle::MaximizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MAXIMIZEBOX : 0)
+                    | (fWindowStyles.test(WindowStyle::ResizableBorder) ? WS_SIZEBOX : 0)
                     ;
             }
 
@@ -191,13 +191,11 @@ namespace OIV
 
         void Win32Window::SetWindowStyles(WindowStyle styles, bool enable)
         {
-            WindowStyle oldStyles = fWindowStyles;
-
-            if (enable == true)
-                fWindowStyles |= styles;
+            WindowStyleFlags oldStyles = fWindowStyles;
+            if (enable)
+                fWindowStyles.set(styles);
             else
-                fWindowStyles &= ~styles;
-
+                fWindowStyles.clear(styles);
 
             if (oldStyles != fWindowStyles)
                 UpdateWindowStyles();

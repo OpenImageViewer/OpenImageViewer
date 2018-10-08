@@ -10,7 +10,7 @@
 #include "StopWatch.h"
 #include <wrl/client.h>
 #include "Win32Common.h"
-#include <EnumClassBitwise.h>
+#include <BitFlags.h>
 
 namespace OIV
 {
@@ -42,6 +42,9 @@ namespace OIV
             , MaximizeButton = 1 << 4 // WS_MAXIMIZEBOX;
             , ChildWindow    = 1 << 5 // WS_CHILD
         };
+
+        using WindowStyleFlags = LLUtils::BitFlags<WindowStyle>;
+        
         
         class Win32Window
         {
@@ -64,7 +67,7 @@ namespace OIV
             HCURSOR GetMouseCursor() const { return fMouseCursor; }
             LockMouseToWindowMode GetLockMouseToWindowMode() const { return fLockMouseToWindowMode; }
             bool GetVisible() const  { return fVisible; }
-            WindowStyle GetWindowStyles() const {return fWindowStyles;}
+            WindowStyleFlags GetWindowStyles() const {return fWindowStyles;}
             bool GetTransparent() const { return fIsTransparent; }
             
             
@@ -117,7 +120,7 @@ namespace OIV
             LockMouseToWindowMode fLockMouseToWindowMode = LockMouseToWindowMode::NoLock;
             bool fVisible = false;
             bool fIsMaximized = false;
-            WindowStyle fWindowStyles = WindowStyle::NoStyle;
+            WindowStyleFlags fWindowStyles = WindowStyle::NoStyle;
             bool fIsTransparent = false;
         };
 
