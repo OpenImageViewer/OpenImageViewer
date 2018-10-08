@@ -12,9 +12,13 @@ namespace OIV
 
     namespace Win32
     {
-
-        int Win32Window::Create(HINSTANCE hInstance, int nCmdShow)
+        void Win32Window::SetParent(Win32Window * parent)
         {
+            ::SetParent(GetHandle(), parent->GetHandle());
+        }
+        int Win32Window::Create()
+        {
+            HINSTANCE hInstance = GetModuleHandle(nullptr);
             // The main window class name.
             static TCHAR szWindowClass[] = _T("OIV_WINDOW_CLASS");
 
@@ -56,19 +60,19 @@ namespace OIV
 
             HWND handleWindow =
 
-            CreateWindow(
-                szWindowClass,
-                szTitle,
-                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                CW_USEDEFAULT,
-                CW_USEDEFAULT,
-                1200,
-                800,
-                nullptr,
-                nullptr,
-                hInstance,
-                this
-            );
+                CreateWindow(
+                    szWindowClass,
+                    szTitle,
+                    WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                    CW_USEDEFAULT,
+                    CW_USEDEFAULT,
+                    1200,
+                    800,
+                    nullptr,
+                    nullptr,
+                    hInstance,
+                    this
+                );
 
 
             assert("Wrong window handle" && fHandleWindow == handleWindow);
@@ -100,14 +104,14 @@ namespace OIV
             //    }
             //}
 
-            
+
 
             return 0;
         }
 
         void Win32Window::SetLockMouseToWindowMode(LockMouseToWindowMode mode)
         {
-			fLockMouseToWindowMode = mode;
+            fLockMouseToWindowMode = mode;
         }
 
         void Win32Window::SetMenuChar(bool enabled)
@@ -159,9 +163,9 @@ namespace OIV
         DWORD Win32Window::ComposeWindowStyles() const
         {
             DWORD currentStyles = 0
-            | (WS_CLIPCHILDREN | WS_CLIPSIBLINGS) 
-            | (GetVisible() ? WS_VISIBLE : 0)
-            ;
+                | (WS_CLIPCHILDREN | WS_CLIPSIBLINGS)
+                | (GetVisible() ? WS_VISIBLE : 0)
+                ;
 
 
             if (GetFullScreenState() == FullSceenState::Windowed)
@@ -169,15 +173,15 @@ namespace OIV
                 currentStyles |= 0
                     | (((fWindowStyles & WindowStyle::ChildWindow) == WindowStyle::ChildWindow) ? WS_CHILD : 0)
                     | (((fWindowStyles & WindowStyle::Caption) == WindowStyle::Caption) ? WS_CAPTION : 0)
-                    | (((fWindowStyles & WindowStyle::CloseButton) == WindowStyle::CloseButton) ? WS_SYSMENU | WS_CAPTION: 0)
+                    | (((fWindowStyles & WindowStyle::CloseButton) == WindowStyle::CloseButton) ? WS_SYSMENU | WS_CAPTION : 0)
                     | (((fWindowStyles & WindowStyle::MinimizeButton) == WindowStyle::MinimizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX : 0)
                     | (((fWindowStyles & WindowStyle::MaximizeButton) == WindowStyle::MaximizeButton) ? WS_SYSMENU | WS_CAPTION | WS_MAXIMIZEBOX : 0)
                     | (((fWindowStyles & WindowStyle::ResizableBorder) == WindowStyle::ResizableBorder) ? WS_SIZEBOX : 0)
                     ;
             }
-            
+
             return currentStyles;
-                
+
         }
 
         bool Win32Window::IsUnderMouseCursor() const
@@ -197,9 +201,9 @@ namespace OIV
 
             if (oldStyles != fWindowStyles)
                 UpdateWindowStyles();
-                
-                
-            
+
+
+
         }
 
         void Win32Window::SetMouseCursor(HCURSOR cursor)
@@ -381,6 +385,10 @@ namespace OIV
             switch (message.message)
             {
             case WM_NCHITTEST:
+
+                if (GetTransparent() == true)
+                    return HTTRANSPARENT;
+
                 if (DefWindowProc(message.hWnd, message.message, message.wParam, message.lParam) == HTCLIENT)
                 {
                     switch (fLockMouseToWindowMode)
@@ -420,7 +428,7 @@ namespace OIV
                 break;
 
             case WM_NCLBUTTONDBLCLK:
-                
+
                 switch (GetDoubleClickMode())
                 {
                 case DoubleClickMode::NotSet:
@@ -438,12 +446,12 @@ namespace OIV
                     break;
                 }
                 break;
-         
+
             case WM_ERASEBKGND:
                 defaultProc = GetEraseBackground();
                 break;
             case WM_DESTROY:
-                    DestroyResources();
+                DestroyResources();
                 break;
 
             case WM_SYSCOMMAND:
@@ -466,7 +474,7 @@ namespace OIV
 
             return (defaultProc == false ? retValue : DefWindowProc(message.hWnd, message.message, message.wParam, message.lParam));
         }
-        
+
 
 
         LRESULT Win32Window::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -483,19 +491,19 @@ namespace OIV
                 if (SetProp(hWnd, _T("windowClass"), s->lpCreateParams) == 0)
                     std::exception("Unable to set window property");
                 reinterpret_cast<Win32Window*>(s->lpCreateParams)->fHandleWindow = hWnd;
-                
+
             }
 
             Win32Window* window = reinterpret_cast<Win32Window*>(GetProp(hWnd, _T("windowClass")));
-            if (window != nullptr )
-                return window->WindowProc({hWnd,message,wParam,lParam} );
+            if (window != nullptr)
+                return window->WindowProc({ hWnd,message,wParam,lParam });
             else return DefWindowProc(hWnd, message, wParam, lParam);
         }
 
         POINT Win32Window::GetMousePosition() const
         {
             return Win32Helper::GetMouseCursorPosition(GetHandle());
-            
+
         }
 
 
@@ -539,7 +547,7 @@ namespace OIV
                     const std::wstring CursorsPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/";
 
                     fCursors[0] = nullptr;
-                    fCursors[(size_t)CursorType::SystemDefault ] = LoadCursor(nullptr, IDC_ARROW);
+                    fCursors[(size_t)CursorType::SystemDefault] = LoadCursor(nullptr, IDC_ARROW);
                     fCursors[(size_t)CursorType::East] = LoadCursorFromFile((CursorsPath + L"arrow-E.cur").c_str());
                     fCursors[(size_t)CursorType::NorthEast] = LoadCursorFromFile((CursorsPath + L"arrow-NE.cur").c_str());
                     fCursors[(size_t)CursorType::North] = LoadCursorFromFile((CursorsPath + L"arrow-N.cur").c_str());
@@ -556,79 +564,24 @@ namespace OIV
             }
         }
 
-                void MainWindow::OnCreate()
-                {
-                    HINSTANCE hInstance = GetModuleHandle(nullptr);
-                    static TCHAR szWindowClass[] = _T("OIV_WINDOW_CLASS_CLIENT");
-
-                    // The string that appears in the application's title bar.
-                    static TCHAR szTitle[] = _T("Open image viewer");
-                    WNDCLASSEX wcex;
-
-                    wcex.cbSize = sizeof(WNDCLASSEX);
-                    wcex.style = 0;// CS_HREDRAW | CS_VREDRAW | CS_;
-                    wcex.lpfnWndProc = ClientWndProc;
-                    wcex.cbClsExtra = 0;
-                    wcex.cbWndExtra = 0;
-                    wcex.hInstance = GetModuleHandle(nullptr);
-                    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-                    wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-                    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-                    wcex.lpszMenuName = nullptr;
-                    wcex.lpszClassName = szWindowClass;
-                    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
-                    static bool classRegistered = false;
-                    if (classRegistered == false)
-                    {
-
-                        if (RegisterClassEx(&wcex) == false)
-                        {
-                            MessageBox(nullptr,
-                                _T("Call to RegisterClassEx failed!"),
-                                _T("Win32 Guided Tour"),
-                                MB_OK);
-
-//                            return 1;
-                        }
-
-                        classRegistered = true;
-                    }
-
-                    fHandleStatusBar = DoCreateStatusBar(GetHandle(), 12, GetModuleHandle(nullptr), 3);
-                    ResizeStatusBar();
-
-                    fWindowStylesClient = WS_CHILD;
-
-                    fHandleClient = CreateWindow(
-                        szWindowClass,
-                        szTitle,
-                        fWindowStylesClient,
-                        0,
-                        0,
-                        1200,
-                        800,
-                        GetHandle(),
-                        nullptr,
-                        GetModuleHandle(nullptr),
-                        this
-                    );
-
-                    
-                    SetStatusBarText(_T("pixel: "), 0, SBT_NOBORDERS);
-                    SetStatusBarText(_T("File: "), 1, 0);
-
-                    ShowWindow(fHandleClient, SW_SHOW);
-
-                    RawInput::ResiterWindow(GetHandle());
-                }
-
-
-        HWND MainWindow::GetHandleClient() const
+        void MainWindow::OnCreate()
         {
-            return fHandleClient;
+            fHandleStatusBar = DoCreateStatusBar(GetHandle(), 12, GetModuleHandle(nullptr), 3);
+            ResizeStatusBar();
+
+            fCanvasWindow.Create();
+            fCanvasWindow.SetWindowStyles(WindowStyle::ChildWindow, true);
+            fCanvasWindow.SetParent(this);
+            fCanvasWindow.SetVisible(true);
+            fCanvasWindow.SetTransparent(true);
+            fCanvasWindow.SetEraseBackground(false);
+
+            SetStatusBarText(_T("pixel: "), 0, SBT_NOBORDERS);
+            SetStatusBarText(_T("File: "), 1, 0);
+
+
+            RawInput::ResiterWindow(GetHandle());
         }
-
-
 
 
 #pragma region RawInput
@@ -718,24 +671,6 @@ namespace OIV
 
 
 
-
-
-
-        LRESULT MainWindow::ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-        {
-            switch (message)
-            {
-            case WM_NCHITTEST:
-                return HTTRANSPARENT;
-            case WM_ERASEBKGND:
-                return 0;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-
-
-
         HWND MainWindow::DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts)
         {
             HWND hwndStatus;
@@ -757,159 +692,164 @@ namespace OIV
             return hwndStatus;
         }
 
-        
+
         void MainWindow::SetStatusBarText(std::wstring message, int part, int type)
         {
             if (fHandleStatusBar != nullptr)
                 ::SendMessage(fHandleStatusBar, SB_SETTEXT, MAKEWORD(part, type), reinterpret_cast<LPARAM>(message.c_str()));
         }
-      
-
-    void MainWindow::ResizeStatusBar()
-    {
-        if (fHandleStatusBar == nullptr)
-            return;
-        RECT rcClient;
-        HLOCAL hloc;
-        PINT paParts;
-        int i, nWidth;
-        if (GetClientRect(GetHandle(), &rcClient) == 0)
-            return;
 
 
-        SetWindowPos(fHandleStatusBar, nullptr, 0, 0, -1, -1, 0);
-        // Allocate an array for holding the right edge coordinates.
-        hloc = LocalAlloc(LHND, sizeof(int) * fStatusWindowParts);
-        paParts = (PINT)LocalLock(hloc);
-
-        // Calculate the right edge coordinate for each part, and
-        // copy the coordinates to the array.
-        nWidth = rcClient.right / fStatusWindowParts;
-        int rightEdge = nWidth;
-        for (i = 0; i < fStatusWindowParts; i++)
+        void MainWindow::ResizeStatusBar()
         {
-            paParts[i] = rightEdge;
-            rightEdge += nWidth;
-        }
-
-        // Tell the status bar to create the window parts.
-        ::SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
-            paParts);
-
-        // Free the array, and return.
-        LocalUnlock(hloc);
-        LocalFree(hloc);
-    }
+            if (fHandleStatusBar == nullptr)
+                return;
+            RECT rcClient;
+            HLOCAL hloc;
+            PINT paParts;
+            int i, nWidth;
+            if (GetClientRect(GetHandle(), &rcClient) == 0)
+                return;
 
 
+            SetWindowPos(fHandleStatusBar, nullptr, 0, 0, -1, -1, 0);
+            // Allocate an array for holding the right edge coordinates.
+            hloc = LocalAlloc(LHND, sizeof(int) * fStatusWindowParts);
+            paParts = (PINT)LocalLock(hloc);
 
-    bool MainWindow::GetShowStatusBar() const
-    {
-        // show status bar if explicity not visible and caption is visible
-        return fShowStatusBar == true &&   
-            ((GetWindowStyles() & (WindowStyle::Caption | WindowStyle::CloseButton | WindowStyle::MinimizeButton | WindowStyle::MaximizeButton) ) != WindowStyle::NoStyle);
-    }
-
-    void MainWindow::HandleResize()
-    {
-        RECT rect;
-        GetClientRect(GetHandle(), &rect);
-        SIZE clientSize;
-        clientSize.cx = rect.right - rect.left;
-        clientSize.cy = rect.bottom - rect.top;
-
-
-        if (GetShowStatusBar() && GetFullScreenState() == FullSceenState::Windowed)
-        {
-            RECT statusBarRect;
-            ShowWindow(fHandleStatusBar, SW_SHOW);
-            GetWindowRect(fHandleStatusBar, &statusBarRect);
-            clientSize.cy -= statusBarRect.bottom - statusBarRect.top;
-            ResizeStatusBar();
-        }
-        else
-        {
-            ShowWindow(fHandleStatusBar, SW_HIDE);
-        }
-
-        SetWindowPos(fHandleClient, nullptr, 0, 0, clientSize.cx, clientSize.cy, 0);
-        ShowWindow(fHandleStatusBar, GetFullScreenState() == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
-    }
-
-    void MainWindow::ShowStatusBar(bool show)
-    {
-        if (show != fShowStatusBar)
-        {
-            fShowStatusBar = show;
-            HandleResize();
-        }
-    }
-
-
-    
-
-    //Temporary Method / TODO: fix
-    SIZE MainWindow::GetClientSize() const
-    {
-        RECT rect;
-        GetClientRect(GetHandleClient(), &rect);
-        return Win32Helper::GetRectSize(rect);
-    }
-
-
-    LRESULT MainWindow::HandleWindwMessage(const Win32::Event* evnt1)
-    {
-
-        const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
-        if (evnt == nullptr)
-            return 0;
-
-        const WinMessage & message = evnt->message;
-        
-        LRESULT retValue = 0;
-        bool defaultProc = true;
-        switch (message.message)
-        {
-        case WM_CREATE:
-            OnCreate();
-            break;
-
-        case WM_TIMER:
-            if (message.wParam == cTimerIDRawInputFlush)
-                FlushInput(true);
-            break;
-        case WM_INPUT:
-        {
-            UINT dwSize;
-            GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-
-            LLUtils::Buffer lpb(dwSize);
-
-            if (lpb == nullptr)
-                return 0;
-
-            if (GetRawInputData((HRAWINPUT)message.lParam,
-                RID_INPUT,
-                lpb.GetBuffer(),
-                &dwSize,
-                sizeof(RAWINPUTHEADER)) != dwSize)
+            // Calculate the right edge coordinate for each part, and
+            // copy the coordinates to the array.
+            nWidth = rcClient.right / fStatusWindowParts;
+            int rightEdge = nWidth;
+            for (i = 0; i < fStatusWindowParts; i++)
             {
-                LL_EXCEPTION_SYSTEM_ERROR("can not get raw input data");
+                paParts[i] = rightEdge;
+                rightEdge += nWidth;
             }
 
-            HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.GetBuffer()));
+            // Tell the status bar to create the window parts.
+            ::SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
+                paParts);
+
+            // Free the array, and return.
+            LocalUnlock(hloc);
+            LocalFree(hloc);
         }
-        break;
-        case WM_SIZE:
+
+
+
+        bool MainWindow::GetShowStatusBar() const
+        {
+            // show status bar if explicity not visible and caption is visible
+            return fShowStatusBar == true &&
+                ((GetWindowStyles() & (WindowStyle::Caption | WindowStyle::CloseButton | WindowStyle::MinimizeButton | WindowStyle::MaximizeButton)) != WindowStyle::NoStyle);
+        }
+
+        void MainWindow::HandleResize()
+        {
+            RECT rect;
+            GetClientRect(GetHandle(), &rect);
+            SIZE clientSize;
+            clientSize.cx = rect.right - rect.left;
+            clientSize.cy = rect.bottom - rect.top;
+
+
+            if (GetShowStatusBar() && GetFullScreenState() == FullSceenState::Windowed)
+            {
+                RECT statusBarRect;
+                ShowWindow(fHandleStatusBar, SW_SHOW);
+                GetWindowRect(fHandleStatusBar, &statusBarRect);
+                clientSize.cy -= statusBarRect.bottom - statusBarRect.top;
+                ResizeStatusBar();
+            }
+            else
+            {
+                ShowWindow(fHandleStatusBar, SW_HIDE);
+            }
+
+            SetWindowPos(fCanvasWindow.GetHandle(), nullptr, 0, 0, clientSize.cx, clientSize.cy, 0);
+            ShowWindow(fHandleStatusBar, GetFullScreenState() == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
+        }
+
+        void MainWindow::ShowStatusBar(bool show)
+        {
+            if (show != fShowStatusBar)
+            {
+                fShowStatusBar = show;
                 HandleResize();
-            break;
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
+            }
         }
-        return retValue;
+
+
+        HWND MainWindow::GetCanvasHandle() const
+        {
+            return fCanvasWindow.GetHandle();
+        }
+
+
+
+        SIZE MainWindow::GetCanvasSize() const
+        {
+            RECT rect;
+            GetClientRect(GetCanvasHandle(), &rect);
+            return Win32Helper::GetRectSize(rect);
+        }
+
+   
+
+        LRESULT MainWindow::HandleWindwMessage(const Win32::Event* evnt1)
+        {
+
+            const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
+            if (evnt == nullptr)
+                return 0;
+
+            const WinMessage & message = evnt->message;
+
+            LRESULT retValue = 0;
+            bool defaultProc = true;
+            switch (message.message)
+            {
+            case WM_CREATE:
+                OnCreate();
+                break;
+
+            case WM_TIMER:
+                if (message.wParam == cTimerIDRawInputFlush)
+                    FlushInput(true);
+                break;
+            case WM_INPUT:
+            {
+                UINT dwSize;
+                GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
+
+                LLUtils::Buffer lpb(dwSize);
+
+                if (lpb == nullptr)
+                    return 0;
+
+                if (GetRawInputData((HRAWINPUT)message.lParam,
+                    RID_INPUT,
+                    lpb.GetBuffer(),
+                    &dwSize,
+                    sizeof(RAWINPUTHEADER)) != dwSize)
+                {
+                    LL_EXCEPTION_SYSTEM_ERROR("can not get raw input data");
+                }
+
+                HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.GetBuffer()));
+            }
+            break;
+            case WM_SIZE:
+                HandleResize();
+                break;
+            case WM_DESTROY:
+                PostQuitMessage(0);
+                break;
+            }
+            return retValue;
+        }
+
+
     }
-
-
-}
 }

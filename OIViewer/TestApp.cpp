@@ -1069,7 +1069,7 @@ namespace OIV
         }
         
         // initialize the windowing system of the window
-        fWindow.Create(GetModuleHandle(nullptr), SW_HIDE);
+        fWindow.Create();
         fWindow.SetMenuChar(false);
         fWindow.EnableDragAndDrop(true);
         fWindow.SetEraseBackground(false);
@@ -1090,7 +1090,7 @@ namespace OIV
             fMutexWindowCreation.unlock();
         
         
-        OIVCommands::Init(fWindow.GetHandleClient());
+        OIVCommands::Init(fWindow.GetCanvasHandle());
 
         fIsInitialLoad = isInitialFile;
 
@@ -1338,7 +1338,7 @@ namespace OIV
     void TestApp::FitToClientAreaAndCenter()
     {
         using namespace LLUtils;
-        SIZE clientSize = fWindow.GetClientSize();
+        SIZE clientSize = fWindow.GetCanvasSize();
         PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
         double zoom = std::min(ratio.x, ratio.y);
         fRefreshOperation.Begin();
@@ -1418,7 +1418,7 @@ namespace OIV
         fPreserveImageSpaceSelection.Begin();
 
         PointF64 zoomPoint;
-        PointF64 clientSize = static_cast<PointF64>(fWindow.GetClientSize());
+        PointF64 clientSize = static_cast<PointF64>(fWindow.GetCanvasSize());
         
         if (clientX < 0)
             clientX = clientSize.x / 2.0;
@@ -1452,7 +1452,7 @@ namespace OIV
     void TestApp::UpdateCanvasSize()
     {
         using namespace  LLUtils;
-        PointF64 canvasSize = (PointF64)fWindow.GetClientSize() / GetScale();
+        PointF64 canvasSize = (PointF64)fWindow.GetCanvasSize() / GetScale();
             std::wstringstream ss;
             ss << L"Canvas: "
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.x
@@ -1536,7 +1536,7 @@ namespace OIV
 
     void TestApp::UpdateWindowSize()
     {
-        SIZE size = fWindow.GetClientSize();
+        SIZE size = fWindow.GetCanvasSize();
         OIVCommands::ExecuteCommand(CMD_SetClientSize,
             &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
             static_cast<uint16_t>(size.cy) }, &CmdNull());
@@ -1556,7 +1556,7 @@ namespace OIV
     void TestApp::Center()
     {
         using namespace LLUtils;
-        PointF64 offset = (PointF64(fWindow.GetClientSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
+        PointF64 offset = (PointF64(fWindow.GetCanvasSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
         SetOffset(offset);
         fIsOffsetLocked = true;
     }
@@ -1593,7 +1593,7 @@ namespace OIV
     {
         using namespace LLUtils;
         PointF64 imageSize = GetImageSize(ImageSizeType::Visible);
-        PointF64 clientSize = fWindow.GetClientSize();
+        PointF64 clientSize = fWindow.GetCanvasSize();
         PointF64 offset = static_cast<PointF64>(point);
         const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
         
@@ -2171,7 +2171,7 @@ namespace OIV
             ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &textImageInfo);
             
             using namespace LLUtils;
-            PointI32 clientSize = fWindow.GetClientSize();
+            PointI32 clientSize = fWindow.GetCanvasSize();
             PointI32 center = (clientSize - PointI32(textImageInfo.width, textImageInfo.height)) / 2;
             
             

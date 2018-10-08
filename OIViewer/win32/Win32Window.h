@@ -65,12 +65,13 @@ namespace OIV
             LockMouseToWindowMode GetLockMouseToWindowMode() const { return fLockMouseToWindowMode; }
             bool GetVisible() const  { return fVisible; }
             WindowStyle GetWindowStyles() const {return fWindowStyles;}
+            bool GetTransparent() const { return fIsTransparent; }
             
             
             virtual ~Win32Window() {};
 
         public: // mutating methods
-            int WINAPI Create(HINSTANCE hInstance, int nCmdShow);
+            int WINAPI Create();
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void AddEventListener(EventCallback callback);
             void SetMenuChar(bool enabled);
@@ -83,6 +84,8 @@ namespace OIV
             void SetLockMouseToWindowMode(LockMouseToWindowMode mode);
             void SetVisible(bool visible);
             void SetWindowStyles(WindowStyle styles, bool enable);
+            void SetParent(Win32Window* parent);
+            void SetTransparent(bool transparent) {fIsTransparent = transparent;}
 
         protected:
             bool RaiseEvent(const Event& evnt);
@@ -115,6 +118,7 @@ namespace OIV
             bool fVisible = false;
             bool fIsMaximized = false;
             WindowStyle fWindowStyles = WindowStyle::NoStyle;
+            bool fIsTransparent = false;
         };
 
 
@@ -126,7 +130,7 @@ namespace OIV
         public: // Types
             enum class CursorType
             {
-                SystemDefault
+                  SystemDefault
                 , Arrow
                 , East
                 , NorthEast
@@ -142,10 +146,11 @@ namespace OIV
 
             MainWindow();
         public: // constant methods
-            HWND GetHandleClient() const;
             const Win32::RawInputMouseWindow& GetMouseState() const { return fMouseState; }
             bool GetShowStatusBar() const;
-            SIZE GetClientSize() const;
+            SIZE GetCanvasSize() const;
+            HWND GetCanvasHandle() const;
+
 
         public: // mutating methods
             void SetCursorType(CursorType type);
@@ -161,17 +166,14 @@ namespace OIV
         private: // methods
             void HandleRawInputMouse(const RAWMOUSE& mouse);
             void HandleRawInputKeyboard(const RAWKEYBOARD& keyboard);
-            static LRESULT ClientWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
             void ResizeStatusBar();
             LRESULT HandleWindwMessage(const Win32::Event* evnt1);
             HWND DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts);
             void OnCreate();
             
         private: // member fields
-            //Win32Window fClientWindow;
+            Win32Window fCanvasWindow;
             RawInputMouseWindow fMouseState = RawInputMouseWindow(static_cast<Win32Window*>(this));
-            DWORD fWindowStylesClient = 0;
-            HWND fHandleClient = nullptr;
             HWND fHandleStatusBar = nullptr;
             int fStatusWindowParts = 6;
             bool fShowStatusBar = true;
