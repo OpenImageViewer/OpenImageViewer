@@ -8,7 +8,8 @@ namespace IMCodec
     class CodecJpeg : public IImagePlugin
     {
     private:
-        static tjhandle ftjHandle;
+       
+
 
     public:
         PluginProperties& GetPluginProperties() override
@@ -19,6 +20,7 @@ namespace IMCodec
 
         virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
+            static tjhandle ftjHandle = tjInitDecompress();
             bool success = false;
         
             int width = 0;
@@ -46,5 +48,4 @@ namespace IMCodec
             return success;
         }
     };
-    tjhandle CodecJpeg::ftjHandle = tjInitDecompress();
 }
