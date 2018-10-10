@@ -11,6 +11,7 @@
 #include <wrl/client.h>
 #include "Win32Common.h"
 #include <BitFlags.h>
+#include <Templates.h>
 
 namespace OIV
 {
@@ -41,6 +42,7 @@ namespace OIV
             , MinimizeButton = 1 << 3 // WS_MINIMIZEBOX
             , MaximizeButton = 1 << 4 // WS_MAXIMIZEBOX;
             , ChildWindow    = 1 << 5 // WS_CHILD
+            , All            = LLUtils::GetMaxBitsMask<uint32_t>()
         };
 
         using WindowStyleFlags = LLUtils::BitFlags<WindowStyle>;
