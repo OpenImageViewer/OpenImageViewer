@@ -2,7 +2,7 @@
 
 #include <mutex>
 
-#include "win32/Win32Window.h"
+#include "win32/MainWindow.h"
 #include "win32/HighPrecisionTimer.h"
 #include "API/defs.h"
 #include "API/StringHelper.h"
