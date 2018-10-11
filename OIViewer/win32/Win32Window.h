@@ -47,6 +47,9 @@ namespace OIV
 
         using WindowStyleFlags = LLUtils::BitFlags<WindowStyle>;
         
+        class Win32Window;
+
+        using VecChildWindows = std::vector<Win32Window*>;
         
         class Win32Window
         {
@@ -72,6 +75,7 @@ namespace OIV
             bool GetVisible() const  { return fVisible; }
             WindowStyleFlags GetWindowStyles() const {return fWindowStyles;}
             bool GetTransparent() const { return fIsTransparent; }
+            Win32Window* GetParent() const { return fParent; }
             
             
             virtual ~Win32Window() {};
@@ -107,9 +111,13 @@ namespace OIV
             void RestorePlacement();
             void SetWindowed();
             void SetFullScreen(bool multiMonitor);
-
+            void NotifyRemovedForRelatedWindows();
+            void AddChild(Win32Window* child);
+            void RemoveChild(Win32Window* child);
             void DestroyResources();
         private:
+            Win32Window* fParent = nullptr;
+            VecChildWindows fChildren;
             HCURSOR fMouseCursor = nullptr;
             HWND fHandleWindow = nullptr;
             EventCallbackCollection fListeners;

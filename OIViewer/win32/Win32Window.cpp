@@ -11,9 +11,44 @@ namespace OIV
 {
     namespace Win32
     {
-        void Win32Window::SetParent(Win32Window * parent)
+        
+
+        void Win32Window::AddChild(Win32Window* child)
         {
-            ::SetParent(GetHandle(), parent->GetHandle());
+            fChildren.push_back(child);
+        }
+        void Win32Window::RemoveChild(Win32Window* child)
+        {
+            auto it = std::find(fChildren.begin(), fChildren.end(), child);
+            fChildren.erase(it);
+        }
+
+        void Win32Window::NotifyRemovedForRelatedWindows()
+        {
+            decltype(fChildren) childrenCopy = fChildren;
+            for (Win32Window* child : childrenCopy)
+                child->SetParent(nullptr);
+
+            SetParent(nullptr);
+        }
+
+
+        void Win32Window::SetParent(Win32Window* parent)
+        {
+            if (parent != fParent)
+            {
+                if (fParent != nullptr)
+                    fParent->RemoveChild(this);
+
+                
+                fParent = parent;
+                if (fParent != nullptr)
+                    fParent->AddChild(this);
+
+                SetWindowStyles(WindowStyle::ChildWindow, parent != nullptr);
+               ::SetParent(GetHandle(), fParent != nullptr ? parent->GetHandle() : nullptr);
+
+            }
         }
         int Win32Window::Create()
         {
@@ -461,6 +496,9 @@ namespace OIV
                     fIsMaximized = false;
                     break;
                 }
+                break;
+            case WM_CLOSE:
+                NotifyRemovedForRelatedWindows();
                 break;
             }
 
