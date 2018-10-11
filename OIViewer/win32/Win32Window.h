@@ -52,6 +52,7 @@ namespace OIV
         {
         public:
             // const methods
+            void SetFocused() const;
             HWND GetHandle() const;
             bool IsInFocus() const;
             bool IsMouseCursorInClientRect() const;

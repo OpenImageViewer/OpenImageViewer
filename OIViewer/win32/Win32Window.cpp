@@ -525,9 +525,9 @@ namespace OIV
             return handled;
         }
 
-
-
-
-
+        void Win32Window::SetFocused() const
+        {
+            ::SetFocus(fHandleWindow);
+        }
     }
 }
