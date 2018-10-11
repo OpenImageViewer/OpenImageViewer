@@ -57,13 +57,8 @@ float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 
 float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
 {
-    float2 checkerSize = float2(0.03, 0.03);
-	//Fix aspect ratio
-	if (viewportSize.x > viewportSize.y)
-		checkerSize.y *= viewportSize.x / viewportSize.y;
-	else
-		checkerSize.x *= viewportSize.y / viewportSize.x;
-
+	static const float2 CheckerSizeInPixels = float2(16, 16);
+    float2 checkerSize = CheckerSizeInPixels / viewportSize;
     float2 checkerPos = uv / checkerSize;
     uint2 checkerPosInt = uint2(checkerPos);
     checkerPosInt = checkerPosInt % 2;
