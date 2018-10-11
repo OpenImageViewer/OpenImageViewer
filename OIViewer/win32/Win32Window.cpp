@@ -567,5 +567,15 @@ namespace OIV
         {
             ::SetFocus(fHandleWindow);
         }
+
+        void Win32Window::SetPosition(int32_t x, int32_t y)
+        {
+            SetWindowPos(GetHandle(), nullptr, x, y, 0, 0, Win32Helper::GetFlagsForWindowSetPosOp(WindowSetPosOp::Move));
+        }
+
+        void Win32Window::SetSize(uint32_t width, uint32_t height)
+        {
+            SetWindowPos(GetHandle(), nullptr, 0, 0, width, height, Win32Helper::GetFlagsForWindowSetPosOp(WindowSetPosOp::Resize));
+        }
     }
 }

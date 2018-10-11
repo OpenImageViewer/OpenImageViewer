@@ -85,6 +85,8 @@ namespace OIV
             HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void AddEventListener(EventCallback callback);
             void SetMenuChar(bool enabled);
+            void SetPosition(int32_t x, int32_t y);
+            void SetSize(uint32_t width, uint32_t height);
             void ToggleFullScreen(bool multiMonitor = false);
             void Move(const int16_t delta_x, const int16_t delta_y);
             void SetMouseCursor(HCURSOR cursor);

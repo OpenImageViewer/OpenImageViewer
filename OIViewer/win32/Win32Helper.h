@@ -3,6 +3,16 @@
 #include <Point.h>
 namespace OIV
 {
+    enum class WindowSetPosOp
+    {
+          None
+        , Resize
+        , Move
+        , Zorder
+        , RefreshFrame
+
+    };
+
     class Win32Helper
     {
     public:
@@ -83,6 +93,45 @@ namespace OIV
                 return filename;
             else
                 return std::wstring();
+        }
+
+
+
+        static UINT GetFlagsForWindowSetPosOp(WindowSetPosOp op)
+        {
+            static const UINT BaseFlags =
+                0
+                | SWP_NOMOVE
+                | SWP_NOSIZE
+                | SWP_NOZORDER
+                | SWP_NOOWNERZORDER
+                | SWP_NOACTIVATE
+                | SWP_NOCOPYBITS
+                | SWP_NOREPOSITION
+                | SWP_NOREDRAW
+                | SWP_NOSENDCHANGING
+                | SWP_DEFERERASE
+                ;
+
+            switch (op)
+            {
+            case WindowSetPosOp::None:
+                return 0;
+            case WindowSetPosOp::Move:
+                return BaseFlags & ~SWP_NOMOVE;
+                break;
+            case WindowSetPosOp::RefreshFrame:
+                return BaseFlags | SWP_FRAMECHANGED;
+                break;
+            case WindowSetPosOp::Resize:
+                return BaseFlags & ~SWP_NOSIZE;
+                break;
+            case WindowSetPosOp::Zorder:
+                return BaseFlags & ~SWP_NOZORDER;
+                break;
+            default:
+                return 0;
+            }
         }
     };
 }
