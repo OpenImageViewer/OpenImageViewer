@@ -33,7 +33,6 @@ namespace OIV
 
         public: // mutating methods
             void SetCursorType(CursorType type);
-            void HandleResize();
             void ShowStatusBar(bool show);
             void FlushInput(bool calledFromIdleTimer);
             void HandleRawInput(RAWINPUT* event_raw_input);
@@ -43,6 +42,7 @@ namespace OIV
 
 
         private: // methods
+            void HandleResize();
             void HandleRawInputMouse(const RAWMOUSE& mouse);
             void HandleRawInputKeyboard(const RAWKEYBOARD& keyboard);
             void ResizeStatusBar();
