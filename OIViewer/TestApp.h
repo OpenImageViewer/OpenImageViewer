@@ -19,7 +19,8 @@
 #include "OIVImage\OIVBaseImage.h"
 #include "LabelManager.h"
 #include "win32/MonitorInfo.h"
-
+#include "VirtualStatusBar.h"
+#include "MonitorProvider.h"
 
 
 namespace OIV
@@ -78,6 +79,7 @@ namespace OIV
     class TestApp
     {
     public:
+        void OnLabelRefreshRequest();
         TestApp();
         void Init(std::wstring filePath);
         void Run();
@@ -91,11 +93,10 @@ namespace OIV
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
-        std::tuple<uint16_t, uint16_t> GetCurrentMonitorDPI() const;
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
-        void UpdateCurrentMonitorDescription();
-        void UpdateRefreshRate();
+        void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
+        void ProbeForMonitorChange();
         void PerformRefresh();
         void SetUserMessage(const std::wstring& message);
         void SetDebugMessage(const std::string& message);
@@ -192,9 +193,8 @@ namespace OIV
         const bool EnableFrameLimiter = true;
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
         Win32::HighPrecisionTimer fRefreshTimer;
-        HMONITOR fLastMonitor = nullptr;
         uint32_t fRefreshRateTimes1000 = 60'000;
-        MonitorDesc fCurrentMonitorDesc = {};
+        MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
         Win32::MainWindow fWindow;
         AutoScrollUniquePtr fAutoScroll;
@@ -232,7 +232,8 @@ namespace OIV
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
-        
+        VirtualStatusBar fVirtualStatusBar;
+
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);

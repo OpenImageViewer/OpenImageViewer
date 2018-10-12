@@ -1,6 +1,26 @@
 #include "LabelManager.h"
+#include "EventManager.h"
+
 namespace OIV
 {
+
+    LabelManager::LabelManager()
+    {
+        EventManager::GetSingleton().MonitorChange.Add(std::bind(&LabelManager::OnMonitorChange, this,std::placeholders::_1));
+    }
+
+    void LabelManager::OnMonitorChange(const EventManager::MonitorChangeEventParams& params)
+    {
+        std::get<0>(fDPI) = params.monitorDesc.DPIx;
+        std::get<1>(fDPI) = params.monitorDesc.DPIy;
+        for (auto& [name, text] : fTextLabels)
+        {
+            text->GetTextOptions().DPIx = std::get<0>(fDPI);
+            text->GetTextOptions().DPIy = std::get<1>(fDPI);
+            text->Update();
+        }
+    }
+
     void LabelManager::RemoveAll()
     {
         fTextLabels.clear();
@@ -40,6 +60,8 @@ namespace OIV
         textOptions.fontSize = 12;
         textOptions.outlineWidth = 2;
         textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        textOptions.DPIx = std::get<0>(fDPI);
+        textOptions.DPIy = std::get<1>(fDPI);
 
         OIV_CMD_ImageProperties_Request& properties = text->GetImageProperties();
         properties.position = { 0,0 };

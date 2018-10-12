@@ -39,8 +39,9 @@ namespace OIV
         std::wstringstream ss;
         ss << fDescriptor.Width << L" X " << fDescriptor.Height << L" X "
             << fDescriptor.Bpp << L" BPP | loaded in " << std::fixed << std::setprecision(1)
-            << fDescriptor.LoadTime
-            << L"/" << fDescriptor.DisplayTime + fDescriptor.LoadTime << L" ms";
+            << fDescriptor.LoadTime << L" ms"
+            //<< L"/" << fDescriptor.DisplayTime + fDescriptor.LoadTime << L" ms"
+            ;
 
         return ss.str();
     }

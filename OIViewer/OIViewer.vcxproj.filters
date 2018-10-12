@@ -185,6 +185,15 @@
     <ClInclude Include="Helpers\OIVImageHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VirtualStatusBar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MonitorProvider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EventManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

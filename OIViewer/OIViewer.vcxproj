@@ -197,6 +197,7 @@
     <ClInclude Include="AutoScroll.h" />
     <ClInclude Include="BuildConfig.h" />
     <ClInclude Include="CommandManager.h" />
+    <ClInclude Include="EventManager.h" />
     <ClInclude Include="External\WinReg.hpp" />
     <ClInclude Include="Helpers\OIVHelper.h" />
     <ClInclude Include="Helpers\OIVImageHelper.h" />
@@ -208,6 +209,7 @@
     <ClInclude Include="Keyboard\KeyCombination.h" />
     <ClInclude Include="Keyboard\KeyCode.h" />
     <ClInclude Include="LabelManager.h" />
+    <ClInclude Include="MonitorProvider.h" />
     <ClInclude Include="OIVImage\OIVBaseImage.h" />
     <ClInclude Include="OIVCommands.h" />
     <ClInclude Include="OIVImage\OIVFileImage.h" />
@@ -220,6 +222,7 @@
     <ClInclude Include="SelectionRect.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
+    <ClInclude Include="VirtualStatusBar.h" />
     <ClInclude Include="win32\BitmapHelper.h" />
     <ClInclude Include="win32\HighPrecisionTimer.h" />
     <ClInclude Include="win32\MainWindow.h" />

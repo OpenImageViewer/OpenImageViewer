@@ -32,6 +32,8 @@
 #include "OIVImage\OIVFileImage.h"
 #include "OIVImage\OIVRawImage.h"
 #include "Helpers\OIVImageHelper.h"
+#include "VirtualStatusBar.h"
+#include "MonitorProvider.h"
 
 
 namespace OIV
@@ -257,10 +259,6 @@ namespace OIV
         requestText.fontSize = 12;
         requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
         requestText.outlineWidth = 2;
-
-        auto dpi = GetCurrentMonitorDPI();
-        requestText.DPIx = std::get<0>(dpi);
-        requestText.DPIy = std::get<1>(dpi);
 
 
         OIV_CMD_ImageProperties_Request& imageProperties = text->GetImageProperties();
@@ -543,22 +541,15 @@ namespace OIV
         DebugBreak();
     }
 
-
     TestApp::TestApp()
         :fRefreshOperation(std::bind(&TestApp::OnRefresh, this))
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
         , fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
         , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
+        , fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this))
     {
+        EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
-        fWindow.SetMenuChar(false);
-        
-        /*displaymageProperties.imageHandle = ImageHandleDisplayed;
-        displaymageProperties.position = 0;
-        displaymageProperties.filterType = OIV_Filter_type::FT_None;
-        displaymageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
-        displaymageProperties.scale = 1.0;
-        displaymageProperties.opacity = 1.0;*/
 
 
         OIV_CMD_RegisterCallbacks_Request request;
@@ -696,28 +687,22 @@ namespace OIV
                 , { desc.description, desc.command,desc.arguments });
     }
 
-    void TestApp::UpdateCurrentMonitorDescription()
+
+    void TestApp::OnLabelRefreshRequest()
     {
-        if (fIsFirstFrameDisplayed == true)
-        {
-            HMONITOR hmonitor = MonitorFromWindow(fWindow.GetHandle(), 0);
-            if (hmonitor != fLastMonitor) // update frame rate only if monitor has changed.
-            {
-                MonitorInfo::GetSingleton().Refresh();
-                fCurrentMonitorDesc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
-                fLastMonitor = hmonitor;
-            }
-        }
+        fRefreshOperation.Queue();
     }
 
-
-    void TestApp::UpdateRefreshRate()
+    void TestApp::OnMonitorChanged(const EventManager::MonitorChangeEventParams& params)
     {
-        UpdateCurrentMonitorDescription();
-        if (fCurrentMonitorDesc.handle != nullptr)
-        {
-            fRefreshRateTimes1000 = fCurrentMonitorDesc.DisplaySettings.dmDisplayFrequency == 59 ? 59940 : fCurrentMonitorDesc.DisplaySettings.dmDisplayFrequency * 1000;
-        }
+        //update the refresh rate.
+        fRefreshRateTimes1000 = params.monitorDesc.DisplaySettings.dmDisplayFrequency == 59 ? 59940 : params.monitorDesc.DisplaySettings.dmDisplayFrequency * 1000;
+    }
+
+    void TestApp::ProbeForMonitorChange()
+    {
+        if (fIsFirstFrameDisplayed == true)
+            fMonitorProvider.UpdateFromWindowHandle(fWindow.GetHandle());
     }
 
     void TestApp::PerformRefresh()
@@ -725,7 +710,8 @@ namespace OIV
         if (EnableFrameLimiter == true)
         {
             using namespace std::chrono;
-            UpdateRefreshRate();
+            
+            ProbeForMonitorChange();
             high_resolution_clock::time_point now = high_resolution_clock::now();
             auto windowTimeInMicroSeconds = 1'000'000'000 / fRefreshRateTimes1000;
             auto microsecSinceLastRefresh = duration_cast<microseconds>(now - fLastRefreshTime).count();
@@ -998,6 +984,7 @@ namespace OIV
     {
         UpdateTitle();
         UpdateStatusBar();
+        fVirtualStatusBar.SetText("imageDescription", fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescription());
     }
 
 
@@ -1095,6 +1082,7 @@ namespace OIV
         // initialize the windowing system of the window
         fWindow.Create();
         fWindow.SetMenuChar(false);
+        fWindow.ShowStatusBar(false);
         fWindow.EnableDragAndDrop(true);
         fWindow.SetEraseBackground(false);
         fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
@@ -1115,6 +1103,13 @@ namespace OIV
         
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
+
+        fVirtualStatusBar.Add("texelValue");
+        fVirtualStatusBar.Add("imageDescription");
+        fVirtualStatusBar.SetOpacity("imageDescription", 1.0);
+        fVirtualStatusBar.Add("texelPos");
+        fVirtualStatusBar.SetOpacity("texelPos", 1.0);
+
 
         fIsInitialLoad = isInitialFile;
 
@@ -1550,6 +1545,8 @@ namespace OIV
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.x
                 << L" X "
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
+            fVirtualStatusBar.SetText("texelPos", ss.str());
+            
             fWindow.SetStatusBarText(ss.str(), 2, 0);
 
             PointF64 storageImageSize = GetImageSize(ImageSizeType::Transformed);
@@ -1566,12 +1563,23 @@ namespace OIV
                 OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
                 if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
-                    fWindow.SetStatusBarText(OIVHelper::ParseTexelValue(texelInfoResponse), 5, 0);
+                {
+                    std::wstring message = OIVHelper::ParseTexelValue(texelInfoResponse);
+                    OIVString txt = OIV_ToOIVString(message);
+                    OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
+
+                    fVirtualStatusBar.SetText("texelValue", txt);
+                    fVirtualStatusBar.SetOpacity("texelValue",1.0);
+                    fRefreshOperation.Queue(); 
+                }
+                
             }
             else
             {
-                fWindow.SetStatusBarText(L"", 5, 0);
+                fVirtualStatusBar.SetOpacity("texelValue", 0);
+                fRefreshOperation.Queue();
             }
+
         }
     }
 
@@ -1595,6 +1603,7 @@ namespace OIV
             static_cast<uint16_t>(size.cy) }, &CmdNull());
         UpdateCanvasSize();
 		AutoPlaceImage();
+        fVirtualStatusBar.ClientSizeChanged(static_cast<LLUtils::PointI32>( fWindow.GetCanvasSize()));
     }
 
     void TestApp::Center()
@@ -2076,14 +2085,6 @@ namespace OIV
         return false;
     }
 
-    std::tuple<uint16_t,uint16_t> TestApp::GetCurrentMonitorDPI() const
-    {
-        if (fCurrentMonitorDesc.handle == nullptr)
-            return { 96, 96 };
-        else 
-            return { fCurrentMonitorDesc.DPIx, fCurrentMonitorDesc.DPIy };
-    }
- 
 
     void TestApp::SetUserMessage(const std::wstring& message)
     {
@@ -2111,11 +2112,6 @@ namespace OIV
         userMessage->GetImageProperties().opacity = 1.0;
 
         CreateTextParams& textOptions = userMessage->GetTextOptions();
-
-
-        auto dpi = GetCurrentMonitorDPI();
-        textOptions.DPIx = std::get<0>(dpi);
-        textOptions.DPIy = std::get<1>(dpi);
         
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += message;
@@ -2196,10 +2192,6 @@ namespace OIV
         string message = "<textcolor=#4a80e2>Welcome to <textcolor=#dd0f1d>OIV\n"\
                          "<textcolor=#25bc25>Drag <textcolor=#4a80e2>here an image to start\n"\
                          "Press <textcolor=#25bc25>F1<textcolor=#4a80e2> to show key bindings";
-        
-
-        OIV_CMD_CreateText_Request requestText = { };
-        OIV_CMD_CreateText_Response responseText;
 
         OIVTextImage* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
         
