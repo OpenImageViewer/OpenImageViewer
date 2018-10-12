@@ -162,6 +162,7 @@ namespace OIV
         , FAKERSHIFT         = 0XE036 // 	36 (RShift)
         , CONTROLPRINTSCREEN = 0XE037 // )		37 (*/ PrtScn)
         , RIGHTALT           = 0XE038 // )
+        , GREYNUMLOCK        = 0XE045 // )
         , CONTROL2           = 0XE046 // 		46 (ScrollLock)
         , GREYHOME           = 0XE047 // 	47 (Keypad - 7 / Home)
         , GREYUP             = 0XE048 // 48 (Keypad - 8 / UpArrow)
@@ -176,6 +177,7 @@ namespace OIV
         , LEFTWINDOW         = 0XE05B //(LeftWindow)
         , RIGHTWINDOW        = 0XE05C // (RightWindow)
         , MENU               = 0XE05D // (Menu)
+        , PAUSE1             = 0XE11D // (Pause)
 
 
     };
@@ -342,6 +344,7 @@ namespace OIV
         ,{KeyCode::FAKERSHIFT,                    "FAKERSHIFT"  }
         ,{KeyCode::CONTROLPRINTSCREEN,            "CONTROLPRINTSCREEN" }
         ,{KeyCode::RIGHTALT,                      "RALT"        }
+      , { KeyCode::GREYNUMLOCK,                   "GREYNUMLOCK" }
         ,{KeyCode::CONTROL2,                      "CONTROL2"    }
         ,{KeyCode::GREYHOME,                      "GREYHOME"    }                 
         ,{KeyCode::GREYUP,                        "GREYUP"      }       
@@ -356,6 +359,7 @@ namespace OIV
         ,{ KeyCode::LEFTWINDOW,                   "LEFTWINDOW"  }
         ,{ KeyCode::RIGHTWINDOW,                  "RIGHTWINDOW" }
         ,{ KeyCode::MENU,                         "MENU"        }
+       , { KeyCode::PAUSE1,                         "PAUSE1" }
     };
 #pragma pop_macro("DELETE")
 }

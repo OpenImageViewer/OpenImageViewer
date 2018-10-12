@@ -79,7 +79,7 @@ namespace OIV
         static KeyCode KeyCodeFromVK(uint32_t key, uint32_t params)
         {
             KeyEventParams* keydown = reinterpret_cast<KeyEventParams*>(&params);
-            uint16_t scanCode = ((keydown->isExtented == true ? 0xe0 : 0)  << 8) |  MapVirtualKey(key, MAPVK_VK_TO_VSC);
+            uint16_t scanCode = ((keydown->isExtented == true ? 0xe0 : 0)  << 8) |  MapVirtualKey(key, MAPVK_VK_TO_VSC_EX);
             return   static_cast<KeyCode>(scanCode);
         }
     };
