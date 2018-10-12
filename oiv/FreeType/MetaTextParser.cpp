@@ -89,17 +89,25 @@ VecFormattedTextEntry MetaText::GetFormattedText(u8string text, int fontSize)
         }
     }
 
+    FormattedTextEntry entry;
 
+    if (beginTag == -1)
+    {
+        entry.textColor = LLUtils::Color(0xaa_u8, 0xaa, 0xaa, 0xFF);;
+        entry.text = text;
+    }
+    else
+    {
+        ptrdiff_t i = text.length() - 1;
+        u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
 
-    ptrdiff_t i = text.length() - 1;
-    u8string tagContents = text.substr(beginTag, endTag - beginTag + 1);
+        u8string textInsideTag = text.substr(endTag + 1, i - endTag);
+        beginTag = i;
+        endTag = -1;
 
-    u8string textInsideTag = text.substr(endTag + 1, i - endTag);
-    beginTag = i;
-    endTag = -1;
-
-    FormattedTextEntry entry = FormattedTextEntry::Parse(tagContents);
-    entry.text = textInsideTag;
+        entry = FormattedTextEntry::Parse(tagContents);
+        entry.text = textInsideTag;
+    }
     formattedText.push_back(entry);
 
     return formattedText;
