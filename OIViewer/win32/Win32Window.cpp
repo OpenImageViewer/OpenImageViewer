@@ -1,11 +1,12 @@
+#include <array>
+#include <assert.h>
+#include <tchar.h>
 #include "Win32Window.h"
 #include "MonitorInfo.h"
-#include <tchar.h>
 #include "Win32Helper.h"
-#include <array>
 #include "../resource.h"
 #include "Buffer.h"
-#include <assert.h>
+#include "WindowPosHelper.h"
 
 namespace OIV
 {
@@ -97,7 +98,7 @@ namespace OIV
                 CreateWindow(
                     szWindowClass,
                     szTitle,
-                    WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                    0,
                     CW_USEDEFAULT,
                     CW_USEDEFAULT,
                     1200,
@@ -570,12 +571,17 @@ namespace OIV
 
         void Win32Window::SetPosition(int32_t x, int32_t y)
         {
-            SetWindowPos(GetHandle(), nullptr, x, y, 0, 0, Win32Helper::GetFlagsForWindowSetPosOp(WindowSetPosOp::Move));
+            WindowPosHelper::SetPosition(GetHandle(), x, y);
         }
 
         void Win32Window::SetSize(uint32_t width, uint32_t height)
         {
-            SetWindowPos(GetHandle(), nullptr, 0, 0, width, height, Win32Helper::GetFlagsForWindowSetPosOp(WindowSetPosOp::Resize));
+            WindowPosHelper::SetSize(GetHandle(), width, height);
+        }
+
+        void Win32Window::SetPlacement(int32_t x, int32_t y, uint32_t width, uint32_t height)
+        {
+            WindowPosHelper::SetPlacement(GetHandle(), x, y, width, height);
         }
     }
 }

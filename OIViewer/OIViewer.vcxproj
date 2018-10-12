@@ -218,6 +218,7 @@
     <ClInclude Include="win32\Win32Common.h" />
     <ClInclude Include="win32\Win32Helper.h" />
     <ClInclude Include="win32\Win32Window.h" />
+    <ClInclude Include="win32\WindowPosHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\oiv\oiv.vcxproj">
