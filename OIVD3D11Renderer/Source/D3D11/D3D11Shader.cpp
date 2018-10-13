@@ -34,7 +34,7 @@ namespace  OIV
 
         HRESULT __stdcall Close(LPCVOID pData) override
         {
-            LLUtils::Buffer::GlobalDealocate(reinterpret_cast<std::byte*>( const_cast<void*>(pData)));
+            LLUtils::Buffer::Allocator::Deallocate(reinterpret_cast<std::byte*>(const_cast<void*>(pData)));
             return S_OK;
         }
 

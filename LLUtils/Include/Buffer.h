@@ -3,37 +3,58 @@
 #include <stdexcept>
 namespace LLUtils
 {
-    class Buffer
+    class STDAlloc
+    {
+    public:
+        static std::byte* Allocate(size_t size)
+        {
+            return new std::byte[size];
+        }
+
+        static void Deallocate(std::byte* buffer)
+        {
+            delete[] buffer;
+        }
+    };
+
+
+    class AlignedAlloc
     {
     public:
         static constexpr int Alignment = 16;
 
-        static std::byte * GlobalAllocate(size_t size)
+        static std::byte * Allocate(size_t size)
         {
             return reinterpret_cast<std::byte*>(_aligned_malloc(size, Alignment));
         }
 
-        static void GlobalDealocate(std::byte* buffer)
+        static void Deallocate(std::byte* buffer)
         {
             _aligned_free(buffer);
         }
+    };
 
 
-        Buffer(const Buffer&) = delete;
-        Buffer& operator=(const Buffer&) = delete;
-        Buffer() = default;
-        Buffer(size_t size)
+    template <typename Alloc>
+    class BufferBase
+    {
+    public:
+        using Allocator = Alloc;
+        BufferBase(const BufferBase&) = delete;
+        BufferBase& operator=(const BufferBase&) = delete;
+        BufferBase() = default;
+        BufferBase(size_t size)
         {
             Allocate(size);
         }
 
 
-        void operator=(Buffer&& rhs)
+        void operator=(BufferBase&& rhs)
         {
             Swap(std::move(rhs));
         }
 
-        Buffer(Buffer&& rhs)
+        BufferBase(BufferBase&& rhs)
         {
             Swap(std::move(rhs));
         }
@@ -44,9 +65,9 @@ namespace LLUtils
             return fData == null;
         }
 
-        Buffer Clone() const
+        BufferBase Clone() const
         {
-            Buffer cloned(fSize);
+            BufferBase cloned(fSize);
             cloned.Write(fData, 0, fSize);
             return cloned;
         }
@@ -80,15 +101,15 @@ namespace LLUtils
                 throw std::runtime_error("Memory read overflow");
         }
 
-        void Write(const std::byte* buffer, size_t offset, size_t size)
+        void Write(const std::byte* BufferBase, size_t offset, size_t size)
         {
             if (offset + size <= fSize)
-                memcpy(fData + offset, buffer, size);
+                memcpy(fData + offset, BufferBase, size);
             else
                 throw std::runtime_error("Memory write overflow");
         }
 
-        ~Buffer()
+        ~BufferBase()
         {
             Free();
         }
@@ -98,8 +119,7 @@ namespace LLUtils
             return fSize;
         }
 
-        // buffer must have been allocated with Buffer::GlobalAllocate
-
+        // buffer must have been allocated with the corresponding Allocator.
         void TransferOwnership(size_t size, std::byte*& data)
         {
             fSize = size;
@@ -107,7 +127,7 @@ namespace LLUtils
             data = nullptr;
         }
 
-        // buffer must be freed  with Buffer::GlobalDealocate
+        // buffer must be freed  with the corresponding Allocator.
         void RemoveOwnership(size_t& size , std::byte*& data)
         {
             size = fSize;
@@ -118,7 +138,7 @@ namespace LLUtils
 
     private:
         // private methods
-        void Swap(Buffer&& rhs)
+        void Swap(BufferBase&& rhs)
         {
             std::swap(fSize, rhs.fSize);
             rhs.fSize = 0;
@@ -130,7 +150,7 @@ namespace LLUtils
         void AllocateImp(size_t size)
         {
             Free();
-            fData = GlobalAllocate(size);
+            fData = Allocator::Allocate(size);
             fSize = size;
         }
 
@@ -140,7 +160,7 @@ namespace LLUtils
         {
             if (fData != nullptr)
             {
-                GlobalDealocate(fData);
+                Allocator::Deallocate(fData);
                 fData = nullptr;
                 fSize = 0;
             }
@@ -150,4 +170,6 @@ namespace LLUtils
         std::byte* fData = nullptr;
         size_t fSize = 0;
     };
+
+    using Buffer = BufferBase<AlignedAlloc>;
 }
