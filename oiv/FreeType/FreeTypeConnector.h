@@ -70,12 +70,15 @@ private:
 
     FreeTypeConnector();
     FreeTypeFont* GetOrCreateFont(std::string fontPath);
+    FT_Stroker GetStroker();
     std::string GenerateFreeTypeErrorString(std::string userMessage, FT_Error error);
     void MesaureText(const TextMesureParams& measureParams, TextMesureResult& out_result);
     
 
 private:
-    FT_Library  fLibrary;
+    FT_Library fLibrary;
+    FT_Stroker fStroker = nullptr;
+
     std::map<std::string, FreeTypeFontUniquePtr> fFontNameToFont;
     
 };

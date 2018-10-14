@@ -29,6 +29,7 @@ FreeTypeConnector::FreeTypeConnector()
 FreeTypeConnector::~FreeTypeConnector()
 {
     fFontNameToFont.clear();
+    FT_Stroker_Done(fStroker);
     FT_Error error = FT_Done_FreeType(fLibrary);
     if (error)
     {
@@ -121,6 +122,14 @@ FreeTypeFont* FreeTypeConnector::GetOrCreateFont(std::string fontPath)
 }
 
 
+FT_Stroker FreeTypeConnector::GetStroker()
+{
+    if (fStroker == nullptr)
+    {
+        FT_Stroker_New(fLibrary, &fStroker);
+    }
+    return fStroker;
+}
 
 
 
@@ -239,9 +248,10 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
          
             if (renderOutline) // render outline
             {
+
                 //initialize stroker, so you can create outline font
-                FT_Stroker stroker;
-                FT_Stroker_New(fLibrary, &stroker);
+                FT_Stroker stroker = GetStroker();
+
                 //  2 * 64 result in 2px outline
                 FT_Stroker_Set(stroker, OutlineWidth * 64, FT_STROKER_LINECAP_SQUARE, FT_STROKER_LINEJOIN_BEVEL, 0);
                 FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
@@ -265,6 +275,9 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 destOutline.left = penX + bitmapGlyph->left;
                 destOutline.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
                 BlitBox::Blit(destOutline, source);
+
+                FT_Done_Glyph(glyph);
+
             }
 
             if (renderText)
@@ -294,6 +307,8 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 dest.top = rowHeight + penY + mesaureResult.descender - bitmapGlyph->top;
                 FT_GlyphSlot  slot = face->glyph;
                 penX += slot->advance.x >> 6;
+
+                FT_Done_Glyph(glyph);
 
                 BlitBox::Blit(dest, source);
             }
