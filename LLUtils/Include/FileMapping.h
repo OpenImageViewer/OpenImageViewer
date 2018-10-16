@@ -55,14 +55,14 @@ namespace LLUtils
                 FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL, nullptr);
 
-            if (mHandleFile)
+            if (mHandleFile != INVALID_HANDLE_VALUE)
             {
                 mHandleMMF = CreateFileMapping(mHandleFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
                 if (mHandleMMF != nullptr)
                     mView = MapViewOfFile(mHandleMMF, FILE_MAP_READ, 0, 0, 0);
-            }
 
-            mSize = std::experimental::filesystem::file_size(fFilePath);
+                mSize = std::filesystem::file_size(fFilePath);
+            }
         }
 
     private: // member fields

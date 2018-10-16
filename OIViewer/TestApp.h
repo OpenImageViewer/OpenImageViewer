@@ -16,6 +16,8 @@
 #include "CommandManager.h"
 #include "Keyboard/KeyBindings.h"
 #include "SelectionRect.h"
+#include "OIVImage\OIVBaseImage.h"
+#include "LabelManager.h"
 
 
 
@@ -104,7 +106,6 @@ namespace OIV
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void UpdateUIZoom();
-        void UpdateImageProperties();
         void SaveImageSpaceSelection();
         void LoadImageSpaceSelection();
         void SetZoomInternal(double zoom, int x = -1, int y = -1);
@@ -124,12 +125,14 @@ namespace OIV
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
-        void SetOpenImage(const ImageDescriptor& image_descriptor);
+        void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
         void FinalizeImageLoad(ResultCode result);
         void FinalizeImageLoadThreadSafe(ResultCode result);
         bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
+        const std::wstring& GetOpenedFileName() const;
+        bool IsOpenedImageIsAFile() const;
         void ReloadFileInFolder();
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
@@ -139,11 +142,12 @@ namespace OIV
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
-        void DisplayImage(ImageDescriptor& descriptor, bool resetScrollState) ;
+        void DisplayImage(OIVBaseImageSharedPtr& descriptor, bool resetScrollState) ;
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
         void UpdateExposure();
         bool ToggleColorCorrection(); 
+        void CancelSelection();
         
 
     private: // member fields
@@ -163,8 +167,9 @@ namespace OIV
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         bool fIsGridEnabled = false;
-        ImageDescriptor fImageBeingOpened;
-        ImageDescriptor fOpenedImage;
+        OIVBaseImageSharedPtr fDisplayImage;
+        OIVBaseImageSharedPtr fImageBeingOpened;
+        OIVBaseImageSharedPtr fOpenedImage;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         SelectionRect fSelectionRect;
@@ -173,11 +178,6 @@ namespace OIV
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
-
-        inline static const OIVString sFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\segoeuib.ttf");
-        inline static const OIVCHAR* sFontPathCstr = sFontPath.c_str();
-        inline static const OIVString sFixedFontPath = OIV_ToOIVString(L"C:\\Windows\\Fonts\\consola.ttf");
-        inline static const OIVCHAR* sFixedFontPathCstr = sFixedFontPath.c_str();
 
         static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
         static constexpr int FileIndexStart = std::numeric_limits<int>::min();
@@ -200,13 +200,13 @@ namespace OIV
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
-        OIV_CMD_ImageProperties_Request fImageProperties;
-        OIV_CMD_ImageProperties_Request fUserMessageOverlayProperties;
-        OIV_CMD_ImageProperties_Request fDebugMessageOverlayProperties;
-        CommandManager fCommandManager;
-        ImageHandle fKeybindingsHandle = ImageHandleNull;
-        ImageHandle fWelcomeMessageHandle = ImageHandleNull;
 
+
+        CommandManager fCommandManager;
+        LabelManager fLabelManager;
+        
+
+        
         struct BindingElement
         {
             std::string commandDescription;

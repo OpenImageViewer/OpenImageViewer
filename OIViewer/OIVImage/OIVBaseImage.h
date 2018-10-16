@@ -1,0 +1,66 @@
+#pragma once
+#include <string>
+#include <StopWatch.h>
+#include <API/defs.h>
+
+namespace OIV
+{
+    enum class ImageSource
+    {
+          None
+        , File
+        , Clipboard
+        , InternalText
+        , GeneratedByLib
+    };
+   
+    struct DisplayOptions
+    {
+        bool fUseRainbowNormalization;
+    };
+
+    struct ImageDescriptor
+    {
+        ImageHandle ImageHandle = ImageHandleNull;
+        ImageSource Source = ImageSource::None;
+        uint32_t Width = 0;
+        uint32_t Height = 0;
+        uint8_t Bpp = 0;
+        LLUtils::StopWatch::time_type_real DisplayTime = 0.0;
+        double LoadTime = 0.0;
+
+    };
+  
+    class OIVBaseImage
+    {
+    public:
+        OIVBaseImage();
+        ResultCode Display(const DisplayOptions& displayOptions);
+        //Base image updates image properties
+        ResultCode Update();
+     
+    public: //const methods
+        const ImageDescriptor& GetDescriptor() {return fDescriptor; }
+        std::wstring GetDescription() const;
+        OIV_CMD_ImageProperties_Request& GetImageProperties()  { return fImageProperties; }
+
+    protected:
+        OIV_CMD_ImageProperties_Request& GetImagePropertiesCurrent();
+        void FreeImage();
+        void QueryImageInfo();
+        void ResetActiveImageProperties();
+        void SetImageHandle(ImageHandle imageHandle);
+        virtual ResultCode DoUpdate();
+        ImageDescriptor& GetDescriptorMutable() { return fDescriptor; }
+    private:
+
+
+    private: //member fields
+        OIV_CMD_ImageProperties_Request fImagePropertiesCached = {};
+        OIV_CMD_ImageProperties_Request fImageProperties = {};
+        ImageDescriptor fDescriptor;
+    };
+
+
+    using OIVBaseImageSharedPtr = std::shared_ptr<OIVBaseImage>;
+}

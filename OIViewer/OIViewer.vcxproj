@@ -177,7 +177,13 @@
   <ItemGroup>
     <ClCompile Include="AutoScroll.cpp" />
     <ClCompile Include="Keyboard\KeyCombination.cpp" />
+    <ClCompile Include="LabelManager.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="OIVImage\OIVBaseImage.cpp" />
+    <ClCompile Include="OIVImage\OIVFileImage.cpp" />
+    <ClCompile Include="OIVImage\OIVHandleImage.cpp" />
+    <ClCompile Include="OIVImage\OIVRawImage.cpp" />
+    <ClCompile Include="OIVImage\OIVTextImage.cpp" />
     <ClCompile Include="SelectionRect.cpp" />
     <ClCompile Include="TestApp.cpp" />
     <ClCompile Include="UserSettings.cpp" />
@@ -200,7 +206,13 @@
     <ClInclude Include="Keyboard\KeyCodeHelper.h" />
     <ClInclude Include="Keyboard\KeyCombination.h" />
     <ClInclude Include="Keyboard\KeyCode.h" />
+    <ClInclude Include="LabelManager.h" />
+    <ClInclude Include="OIVImage\OIVBaseImage.h" />
     <ClInclude Include="OIVCommands.h" />
+    <ClInclude Include="OIVImage\OIVFileImage.h" />
+    <ClInclude Include="OIVImage\OIVHandleImage.h" />
+    <ClInclude Include="OIVImage\OIVRawImage.h" />
+    <ClInclude Include="OIVImage\OIVTextImage.h" />
     <ClInclude Include="RecursiveDelayOp.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="AdaptiveMotion.h" />

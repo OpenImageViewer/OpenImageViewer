@@ -1,5 +1,6 @@
 #pragma once
 #include "defs.h"
+#include <StringUtility.h>
 #ifdef __cplusplus
 
 template <typename CHAR_TYPE>
