@@ -18,6 +18,7 @@
 #include "SelectionRect.h"
 #include "OIVImage\OIVBaseImage.h"
 #include "LabelManager.h"
+#include "win32/MonitorInfo.h"
 
 
 
@@ -157,7 +158,7 @@ namespace OIV
         Win32::HighPrecisionTimer fRefreshTimer;
         HMONITOR fLastMonitor = nullptr;
         uint32_t fRefreshRateTimes1000 = 60'000;
-        const MonitorDesc* fCurrentMonitorDesc = nullptr;
+        MonitorDesc fCurrentMonitorDesc = {};
 #pragma endregion FrameLimiter
         Win32::MainWindow fWindow;
         AutoScrollUniquePtr fAutoScroll;

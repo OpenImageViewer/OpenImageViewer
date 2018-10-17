@@ -13,7 +13,7 @@ namespace OIV
             , Resize
             , Move
             , Zorder
-            , RefreshFrame
+            , UpdateFrame
             , Placement
         };
 
@@ -21,21 +21,24 @@ namespace OIV
         class WindowPosHelper
         {
         public:
+
+            static const UINT BaseFlags =
+                0
+                | SWP_NOMOVE
+                | SWP_NOSIZE
+                | SWP_NOZORDER
+                | SWP_NOOWNERZORDER
+                | SWP_NOACTIVATE
+                | SWP_NOCOPYBITS
+                | SWP_NOREPOSITION
+                | SWP_NOREDRAW
+                | SWP_NOSENDCHANGING
+                | SWP_DEFERERASE
+                ;
+
             static UINT GetFlagsForWindowSetPosOp(WindowPosOp op)
             {
-                static const UINT BaseFlags =
-                    0
-                    | SWP_NOMOVE
-                    | SWP_NOSIZE
-                    | SWP_NOZORDER
-                    | SWP_NOOWNERZORDER
-                    | SWP_NOACTIVATE
-                    | SWP_NOCOPYBITS
-                    | SWP_NOREPOSITION
-                    | SWP_NOREDRAW
-                    | SWP_NOSENDCHANGING
-                    | SWP_DEFERERASE
-                    ;
+           
 
                 switch (op)
                 {
@@ -45,21 +48,48 @@ namespace OIV
                     return BaseFlags & (~(SWP_NOMOVE | SWP_NOSIZE));
                 case WindowPosOp::Move:
                     return BaseFlags & ~SWP_NOMOVE;
-                    break;
-                case WindowPosOp::RefreshFrame:
+                case WindowPosOp::UpdateFrame:
                     return BaseFlags | SWP_FRAMECHANGED;
-                    break;
                 case WindowPosOp::Resize:
                     return BaseFlags & ~SWP_NOSIZE;
-                    break;
                 case WindowPosOp::Zorder:
                     return BaseFlags & ~SWP_NOZORDER;
-                    break;
                 default:
                     return 0;
                 }
             }
 
+            static UINT ComposeFlags(std::vector< WindowPosOp> flags)
+            {
+                UINT result = BaseFlags;
+
+                for (WindowPosOp op : flags)
+                {
+                    switch (op)
+                    {
+                    case WindowPosOp::None:
+                        break;
+                    case WindowPosOp::Placement:
+                        result &= (~(SWP_NOMOVE | SWP_NOSIZE));
+                        break;
+                    case WindowPosOp::Move:
+                        result &= ~SWP_NOMOVE;
+                        break;
+                    case WindowPosOp::UpdateFrame:
+                        result |= SWP_FRAMECHANGED;
+                        break;
+                    case WindowPosOp::Resize:
+                        result &= ~SWP_NOSIZE;
+                        break;
+                    case WindowPosOp::Zorder:
+                        result &= ~SWP_NOZORDER;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                return result;
+            }
 
             static void SetPosition(HWND handle, int32_t x, int32_t y)
             {
@@ -75,6 +105,12 @@ namespace OIV
             {
                 SetWindowPos(handle, nullptr, x, y, width, height, GetFlagsForWindowSetPosOp(WindowPosOp::Placement));
             }
+
+            static void UpdateFrame(HWND handle)
+            {
+                SetWindowPos(handle, nullptr, 0, 0, 0, 0, GetFlagsForWindowSetPosOp(WindowPosOp::UpdateFrame));
+            }
+
         };
     }
 }

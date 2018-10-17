@@ -31,25 +31,22 @@ namespace OIV
         EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc, (LPARAM)this);
     }
     //---------------------------------------------------------------------
-    const MonitorDesc * const MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
+    const MonitorDesc& MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
     {
         MonitorDesc* result = nullptr;
         if (monitorIndex >= mDisplayDevices.size() && allowRefresh)
             Refresh();
 
-        if (monitorIndex < mDisplayDevices.size())
-            result = &mDisplayDevices[monitorIndex];
-
-        return result;
+		return monitorIndex < mDisplayDevices.size() ? mDisplayDevices[monitorIndex] : mEmptyMonitorDesc;
     }
     //---------------------------------------------------------------------
-    const MonitorDesc * const MonitorInfo::getMonitorInfo(HMONITOR hMonitor, bool allowRefresh )
+    const MonitorDesc&  MonitorInfo::getMonitorInfo(HMONITOR hMonitor, bool allowRefresh )
     {
         if (allowRefresh)
             Refresh();
 
         auto it = mHMonitorToDesc.find(hMonitor);
-        return it == mHMonitorToDesc.end() ? nullptr : &it->second;
+        return it == mHMonitorToDesc.end() ? mEmptyMonitorDesc : it->second;
 
     }
     //---------------------------------------------------------------------
@@ -92,7 +89,7 @@ namespace OIV
         int count = getMonitorsCount();
         for (int i = 0; i < count; i++)
         {
-            const MONITORINFOEX&  info = getMonitorInfo(i)->monitorInfo;
+            const MONITORINFOEX&  info = getMonitorInfo(i).monitorInfo;
             const RECT& monRect = info.rcMonitor;
             rect.left = min(rect.left, monRect.left);
             rect.top = min(rect.top, monRect.top);

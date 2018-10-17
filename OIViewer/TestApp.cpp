@@ -694,6 +694,7 @@ namespace OIV
             HMONITOR hmonitor = MonitorFromWindow(fWindow.GetHandle(), 0);
             if (hmonitor != fLastMonitor) // update frame rate only if monitor has changed.
             {
+                MonitorInfo::GetSingleton().Refresh();
                 fCurrentMonitorDesc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
                 fLastMonitor = hmonitor;
             }
@@ -704,9 +705,9 @@ namespace OIV
     void TestApp::UpdateRefreshRate()
     {
         UpdateCurrentMonitorDescription();
-        if (fCurrentMonitorDesc != nullptr)
+        if (fCurrentMonitorDesc.handle != nullptr)
         {
-            fRefreshRateTimes1000 = fCurrentMonitorDesc->DisplaySettings.dmDisplayFrequency == 59 ? 59940 : fCurrentMonitorDesc->DisplaySettings.dmDisplayFrequency * 1000;
+            fRefreshRateTimes1000 = fCurrentMonitorDesc.DisplaySettings.dmDisplayFrequency == 59 ? 59940 : fCurrentMonitorDesc.DisplaySettings.dmDisplayFrequency * 1000;
         }
     }
 
@@ -1984,12 +1985,10 @@ namespace OIV
 
     std::tuple<uint16_t,uint16_t> TestApp::GetCurrentMonitorDPI() const
     {
-     //   return { 96, 96 };
-        if (fCurrentMonitorDesc == nullptr)
+        if (fCurrentMonitorDesc.handle == nullptr)
             return { 96, 96 };
         else 
-            return { fCurrentMonitorDesc->DPIx, fCurrentMonitorDesc->DPIy };
-       //return fCurrentMonitorDesc == nullptr ? { 96, 96 } : {0, 0};// 
+            return { fCurrentMonitorDesc.DPIx, fCurrentMonitorDesc.DPIy };
     }
  
 

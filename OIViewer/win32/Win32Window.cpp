@@ -233,7 +233,10 @@ namespace OIV
                 fWindowStyles.clear(styles);
 
             if (oldStyles != fWindowStyles)
+            {
                 UpdateWindowStyles();
+                WindowPosHelper::UpdateFrame(GetHandle());
+            }
 
 
 
@@ -279,30 +282,21 @@ namespace OIV
 
         void Win32Window::UpdateWindowStyles()
         {
-            //Set styles
+            //Set styles, Need to call SetWindowPos with the appropriate flags after changing window styles.
             SetWindowLong(GetHandle(), GWL_STYLE, ComposeWindowStyles());
-
-            //Refresh frame
-            SetWindowPos(GetHandle(), nullptr, 0, 0, 0, 0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
         }
 
 
         void Win32Window::SetFullScreen(bool multiMonitor)
         {
-            HWND hwnd = fHandleWindow;
-
-            MONITORINFO mi = { sizeof(mi) };
-            GetMonitorInfo(MonitorFromWindow(fHandleWindow, MONITOR_DEFAULTTOPRIMARY), &mi);
-            RECT rect = mi.rcMonitor;
+            MonitorInfo::GetSingleton().Refresh();
+            RECT rect = MonitorInfo::GetSingleton().getMonitorInfo(MonitorFromWindow(GetHandle(), MONITOR_DEFAULTTOPRIMARY)).monitorInfo.rcMonitor;
 
             if (fFullSceenState == FullSceenState::Windowed)
                 SavePlacement();
 
             if (multiMonitor)
             {
-                MonitorInfo::GetSingleton().Refresh();
                 rect = MonitorInfo::GetSingleton().getBoundingMonitorArea();
                 fFullSceenState = FullSceenState::MultiScreen;
             }
@@ -310,12 +304,10 @@ namespace OIV
                 fFullSceenState = FullSceenState::SingleScreen;
 
             UpdateWindowStyles();
-
-            SetWindowPos(hwnd, HWND_TOP,
-                rect.left, rect.top,
-                rect.right - rect.left,
-                rect.bottom - rect.top,
-                SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+			//Set window pos for full screen with resize move and updateframe.
+            SetWindowPos(GetHandle(), nullptr, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
+                , WindowPosHelper::ComposeFlags({ WindowPosOp::Move, WindowPosOp::Resize,WindowPosOp::UpdateFrame }));
+           
 
         }
 
