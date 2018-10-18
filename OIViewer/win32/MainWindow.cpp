@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include <Buffer.h>
+#include "BitmapHelper.h"
 namespace OIV
 {
     namespace Win32
@@ -31,6 +32,39 @@ namespace OIV
                     fCursors[(size_t)CursorType::South] = LoadCursorFromFile((CursorsPath + L"arrow-S.cur").c_str());
                     fCursors[(size_t)CursorType::SouthEast] = LoadCursorFromFile((CursorsPath + L"arrow-SE.cur").c_str());
                     fCursors[(size_t)CursorType::SizeAll] = LoadCursorFromFile((CursorsPath + L"arrow-C.cur").c_str());
+
+
+                //    BitmapShaderPtr bitmap = Bitmap::FromFileAnyFormat((CursorsPath + L"arrow-C.cur").c_str());
+
+                //struct {
+                //    WORD             xHot;         // x hotspot
+                //    WORD             yHot;         // y hotspot
+                //    BITMAPINFOHEADER bih;
+                //   } CURSOR_RES_HDR;
+
+                //   
+
+                // //Fill out pImage
+
+                //
+                //CURSOR_RES_HDR.xHot = 20;
+                //CURSOR_RES_HDR.yHot = 20;
+                //CURSOR_RES_HDR.bih = bitmap->GetBitmapHeader();
+                //    
+                //    
+
+                //HCURSOR hcur = CreateIconFromResourceEx((BYTE*)&CURSOR_RES_HDR,
+                //    bitmap->GetBitmapHeader().biSizeImage + 32, // size of image data + hotspot (in bytes)
+                //    FALSE,
+                //    0x00030000, // version: value mandated by windows
+                //    0, 0,       // width & height, 0 means use default
+                //    LR_DEFAULTSIZE | LR_DEFAULTCOLOR);
+
+
+                ////LoadCursorFromFile();
+
+
+                //fCursors[(size_t)CursorType::SizeAll] = hcur; 
                     fCursorsInitialized = true;
                 }
                 fCurrentCursorType = type;
@@ -106,14 +140,8 @@ namespace OIV
                 LL_EXCEPTION_UNEXPECTED_VALUE;
 
             }
-
-
             FlushInput(false);
-
         }
-
-
-
 
         void MainWindow::SetInputFlushTimer(bool enable)
         {

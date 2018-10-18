@@ -5,6 +5,11 @@
 
 namespace OIV
 {
+    const std::wstring & OIVFileImage::GetFileName() const { return fFileName; }
+    OIVFileImage::OIVFileImage(const std::wstring & fileName) : fFileName(fileName)
+    {
+        GetDescriptorMutable().Source = ImageSource::File;
+    }
     ResultCode OIVFileImage::Load(const FileLoadOptions& loadOptions)
     {
         using namespace LLUtils;
@@ -30,12 +35,14 @@ namespace OIV
         if (result == RC_Success)
         {
             ImageDescriptor& desc = GetDescriptorMutable();
-            desc.Width = loadResponse.width;
-            desc.Height = loadResponse.height;
+            //desc.Width = loadResponse.width;
+            //desc.Height = loadResponse.height;
             desc.LoadTime = loadResponse.loadTime;
-            desc.ImageHandle = loadResponse.handle;
-            desc.Bpp = loadResponse.bpp;
+            /*desc.ImageHandle = loadResponse.handle;
+            desc.Bpp = loadResponse.bpp;*/
+            SetImageHandle(loadResponse.handle);
+            QueryImageInfo();
         }
         return result;
     }
-}
+ }

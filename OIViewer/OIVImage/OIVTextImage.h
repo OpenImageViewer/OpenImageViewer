@@ -44,7 +44,6 @@ namespace OIV
     public:
         CreateTextParams& GetTextOptions() { return  fTextOptionsCurrent; }
         ResultCode DoUpdate() override;
-        ~OIVTextImage();
 
     public: //const methods
         CreateTextParams fTextOptionsCached = {};

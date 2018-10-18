@@ -21,9 +21,7 @@ typedef wchar_t OIVCHAR;
 
 
     typedef int16_t ImageHandle;
-    const ImageHandle ImageHandleNull = -1;
-    const ImageHandle ImageHandleDisplayed = 0;
-
+    const ImageHandle ImageHandleNull = 0;
 
 
     enum CommandExecute
@@ -34,7 +32,6 @@ typedef wchar_t OIVCHAR;
         , OIV_CMD_LoadFile
         , OIV_CMD_LoadRaw
         , OIV_CMD_UnloadFile
-        , OIV_CMD_DisplayImage
         , OIV_CMD_ImageProperties
         , CE_Refresh
         , OIV_CMD_QueryImageInfo
@@ -82,17 +79,22 @@ typedef wchar_t OIVCHAR;
     };
 
     //-------Command Structs-------------------------
-    enum OIV_AxisAlignedRTransform
+    enum OIV_AxisAlignedRotation
     {
-          AAT_None
-        , AAT_Rotate90CW
-        , AAT_Rotate270CCW = AAT_Rotate90CW
-        , AAT_Rotate90CCW
-        , AAT_Rotate270CW = AAT_Rotate90CCW
+          AAT_None = 0
+        , AAT_Rotate90CW 
         , AAT_Rotate180
-        , AAT_FlipVertical
-        , AAT_FlipHorizontal
+        , AAT_Rotate90CCW
     };
+
+    //flags.
+    enum OIV_AxisAlignedFlip
+    {
+          AAF_None = 0 << 0
+        , AAF_Horizontal = 1 << 0
+        , AAF_Vertical = 1 << 1
+    };
+
 
     enum OIV_TexelFormat : uint16_t
     {
@@ -172,11 +174,24 @@ typedef wchar_t OIVCHAR;
         uint8_t buffer[32];
     };
 
+    enum OIV_ConvertFormat_Flags
+    {
+          OIV_CF_None
+        , OIV_CF_RAINBOW_NORMALIZE
+    };
+
     struct OIV_CMD_ConvertFormat_Request
     {
         ImageHandle handle;
+        OIV_ConvertFormat_Flags flags;
         OIV_TexelFormat format;
     };
+
+    struct OIV_CMD_ConvertFormat_Response
+    {
+        ImageHandle handle;
+    };
+
 
     struct OIV_CMD_GetPixels_Request
     {
@@ -242,6 +257,7 @@ typedef wchar_t OIVCHAR;
         ImageHandle imageHandle;
     };
 
+ 
     struct OIV_CMD_SetSelectionRect_Request
     {
         OIV_RECT_I rect;
@@ -255,7 +271,7 @@ typedef wchar_t OIVCHAR;
         uint32_t rowPitch;
         OIV_TexelFormat texelFormat;
         std::byte* buffer;
-        OIV_AxisAlignedRTransform transformation;
+        OIV_AxisAlignedFlip transformation;
     };
 
 
@@ -299,10 +315,21 @@ typedef wchar_t OIVCHAR;
         uint16_t height;
     };
 
+    struct OIV_Tranform
+    {
+        OIV_AxisAlignedRotation rotation;
+        OIV_AxisAlignedFlip flip;
+    };
+
 
     struct OIV_CMD_AxisAlignedTransform_Request
     {
-        OIV_AxisAlignedRTransform transform;
+        OIV_Tranform transform;
+        ImageHandle handle;
+    };
+
+    struct OIV_CMD_AxisAlignedTransform_Response
+    {
         ImageHandle handle;
     };
 
@@ -385,7 +412,7 @@ typedef wchar_t OIVCHAR;
         LLUtils::PointF64 position;
         LLUtils::PointF64 scale;
         OIV_Image_Render_mode imageRenderMode;
-        double opacity = 1.0;
+        double opacity;
         OIV_Filter_type filterType;
     };
 
@@ -410,8 +437,11 @@ typedef wchar_t OIVCHAR;
     {
           DF_None                       = 0 << 0
         , DF_ApplyExifTransformation    = 1 << 0
-        , DF_ResetScrollState           = 1 << 1
-        , DF_RefreshRenderer            = 1 << 2
+        , DF_RefreshRenderer            = 1 << 1
+        , DF_AutoRasterize              = 1 << 2 // don't rasterize to a compabile image
+        , DF_Hide                       = 1 << 3
+        , DF_UseFixedDisplayHandle      = 1 << 4 
+
     };
 
     enum OIV_PROP_Normalize_Mode
@@ -457,6 +487,7 @@ typedef wchar_t OIVCHAR;
         uint32_t rowPitchInBytes;
         uint32_t bitsPerPixel;
         uint32_t NumSubImages;
+        OIV_TexelFormat texelFormat;
     };
 
 #pragma pack() 

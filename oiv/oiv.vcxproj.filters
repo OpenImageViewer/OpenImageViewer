@@ -38,7 +38,6 @@
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerInit.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerLoadFile.h" />
-    <ClInclude Include="Commands\Handlers\CommandHandlerDisplayImage.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerRefresh.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerTexelGrid.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerSetClientSize.h" />

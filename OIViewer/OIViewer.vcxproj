@@ -199,6 +199,7 @@
     <ClInclude Include="CommandManager.h" />
     <ClInclude Include="External\WinReg.hpp" />
     <ClInclude Include="Helpers\OIVHelper.h" />
+    <ClInclude Include="Helpers\OIVImageHelper.h" />
     <ClInclude Include="Helpers\PhotoshopFinder.h" />
     <ClInclude Include="ImageDescriptor.h" />
     <ClInclude Include="FullScreenState.h" />
@@ -219,6 +220,7 @@
     <ClInclude Include="SelectionRect.h" />
     <ClInclude Include="TestApp.h" />
     <ClInclude Include="UserSettings.h" />
+    <ClInclude Include="win32\BitmapHelper.h" />
     <ClInclude Include="win32\HighPrecisionTimer.h" />
     <ClInclude Include="win32\MainWindow.h" />
     <ClInclude Include="win32\UserMessages.h" />

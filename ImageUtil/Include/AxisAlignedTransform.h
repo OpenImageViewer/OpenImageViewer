@@ -1,15 +1,25 @@
 #pragma once
 namespace IMUtil
 {
-    enum class AxisAlignedRTransform
+    enum OIV_AxisAlignedRotation
     {
           None
         , Rotate90CW
-        , Rotate270CCW = Rotate90CW
-        , Rotate90CCW
-        , Rotate270CW = Rotate90CCW
         , Rotate180
-        , FlipVertical
-        , FlipHorizontal
+        , Rotate90CCW
+    };
+
+    enum class OIV_AxisAlignedFlip
+    {
+          None          = 0 << 0
+        , Horizontal    = 1 << 0
+        , Vertical      = 1 << 1
+    };
+
+
+    struct OIV_AxisAlignedTransform
+    {
+        OIV_AxisAlignedRotation rotation;
+        OIV_AxisAlignedFlip flip;
     };
 }

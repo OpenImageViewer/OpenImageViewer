@@ -1,7 +1,6 @@
 #include "CommandProcessor.h"
 #include "Handlers/CommandHandlerInit.h"
 #include "Handlers/CommandHandlerLoadFile.h"
-#include "Handlers/CommandHandlerDisplayImage.h"
 #include "Handlers/CommandHandlerRefresh.h"
 #include "Handlers/CommandHandlerTexelGrid.h"
 #include "Handlers/CommandHandlerSetClientSize.h"
@@ -33,7 +32,6 @@ namespace OIV
             , make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
             , make_pair(OIV_CMD_LoadRaw,new CommandHandlerLoadRaw())
             , make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
-            , make_pair(OIV_CMD_DisplayImage,new CommandHandlerDisplayImage())
             , make_pair(CE_Refresh,new CommandHandlerRefresh())
             , make_pair(CE_TexelGrid,new CommandHandlerTexelGrid())
             , make_pair(CMD_SetClientSize,new CommandHandlerSetClientSize())

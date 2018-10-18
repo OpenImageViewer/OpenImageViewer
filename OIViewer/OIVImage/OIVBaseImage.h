@@ -13,14 +13,10 @@ namespace OIV
         , InternalText
         , GeneratedByLib
     };
-   
-    struct DisplayOptions
-    {
-        bool fUseRainbowNormalization;
-    };
 
     struct ImageDescriptor
     {
+        OIV_TexelFormat texelFormat = TF_UNKNOWN;
         ImageHandle ImageHandle = ImageHandleNull;
         ImageSource Source = ImageSource::None;
         uint32_t Width = 0;
@@ -35,10 +31,10 @@ namespace OIV
     {
     public:
         OIVBaseImage();
-        ResultCode Display(const DisplayOptions& displayOptions);
         //Base image updates image properties
         ResultCode Update();
-     
+        virtual ~OIVBaseImage();
+
     public: //const methods
         const ImageDescriptor& GetDescriptor() {return fDescriptor; }
         std::wstring GetDescription() const;
@@ -61,6 +57,6 @@ namespace OIV
         ImageDescriptor fDescriptor;
     };
 
-
+    using OIVBaseImageUniquePtr = std::shared_ptr<OIVBaseImage>;
     using OIVBaseImageSharedPtr = std::shared_ptr<OIVBaseImage>;
 }

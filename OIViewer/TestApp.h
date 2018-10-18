@@ -41,6 +41,40 @@ namespace OIV
         , Count
     };
 
+    enum class ImageChainStage
+    {
+          Opened
+        , Begin = Opened
+        , Deformed
+        , Rasterized
+        , Resampled
+        , Count
+    };
+
+    struct ImageChain
+    {
+        std::array<OIVBaseImageSharedPtr, static_cast<size_t>(ImageChainStage::Count)> Chain;
+        OIVBaseImageSharedPtr& Get(ImageChainStage stage)
+        {
+            return Chain[static_cast<size_t>(stage)];
+        }
+
+        const OIVBaseImageSharedPtr& Get(ImageChainStage stage) const
+        {
+            return const_cast<ImageChain*>(this)->Get(stage);
+            //return Chain[static_cast<size_t>(stage)];
+        }
+
+        void Reset()
+        {
+            for (auto& e : Chain)
+                e.reset();
+        }
+    };
+
+
+    
+
     class TestApp
     {
     public:
@@ -118,34 +152,36 @@ namespace OIV
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
         void UpdateTexelPos();
+        void AutoPlaceImage();
         void UpdateWindowSize();
         void Center();
         LLUtils::PointF64 ResolveOffset(const LLUtils::PointF64& point);
-        void UpdateVisibleImageInfo();
         void SetOffset(LLUtils::PointF64 offset);
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
+        void UpdateOpenImageUI();
         void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
         void FinalizeImageLoad(ResultCode result);
         void FinalizeImageLoadThreadSafe(ResultCode result);
-        bool LoadFileFromBuffer(const uint8_t* buffer, const std::size_t size, std::string extension, bool onlyRegisteredExtension);
         const std::wstring& GetOpenedFileName() const;
         bool IsOpenedImageIsAFile() const;
         void ReloadFileInFolder();
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
-        void TransformImage(OIV_AxisAlignedRTransform transform);
+        void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat);
         void PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
-        void DisplayImage(OIVBaseImageSharedPtr& descriptor, bool resetScrollState) ;
+        void DisplayImage(OIVBaseImageSharedPtr& descriptor);
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
+        void RefreshImage();
+        void DisplayOpenedFileName();
         void UpdateExposure();
         bool ToggleColorCorrection(); 
         void CancelSelection();
@@ -168,9 +204,7 @@ namespace OIV
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         bool fIsGridEnabled = false;
-        OIVBaseImageSharedPtr fDisplayImage;
-        OIVBaseImageSharedPtr fImageBeingOpened;
-        OIVBaseImageSharedPtr fOpenedImage;
+        OIVBaseImageSharedPtr fAutoScrollAnchor;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         SelectionRect fSelectionRect;
@@ -179,6 +213,8 @@ namespace OIV
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
+        OIV_AxisAlignedRotation fAxisAlignedTransform = OIV_AxisAlignedRotation::AAT_None;
+        OIV_AxisAlignedFlip     fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
 
         static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
         static constexpr int FileIndexStart = std::numeric_limits<int>::min();
@@ -197,10 +233,11 @@ namespace OIV
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
         
-        OIV_CMD_QueryImageInfo_Response fVisibleFileInfo = {};
         AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
+        ImageChain fCurrentImageChain;
+        ImageChain fPreviousImageChain;
 
 
         CommandManager fCommandManager;

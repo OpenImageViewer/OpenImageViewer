@@ -179,6 +179,12 @@
     <ClInclude Include="OIVImage\OIVTextImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="win32\BitmapHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Helpers\OIVImageHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

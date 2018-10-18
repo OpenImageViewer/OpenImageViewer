@@ -173,6 +173,14 @@ namespace IMUtil
             }
         }
 
+        struct AxisAlignedResolvedTransformData
+        {
+            uint8_t flipX = 0;
+            uint8_t flipY = 0;
+            uint8_t switchDimensions = 0;
+            uint8_t reserved = 0;
+        };
+
         struct TransformTexelsInfo
         {
             size_t startRow;
@@ -183,43 +191,75 @@ namespace IMUtil
             size_t height;
             const std::byte* srcBuffer;
             std::byte* dstBuffer;
-            IMUtil::AxisAlignedRTransform transform;
+            AxisAlignedResolvedTransformData resolvedTransformData;
             size_t srcRowPitch;
             size_t bytesPerTexel;
         };
 
+
+    
+
+        static AxisAlignedResolvedTransformData ReolvedAxisAlignedTransformData(OIV_AxisAlignedTransform transform)
+        {
+            AxisAlignedResolvedTransformData transformData;
+
+            transformData.flipX = (((int)transform.flip & (int)OIV_AxisAlignedFlip::Horizontal) != 0) ? 1 : 0;
+            transformData.flipY = (((int)transform.flip & (int)OIV_AxisAlignedFlip::Vertical) != 0) ? 1 : 0;
+
+            //if rotate is 90 counter clock wise flip horizontal axis
+            switch (transform.rotation)
+            {
+            case OIV_AxisAlignedRotation::Rotate180:
+                transformData.flipX ^= 1;
+                transformData.flipY ^= 1;
+                break;
+            case OIV_AxisAlignedRotation::Rotate90CCW:
+                transformData.flipY ^= 1;
+                transformData.switchDimensions = 1;
+                break;
+            case OIV_AxisAlignedRotation::Rotate90CW:
+                transformData.flipX ^= 1;
+                transformData.switchDimensions = 1;
+                break;
+            }
+
+
+            return transformData;
+        }
+        
+
         static void TransformTexels(const TransformTexelsInfo& transformInfo)
         {
+
+            const AxisAlignedResolvedTransformData& resolvedTransform = transformInfo.resolvedTransformData;
+
             for (std::size_t y = transformInfo.startRow; y < transformInfo.endRow; y++)
                 for (std::size_t x = transformInfo.startCol; x < transformInfo.endCol; x++)
                 {
                     const std::byte* srcRow = transformInfo.srcBuffer + y * transformInfo.srcRowPitch;
-                    std::size_t idxDest;
 
-                    switch (transformInfo.transform)
+                    size_t destWidth = transformInfo.width;
+                    size_t destHeight = transformInfo.height;
+                    size_t destX = x;
+                    size_t destY = y;
+
+                    if (resolvedTransform.switchDimensions == 1)
                     {
-                    case AxisAlignedRTransform::Rotate180:
-                        idxDest = transformInfo.width - x - 1 + (transformInfo.height - y - 1) * transformInfo.width;
-                        break;
-                    case AxisAlignedRTransform::Rotate90CW:
-                        idxDest = (transformInfo.height - 1 - y) + x * transformInfo.height;
-                        break;
-                    case AxisAlignedRTransform::Rotate90CCW:
-                        idxDest = y + (transformInfo.width - 1 - x) * transformInfo.height;
-                        break;
-                    case AxisAlignedRTransform::FlipVertical:
-                        idxDest = x + (transformInfo.height - y - 1) * transformInfo.width;
-                        break;
-                    case AxisAlignedRTransform::FlipHorizontal:
-                        idxDest = (transformInfo.width - 1 - x) + y * transformInfo.width;
-                        break;
-
-                    default:
-                        LL_EXCEPTION_UNEXPECTED_VALUE;
+                        destWidth = transformInfo.height;
+                        destHeight = transformInfo.width;
+                        destX = y;
+                        destY = x;
                     }
 
+                    if (resolvedTransform.flipX)
+                        destX = destWidth - destX - 1;
 
+                    if (resolvedTransform.flipY)
+                        destY = destHeight - destY - 1;
 
+                    const std::size_t idxDest =  destY * destWidth + destX;
+
+             
                     switch (transformInfo.bytesPerTexel)
                     {
                     case 1:

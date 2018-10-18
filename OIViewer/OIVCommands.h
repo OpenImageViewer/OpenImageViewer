@@ -48,15 +48,6 @@ namespace OIV
             
         }
 
-
-        static ResultCode ClearImage()
-        {
-            OIV_CMD_DisplayImage_Request displayRequest = {};
-
-            displayRequest.handle = ImageHandleNull;
-            return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
-        }
-
         static ResultCode UnloadImage(ImageHandle handle)
         {
             if (handle != ImageHandleNull)
@@ -68,22 +59,37 @@ namespace OIV
             else return RC_InvalidHandle;
         }
 
-        static ResultCode TransformImage(ImageHandle handle, OIV_AxisAlignedRTransform transform)
+        static ResultCode TransformImage(ImageHandle handle, OIV_AxisAlignedRotation rotation, OIV_AxisAlignedFlip flip, ImageHandle& tranformedHandle)
         {
             OIV_CMD_AxisAlignedTransform_Request request = {};
-            request.handle = handle;
-            request.transform = transform;
+            OIV_CMD_AxisAlignedTransform_Response response= {};
             
-            return ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &CmdNull());
+            
+            request.handle = handle;
+            request.transform.rotation = rotation;
+            request.transform.flip= flip;
+            ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &response);
+            if (result == RC_Success)
+            {
+                tranformedHandle = response.handle;
+            }
+
+            return result;
         }
 
-        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat)
+        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat,bool useRainbow, ImageHandle& converted)
         {
             OIV_CMD_ConvertFormat_Request request = {};
+            OIV_CMD_ConvertFormat_Response response = {};
             request.handle = handle;
             request.format = desiredTexelFormat;
+            request.flags = useRainbow ? OIV_CF_RAINBOW_NORMALIZE : static_cast<OIV_ConvertFormat_Flags>(0);
+            ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_ConvertFormat, &request, &response);
+            if (result == RC_Success)
+                converted = response.handle;
 
-            return ExecuteCommand(CommandExecute::OIV_CMD_ConvertFormat, &request, &CmdNull());
+
+            return result;
         }
         
 
@@ -99,20 +105,6 @@ namespace OIV
             ResultCode result = ExecuteCommand(OIV_CMD_CropImage, &requestCropImage, &responseCropImage);
             croppedHandle = (result == RC_Success ? responseCropImage.imageHandle : ImageHandleNull);
             return result;
-        }
-
-        static ResultCode OIVCommands::DisplayImage(ImageHandle image_handle
-                , OIV_CMD_DisplayImage_Flags displayFlags
-                , OIV_PROP_Normalize_Mode normalizationFlags = OIV_PROP_Normalize_Mode::NM_Default
-                )
-        {
-            OIV_CMD_DisplayImage_Request displayRequest = {};
-
-            displayRequest.handle = image_handle;
-            displayRequest.displayFlags = displayFlags;
-            displayRequest.normalizeMode = normalizationFlags;
-
-            return ExecuteCommand(CommandExecute::OIV_CMD_DisplayImage, &displayRequest, &CmdNull());
         }
 
         static void SetSelectionRect(const LLUtils::RectI32& rect)

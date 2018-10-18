@@ -15,7 +15,7 @@ namespace OIV
         loadRequest.height = loadParams.height;
         loadRequest.rowPitch = loadParams.rowPitch;
         loadRequest.texelFormat = loadParams.texelFormat;
-        loadRequest.transformation = OIV_AxisAlignedRTransform::AAT_FlipVertical;
+        loadRequest.transformation = OIV_AxisAlignedFlip::AAF_Vertical;
 
 
         ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_LoadRaw, &loadRequest, &loadResponse);

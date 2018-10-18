@@ -4,37 +4,23 @@ namespace OIV
 {
     OIVBaseImage::OIVBaseImage()
     {
-        fImageProperties.imageHandle = ImageHandleDisplayed;
+        fImageProperties.imageHandle = ImageHandleNull;;
         fImageProperties.position = 0;
         fImageProperties.filterType = OIV_Filter_type::FT_None;
         fImageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
         fImageProperties.scale = 1.0;
-        fImageProperties.opacity = 1.0;
+        fImageProperties.opacity = 0.0;
 
-    }
-    ResultCode OIVBaseImage::Display(const DisplayOptions & loadOptions)
-    {
-
-        ResultCode result = ResultCode::RC_UknownError;
-
-        if (fDescriptor.ImageHandle != ImageHandleNull)
-        {
-            LLUtils::StopWatch stopWatch(true);
-
-            result = OIVCommands::DisplayImage(fDescriptor.ImageHandle
-                , static_cast<OIV_CMD_DisplayImage_Flags>(OIV_CMD_DisplayImage_Flags::DF_ApplyExifTransformation)
-                , loadOptions.fUseRainbowNormalization ? OIV_PROP_Normalize_Mode::NM_Rainbow : OIV_PROP_Normalize_Mode::NM_Monochrome
-            );
-
-            fDescriptor.DisplayTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-        }
-
-        return result;
     }
 
     ResultCode OIVBaseImage::Update()
     {
         return DoUpdate();
+    }
+
+    OIVBaseImage::~OIVBaseImage()
+    {
+        FreeImage();
     }
 
     ResultCode OIVBaseImage::DoUpdate()
@@ -78,6 +64,7 @@ namespace OIV
         GetDescriptorMutable().Bpp = textImageInfo.bitsPerPixel;
         GetDescriptorMutable().Height = textImageInfo.height;
         GetDescriptorMutable().Width = textImageInfo.width;
+        GetDescriptorMutable().texelFormat = textImageInfo.texelFormat;
     }
     void OIVBaseImage::ResetActiveImageProperties()
     {

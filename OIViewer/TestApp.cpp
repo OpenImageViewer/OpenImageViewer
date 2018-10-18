@@ -16,7 +16,6 @@
 #include "Exception.h"
 #include "win32/Win32Helper.h"
 #include "FileHelper.h"
-#include "StopWatch.h"
 #include <PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
@@ -32,6 +31,8 @@
 #include "OIVImage\OIVHandleImage.h"
 #include "OIVImage\OIVFileImage.h"
 #include "OIVImage\OIVRawImage.h"
+#include "Helpers\OIVImageHelper.h"
+
 
 namespace OIV
 {
@@ -53,7 +54,7 @@ namespace OIV
         
         wstringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
-            << fixed << setprecision(2) << fDisplayImage->GetImageProperties().scale.x * 100.0 << "%)";
+            << fixed << setprecision(2) << fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale.x * 100.0 << "%)";
 
         result.resValue = ss.str();
     }
@@ -93,7 +94,8 @@ namespace OIV
         {
             // Change normalization mode
             fUseRainbowNormalization = !fUseRainbowNormalization;
-            DisplayImage(fOpenedImage, false);
+            
+            DisplayImage(fCurrentImageChain.Get(ImageChainStage::Resampled));
             result.resValue = fUseRainbowNormalization ? L"Rainbow normalization" : L"Grayscale normalization";
         }
         else if (type == "imageFilterUp")
@@ -286,27 +288,27 @@ namespace OIV
 
     void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
     {
-        OIV_AxisAlignedRTransform transform = OIV_AxisAlignedRTransform::AAT_None;
+        OIV_AxisAlignedRotation rotation = OIV_AxisAlignedRotation::AAT_None;
+        OIV_AxisAlignedFlip flip = OIV_AxisAlignedFlip::AAF_None;
 
         std::string type = request.args.GetArgValue("type");
 
         if (false);
         else if (type == "hflip")
-            transform = AAT_FlipHorizontal;
+            flip = OIV_AxisAlignedFlip::AAF_Horizontal;
         else if (type == "vflip")
-            transform = AAT_FlipVertical;
+            flip = OIV_AxisAlignedFlip::AAF_Vertical;
         else if (type == "rotatecw")
-            transform = AAT_Rotate90CW;
+            rotation = AAT_Rotate90CW;
         else if (type == "rotateccw")
-            transform = AAT_Rotate90CCW;
+            rotation = AAT_Rotate90CCW;
 
 
-        if (transform != OIV_AxisAlignedRTransform::AAT_None)
+        if (rotation != OIV_AxisAlignedRotation::AAT_None || flip != OIV_AxisAlignedFlip::AAF_None)
         {
-            TransformImage(transform);
+            TransformImage(rotation, flip);
             response.resValue = LLUtils::StringUtility::ToWString(request.description);
         }
-       
     }
 
 
@@ -541,15 +543,13 @@ namespace OIV
     {
 
         fWindow.SetMenuChar(false);
-        fDisplayImage = std::make_shared<OIVHandleImage>(ImageHandleDisplayed, false);
-        OIV_CMD_ImageProperties_Request& displaymageProperties = fDisplayImage->GetImageProperties();
         
-        displaymageProperties.imageHandle = ImageHandleDisplayed;
+        /*displaymageProperties.imageHandle = ImageHandleDisplayed;
         displaymageProperties.position = 0;
         displaymageProperties.filterType = OIV_Filter_type::FT_None;
         displaymageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
         displaymageProperties.scale = 1.0;
-        displaymageProperties.opacity = 1.0;
+        displaymageProperties.opacity = 1.0;*/
 
 
         OIV_CMD_RegisterCallbacks_Request request;
@@ -786,30 +786,37 @@ namespace OIV
 
     void TestApp::UpdateStatusBar()
     {
-        fWindow.SetStatusBarText(fOpenedImage->GetDescription(), 0, 0);
+        
+        fWindow.SetStatusBarText(fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescription(), 0, 0);
     }
 
-    void TestApp::DisplayImage(OIVBaseImageSharedPtr& image , bool resetScrollState) 
+    void TestApp::DisplayImage(OIVBaseImageSharedPtr& image) 
     {
 
-        DisplayOptions options = {};
+        image->GetImageProperties().opacity = 1.0;
+        if ( image->Update() == RC_Success)
+            fRefreshOperation.Queue();
+
+
+        /*DisplayOptions options = {};
+        
         options.fUseRainbowNormalization = fUseRainbowNormalization;
+        options.fUseReservedDisplayHandle = true;
 
 
         if (image->Display(options) == RC_Success)
-            fRefreshOperation.Queue();
+            fRefreshOperation.Queue();*/
 
         //The visible image is different from loaded image.
-        UpdateVisibleImageInfo();
+        //UpdateVisibleImageInfo();
       
     }
 
     void TestApp::UnloadOpenedImaged()
     {
-        fOpenedImage.reset();
-        OIVCommands::ClearImage();
+        fCurrentImageChain.Reset();
         fRefreshOperation.Queue();
-        SetOpenImage(nullptr);
+        UpdateOpenImageUI();
     }
 
     void TestApp::DeleteOpenedFile(bool permanently)
@@ -851,6 +858,63 @@ namespace OIV
         }
     }
 
+    void TestApp::RefreshImage()
+    {
+        
+        if (fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr)
+        {
+            fPreviousImageChain = fCurrentImageChain;
+
+
+            //just hide old display image
+            if (fPreviousImageChain.Get(ImageChainStage::Resampled) != nullptr)
+            {
+                fPreviousImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().opacity = 0.0;
+                fPreviousImageChain.Get(ImageChainStage::Resampled)->Update();
+            }
+
+            fRefreshOperation.Begin();
+
+            if (fAxisAlignedTransform != OIV_AxisAlignedRotation::AAT_None || fAxisAlignedFlip != OIV_AxisAlignedFlip::AAF_None)
+            {
+
+                ImageHandle transformedHandle = ImageHandleNull;
+                OIVCommands::TransformImage(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().ImageHandle
+                    , fAxisAlignedTransform,fAxisAlignedFlip, transformedHandle);
+                
+                fCurrentImageChain.Get(ImageChainStage::Deformed) = std::make_shared<OIVHandleImage>(transformedHandle);
+            }
+            else
+            {
+                fCurrentImageChain.Get(ImageChainStage::Deformed) = fCurrentImageChain.Get(ImageChainStage::Opened);
+            }
+
+            fCurrentImageChain.Get(ImageChainStage::Rasterized) = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Deformed), fUseRainbowNormalization);
+            fCurrentImageChain.Get(ImageChainStage::Resampled) = fCurrentImageChain.Get(ImageChainStage::Rasterized);
+            fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().opacity = 1.0;
+            fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
+            AutoPlaceImage();
+            fRefreshOperation.End(true);
+            fPreviousImageChain.Reset();
+
+            UpdateOpenImageUI();
+
+            //todo: if success reset previous image, if failed keep existing image
+        }
+    }
+
+    void TestApp::DisplayOpenedFileName()
+    {
+        if (IsOpenedImageIsAFile())
+        {
+            std::wstringstream ss;
+            ss << L"File: ";
+            std::filesystem::path p = GetOpenedFileName();
+            ss << p.parent_path() << "\\" << "<textcolor=#ff00ff>" << p.stem() << "<textcolor=#00ff00>" << p.extension();
+            SetUserMessage(ss.str());
+        }
+    }
+
     void TestApp::FinalizeImageLoad(ResultCode result)
     {
         if (result == RC_Success)
@@ -859,38 +923,28 @@ namespace OIV
             assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
                 GetCurrentThreadId() == fMainThreadID);
 
-            OIVBaseImageSharedPtr oldImage = fOpenedImage;
+            //Show new image as soon as possible if not initial file
+            if (fIsInitialLoad)
+                fRefreshOperation.Begin();
 
-            fRefreshOperation.Begin();
-            DisplayImage(fImageBeingOpened, true);
-            SetOpenImage(fImageBeingOpened);
+            RefreshImage(); // actual refresh operation won't occur due to the line above.
+            UpdateOpenImageUI();
 			
             if (fResetTransformationMode == ResetTransformationMode::ResetAll)
                 FitToClientAreaAndCenter();
 
-            UnloadWelcomeMessage();
-            
-            //Don't refresh on initial file, wait for WM_SIZE
-            fRefreshOperation.End(!fIsInitialLoad);
-            
-            fImageBeingOpened.reset();
-
             if (fIsInitialLoad == false)
                 UpdateUIFileIndex();
+
+            fRefreshOperation.Begin();
+            UnloadWelcomeMessage();
+            DisplayOpenedFileName();
+            fRefreshOperation.End();
+
+            if (fIsInitialLoad)
+                fRefreshOperation.End(false);//Don't refresh on initial file, wait for WM_SIZE
             
-
-            if (IsOpenedImageIsAFile())
-            {
-                std::wstringstream ss;
-                ss << L"File: ";
-                using namespace std::experimental;
-                filesystem::path p = GetOpenedFileName();
-                ss << p.parent_path() << "\\" << "<textcolor=#ff00ff>" << p.stem() << "<textcolor=#00ff00>" << p.extension();
-                SetUserMessage(ss.str());
-            }
-
-            //Unload old image after displaying the new image.
-            oldImage.reset();
+            
         }
 
         if (fIsInitialLoad == true)
@@ -922,28 +976,32 @@ namespace OIV
         FileLoadOptions loadOptions;
         loadOptions.onlyRegisteredExtension = onlyRegisteredExtension;
         ResultCode result = file->Load(loadOptions);
-        fImageBeingOpened = file;
+        fCurrentImageChain.Get(ImageChainStage::Opened) = file;
+        //Save last display image so it won't be released.
+        //TODO: add dirty mode.
+        /*fPreviousImageChain.Get(ImageChainStage::Resampled) = fCurrentImageChain.Get(ImageChainStage::Resampled);
+        fCurrentImageChain.Get(ImageChainStage::Resampled) = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Opening),fUseRainbowNormalization);*/
         FinalizeImageLoadThreadSafe(result);
         return result == RC_Success;
     }
 
-    void TestApp::SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor)
+    void TestApp::UpdateOpenImageUI()
     {
-        fOpenedImage = image_descriptor;
         UpdateTitle();
         UpdateStatusBar();
     }
 
+
     const std::wstring& TestApp::GetOpenedFileName() const
     {
         static const std::wstring emptyString;
-        std::shared_ptr<OIVFileImage> file = std::dynamic_pointer_cast<OIVFileImage>(fOpenedImage);
+        std::shared_ptr<OIVFileImage> file = std::dynamic_pointer_cast<OIVFileImage>(fCurrentImageChain.Get(ImageChainStage::Opened));
         return file != nullptr ? file->GetFileName() : emptyString;
     }
 
     bool TestApp::IsOpenedImageIsAFile() const
     {
-        return fOpenedImage != nullptr && fOpenedImage->GetDescriptor().Source == ImageSource::File;
+        return fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr && fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Source == ImageSource::File;
     }
     
     void TestApp::ReloadFileInFolder()
@@ -1018,7 +1076,6 @@ namespace OIV
         
         future <bool> asyncResult;
         
-        
         if (isInitialFile == true)
         {
             fMutexWindowCreation.lock();
@@ -1084,7 +1141,8 @@ namespace OIV
     void TestApp::Destroy()
     {
         // destroy OIV resources before destroying OIV.
-        fOpenedImage.reset();
+        fPreviousImageChain.Reset();
+        fCurrentImageChain.Reset();
         fLabelManager.RemoveAll();
         // Destroy OIV when window is closed.
         OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
@@ -1106,7 +1164,7 @@ namespace OIV
 
     OIV_Filter_type TestApp::GetFilterType() const
     {
-        return fDisplayImage->GetImageProperties().filterType;
+        return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().filterType;
     }
 
     void TestApp::UpdateExposure()
@@ -1230,10 +1288,10 @@ namespace OIV
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
-        fDisplayImage->GetImageProperties().filterType =  std::clamp(filterType
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().filterType =  std::clamp(filterType
             , FT_None, static_cast<OIV_Filter_type>( FT_Count - 1));
 
-        fDisplayImage->Update();
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
         fRefreshOperation.Queue();
     }
 
@@ -1261,8 +1319,8 @@ namespace OIV
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
-        fDisplayImage->GetImageProperties().position = ResolveOffset(offset);
-        fDisplayImage->Update();
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position = ResolveOffset(offset);
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
@@ -1278,7 +1336,7 @@ namespace OIV
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         using namespace LLUtils;
-        SetOffset(panAmount + fDisplayImage->GetImageProperties().position);
+        SetOffset(panAmount + fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position);
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
@@ -1316,11 +1374,11 @@ namespace OIV
         switch (imageSizeType)
         {
         case ImageSizeType::Original:
-            return fOpenedImage != nullptr ? PointF64(fOpenedImage->GetDescriptor().Width, fOpenedImage->GetDescriptor().Height) : PointF64(0, 0);
+            return fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr ? PointF64(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().Height) : PointF64(0, 0);
         case ImageSizeType::Transformed:
-            return PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height);
+            return PointF64(fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().Height);
         case ImageSizeType::Visible:
-            return PointF64(fVisibleFileInfo.width, fVisibleFileInfo.height) * GetScale();
+            return PointF64(fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().Width, fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().Height) * GetScale();
         default:
             LL_EXCEPTION_UNEXPECTED_VALUE;
         }
@@ -1393,8 +1451,8 @@ namespace OIV
 
         zoomPoint = ClientToImage(PointI32(clientX, clientY));
         PointF64 offset = (zoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
-        fDisplayImage->GetImageProperties().scale = zoomValue;
-        fDisplayImage->Update();
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale = zoomValue;
+        fCurrentImageChain.Get(ImageChainStage::Resampled)->Update();
 
         fRefreshOperation.Begin();
         
@@ -1411,12 +1469,15 @@ namespace OIV
 
     double TestApp::GetScale() const
     {
-        return fDisplayImage->GetImageProperties().scale.x;
+        if (fCurrentImageChain.Get(ImageChainStage::Resampled) != nullptr)
+            return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().scale.x;
+        else
+            return 1.0;
     }
 
     void TestApp::UpdateCanvasSize()
     {
-        if (fOpenedImage != nullptr)
+        if (fCurrentImageChain.Get(ImageChainStage::Opened) != nullptr)
         {
             using namespace  LLUtils;
             PointF64 canvasSize = (PointF64)fWindow.GetCanvasSize() / GetScale();
@@ -1433,7 +1494,7 @@ namespace OIV
 
     LLUtils::PointF64 TestApp::GetOffset() const
     {
-        return fDisplayImage->GetImageProperties().position;
+        return fCurrentImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().position;
     }
 
     LLUtils::PointF64 TestApp::ImageToClient(LLUtils::PointF64 imagepos) const
@@ -1470,7 +1531,7 @@ namespace OIV
     void TestApp::UpdateTexelPos()
     {
 
-        if (fOpenedImage != nullptr)
+        if (fCurrentImageChain.Get(ImageChainStage::Deformed) != nullptr)
         {
             using namespace LLUtils;
             PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
@@ -1482,7 +1543,7 @@ namespace OIV
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
             fWindow.SetStatusBarText(ss.str(), 2, 0);
 
-            PointF64 storageImageSize = GetImageSize(ImageSizeType::Original);
+            PointF64 storageImageSize = GetImageSize(ImageSizeType::Transformed);
 
             if (!(storageImageSpace.x < 0
                 || storageImageSpace.y < 0
@@ -1490,7 +1551,7 @@ namespace OIV
                 || storageImageSpace.y >= storageImageSize.y
                 ))
             {
-                OIV_CMD_TexelInfo_Request texelInfoRequest = { fOpenedImage->GetDescriptor().ImageHandle
+                OIV_CMD_TexelInfo_Request texelInfoRequest = { fCurrentImageChain.Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
            ,static_cast<uint32_t>(storageImageSpace.x)
            ,static_cast<uint32_t>(storageImageSpace.y) };
                 OIV_CMD_TexelInfo_Response  texelInfoResponse;
@@ -1506,6 +1567,17 @@ namespace OIV
     }
 
 
+    void TestApp::AutoPlaceImage()
+    {
+        fRefreshOperation.Begin();
+        if (fIsLockFitToScreen == true)
+            FitToClientAreaAndCenter();
+
+        else if (fIsOffsetLocked == true)
+            Center();
+        fRefreshOperation.End();
+    }
+
     void TestApp::UpdateWindowSize()
     {
         SIZE size = fWindow.GetCanvasSize();
@@ -1513,16 +1585,7 @@ namespace OIV
             &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
             static_cast<uint16_t>(size.cy) }, &CmdNull());
         UpdateCanvasSize();
-
-        fRefreshOperation.Begin();
-
-        if (fIsLockFitToScreen == true)
-            FitToClientAreaAndCenter();
-
-        else if (fIsOffsetLocked == true)
-            Center();
-
-        fRefreshOperation.End();
+		AutoPlaceImage();
     }
 
     void TestApp::Center()
@@ -1574,31 +1637,38 @@ namespace OIV
         return offset;
     }
 
-    void TestApp::TransformImage(OIV_AxisAlignedRTransform transform)
-    {
-        fRefreshOperation.Begin();
-        
-        OIVCommands::TransformImage(ImageHandleDisplayed, transform);
-        UpdateVisibleImageInfo();
-        
-        if (fIsLockFitToScreen)
-            FitToClientAreaAndCenter();
-        else
-            Center();
 
-        fRefreshOperation.End();
-    }
-
-    void TestApp::UpdateVisibleImageInfo()
+    void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
-        OIV_CMD_QueryImageInfo_Request loadRequest;
-        loadRequest.handle = ImageHandleDisplayed;
-        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &fVisibleFileInfo);
+
+        const bool isHorizontalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Horizontal)) != 0;
+        const bool isVerticalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Vertical)) != 0;
+        const bool isFlip = isVerticalFlip || isHorizontalFlip;
+
+        // the two options to manage axes aligned transofrmation are either
+        //1. modify the original image so transformation would cumulative - not the case here.
+        //2. preserve the original image and add compute the desired transformation - the case here.
+        // for simplicity the code accepts only 90 degrees rotations. 
+
+        if (relativeRotation != OIV_AxisAlignedRotation::AAT_None)
+        {
+            if (relativeRotation != AAT_Rotate90CW && relativeRotation != AAT_Rotate90CCW)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "Rotating image is currently limited to 90 degrees in CW/CCW");
+
+            fAxisAlignedTransform = static_cast<OIV_AxisAlignedRotation>((static_cast<int>(relativeRotation + fAxisAlignedTransform) % 4));
+            //If switching axes by rotating 90 degrees and flip is applied, then flip the flip axes.
+            if (isFlip == true)
+                fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(3));
+        }
+
+        fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(flip));
+
+       RefreshImage();
     }
 
     void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
     {
-        fImageBeingOpened.reset();
+        fCurrentImageChain.Get(ImageChainStage::Opened).reset();
         std::shared_ptr<OIVRawImage>  rawImage = std::make_shared<OIVRawImage>(ImageSource::Clipboard);
         RawBufferParams params;
         params.width = width;
@@ -1608,11 +1678,9 @@ namespace OIV
         params.buffer = buffer;
 
         ResultCode result = rawImage->Load(params);
-        fImageBeingOpened = rawImage;
+        fCurrentImageChain.Get(ImageChainStage::Opened) = rawImage;
 
         FinalizeImageLoadThreadSafe(result);
-
-
     }
 
     void TestApp::PasteFromClipBoard()
@@ -1676,82 +1744,74 @@ namespace OIV
     void TestApp::CopyVisibleToClipBoard()
     {
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
-        ImageHandle croppedHandle;
-        ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
+        ImageHandle croppedHandle = ImageHandleNull;
+        ImageHandle clipboardCompatibleHandle = ImageHandleNull;
+        ResultCode result = OIVCommands::CropImage(fCurrentImageChain.Get(ImageChainStage::Resampled)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+
         if (result == RC_Success)
         {
-
-            struct unloadImage
-            {
-                ImageHandle handle;
-                ~unloadImage()
-                {
-                    if (handle != ImageHandleNull)
-                        OIVCommands::UnloadImage(handle);
-
-                }
-            } handle{ croppedHandle };
-
-
+            OIVHandleImageSharedPtr croppedImage = std::make_shared<OIVHandleImage>(croppedHandle);
             //2. Flip the image vertically and convert it to BGRA for the clipboard.
-            result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRTransform::AAT_FlipVertical);
-            result = OIVCommands::ConvertImage(croppedHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8);
-
-            //3. Get image pixel buffer and Copy to clipboard.
-
-            OIV_CMD_GetPixels_Request requestGetPixels;
-            OIV_CMD_GetPixels_Response responseGetPixels;
-
-            requestGetPixels.handle = croppedHandle;
-
-            if (OIVCommands::ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
+            result = OIVCommands::TransformImage(croppedHandle, OIV_AxisAlignedRotation::AAT_None, OIV_AxisAlignedFlip::AAF_Vertical, clipboardCompatibleHandle);
+            if (result == RC_Success)
             {
-                struct hDibDelete
+                OIVHandleImageSharedPtr compatibleImage = std::make_shared<OIVHandleImage>(clipboardCompatibleHandle);
+                result = OIVCommands::ConvertImage(clipboardCompatibleHandle, OIV_TexelFormat::TF_I_B8_G8_R8_A8, false, clipboardCompatibleHandle);
+                compatibleImage = std::make_shared<OIVHandleImage>(clipboardCompatibleHandle);
+                //3. Get image pixel buffer and Copy to clipboard.
+
+                OIV_CMD_GetPixels_Request requestGetPixels;
+                OIV_CMD_GetPixels_Response responseGetPixels;
+
+                requestGetPixels.handle = clipboardCompatibleHandle;
+
+                if (OIVCommands::ExecuteCommand(OIV_CMD_GetPixels, &requestGetPixels, &responseGetPixels) == RC_Success)
                 {
-                    bool dlt;
-                    HANDLE mHande;
-                    ~hDibDelete()
+                    struct hDibDelete
                     {
-                        if (dlt && mHande)
+                        bool dlt;
+                        HANDLE mHande;
+                        ~hDibDelete()
                         {
-                            GlobalFree(mHande);
+                            if (dlt && mHande)
+                            {
+                                GlobalFree(mHande);
+                            }
                         }
-                    }
-                };
+                    };
 
 
-                uint32_t width = responseGetPixels.width;
-                uint32_t height = responseGetPixels.height;
-                uint8_t bpp;
-                OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
+                    uint32_t width = responseGetPixels.width;
+                    uint32_t height = responseGetPixels.height;
+                    uint8_t bpp;
+                    OIV_Util_GetBPPFromTexelFormat(responseGetPixels.texelFormat, &bpp);
 
-                HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
+                    HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, responseGetPixels.pixelBuffer);
 
-                hDibDelete deletor = { true,hDib };
+                    hDibDelete deletor = { true,hDib };
 
 
-                if (::OpenClipboard(nullptr))
-                {
-                    if (SetClipboardData(CF_DIB, hDib) != nullptr)
+                    if (::OpenClipboard(nullptr))
                     {
-                        //succeeded do not free hDib.
-                        deletor.dlt = false;
+                        if (SetClipboardData(CF_DIB, hDib) != nullptr)
+                        {
+                            //succeeded do not free hDib.
+                            deletor.dlt = false;
+                        }
+                        else
+                        {
+                            LL_EXCEPTION_SYSTEM_ERROR("Unable to set clipboard data.");
+                        }
+                        if (CloseClipboard() == FALSE)
+                            LL_EXCEPTION_SYSTEM_ERROR("can not close clipboard.");
+
                     }
                     else
                     {
-                        LL_EXCEPTION_SYSTEM_ERROR("Unable to set clipboard data.");
+                        LL_EXCEPTION_SYSTEM_ERROR("Can not open clipboard.");
                     }
-                    if (CloseClipboard() == FALSE)
-                        LL_EXCEPTION_SYSTEM_ERROR("can not close clipboard.");
-                        
-                }
-                else
-                {
-                    LL_EXCEPTION_SYSTEM_ERROR("Can not open clipboard.");
                 }
             }
-
-
         }
     }
 
@@ -1760,12 +1820,15 @@ namespace OIV
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         
         ImageHandle croppedHandle;
-        ResultCode result = OIVCommands::CropImage(ImageHandleDisplayed, imageRectInt, croppedHandle);
+
+        
+        ResultCode result = OIVCommands::CropImage(fCurrentImageChain.Get(ImageChainStage::Opened)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
         
         if (result == RC_Success)
         {
-            std::shared_ptr<OIVHandleImage> handleImage = std::make_shared<OIVHandleImage>(croppedHandle,true);
-            fImageBeingOpened = handleImage;
+            std::shared_ptr<OIVHandleImage> handleImage = std::make_shared<OIVHandleImage>(croppedHandle);
+            fPreviousImageChain = fCurrentImageChain;
+            fCurrentImageChain.Get(ImageChainStage::Opened) = handleImage;
             CancelSelection();
         }
 
@@ -1943,7 +2006,29 @@ namespace OIV
             {
                 fAutoScroll->ToggleAutoScroll();
                 if (fAutoScroll->IsAutoScrolling() == false)
+                {
                     fWindow.SetCursorType(OIV::Win32::MainWindow::CursorType::SystemDefault);
+                    fAutoScrollAnchor.reset();
+                }
+                else
+                {
+                    std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
+                    std::unique_ptr< OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
+                    FileLoadOptions options = {};
+                    options.onlyRegisteredExtension = true;
+                    fileImage->Load(options);
+                    fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
+                    fileImage->GetImageProperties().opacity = 0.5;
+                    
+                
+
+                    fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
+                    fileImage->GetImageProperties().scale = { 1,1 };
+                    fileImage->GetImageProperties().opacity = 1.0;
+
+                    fAutoScrollAnchor = std::move(fileImage);
+                    fAutoScrollAnchor->Update();
+                }
             }
 
             if (IsLeftDoubleClick)
@@ -1951,7 +2036,6 @@ namespace OIV
                 if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
                 {
                     CancelSelection();
-                    
                 }
                 else
                 {
@@ -1994,6 +2078,7 @@ namespace OIV
 
     void TestApp::SetUserMessage(const std::wstring& message)
     {
+        
         OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         if (userMessage == nullptr)
         {
@@ -2141,3 +2226,4 @@ namespace OIV
         fLabelManager.Remove("welcomeMessage");
     }
 }
+

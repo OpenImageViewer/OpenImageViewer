@@ -5,15 +5,8 @@ namespace OIV
     class OIVHandleImage : public OIVBaseImage
     {
     public:
-        OIVHandleImage(ImageHandle handle, bool freeAtDescturction);
-
-        ~OIVHandleImage()
-        {
-            if (fFreeAtDescturction == true)
-                FreeImage();
-        }
-
-    private:
-        const bool fFreeAtDescturction = false;
+        OIVHandleImage(ImageHandle handle);
     };
+
+    using OIVHandleImageSharedPtr = std::shared_ptr<OIVHandleImage>;
 }

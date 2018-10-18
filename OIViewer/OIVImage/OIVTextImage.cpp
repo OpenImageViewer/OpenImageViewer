@@ -19,10 +19,7 @@ namespace OIV
 
         return result;
     }
-    OIVTextImage::~OIVTextImage()
-    {
-        FreeImage();
-    }
+
     ResultCode OIVTextImage::CreateText()
     {
         OIV_CMD_CreateText_Response textResponse = {};

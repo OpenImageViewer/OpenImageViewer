@@ -274,7 +274,7 @@ namespace OIV
 
     void D3D11Renderer::DrawImage(const ImageEntry& entry)
     {
-        if (entry.texture == nullptr)
+        if (entry.texture == nullptr || entry.properties.opacity == 0.0)
             return;
 
 

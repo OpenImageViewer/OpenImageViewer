@@ -7,6 +7,8 @@
 #include "half.hpp"
 #include "HSLRGB.h"
 #include <Exception.h>
+#include <Float24.h>
+
 
 namespace IMUtil
 {
@@ -50,7 +52,7 @@ namespace IMUtil
 
     public:
 
-        static IMCodec::ImageSharedPtr Transform(AxisAlignedRTransform transform, IMCodec::ImageSharedPtr image)
+        static IMCodec::ImageSharedPtr Transform(OIV_AxisAlignedTransform transform, IMCodec::ImageSharedPtr image)
         {
             using namespace std;
             using namespace IMCodec;
@@ -58,7 +60,7 @@ namespace IMUtil
             if (image->GetIsByteAligned() == false)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "OIV::Image::Transom works only with byte aligned image formats.");
 
-            if (transform != AxisAlignedRTransform::None)
+            if (transform.rotation != OIV_AxisAlignedRotation::None || transform.flip != OIV_AxisAlignedFlip::None)
             {
                 ImageDescriptor transformedProperties;
                 transformedProperties.fProperties = image->GetDescriptor().fProperties;
@@ -75,7 +77,7 @@ namespace IMUtil
                 const size_t bytesPerThread = MegaBytesPerThread * 1024 * 1024;
                 const uint8_t totalThreads = (std::min)(maxThreads, static_cast<uint8_t>(image->GetTotalSizeOfImageTexels() / bytesPerThread));
                 PixelUtil::TransformTexelsInfo descTemplate;
-                descTemplate.transform = transform;
+                descTemplate.resolvedTransformData = PixelUtil::ReolvedAxisAlignedTransformData(transform);
                 descTemplate.dstBuffer = dest;
                 descTemplate.srcBuffer = image->GetBuffer();
                 descTemplate.width = image->GetWidth();
@@ -122,7 +124,7 @@ namespace IMUtil
 
                 
 
-                if (transform == AxisAlignedRTransform::Rotate90CW || transform == AxisAlignedRTransform::Rotate90CCW)
+                if (transform.rotation == OIV_AxisAlignedRotation::Rotate90CW || transform.rotation == OIV_AxisAlignedRotation::Rotate90CCW)
                     swap(transformedProperties.fProperties.Height, transformedProperties.fProperties.Width);
 
                 transformedProperties.fProperties.RowPitchInBytes = transformedProperties.fProperties.Width * image->GetBytesPerTexel();
@@ -134,6 +136,37 @@ namespace IMUtil
             
         }
         
+        static IMCodec::ImageSharedPtr ConvertImageWithNormalization(IMCodec::ImageSharedPtr image, IMCodec::TexelFormat targetTexelFormat, bool isRainbow)
+        {
+
+            const NormalizeMode normalizeMode = isRainbow ? ImageUtil::NormalizeMode::RainBow : ImageUtil::NormalizeMode::GrayScale;
+
+            switch (image->GetImageType())
+            {
+            case IMCodec::TexelFormat::F_X16:
+                image = Normalize<half_float::half>(image, targetTexelFormat, normalizeMode);
+                break;
+
+            case IMCodec::TexelFormat::F_X24:
+                image = Normalize<float, Float24>(image, targetTexelFormat, normalizeMode);
+                break;
+
+            case IMCodec::TexelFormat::F_X32:
+                image = ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
+                break;
+            case IMCodec::TexelFormat::I_X8:
+                image = ImageUtil::Normalize<int8_t>(image, targetTexelFormat, normalizeMode);
+                break;
+
+            default:
+                image = ImageUtil::Convert(image, targetTexelFormat);
+            }
+
+            return image;
+
+        }
+
+
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr image)
         {
             using namespace IMCodec;
