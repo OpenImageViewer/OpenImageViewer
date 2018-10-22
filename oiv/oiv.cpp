@@ -125,6 +125,10 @@ namespace OIV
                 if (exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
                 {
                     const_cast<ImageDescriptor::MetaData&>(image->GetDescriptor().fMetaData).exifOrientation = exifInfo.Orientation;
+
+                    // I see no use of using the original image, discard source image and use the image with exif rotation applied. 
+                    // If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
+                    image = ApplyExifRotation(image);
                 }
             }
                 
