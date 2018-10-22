@@ -910,7 +910,7 @@ namespace OIV
             std::wstringstream ss;
             ss << L"File: ";
             std::filesystem::path p = GetOpenedFileName();
-            ss << p.parent_path() << "\\" << "<textcolor=#ff00ff>" << p.stem() << "<textcolor=#00ff00>" << p.extension();
+            ss << p.parent_path().wstring() << L"<textcolor=#ff00ff>" << p.stem().wstring() << L"<textcolor=#00ff00>" << p.extension().wstring();
             SetUserMessage(ss.str());
         }
     }
