@@ -40,7 +40,7 @@ namespace OIV
             using namespace std;
 
             vector<vector<int>> result;
-            const int totalGroups = groupSizes.size();
+            const size_t totalGroups = groupSizes.size();
             vector<int> accumulativeSize = std::vector<int>(totalGroups);
             int totalElements = 1;
             for (int i = 0; i < groupSizes.size(); i++)

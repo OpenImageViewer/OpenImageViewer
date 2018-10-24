@@ -86,8 +86,8 @@ namespace  OIV
 
         if (fShaderData == nullptr)
             D3D11Error::HandleError("Could not compile GPU program");
-
-        Create();
+        else
+           Create();
     }
 
     const std::string& D3D11Shader::Getsource() const
@@ -165,8 +165,8 @@ namespace  OIV
 
         if (SUCCEEDED(res) == false)
             HandleCompileError(errors.Get());
-
-        fShaderData = D3D11Utility::BufferFromBlob(microCode.Get());
+        else
+            fShaderData = D3D11Utility::BufferFromBlob(microCode.Get());
     }
 
     void D3D11Shader::HandleCompileError(ID3DBlob* errors) const

@@ -346,6 +346,8 @@ namespace OIV
         string op = request.args.GetArgValue("op");;
         string val = request.args.GetArgValue("val");;
 
+
+        bool validValue = true;
         double newValue;
 
         if (type == "gamma")
@@ -358,19 +360,26 @@ namespace OIV
             newValue = PerformColorOp(fColorExposure.saturation, op, val);
         else if (type == "contrast")
             newValue = PerformColorOp(fColorExposure.contrast, op, val);
+        else
+        {
+            validValue = false;
+        }
+        if (validValue == true)
+        {
 
-        std::wstringstream ss;
+            std::wstringstream ss;
 
-        ss << L"<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" << " "
-            << LLUtils::StringUtility::ToWString(op) << L" " << LLUtils::StringUtility::ToWString(val);
+            ss << L"<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" << " "
+                << LLUtils::StringUtility::ToWString(op) << L" " << LLUtils::StringUtility::ToWString(val);
 
-        if (op == "increase" || op == "decrease")
-            ss << "%";
+            if (op == "increase" || op == "decrease")
+                ss << "%";
 
 
-        ss << "<textcolor=#00ff00> (" << std::fixed << std::setprecision(0) << newValue * 100 << "%)";
-        result.resValue = ss.str();
-        UpdateExposure();
+            ss << "<textcolor=#00ff00> (" << std::fixed << std::setprecision(0) << newValue * 100 << "%)";
+            result.resValue = ss.str();
+            UpdateExposure();
+        }
     }
 
     void TestApp::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)

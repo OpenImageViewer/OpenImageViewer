@@ -64,7 +64,7 @@ namespace LLUtils
         static Color FromString(const std::string& str)
         {
             using namespace std;;
-            Color c = 0xFF << 24;
+            Color c = static_cast<uint32_t>(0xFF) << 24;
             char strByteColor[3];
             strByteColor[2] = 0;
             if (str.length() > 0)
