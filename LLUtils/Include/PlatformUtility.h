@@ -1,16 +1,23 @@
 #pragma once
+#include "Platform.h"
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
 #include <windows.h>
 #include <Shlobj.h>
+#include <DbgHelp.h>
+#endif
+
 #include "StringDefs.h"
 #include "Utility.h"
-#include <DbgHelp.h>
 #include <StringUtility.h>
+
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 #pragma push_macro("max"); 
 
 #undef max
+#endif
 
 namespace LLUtils
 {
@@ -30,6 +37,7 @@ namespace LLUtils
 
         static StackTrace GetCallStack(int framesToSkip = 0)
         {
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
             unsigned int   i;
             void* stack[std::numeric_limits<USHORT>::max()];
             unsigned short frames;
@@ -61,8 +69,12 @@ namespace LLUtils
             free(symbol);
 
             return stackTrace;
+            #else
+            return StackTrace();
+            #endif
         }
 
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
         static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const std::byte* buffer)
         {
             BITMAPINFOHEADER bi = { 0 };
@@ -149,81 +161,6 @@ namespace LLUtils
             return default_string_type();
         }
 
-        /*
-        static void find_files(default_string_type wrkdir, ListWString &lstFileData, bool recursive = false)
-        {
-            native_string_type wrkdirtemp = wrkdir;
-            if (!wrkdirtemp.empty() && (wrkdirtemp[wrkdirtemp.length() - 1] != L'\\'))
-            {
-                wrkdirtemp += TEXT("\\");
-            }
-
-            WIN32_FIND_DATA file_data = { 0 };
-            HANDLE hFile = FindFirstFile((wrkdirtemp + TEXT("*")).c_str(), &file_data);
-
-            if (hFile == INVALID_HANDLE_VALUE)
-            {
-                return;
-            }
-
-            do
-            {
-                const bool isDirectory = (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY;
-                //const bool isFile = (file_data.dwFileAttributes & (FILE_ATTRIBUTE_ HIDDEN | FILE_ATTRIBUTE_SYSTEM));
-
-                if (recursive && isDirectory)
-                {
-                    if ((wcscmp(file_data.cFileName, TEXT(".")) != 0) &&
-                        (wcscmp(file_data.cFileName, TEXT("..")) != 0))
-                    {
-                        default_string_type directoryName = wrkdirtemp + file_data.cFileName;
-                        find_files(directoryName, lstFileData);
-                    }
-                }
-                else
-                {
-                    if (!isDirectory)
-                    {
-                        lstFileData.push_back(wrkdirtemp + file_data.cFileName);
-                    }
-                }
-            } while (FindNextFile(hFile, &file_data));
-
-            FindClose(hFile);
-        }
-        */
-
-        
-        //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
-        template <class CHAR_TYPE = wchar_t , typename ustring =  std::basic_string<CHAR_TYPE>>
-        static ustring GetLastErrorAsString()
-        {
-            //Get the error message, if any.
-            DWORD errorMessageID = ::GetLastError();
-            if (errorMessageID == 0)
-                return ustring(); //No error message has been recorded
-
-            CHAR_TYPE* messageBuffer = nullptr;
-            size_t size = 0;
-            if (typeid(CHAR_TYPE) == typeid(wchar_t))
-            {
-                size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&messageBuffer), 0, NULL);
-            }
-            else
-            {
-                size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<char*>(&messageBuffer), 0, NULL);
-            }
-
-            ustring message(messageBuffer, size);
-
-            //Free the buffer.
-            LocalFree(messageBuffer);
-
-            return message;
-        }
-
         static void CopyTextToClipBoard(const std::wstring& text)
         {
             if (OpenClipboard(nullptr) != FALSE)
@@ -270,6 +207,48 @@ namespace LLUtils
             static thread_local NanoSleep timer;
             timer.Wait(ns);
         }
+    
+#endif
+     
+
+        
+        //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+        template <class CHAR_TYPE = wchar_t , typename ustring =  std::basic_string<CHAR_TYPE>>
+        static ustring GetLastErrorAsString()
+        {
+
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
+            //Get the error message, if any.
+            DWORD errorMessageID = ::GetLastError();
+            if (errorMessageID == 0)
+                return ustring(); //No error message has been recorded
+
+            CHAR_TYPE* messageBuffer = nullptr;
+            size_t size = 0;
+            if (typeid(CHAR_TYPE) == typeid(wchar_t))
+            {
+                size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<wchar_t*>(&messageBuffer), 0, NULL);
+            }
+            else
+            {
+                size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                    NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<char*>(&messageBuffer), 0, NULL);
+            }
+
+            ustring message(messageBuffer, size);
+
+            //Free the buffer.
+            LocalFree(messageBuffer);
+
+            return message;
+#else
+            return ustring();
+#endif
+        }
     };
 }
+
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
 #pragma pop_macro("max")
+#endif

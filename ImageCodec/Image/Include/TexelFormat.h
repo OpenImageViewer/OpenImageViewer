@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <Platform.h>
 #include "Exception.h"
 
 namespace IMCodec
@@ -50,7 +51,7 @@ namespace IMCodec
             ,64      // TF_F_X64
         };         
 
-    __forceinline  uint8_t GetTexelFormatSize(TexelFormat format)
+    LLUTILS_FORCE_INLINE uint8_t GetTexelFormatSize(TexelFormat format)
     {
         static_assert(sizeof(TexelFormatSize) / sizeof(TexelFormatSize[0]) == static_cast<std::underlying_type<TexelFormat>::type>(TexelFormat::COUNT), " Wrong array size");
         

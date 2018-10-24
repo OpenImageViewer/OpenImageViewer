@@ -8,9 +8,9 @@
 namespace IMCodec
 {
 
-	class ImageDescriptor
-	{
-	public:
+    class ImageDescriptor//TODO: Rename the class or the file to match
+    {
+    public:
         
         ImageDescriptor() = default;
         ImageDescriptor(const ImageDescriptor& properties)
@@ -45,7 +45,8 @@ namespace IMCodec
                     || Width == std::numeric_limits<std::size_t>::max()
                     || Height == std::numeric_limits<std::size_t>::max()
                     || RowPitchInBytes == std::numeric_limits<std::size_t>::max()
-                    || NumSubImages == std::numeric_limits<std::size_t>::max());
+                    || NumSubImages == std::numeric_limits<std::size_t>::max()//TODO: Change to a const expression
+                );
             }
         };
 
@@ -53,7 +54,11 @@ namespace IMCodec
         LLUtils::Buffer fData;
         MetaData fMetaData;
 
-		bool IsInitialized() const;
-
-	};
+        bool IsInitialized() const
+        {
+            return true
+                && fData.GetBuffer() != nullptr
+                && fProperties.IsInitialized() == true;
+        }
+    };
 }

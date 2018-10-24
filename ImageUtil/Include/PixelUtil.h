@@ -21,7 +21,6 @@ namespace IMUtil
         struct alignas(1) BitTexel32 : public BitTexel24 { uint8_t W; };
 
 #pragma pack(1)
-
         struct alignas(1) BitTexel32Ex
         {
             union
@@ -34,13 +33,7 @@ namespace IMUtil
                     uint8_t Z;
                     uint8_t W;
                 };
-                struct
-                {
-                    Int24 XYZ;
-                    uint8_t W;
-                };
             };
-            
         };
 #pragma pack()
 
@@ -154,10 +147,6 @@ namespace IMUtil
                 dst[i].W = src[i].X;
             }
         }
-
-        
-
-        
 
         static void BGRA32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {

@@ -1,9 +1,11 @@
 #pragma once
+#include <Platform.h>
 #include <string>
 #include <vector>
 #include <sstream>
 #include <algorithm>
 #include <locale>
+#include <cwchar>
 #include "StringDefs.h"
 
 namespace LLUtils
@@ -39,10 +41,11 @@ namespace LLUtils
         {
             using namespace std;
             ListString<string_type> elems;
-            basic_stringstream<string_type::value_type> ss;
+            using value_type = typename string_type::value_type;
+            basic_stringstream<value_type> ss;
             ss.str(s);
             string_type item;
-            while (getline<string_type::value_type>(ss, item, delim))
+            while (getline<value_type>(ss, item, delim))
                 if (item.empty() == false)
                     elems.push_back(item);
 
@@ -73,7 +76,11 @@ namespace LLUtils
 		{
             const std::size_t size = str.size() * 2 + 2;
 			wchar_t* buf = new wchar_t[size];
-			swprintf_s(buf, size, L"%S", str.c_str());
+        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
+            swprintf_s(buf, size, L"%S", str.c_str()); //TODO: Can this be removed?
+        #else
+			std::swprintf(buf, size, L"%S", str.c_str());
+        #endif
 			std::wstring rval = buf;
 			delete[] buf;
 			return rval;
@@ -87,7 +94,12 @@ namespace LLUtils
             std::size_t strLength = wcslen(str) + 1;
             char* pBuff = new char[strLength];
             std::size_t converted;
+        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
             wcstombs_s(&converted, pBuff, strLength, str, strLength * 2);
+        #else
+            wcstombs(pBuff, str, strLength * 2);
+        #endif
+            
             std::string retData = pBuff;
             delete[] pBuff;
             return retData;
@@ -154,14 +166,14 @@ namespace LLUtils
             //result = convertor.from_bytes(source);
         }
 
-        template <typename SourceString, typename DestString, typename SRC = SourceString::value_type, typename DST = DestString::value_type>
+        template <typename SourceString, typename DestString, typename SRC = typename SourceString::value_type, typename DST = typename DestString::value_type>
         static void ConvertString(const SourceString& source, DestString& dest)
         {
         
             if (sizeof(SRC) != sizeof(DST))
                 throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
 
-            dest = DestString(reinterpret_cast<const DestString::value_type*>(source.data()));
+            dest = DestString(reinterpret_cast<const typename DestString::value_type*>(source.data()));
             
 
             //TODO: complete string conversions functions and uncomment the following two lines

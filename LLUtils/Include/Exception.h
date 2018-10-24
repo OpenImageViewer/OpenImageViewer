@@ -53,8 +53,6 @@ namespace LLUtils
                 ss << f.fileName << L" at " << f.name << L" line: " << f.line << L" at address 0x" << hex << f.address << endl;
 
             std::wstring callStack = ss.str();
-
-            
             EventArgs args =
             {
                   errorCode
@@ -63,9 +61,8 @@ namespace LLUtils
                 , callStack
                 , LLUtils::StringUtility::ToWString(function)
             };
-
-            OnException.Raise(args);
             
+            OnException.Raise(args);
         }
 
         static std::wstring ExceptionErrorCodeToString(ErrorCode errorCode)

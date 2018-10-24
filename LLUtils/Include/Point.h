@@ -1,8 +1,9 @@
 #pragma once
 #ifdef _WIN32
-#include <windows.h>
+#include <windows.h> //TODO: Should be removed
 #endif
 
+#include <cmath>
 #include "Utility.h"
 
 namespace LLUtils
@@ -51,7 +52,7 @@ namespace LLUtils
             return Point(abs(x), abs(y));
         }
         
-        template< typename = std::enable_if< std::is_floating_point< POINT_TYPE >::value>::type >
+        template< typename = typename std::enable_if_t< std::is_floating_point< POINT_TYPE >::value> >
             Point Round() const
             {
                 return { std::round(x) , std::round(y) };
