@@ -1,5 +1,5 @@
 #pragma once
-#include "Interfaces\IPictureRenderer.h"
+#include "Interfaces/IPictureRenderer.h"
 #include <ImageLoader.h>
 #include "interfaces/IRenderer.h"
 #include "ImageManager.h"

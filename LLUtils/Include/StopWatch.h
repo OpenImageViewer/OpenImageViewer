@@ -3,8 +3,8 @@
 
 namespace LLUtils
 {
-    template <typename time_type_real = long double
-    , typename time_type_integer = int64_t
+    template <typename time_type_real64 = long double
+    , typename time_type_integer64 = int64_t
     , typename base_clock = std::chrono::high_resolution_clock>
     
     
@@ -12,8 +12,8 @@ namespace LLUtils
     {
     public:
         enum TimeUnit { Undefined = 0, NanoSeconds = 1, MicroSeconds = 2, Milliseconds = 3, Seconds = 4, TimeUnitCount};
-        typedef time_type_integer  time_type_integer;
-        typedef time_type_real  time_type_real;
+        using time_type_integer = time_type_integer64;
+        using time_type_real = time_type_real64;
 
     private:
         using base_clock_rep = typename base_clock::rep;

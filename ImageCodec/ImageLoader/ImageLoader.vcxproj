@@ -149,7 +149,6 @@
   <ItemGroup>
     <ClCompile Include="Source\EmbeddedPluginInstaller.cpp" />
     <ClCompile Include="Source\ImageLoader.cpp" />
-    <ClCompile Include="Source\ImageProperties.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Codecs\CodecDDS\CodecDDS.vcxproj">

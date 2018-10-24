@@ -1,6 +1,8 @@
 #pragma once
 #include <memory>
 #include <stdexcept>
+#include <cstring>
+#include <Platform.h>
 namespace LLUtils
 {
     class STDAlloc
@@ -25,12 +27,20 @@ namespace LLUtils
 
         static std::byte * Allocate(size_t size)
         {
+        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
             return reinterpret_cast<std::byte*>(_aligned_malloc(size, Alignment));
+        #else
+            return reinterpret_cast<std::byte*>(std::aligned_alloc(size, Alignment));
+        #endif
         }
 
         static void Deallocate(std::byte* buffer)
         {
+        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
             _aligned_free(buffer);
+        #else
+            std::free(buffer);
+        #endif
         }
     };
 
@@ -143,7 +153,7 @@ namespace LLUtils
             std::swap(fSize, rhs.fSize);
             rhs.fSize = 0;
             std::swap(fData, rhs.fData);
-            _aligned_free(rhs.fData);
+            Allocator::Deallocate(rhs.fData);
             rhs.fData = nullptr;
         }
 

@@ -74,7 +74,7 @@ namespace LLUtils
         }
 
         
-        template< typename = std::enable_if< std::is_floating_point<T>::value>::type >
+        template< typename = typename std::enable_if_t< std::is_floating_point<T>::value>>
         Rect Round() const
         {
             return { p0.Round() , p1.Round() };

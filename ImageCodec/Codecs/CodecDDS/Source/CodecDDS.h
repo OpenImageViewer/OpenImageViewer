@@ -34,24 +34,22 @@ namespace IMCodec
                 membuf(char* begin, char* end) {
                     this->setg(begin, begin, end);
                 }
-
             };
-
 
             uint8_t* buf = const_cast<uint8_t*>(buffer);
             membuf sbuf(reinterpret_cast<char*>(buf), reinterpret_cast<char*>(buf + size));
-            
+
             CDDSImage image;
             try
             {
-                image.load(istream(&sbuf), false);
+                istream bufStream = istream(&sbuf);
+                image.load(bufStream, false);
                 out_properties.fProperties.Width = image.get_width();
                 out_properties.fProperties.Height = image.get_height();
                 out_properties.fProperties.NumSubImages = image.get_num_mipmaps();
                 out_properties.fData.Allocate(image.get_size());
                 out_properties.fData.Write(reinterpret_cast<std::byte*>(static_cast<uint8_t*>(image)), 0, image.get_size());
-                
-                
+
                 unsigned format = image.get_format();
                 switch (format)
                 {
