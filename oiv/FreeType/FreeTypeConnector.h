@@ -15,6 +15,12 @@
 
 class FreeTypeConnector : public LLUtils::Singleton<FreeTypeConnector>
 {
+
+    ///*** workaround to solve***
+
+    static const size_t ExtraWidth = 1;
+    static const size_t ExtraRowHeight = 1;
+
     friend class LLUtils::Singleton<FreeTypeConnector>;
 public:
     ~FreeTypeConnector();

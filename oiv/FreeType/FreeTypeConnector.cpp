@@ -51,7 +51,8 @@ void FreeTypeConnector::MesaureText(const TextMesureParams& measureParams, TextM
     FT_Face face = measureParams.font->GetFace();
     uint32_t fontSize = measureParams.createParams.fontSize;
     const std::string& text = measureParams.createParams.text;
-    const uint32_t rowHeight = ((face->size->metrics.ascender - face->size->metrics.descender) >> 6) + measureParams.createParams.outlineWidth *2;
+    //TODO: workaround add ExtraRowHeight, some botmap has 'top' value above the ascender.
+    const uint32_t rowHeight = ExtraRowHeight +  ((face->size->metrics.ascender - face->size->metrics.descender) >> 6) + measureParams.createParams.outlineWidth *2;
     
     FT_Error error = 0;
 
@@ -172,7 +173,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
 
     // ****** temporary workaround for outline text.
     //TODO: calculate better the destination width
-     destWidth += 1;
+     destWidth += ExtraWidth;
     //***************
 
 
