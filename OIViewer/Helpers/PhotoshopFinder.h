@@ -46,7 +46,7 @@ namespace OIV
 
                         const std::wstring appPath = std::wstring(L"ApplicationPath");
                         std::wstring fileName = versionkey.GetStringValue(appPath) + L"\\Photoshop.exe";
-                        if (std::experimental::filesystem::exists(fileName))
+                        if (std::filesystem::exists(fileName))
                             return fileName;
                     }
                     catch (...) {

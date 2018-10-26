@@ -12,8 +12,30 @@ namespace LLUtils
     {
     public:
 
-        template< class chartype = default_char_type, typename string_type = std::basic_string<chartype>>
-        static ListString<string_type> split(const string_type &s, char delim)
+        template <typename char_type, typename string_type = std::basic_string<char_type>>
+        static inline string_type& rtrim(string_type& s, const char_type* t)
+        {
+            s.erase(s.find_last_not_of(t) + 1);
+            return s;
+        }
+
+        // trim from beginning of string (left)
+        template <typename char_type, typename string_type = std::basic_string<char_type>>
+        static inline string_type& ltrim(string_type& s, const char_type* t)
+        {
+            s.erase(0, s.find_first_not_of(t));
+            return s;
+        }
+
+        // trim from both ends of string (left & right)
+        template <typename char_type, typename string_type = std::basic_string<char_type>>
+        static inline string_type& trim(string_type& s, const char_type* t)
+        {
+            return ltrim(rtrim(s, t), t);
+        }
+	
+        template<typename chartype, typename string_type = std::basic_string<chartype>>
+        static ListString<string_type> split(const string_type &s, chartype delim)
         {
             using namespace std;
             ListString<string_type> elems;

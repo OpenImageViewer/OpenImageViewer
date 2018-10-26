@@ -17,7 +17,7 @@ namespace  OIV
         HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
             LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override
         {
-            using namespace std::experimental;
+            using namespace std;
             filesystem::path p = fShader->GetsourceFileName();
             p = p.parent_path() / pFileName;
             

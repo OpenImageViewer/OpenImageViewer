@@ -5,10 +5,10 @@ namespace LLUtils
     class FileSystemHelper
     {
     public:
-        static ListWString FindFiles(ListWString& filesList, std::experimental::filesystem::path workingDir, std::wstring fileTypes, bool recursive, bool caseSensitive)
+        static ListWString FindFiles(ListWString& filesList, std::filesystem::path workingDir, std::wstring fileTypes, bool recursive, bool caseSensitive)
         {
         
-            using namespace std::experimental::filesystem;
+            using namespace std::filesystem;
             ListWString extensions = StringUtility::split(fileTypes, L';');
             std::set<std::wstring> extensionSet;
 
@@ -37,7 +37,7 @@ namespace LLUtils
 
         static std::wstring ResolveFullPath(std::wstring fileName)
         {
-            using namespace std::experimental::filesystem;
+            using namespace std::filesystem;
             path p(fileName);
             if (p.empty() == false && p.is_absolute() == false)
             {

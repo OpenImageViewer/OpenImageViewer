@@ -201,7 +201,7 @@ namespace OIV
     void D3D11Renderer::CreateShaders()
     {
         using namespace std;
-        using path = std::experimental::filesystem::path;
+        using path = std::filesystem::path;
 
         path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
         path programsPath = executableDirPath / L"/Resources/programs";

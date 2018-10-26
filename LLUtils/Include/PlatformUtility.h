@@ -117,7 +117,7 @@ namespace LLUtils
 
         static default_string_type GetDllFolder()
         {
-            using namespace std::experimental;
+            using namespace std;
             return StringUtility::ToDefaultString(filesystem::path(GetDllPath()).parent_path().wstring());
         }
 
@@ -128,7 +128,7 @@ namespace LLUtils
 
         static default_string_type GetExeFolder()
         {
-            using namespace std::experimental;
+            using namespace std;
             return StringUtility::ToDefaultString(filesystem::path(GetExePath()).parent_path().wstring());
         }
 

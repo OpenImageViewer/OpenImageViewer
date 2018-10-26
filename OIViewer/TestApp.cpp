@@ -1019,7 +1019,7 @@ namespace OIV
 
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
-        using namespace std::experimental::filesystem;
+        using namespace std::filesystem;
         fListFiles.clear();
         fCurrentFileIndex = FileIndexStart;
 
