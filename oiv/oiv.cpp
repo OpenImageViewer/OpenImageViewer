@@ -157,10 +157,9 @@ namespace OIV
         props.fData.Allocate(bufferSize);
         props.fData.Write(loadRawRequest.buffer, 0, bufferSize);
 
-        IMUtil::OIV_AxisAlignedTransform transform;
-        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(loadRawRequest.transformation);
-        //TODO: take flip from request
-        transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
+        IMUtil::OIV_AxisAlignedTransform transform{};
+        //transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(loadRawRequest.transformation);
+        transform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(loadRawRequest.transformation);
 
         ImageSharedPtr image = ImageSharedPtr(new Image(props));
         image = IMUtil::ImageUtil::Transform(transform, image);
