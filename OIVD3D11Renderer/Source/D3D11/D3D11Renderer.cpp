@@ -201,10 +201,10 @@ namespace OIV
     void D3D11Renderer::CreateShaders()
     {
         using namespace std;
-        using path = std::filesystem::path;
+        using path = std::experimental::filesystem::path;
 
         path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        path programsPath = executableDirPath / L"/Resources/programs";
+        path programsPath = executableDirPath / path(L"/Resources/programs");
 
         fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
         fImageVertexShader->SetSourceFileName(programsPath / L"quad_vp.shader");
