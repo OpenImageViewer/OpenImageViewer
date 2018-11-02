@@ -98,6 +98,11 @@ namespace IMCodec
                 TIFFGetField(tiff, TIFFTAG_PHOTOMETRIC, &photoMetric);
                 TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel);
                 
+                uint32_t bytesPerSample = bitsPerSample / 8;
+
+                //TODO: use this field to read extra sample info e.g. transparency channel
+                //TIFFGetField(tiff, TIFFTAG_EXTRASAMPLES, &extra);
+                
                 /* Default sample format is unsigned integer.
                    From tiff specification: 
                    Section 19: Data Sample Format
@@ -129,23 +134,23 @@ namespace IMCodec
                     break;
                 case PHOTOMETRIC_MINISWHITE:
                 case PHOTOMETRIC_MINISBLACK:
-                    texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
-                    out_properties.fData.Allocate(height * rowPitch);
-                    
-                    uint8_t* currensPos = reinterpret_cast<uint8_t*>( out_properties.fData.GetBuffer());
+                        texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
+                        out_properties.fData.Allocate(height * rowPitch);
 
-                    if (stripSize != rowPitch * rowsPerStrip)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");
+                        uint8_t* currensPos = reinterpret_cast<uint8_t*>(out_properties.fData.GetBuffer());
 
+                        if (stripSize != rowPitch * rowsPerStrip)
+                            LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");
 
-                    for (uint32_t i = 0; i < numberOfStripts; i++)
-                    {
-                        TIFFReadEncodedStrip(tiff, i, currensPos, stripSize);
-                        currensPos += rowPitch * rowsPerStrip;
-                    }
+                        for (uint32_t i = 0; i < numberOfStripts; i++)
+                        {
+                            TIFFReadEncodedStrip(tiff, i, currensPos, stripSize);
+                            currensPos += rowPitch * rowsPerStrip;
+                        }
+                        
+                        
+
                     break;
-
-          
                 }
 
                 success = true;
@@ -154,6 +159,31 @@ namespace IMCodec
                 out_properties.fProperties.NumSubImages = 0;
                 out_properties.fProperties.TexelFormatDecompressed = texelFormat;
                 out_properties.fProperties.RowPitchInBytes = rowPitch;
+
+				// Two or more image channels are interleaved
+                // Extract the first one, currently discard the others.
+                // TODO: return extra channel as subimage.				
+                if (samplesPerPixel > 1)
+                {
+
+                    if (photoMetric != PHOTOMETRIC_MINISWHITE && photoMetric != PHOTOMETRIC_MINISBLACK)
+                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Extracing channel for non grayscale image is yet to be implemented");
+                        
+
+                    LLUtils::Buffer image(rowPitch / samplesPerPixel * height);
+                    size_t destIndex = 0;
+
+                    const size_t samplesPerSingleCHannel = rowPitch * height / bytesPerSample / samplesPerPixel;
+                    for (size_t i = 0; i < samplesPerSingleCHannel; i++)
+                    {
+                        const size_t sourceIndex = i * samplesPerPixel * bytesPerSample;
+                        memcpy(reinterpret_cast<uint8_t*>(image.GetBuffer()) + destIndex, reinterpret_cast<uint8_t*>(out_properties.fData.GetBuffer()) + sourceIndex, bytesPerSample);
+                        destIndex += bytesPerSample;
+                    }
+                    out_properties.fData = std::move(image);
+                    out_properties.fProperties.RowPitchInBytes /= samplesPerPixel;
+                }
+
             }
             return success;
         }
