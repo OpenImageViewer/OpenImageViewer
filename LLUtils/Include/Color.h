@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <string>
+#include <math.h>
 
 inline constexpr uint8_t operator "" _u8(unsigned long long int arg) noexcept
 {

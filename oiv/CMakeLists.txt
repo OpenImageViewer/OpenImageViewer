@@ -51,6 +51,8 @@ add_definitions(
    -D_UNICODE
 )
 
+add_compile_definitions(OIV_LIBRARY_BUILD=1)
+
 ############## Artefacts Output #################
 # Defines outputs , depending Debug or Release. #
 #################################################
@@ -65,7 +67,8 @@ else()
   set(CMAKE_EXECUTABLE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUTPUT_REL}")
 endif()
 
-# Include directories 
+# Include directories
+include_directories(.)
 # include_directories($ENV{SolutionDir}/LLUtils/Include)
 include_directories(../ImageCodec/Image/Include)
 include_directories(../ImageCodec/ImageLoader/Include)

@@ -74,6 +74,29 @@ namespace LLUtils
             #endif
         }
 
+        static default_string_type GetAppDataFolder()
+        {
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
+            native_char_type szPath[MAX_PATH];
+
+            if (SUCCEEDED(SHGetFolderPath(nullptr,
+                CSIDL_APPDATA | CSIDL_FLAG_CREATE,
+                nullptr,
+                0,
+                szPath)))
+            {
+                native_string_type result = szPath;
+                return StringUtility::ToDefaultString(result);
+            }
+
+            return default_string_type();
+#else
+            throw std::logic_error("GetAppDataFolder: Not supported in linux yet.");
+            //TODO: Make the exception call below work here
+            //LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented,);
+#endif
+        }
+
 #if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
         static HANDLE CreateDIB(uint32_t width, uint32_t height, uint16_t bpp, const std::byte* buffer)
         {
@@ -142,23 +165,6 @@ namespace LLUtils
         {
             using namespace std;
             return StringUtility::ToDefaultString(filesystem::path(GetExePath()).parent_path().wstring());
-        }
-
-        static default_string_type GetAppDataFolder()
-        {
-            native_char_type szPath[MAX_PATH];
-
-            if (SUCCEEDED(SHGetFolderPath(nullptr,
-                CSIDL_APPDATA | CSIDL_FLAG_CREATE,
-                nullptr,
-                0,
-                szPath)))
-            {
-                native_string_type result = szPath;
-                return StringUtility::ToDefaultString(result);
-            }
-
-            return default_string_type();
         }
 
         static void CopyTextToClipBoard(const std::wstring& text)
