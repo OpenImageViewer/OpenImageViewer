@@ -1,8 +1,8 @@
 #pragma once
 #include <unordered_map>
 
-#include "API/defs.h"
-#include "Interfaces/IPictureRenderer.h"
+#include "../API/defs.h"
+#include "../Interfaces/IPictureRenderer.h"
 #include "CommandHandler.h"
 
 namespace OIV

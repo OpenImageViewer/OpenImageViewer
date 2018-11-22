@@ -1,8 +1,8 @@
 #pragma once
 #include "../CommandHandler.h"
-#include <API/defs.h>
-#include "Commands/CommandProcessor.h"
-#include "ApiGlobal.h"
+#include "../../API/defs.h"
+#include "../CommandProcessor.h"
+#include "../../ApiGlobal.h"
 
 namespace OIV
 {
@@ -40,4 +40,3 @@ namespace OIV
 
 
 }
-#pragma once

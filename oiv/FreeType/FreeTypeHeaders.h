@@ -1,5 +1,5 @@
 #pragma once
-#include "Configuration.h"
+#include "../Configuration.h"
 #if OIV_BUILD_FREETYPE == 1
 #include <ft2build.h>
 # include <freetype/ftstroke.h>

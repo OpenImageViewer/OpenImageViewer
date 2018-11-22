@@ -1,7 +1,6 @@
 #pragma once
-#pragma once
 #include "../CommandHandler.h"
-#include "Commands/CommandProcessor.h"
+#include "../CommandProcessor.h"
 
 namespace OIV
 {

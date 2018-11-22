@@ -1,5 +1,6 @@
 #pragma once
-#include <API/defs.h>
+#include "../API/defs.h"
+
 namespace OIV
 {
 #define VERIFY_OPTIONAL_RESPONSE(REQ,REQ_SIZE,RES,RES_SIZE) sizeof(REQ) != REQ_SIZE ?\
