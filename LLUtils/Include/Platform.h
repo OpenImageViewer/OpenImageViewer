@@ -134,4 +134,19 @@ namespace LLUtils
 #else
 #   define LLUTILS_ARCH_TYPE LLUTILS_ARCHITECTURE_32
 #endif
+
+/* Resolve visibilty */
+
+#if LLUTILS_COMPILER == LLUTILS_COMPILER_MSVC
+    //  Microsoft 
+    #define LLUTILS_EXPORT __declspec(dllexport)
+    #define LLUTILS_IMPORT __declspec(dllimport)
+#elif LLUTILS_COMPILER == LLUTILS_COMPILER_GNUC
+    //  GCC
+    #define LLUTILS_EXPORT __attribute__((visibility("default")))
+    #define LLUTILS_IMPORT
+#else
+    //  Error, compiler must supoport symbol export.
+    #pragma error Unknown dynamic link import/export semantics.
+#endif
 }

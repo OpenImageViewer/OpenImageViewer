@@ -1,6 +1,6 @@
 #pragma once
 #include "../CommandHandler.h"
-#include "../../API/defs.h"
+#include <API/defs.h>
 #include "../CommandProcessor.h"
 #include "../../ApiGlobal.h"
 
