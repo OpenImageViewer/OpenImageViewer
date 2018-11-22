@@ -1,7 +1,7 @@
 #pragma once
 #include "../CommandHandler.h"
-#include <API/defs.h>
-#include "Commands/CommandProcessor.h"
+#include "../../API/defs.h"
+#include "../CommandProcessor.h"
 
 namespace OIV
 {

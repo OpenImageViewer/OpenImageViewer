@@ -26,6 +26,7 @@ set(HEADER_DIR_5 Common)
 set(HEADER_DIR_6 External/easyexif)
 set(HEADER_DIR_7 FreeType)
 set(HEADER_DIR_8 Interfaces)
+set(FREETYPE2_DIR ../Externals/libfreetype2-4.0.7/freetype2)
 
 ############## CMake Project ################
 #        The main options of project        #
@@ -65,14 +66,12 @@ else()
 endif()
 
 # Include directories 
-include_directories($ENV{SolutionDir}/LLUtils/Include)
+# include_directories($ENV{SolutionDir}/LLUtils/Include)
 include_directories(../ImageCodec/Image/Include)
 include_directories(../ImageCodec/ImageLoader/Include)
-include_directories($ENV{SolutionDir}/ImageUtil/Include)
-include_directories(./)
-include_directories(E:/Downloads/freetype-2.3.5-1-bin/include/)
-include_directories(E:/Downloads/freetype-2.3.5-1-bin/include/freetype2/)
-include_directories($ENV{SolutionDir}/oiv)
+include_directories(../ImageUtil/Include)
+include_directories(${FREETYPE2_DIR}/include)
+# include_directories(E:/Downloads/freetype-2.3.5-1-bin/include/freetype2/)
 include_directories(../LLUtils/Include)
 
 ################### Dependencies ##################

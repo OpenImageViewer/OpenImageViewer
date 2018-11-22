@@ -1,8 +1,8 @@
 #pragma warning(disable : 4275 ) // disables warning 4275, pop and push from exceptions
 #pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "oiv.h"
-#include "External\easyexif\exif.h"
-#include "Interfaces\IRenderer.h"
+#include "External/easyexif/exif.h"
+#include "Interfaces/IRenderer.h"
 #include "NullRenderer.h"
 #include <ImageLoader.h>
 #include <ImageUtil.h>

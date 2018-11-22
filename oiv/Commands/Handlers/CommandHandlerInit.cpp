@@ -1,7 +1,7 @@
 #include "CommandHandlerInit.h"
-#include "Commands/CommandProcessor.h"
-#include "oiv.h"
-#include "ApiGlobal.h"
+#include "../CommandProcessor.h"
+#include "../../oiv.h"
+#include "../../ApiGlobal.h"
 
 
 namespace OIV
