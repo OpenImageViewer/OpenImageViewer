@@ -78,11 +78,11 @@ namespace OIV
     IRendererSharedPtr OIV::CreateBestRenderer()
     {
 
-#ifdef _MSC_VER 
-     // Prefer Direct3D11 for windows.
+// use Direct3D11 for window and opengl for every other platfotm.
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
     #if OIV_BUILD_RENDERER_D3D11 == 1
-            return D3D11RendererFactory::Create();
     // Prefer Direct3D11 for windows.
+        return D3D11RendererFactory::Create();
     #elif  OIV_BUILD_RENDERER_GL == 1
         return GLRendererFactory::Create();
     #elif OIV_ALLOW_NULL_RENDERER == 1
@@ -91,7 +91,7 @@ namespace OIV
         #error No valid renderers detected.
     #endif
 
-#else // _MSC_VER
+#else
 // If no windows choose GL renderer
     #if OIV_BUILD_RENDERER_GL == 1
         return GLRendererFactory::Create();

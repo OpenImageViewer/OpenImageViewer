@@ -56,7 +56,6 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerQueryImageInfo.h" />
     <ClInclude Include="FreeType\FreeTypeConnector.h" />
     <ClInclude Include="FreeType\CodePoint.h" />
-    <ClInclude Include="Common\linux.h" />
     <ClInclude Include="FreeType\FreeTypeHelper.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerCreateText.h" />
     <ClInclude Include="Commands\Handlers\CommandHandlerImageProperties.h" />
