@@ -844,10 +844,11 @@ namespace OIV
     {
         if (IsOpenedImageIsAFile())
         {
+            using namespace std::filesystem;
             std::wstringstream ss;
             ss << L"File: ";
-            std::filesystem::path p = GetOpenedFileName();
-            ss << p.parent_path().wstring() << L"<textcolor=#ff00ff>" << p.stem().wstring() << L"<textcolor=#00ff00>" << p.extension().wstring();
+            path p = GetOpenedFileName();
+            ss << p.parent_path().wstring() << path::preferred_separator << L"<textcolor=#ff00ff>" << p.stem().wstring() << L"<textcolor=#00ff00>" << p.extension().wstring();
             SetUserMessage(ss.str());
         }
     }
