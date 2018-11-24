@@ -26,7 +26,8 @@ set(HEADER_DIR_5 Common)
 set(HEADER_DIR_6 External/easyexif)
 set(HEADER_DIR_7 FreeType)
 set(HEADER_DIR_8 Interfaces)
-set(FREETYPE2_DIR ../Externals/libfreetype2-4.0.7/freetype2)
+set(FREETYPE2_DIR ../Externals/freetype2/libfreetype2-4.0.7/freetype2)
+set(D3D11 FALSE)
 
 ############## CMake Project ################
 #        The main options of project        #
@@ -80,21 +81,20 @@ include_directories(../LLUtils/Include)
 # Add Dependencies to project.                    #
 ###################################################
 
-option(BUILD_DEPENDS 
-   "Build other CMake project." 
-   #ON 
-   OFF #TODO: Change to ON
-)
+option(BUILD_DEPENDS "Build other CMake project." ON # OFF #TODO: Change to ON)
 
 # Dependencies : disable BUILD_DEPENDS to link with lib already build.
 if(BUILD_DEPENDS)
-   add_subdirectory(platform/cmake/ImageLoader ${CMAKE_BINARY_DIR}/ImageLoader)
-   add_subdirectory(platform/cmake/ImageUtil ${CMAKE_BINARY_DIR}/ImageUtil)
-   add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
+    add_subdirectory(../ImageCodec/ImageLoader ${CMAKE_BINARY_DIR}/ImageLoader)
+    add_subdirectory(../ImageUtil ${CMAKE_BINARY_DIR}/ImageUtil)
+    if(D3D11)
+        add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer) #TODO: Disabled by me
+        target_link_libraries(${PROJECT_NAME} OIVD3D11Renderer )
+    endif()
 else()
    link_directories(dependencies/ImageLoader/build/)
    link_directories(dependencies/ImageUtil/build/)
-   link_directories(dependencies/OIVD3D11Renderer/build/)
+   link_directories(dependencies/OIVD3D11Renderer/build/) #TODO: Disabled by me
 endif()
 
 ################# Flags ################
@@ -142,7 +142,8 @@ add_library(${PROJECT_NAME} SHARED
 )
 
 # Link with other dependencies.
-target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil OIVD3D11Renderer )
+# target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil OIVD3D11Renderer )
+target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil)
 if(MSVC)
    target_link_libraries(${PROJECT_NAME} E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib )
 endif(MSVC)

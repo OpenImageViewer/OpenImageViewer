@@ -2,13 +2,13 @@
 
 #include <IImagePlugin.h>
 #include <FreeImage.h>
+
 namespace IMCodec
 {
     class CodecFreeImage : public IImagePlugin
     {
 
     public:
-   
         PluginProperties& GetPluginProperties() override
         {
             static PluginProperties pluginProperties =
@@ -19,7 +19,6 @@ namespace IMCodec
             
             return pluginProperties;
         }
-
 
         virtual bool LoadImage(const uint8_t* buffer, std::size_t size, ImageDescriptor& out_properties) override
         {
