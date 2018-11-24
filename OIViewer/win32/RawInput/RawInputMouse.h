@@ -65,7 +65,7 @@ namespace OIV
                     rid.hwndTarget = hWnd;
                 }*/
 
-                if (RegisterRawInputDevices(Rids.data(), Rids.size(), sizeof(RAWINPUTDEVICE) ) == FALSE)
+                if (RegisterRawInputDevices(Rids.data(), static_cast<UINT>(Rids.size()), sizeof(RAWINPUTDEVICE) ) == FALSE)
                     LL_EXCEPTION_SYSTEM_ERROR("could not register raw input");
             }
         };
@@ -87,7 +87,7 @@ namespace OIV
             // Button event            
             struct ButtonEvent
             {
-                int64_t timeStamp;
+                uint64_t timeStamp;
                 Button button;
                 EventType eventType;
                 int32_t x;
@@ -127,7 +127,8 @@ namespace OIV
 
             void Update(const RAWMOUSE& mouse)
             {
-                LLUtils::StopWatch::time_type_integer elpased = fTimer.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds);
+                uint64_t elpased = fTimer.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds);
+                
                 fDeltaX += mouse.lLastX;
                 fDeltaY += mouse.lLastY;
                 POINT mousePos = Win32Helper::GetMouseCursorPosition();
@@ -167,7 +168,7 @@ namespace OIV
 
             void ClearHistory(Button button)
             {
-                for (int i = fButtonActionsHistory.size() - 1; i >= 0; i--)
+                for (int i = static_cast<int>(fButtonActionsHistory.size()) - 1; i >= 0; i--)
                     if (fButtonActionsHistory[i].button == button)
                         fButtonActionsHistory.erase(fButtonActionsHistory.begin() +i );
             }
@@ -195,12 +196,12 @@ namespace OIV
                         {
                             if (evnt.eventType == EventType::Pressed)
                             {
-                                if (origin.DistanceSquared({ evnt.x, evnt.y }) < radiusSquared)
+                                if (static_cast<uint32_t>(origin.DistanceSquared({ evnt.x, evnt.y })) < radiusSquared)
                                 state = 1;
                             }
                             else if (evnt.eventType == EventType::Released && state == 1)
                             {
-                                if (origin.DistanceSquared({ evnt.x , evnt.y }) < radiusSquared)
+                                if (static_cast<uint32_t>(origin.DistanceSquared({ evnt.x , evnt.y })) < radiusSquared)
                                     return true;
                             }
                         }

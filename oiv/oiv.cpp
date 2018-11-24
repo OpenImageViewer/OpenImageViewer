@@ -415,7 +415,7 @@ namespace OIV
          ImageManager::VecImageHandles children = fImageManager.GetChildrenOf(req.handle);
 
          //Copy no more then res.sizeOfArray elements-
-         res.copiedElements = std::min<uint32_t>(req.arraySize, children.size());
+         res.copiedElements = static_cast<uint32_t>(std::min<size_t>(req.arraySize, children.size()));
          memcpy(req.childrenArray, children.data(), res.copiedElements * sizeof(ImageHandle));
 
         return ResultCode::RC_Success;

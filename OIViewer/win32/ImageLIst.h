@@ -61,18 +61,18 @@ public:
         fPos = pos;
     }
 
-    int GetNumberOfDisplayedElements()
+    size_t GetNumberOfDisplayedElements()
     {
         HWND hwnd = fTargetWindow;
         RECT rect;
         GetClientRect(hwnd, &rect);
         int height = rect.bottom - rect.top;
 
-        const int numberOfMaxVisibleElements = height / fEntryHeight;
+        const size_t numberOfMaxVisibleElements = height / fEntryHeight;
         return (std::min)(numberOfMaxVisibleElements, GetNumberOfElements());
     }
 
-    int GetNumberOfElements()
+    size_t GetNumberOfElements()
     {
         return fImages.size();
     }
@@ -132,10 +132,7 @@ public:
         for (const ImageDesc& imageDesc : fImages)
         {
             
-            
             BITMAP bm;
-            PAINTSTRUCT ps;
-            
             HBITMAP currentBitmap = imageDesc.bitmap->GetHBitmap();
             
             HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, currentBitmap);
@@ -158,12 +155,12 @@ public:
             {
                 RECT r = { 0, textpos ,0, textpos + 24 };
                 std::wstring text = imageDesc.title;
-                DrawText(hdc, text.c_str(), text.length(), &r, DT_CALCRECT);
+                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r, DT_CALCRECT);
                 SetBkMode(hdc, TRANSPARENT);
                 int offset = (entrywidth - (r.right - r.left)) / 2;
                 r.right += offset;
                 r.left += offset;
-                DrawText(hdc, text.c_str(), text.length(), &r,DT_CENTER);
+                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r,DT_CENTER);
             }
             
             SetStretchBltMode(hdc, STRETCH_HALFTONE);
@@ -259,8 +256,8 @@ public:
         uint8_t* sourceLine = (uint8_t*)pPixels;
         uint8_t* destLine = (uint8_t*)pixels32;
 
-        uint32_t currentPixelInLine = 0;
-        for (uint32_t line = 0; line < bih.biHeight; line++)
+        LONG currentPixelInLine = 0;
+        for (LONG line = 0; line < bih.biHeight; line++)
         {
             currentPixelInLine = 0;
             while (currentPixelInLine < bih.biWidth)

@@ -82,7 +82,7 @@ namespace OIV
 
         public: // mutating methods
             int WINAPI Create();
-            HRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
+            LRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void AddEventListener(EventCallback callback);
             void SetMenuChar(bool enabled);
             void SetPosition(int32_t x, int32_t y);

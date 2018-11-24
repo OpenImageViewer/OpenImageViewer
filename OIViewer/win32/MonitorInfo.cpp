@@ -31,7 +31,7 @@ namespace OIV
         EnumDisplayMonitors(nullptr, nullptr, MonitorEnumProc, (LPARAM)this);
     }
     //---------------------------------------------------------------------
-    const MonitorDesc& MonitorInfo::getMonitorInfo(unsigned short monitorIndex, bool allowRefresh /*= false*/)
+    const MonitorDesc& MonitorInfo::getMonitorInfo(size_t monitorIndex, bool allowRefresh /*= false*/)
     {
         MonitorDesc* result = nullptr;
         if (monitorIndex >= mDisplayDevices.size() && allowRefresh)
@@ -77,7 +77,7 @@ namespace OIV
         return true;
     }
     //---------------------------------------------------------------------
-    const unsigned short MonitorInfo::getMonitorsCount() const
+    const size_t MonitorInfo::getMonitorsCount() const
     {
         return mDisplayDevices.size();
     }
@@ -86,8 +86,8 @@ namespace OIV
     {
         using namespace std;
         RECT rect = { 0 };
-        int count = getMonitorsCount();
-        for (int i = 0; i < count; i++)
+        size_t count = getMonitorsCount();
+        for (size_t i = 0; i < count; i++)
         {
             const MONITORINFOEX&  info = getMonitorInfo(i).monitorInfo;
             const RECT& monRect = info.rcMonitor;

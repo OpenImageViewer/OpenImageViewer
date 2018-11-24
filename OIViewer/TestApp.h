@@ -57,6 +57,10 @@ namespace OIV
         void Run();
         void Destroy();
 
+    private:// types
+        using FileIndexType = LLUtils::ListWString::difference_type;
+        using FileCountType = LLUtils::ListWString::size_type;
+
     private: //methods
 #pragma region Win32 event handling
         bool handleKeyInput(const Win32::EventWinMessage* evnt);
@@ -101,7 +105,7 @@ namespace OIV
         void UpdateTitle();
         void UpdateStatusBar();
         void UpdateUIFileIndex();
-        bool JumpFiles(int step);
+        bool JumpFiles(FileIndexType step);
         void ToggleFullScreen();
         void ToggleBorders();
         void ToggleSlideShow();
@@ -189,9 +193,9 @@ namespace OIV
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
         
 
-        static constexpr int FileIndexEnd = std::numeric_limits<int>::max();
-        static constexpr int FileIndexStart = std::numeric_limits<int>::min();
-        int fCurrentFileIndex = FileIndexStart;
+        static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
+        static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
+        FileIndexType  fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;

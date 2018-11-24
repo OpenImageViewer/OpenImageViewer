@@ -62,17 +62,17 @@ namespace OIV
             WNDCLASSEX wcex;
 
             wcex.cbSize = sizeof(WNDCLASSEX);
-            wcex.style = 0;// CS_HREDRAW | CS_VREDRAW | CS_;
+            wcex.style = 0;
             wcex.lpfnWndProc = WndProc;
             wcex.cbClsExtra = 0;
             wcex.cbWndExtra = 0;
             wcex.hInstance = hInstance;
             wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
             wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
-            wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+            wcex.hbrBackground =  reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
             wcex.lpszMenuName = nullptr;
             wcex.lpszClassName = szWindowClass;
-            wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
+            wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
             static bool classRegistered = false;
             if (classRegistered == false)
             {
@@ -270,7 +270,7 @@ namespace OIV
             }
         }
 
-        HRESULT Win32Window::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
+        LRESULT Win32Window::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
         {
             return ::SendMessage(fHandleWindow, msg, wParam, lparam);
         }
@@ -365,7 +365,7 @@ namespace OIV
             distancesToCorners[3] = point.DistanceSquared({ 0, windowSize.y }); // Bottom left
             ArrayDouble4::const_iterator it_min = std::min_element(distancesToCorners.begin(), distancesToCorners.end());
 
-            int index = it_min - distancesToCorners.begin();
+            ArrayDouble4::difference_type index = it_min - distancesToCorners.begin();
             switch (index)
             {
             case 0:

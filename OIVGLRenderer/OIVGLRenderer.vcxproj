@@ -77,7 +77,6 @@
   <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>E:\Downloads\glew-2.0.0\include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include</AdditionalIncludeDirectories>
@@ -89,7 +88,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>E:\Downloads\glew-2.0.0\include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include</AdditionalIncludeDirectories>
@@ -104,7 +102,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -120,7 +117,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>E:\Downloads\glew-2.0.0\include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>

@@ -444,8 +444,6 @@ typedef wchar_t OIVCHAR;
         ImageHandle handle;
         ImageHandle *childrenArray;
         uint32_t arraySize;
-        
-
     };
 
     struct OIV_CMD_GetSubImages_Response

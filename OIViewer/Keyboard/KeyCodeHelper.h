@@ -35,27 +35,27 @@ namespace OIV
             return foundItem != KeyCodeString.end() ? foundItem->keyCode :KeyCode::UNASSIGNED;
         }
 
-        static std::vector<std::vector<int>> ComputeCombinations(std::vector<int> groupSizes)
+        static std::vector<std::vector<size_t>> ComputeCombinations(std::vector<size_t> groupSizes)
         {
             using namespace std;
 
-            vector<vector<int>> result;
+            vector<vector<size_t>> result;
             const size_t totalGroups = groupSizes.size();
-            vector<int> accumulativeSize = std::vector<int>(totalGroups);
-            int totalElements = 1;
-            for (int i = 0; i < groupSizes.size(); i++)
+            vector<size_t> accumulativeSize = std::vector<size_t>(totalGroups);
+            size_t totalElements = 1;
+            for (size_t i = 0; i < groupSizes.size(); i++)
             {
                 totalElements *= groupSizes[i];
                 accumulativeSize[i] = totalElements;
             }
 
-            for (int e = 0; e < totalElements; e++)
+            for (size_t e = 0; e < totalElements; e++)
             {
-                vector<int> indices = std::vector<int>(totalGroups);
+                vector<size_t> indices = std::vector<size_t>(totalGroups);
 
-                for (int i = 0; i < indices.size(); i++)
+                for (size_t i = 0; i < indices.size(); i++)
                 {
-                    int accumulativeFactor = i == 0 ? 1 : accumulativeSize[i - 1];
+                    size_t accumulativeFactor = i == 0 ? 1 : accumulativeSize[i - 1];
                     indices[i] = (e / accumulativeFactor) % groupSizes[i];
                 }
                 result.push_back(indices);

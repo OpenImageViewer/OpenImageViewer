@@ -23,7 +23,7 @@ namespace OIV
         double Add(double amount)
         {
             using namespace LLUtils;
-            const int8_t DeltaDirection = Utility::Sign(amount);
+            const double DeltaDirection = Utility::Sign(amount);
             fTime -= stopwatch.GetElapsedTimeReal(StopWatch::Seconds) * DeltaDirection * fDeclerationFactor;
             stopwatch.Start();
             fTime = DeltaDirection > 0 ? std::max(fTime, 0.0) : std::min(fTime, 0.0);

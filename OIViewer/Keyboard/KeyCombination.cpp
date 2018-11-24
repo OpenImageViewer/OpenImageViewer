@@ -24,7 +24,7 @@ namespace OIV
         ListKeyCombinations bindings;
 
 
-        ListAString  keyCombination = StringUtility::split(upper, '+');
+        ListAString keyCombination = StringUtility::split(upper, '+');
 
         for (const std::string& key : keyCombination)
         {
@@ -51,17 +51,17 @@ namespace OIV
         if (duplicateCombinations2Darray.empty() == false)
         {
             using namespace std;
-            vector<int> sizes;
+            vector<size_t> sizes;
 
             for (const KeyCodeList& vec : duplicateCombinations2Darray)
                 sizes.push_back(vec.size());
 
-            vector<vector<int>> indices = KeyCodeHelper::ComputeCombinations(sizes);
+            vector<vector<size_t>> indices = KeyCodeHelper::ComputeCombinations(sizes);
 
-            for (const vector<int>& currentIndices : indices)
+            for (const vector<size_t>& currentIndices : indices)
             {
                 KeyCombination extraCombination = combination;
-                for (int i = 0; i < currentIndices.size(); i++)
+                for (size_t i = 0; i < currentIndices.size(); i++)
                     extraCombination.AssignKey((duplicateCombinations2Darray[i])[currentIndices[i]]);
 
                 bindings.push_back(extraCombination);

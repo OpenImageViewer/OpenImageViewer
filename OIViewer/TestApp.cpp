@@ -182,7 +182,7 @@ namespace OIV
         };
         //TODO: get max lines from window height
         const int MaxLines = 24;
-        const int totalColumns = std::ceil(static_cast<double>(fCommandDescription.size()) / MaxLines);
+        const int totalColumns = static_cast<int>(std::ceil(static_cast<double>(fCommandDescription.size()) / MaxLines));
         std::vector<ColumnInfo> columnInfo(totalColumns);
         int currentcolumn = 0;
         int currentLine = 0;
@@ -726,7 +726,7 @@ namespace OIV
             else
             {
                 //Don't refresh now, restrat refresh timer
-                fRefreshTimer.SetDelay((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000);
+                fRefreshTimer.SetDelay(static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
                 fRefreshTimer.Enable(true);
             }
         }
@@ -793,7 +793,7 @@ namespace OIV
     void TestApp::DeleteOpenedFile(bool permanently)
     {
 
-        int stringLength = GetOpenedFileName().length();
+        size_t stringLength = GetOpenedFileName().length();
         std::unique_ptr<wchar_t> buffer = std::unique_ptr<wchar_t>(new wchar_t[stringLength + 2]);
 
         memcpy(buffer.get(), GetOpenedFileName().c_str(), ( stringLength + 1) * sizeof(wchar_t));
@@ -932,12 +932,12 @@ namespace OIV
         {
             const auto totalImages = subImages .size() + 1;
 
-            AddImageToControl(mainImage->GetDescriptor().ImageHandle, 0, totalImages);
+            AddImageToControl(mainImage->GetDescriptor().ImageHandle, static_cast<uint16_t>(0), static_cast<uint16_t>(totalImages));
 
             for (int i = 0; i < subImages.size(); i++)
             {
                 auto& currentSubImage = subImages[i];
-                AddImageToControl(currentSubImage->GetDescriptor().ImageHandle, i + 1, totalImages);
+                AddImageToControl(currentSubImage->GetDescriptor().ImageHandle, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
             }
             fWindow.SetShowImageControl(true);
         }
@@ -1217,13 +1217,13 @@ namespace OIV
         fWindow.SetStatusBarText(ss.str(), 1, 0);
     }
 
-    bool TestApp::JumpFiles(int step)
+    bool TestApp::JumpFiles(FileIndexType step)
     {
         if (fListFiles.empty())
             return false;
 
-        LLUtils::ListWString::size_type totalFiles = fListFiles.size();
-        int fileIndex = fCurrentFileIndex;
+        FileCountType totalFiles = fListFiles.size();
+        FileIndexType fileIndex = fCurrentFileIndex;
 
 
         int sign;
@@ -1251,7 +1251,7 @@ namespace OIV
         {
             fileIndex += sign;
             
-            if (fileIndex < 0 || fileIndex >= totalFiles || fileIndex == fCurrentFileIndex)
+            if (fileIndex < 0 || fileIndex >= static_cast<FileIndexType>(totalFiles) || fileIndex == fCurrentFileIndex)
                 break;
             
             it = fListFiles.begin();
@@ -1263,7 +1263,7 @@ namespace OIV
 
         if (isLoaded)
         {
-            assert(fileIndex >= 0 && fileIndex < totalFiles);
+            assert(fileIndex >= 0 && fileIndex < static_cast<FileIndexType>(totalFiles));
             fCurrentFileIndex = fileIndex;
             UpdateUIFileIndex();
         }
@@ -1320,7 +1320,8 @@ namespace OIV
 
     bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(evnt->message.wParam, evnt->message.lParam));
+        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam), 
+            static_cast<uint32_t>(evnt->message.lParam)));
         if (bindings.command.empty() == false
             && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
                 return true; // return if operation has been handled.
@@ -1452,17 +1453,18 @@ namespace OIV
         //Save image selection before view change
         fPreserveImageSpaceSelection.Begin();
 
-        PointF64 zoomPoint;
-        PointF64 clientSize = static_cast<PointF64>(fWindow.GetCanvasSize());
         
-        if (clientX < 0)
-            clientX = clientSize.x / 2.0;
+        PointI32 clientSize = fWindow.GetCanvasSize();
+        PointI32 clientZoomPoint = { clientX, clientY };
+        if (clientZoomPoint.x < 0)
+            clientZoomPoint.x = clientSize.x / 2;
 
-        if (clientY < 0 )
-            clientY = clientSize.y / 2.0;
+        if (clientZoomPoint.y < 0)
+            clientZoomPoint.y = clientSize.y / 2;
 
-        zoomPoint = ClientToImage(PointI32(clientX, clientY));
-        PointF64 offset = (zoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
+
+        PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
+        PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
         fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale = zoomValue;
         fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
 
@@ -2104,7 +2106,7 @@ namespace OIV
         if (userMessage->Update() == RC_Success)
         {
             fRefreshOperation.Queue();
-            const uint32_t delayMessageBeforeHide = std::max<uint32_t>(fMinDelayRemoveMessage, message.length() * fDelayPerCharacter);
+            const uint32_t delayMessageBeforeHide = std::max(fMinDelayRemoveMessage, static_cast<uint32_t>( message.length() * fDelayPerCharacter));
             SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, delayMessageBeforeHide, nullptr);
         }
     }
