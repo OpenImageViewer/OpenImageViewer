@@ -6,13 +6,11 @@
 
 namespace OIV
 {
-
     class CommandHandlerTexelInfo : public CommandHandler
     {
     protected:
         ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override
         {
-
             return VERIFY(OIV_CMD_TexelInfo_Request, requestSize, OIV_CMD_TexelInfo_Response, responseSize);
         }
 
@@ -26,7 +24,4 @@ namespace OIV
             return result;
         }
     };
-
-
 }
-
