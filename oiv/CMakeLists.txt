@@ -43,7 +43,6 @@ endif(NOT CMAKE_BUILD_TYPE)
 # Definition of Macros
 add_definitions(
    -DOIV_NO_CLIENT_BUILD 
-   #-DOGRE_SOURCE_DIR="$(OGRESOURCE)" #TODO: My change
    -DWIN32_LEAN_AND_MEAN 
    -DVC_EXTRALEAN 
    -D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 
@@ -92,7 +91,7 @@ if(BUILD_DEPENDS)
    add_subdirectory(platform/cmake/ImageLoader ${CMAKE_BINARY_DIR}/ImageLoader)
    add_subdirectory(platform/cmake/ImageUtil ${CMAKE_BINARY_DIR}/ImageUtil)
    add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
-else(FALSE) #TODO: Remove this FALSE
+else()
    link_directories(dependencies/ImageLoader/build/)
    link_directories(dependencies/ImageUtil/build/)
    link_directories(dependencies/OIVD3D11Renderer/build/)
