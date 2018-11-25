@@ -21,6 +21,7 @@
 #include "UserSettings.h"
 #include "OIVCommands.h"
 #include <Rect.h>
+#include <MathUtil.h>
 #include "Helpers/OIVHelper.h"
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
@@ -1042,9 +1043,7 @@ namespace OIV
         }
         else
         {
-            const double PI = 3.14159265358979323846;
-            double rad = atan2(-panAmount.y, panAmount.x);
-            double deg = (rad * 180) / PI + 180;
+            double deg = LLUtils::Math::ToDegrees(atan2(-panAmount.y, panAmount.x)) + 180.0;
             const int numDirections = 8;
             const int step = 360 / numDirections;
             int index = (static_cast<int>(deg) + step / 2) % 360 / step;
