@@ -15,12 +15,5 @@ namespace LLUtils
                 throw std::logic_error("alignement must be a positive value");
             return (num + (alignement - 1)) / alignement * alignement;
         }
-        
-
-        template <typename T>
-        static T Sign(T val)
-        {
-            return (T(0) < val) - (val < T(0));
-        }
     };
 }

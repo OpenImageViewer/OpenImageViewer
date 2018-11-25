@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <Image.h>
 #include "PixelUtil.h"
-#include "../../LLUtils/Include/Rect.h"
+#include <Rect.h>
 #include "half.hpp"
 #include "HSLRGB.h"
 #include <Exception.h>

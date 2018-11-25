@@ -1,10 +1,13 @@
 #pragma once
-#ifdef _WIN32
-#include <windows.h> //TODO: Should be removed
+#include "MathUtil.h"
+#include "Platform.h"
+
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
+// for casting from POINT and SIZE windows structs
+#include <windows.h> 
 #endif
 
-#include <cmath>
-#include "Utility.h"
+
 
 namespace LLUtils
 {
@@ -180,11 +183,11 @@ namespace LLUtils
 
         Point Sign() const
         {
-            return Point(Utility::Sign(x), Utility::Sign(y));
+            return Point(Math::Sign(x), Math::Sign(y));
         }
 
 
-#ifdef _WIN32
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
         Point(const POINT& rhs)
         {
             x = rhs.x;

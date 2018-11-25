@@ -1,6 +1,7 @@
 #pragma once
 #include <StopWatch.h>
-#include <Utility.h>
+#include <MathUtil.h>
+
 
 namespace OIV
 {
@@ -23,7 +24,7 @@ namespace OIV
         double Add(double amount)
         {
             using namespace LLUtils;
-            const double DeltaDirection = Utility::Sign(amount);
+            const double DeltaDirection = Math::Sign(amount);
             fTime -= stopwatch.GetElapsedTimeReal(StopWatch::Seconds) * DeltaDirection * fDeclerationFactor;
             stopwatch.Start();
             fTime = DeltaDirection > 0 ? std::max(fTime, 0.0) : std::min(fTime, 0.0);
@@ -40,7 +41,7 @@ namespace OIV
         double GetVelocity(double time) const
         {
             //Velocity = Acceleration * Time^2
-            return  std::abs(GetAcceleration(time) * time * time) * LLUtils::Utility::Sign(time);
+            return  std::abs(GetAcceleration(time) * time * time) * LLUtils::Math::Sign(time);
         }
     };
 }
