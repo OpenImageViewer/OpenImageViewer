@@ -866,6 +866,8 @@ namespace OIV
             if (fIsInitialLoad)
                 fRefreshOperation.Begin();
 
+            fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
+
             RefreshImage(); // actual refresh operation won't occur due to the line above.
             UpdateOpenImageUI();
 			
@@ -925,11 +927,7 @@ namespace OIV
         mainImage->FetchSubImages();
         auto subImages = mainImage->GetSubImages();
         
-        if (subImages.empty() == true)
-        {
-            fWindow.SetShowImageControl(false);
-        }
-        else
+        if (subImages.empty() == false)
         {
             const auto totalImages = subImages .size() + 1;
 
@@ -940,7 +938,6 @@ namespace OIV
                 auto& currentSubImage = subImages[i];
                 AddImageToControl(currentSubImage->GetDescriptor().ImageHandle, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
             }
-            fWindow.SetShowImageControl(true);
         }
     }
 
