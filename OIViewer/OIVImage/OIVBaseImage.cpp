@@ -4,15 +4,15 @@
 
 namespace OIV
 {
-    OIVBaseImage::OIVBaseImage()
+    OIVBaseImage::OIVBaseImage(bool freeAtDestruction)
     {
+        fFreeAtDestruction = freeAtDestruction;
         fImageProperties.imageHandle = ImageHandleNull;;
         fImageProperties.position = 0;
         fImageProperties.filterType = OIV_Filter_type::FT_None;
         fImageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
         fImageProperties.scale = 1.0;
         fImageProperties.opacity = 0.0;
-
     }
 
     ResultCode OIVBaseImage::Update()
@@ -22,7 +22,8 @@ namespace OIV
 
     OIVBaseImage::~OIVBaseImage()
     {
-        FreeImage();
+        if (fFreeAtDestruction == true)
+            FreeImage();
     }
 
     ResultCode OIVBaseImage::DoUpdate()
@@ -71,7 +72,7 @@ namespace OIV
 
                 for (int i = 0 ; i < fSubImages.size(); i++)
                 {
-                    fSubImages[i] = std::make_shared<OIVHandleImage>(imageArray[i]);
+                    fSubImages[i] = std::make_shared<OIVHandleImage>(imageArray[i], false);
                 }
 
             }

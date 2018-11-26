@@ -1,7 +1,7 @@
 #include "OIVHandleImage.h"
 namespace OIV
 {
-    OIVHandleImage::OIVHandleImage(ImageHandle handle)
+    OIVHandleImage::OIVHandleImage(ImageHandle handle, bool freeAtDestruction) : OIVBaseImage(freeAtDestruction)
     {
         SetImageHandle(handle);
         QueryImageInfo();

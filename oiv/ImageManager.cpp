@@ -80,6 +80,8 @@ namespace OIV
             auto& children = it->second;
             for (ImageHandle handle : children)
                 RemoveImage(handle);
+
+            fMapHandleToChildren.erase(it);
         }
         else
         {

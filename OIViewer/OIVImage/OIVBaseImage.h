@@ -32,7 +32,7 @@ namespace OIV
     class OIVBaseImage
     {
     public:
-        OIVBaseImage();
+        OIVBaseImage(bool freeAtDestruction = true);
         //Base image updates image properties
         ResultCode Update();
         virtual ~OIVBaseImage();
@@ -62,6 +62,7 @@ namespace OIV
         OIV_CMD_ImageProperties_Request fImageProperties = {};
         ImageDescriptor fDescriptor;
         std::vector<std::shared_ptr<OIVBaseImage>> fSubImages;
+        bool fFreeAtDestruction = true;
     };
 
     using OIVBaseImageUniquePtr = std::shared_ptr<OIVBaseImage>;
