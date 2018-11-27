@@ -80,9 +80,9 @@ coming soon ...
 ## Libraries
 Name         | Link
 ------------ | -------------
-***libfreetype2*** | https://github.com/servo/libfreetype2
+***libfreetype2*** | http://git.sv.nongnu.org/r/freetype/freetype2.git
 
-## Codec Libraries
+## Optional codec Libraries
 Name | Link
 ------------ | -------------
 ***CodecJPG - libjpeg-turbo*** | https://sourceforge.net/projects/libjpeg-turbo/  
