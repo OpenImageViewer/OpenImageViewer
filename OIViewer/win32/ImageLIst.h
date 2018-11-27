@@ -51,9 +51,8 @@ public:
     void MouseClick(int xPos, int yPos)
     {
         int selected = yPos / fEntryHeight + fPos;
-        if (selected <= fImages.size())
+        if (selected < fImages.size())
             SetSelected(selected);
-        
     }
 
     void SetPos(int pos)
