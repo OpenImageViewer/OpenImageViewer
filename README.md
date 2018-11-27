@@ -82,7 +82,7 @@ Name         | Link
 ------------ | -------------
 ***libfreetype2*** | http://git.sv.nongnu.org/r/freetype/freetype2.git
 
-## Optional codec Libraries
+## Codec Libraries (optional)
 Name | Link
 ------------ | -------------
 ***CodecJPG - libjpeg-turbo*** | https://sourceforge.net/projects/libjpeg-turbo/  
