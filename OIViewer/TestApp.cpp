@@ -1342,17 +1342,23 @@ namespace OIV
 
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
-        using namespace LLUtils;
-        SetOffset(panAmount + fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position);
+        if (fImageState.GetOpenedImage() != nullptr)
+        {
+            using namespace LLUtils;
+            SetOffset(panAmount + fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position);
+        }
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
     {
-        CommandManager::CommandClientRequest request;
-        request.description = "Zoom";
-        request.args = "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY);
-        request.commandName = "cmd_zoom";
-        ExecuteUserCommand(request); 
+        if (fImageState.GetOpenedImage() != nullptr)
+        {
+            CommandManager::CommandClientRequest request;
+            request.description = "Zoom";
+            request.args = "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY);
+            request.commandName = "cmd_zoom";
+            ExecuteUserCommand(request);
+        }
     }
 
     void TestApp::ZoomInternal(double amount, int zoomX, int zoomY)
