@@ -30,7 +30,6 @@ public:
 
     void SetRGBATexture(std::size_t width, std::size_t height, const void *buffer)
     {
-        
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
         
     }

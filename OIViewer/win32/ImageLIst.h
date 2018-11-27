@@ -20,7 +20,7 @@ public:
     {
         uint32_t index;
         std::wstring title;
-        BitmapShaderPtr bitmap;
+        BitmapSharedPtr bitmap;
     };
 
     struct RGBAImageDesc

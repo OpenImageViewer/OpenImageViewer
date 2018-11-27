@@ -915,9 +915,8 @@ namespace OIV
 
         std::wstringstream ss;
         ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
-
-        fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(), Bitmap::FromMemory(bitmapBuffer) });
-
+         
+        fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(), std::make_shared<BitmapSharedPtr::element_type>(bitmapBuffer) });
     }
 
 
@@ -2070,7 +2069,6 @@ namespace OIV
 
     void TestApp::SetUserMessage(const std::wstring& message)
     {
-        
         OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         if (userMessage == nullptr)
         {
