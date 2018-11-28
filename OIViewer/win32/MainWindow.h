@@ -38,6 +38,7 @@ namespace OIV
             void SetCursorType(CursorType type);
             void ShowStatusBar(bool show);
             void SetShowImageControl(bool show);
+            Win32Window& GetCanvasWindow() { return fCanvasWindow; }
             void FlushInput(bool calledFromIdleTimer);
             void HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);

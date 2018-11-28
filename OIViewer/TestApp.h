@@ -65,10 +65,13 @@ namespace OIV
 #pragma region Win32 event handling
         bool handleKeyInput(const Win32::EventWinMessage* evnt);
         void HideUserMessage();
+        LRESULT ClientWindwMessage(const Win32::Event * evnt1);
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
+        bool HandleClientWindowMessages(const Win32::Event* evnt);
+        
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);

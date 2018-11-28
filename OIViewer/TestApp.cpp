@@ -1083,6 +1083,7 @@ namespace OIV
 
 
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
+        fWindow.GetCanvasWindow().AddEventListener(std::bind(&TestApp::HandleClientWindowMessages, this, _1));
 
 
         if (isInitialFile == true)
@@ -1848,6 +1849,27 @@ namespace OIV
     }
     
 
+    LRESULT TestApp::ClientWindwMessage(const Win32::Event* evnt1)
+    {
+        using namespace Win32;
+        const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
+        if (evnt == nullptr)
+            return 0;
+
+        const WinMessage & message = evnt->message;
+
+        LRESULT retValue = 0;
+        bool defaultProc = true;
+        switch (message.message)
+        {
+        case WM_SIZE:
+            UpdateWindowSize();
+            fRefreshOperation.Queue();
+            break;
+        }
+        return retValue;
+    }
+
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         bool handled = false;
@@ -1855,10 +1877,6 @@ namespace OIV
         const Win32::WinMessage & uMsg = evnt->message;
         switch (uMsg.message)
         {
-        case WM_SIZE:
-            UpdateWindowSize();
-            fRefreshOperation.Queue();
-            break;
         case WM_SHOWWINDOW:
             if (fIsFirstFrameDisplayed == false)
             {
@@ -2051,6 +2069,18 @@ namespace OIV
 
     }
 
+    bool TestApp::HandleClientWindowMessages(const Win32::Event* evnt1)
+    {
+        using namespace Win32;
+        const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
+
+        if (evnt != nullptr)
+        {
+            return ClientWindwMessage(evnt);
+        }
+        return false;
+    }
+    
     bool TestApp::HandleMessages(const Win32::Event* evnt1)
     {
         using namespace Win32;
