@@ -90,7 +90,6 @@ namespace OIV
     #else
         #error No valid renderers detected.
     #endif
-
 #else
 // If no windows choose GL renderer
     #if OIV_BUILD_RENDERER_GL == 1
