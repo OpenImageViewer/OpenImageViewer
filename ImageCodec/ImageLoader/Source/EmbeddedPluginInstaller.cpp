@@ -1,6 +1,5 @@
 #include "EmbeddedPluginInstaller.h"
 #include "ImageLoader.h"
-#include "BuildConfig.h"
 
 //TODO: Take configuration out to a new file
 #if IMCODEC_BUILD_CODEC_PSD == 1
@@ -26,11 +25,6 @@
 #if IMCODEC_BUILD_CODEC_GIF == 1
 #include "Codecs/CodecGif/Include/CodecGifFactory.h"
 #endif
-
-
-
-
-
 
 namespace IMCodec
 {
