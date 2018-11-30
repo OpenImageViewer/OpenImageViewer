@@ -723,6 +723,8 @@ namespace OIV
                 //Refresh immediately
                 OIVCommands::Refresh();
                 fLastRefreshTime = now;
+                //Clear last image chain if exists, this operation is deffered to this moment to display the new image faster.
+                fImageState.ResetPreviousImageChain();
             }
             else
             {
@@ -836,8 +838,6 @@ namespace OIV
         fImageState.Refresh();
         AutoPlaceImage();
         fRefreshOperation.End(true);
-        //Unload previous image
-        fImageState.ResetPreviousImageChain();
         UpdateOpenImageUI();
     }
 
@@ -862,11 +862,8 @@ namespace OIV
             assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
                 GetCurrentThreadId() == fMainThreadID);
 
-            //Show new image as soon as possible if not initial file
-            if (fIsInitialLoad)
-                fRefreshOperation.Begin();
-
-            fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
+            
+            fRefreshOperation.Begin();
 
             RefreshImage(); // actual refresh operation won't occur due to the line above.
             UpdateOpenImageUI();
@@ -877,15 +874,12 @@ namespace OIV
             if (fIsInitialLoad == false)
                 UpdateUIFileIndex();
 
-            fRefreshOperation.Begin();
+            fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
             UnloadWelcomeMessage();
             DisplayOpenedFileName();
-            fRefreshOperation.End();
-
-            if (fIsInitialLoad)
-                fRefreshOperation.End(false);//Don't refresh on initial file, wait for WM_SIZE
             
-            
+            //Don't refresh on initial file, wait for WM_SIZE
+            fRefreshOperation.End(fIsInitialLoad == false);
         }
 
         if (fIsInitialLoad == true)

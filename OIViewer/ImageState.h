@@ -43,7 +43,6 @@ namespace OIV
         void SetUseRainbowNormalization(bool val);
         void SetOpenedImage(const OIVBaseImageSharedPtr& image);
         void ClearAll();
-        void ClearWorkingImageChain();
         void Transform(OIV_AxisAlignedRotation relative_rotation, OIV_AxisAlignedFlip flip);
         void SetDirtyStage(ImageChainStage dirtyStage);
 
@@ -58,6 +57,7 @@ namespace OIV
         ImageChain fCurrentImageChain;
         ImageChain fPreviousImageChain;
         OIVBaseImageSharedPtr fOpenedImage;
+        bool fPreviousImageChainDirty = false;
         bool fUseRainbowNormalization = false;
     };
 }

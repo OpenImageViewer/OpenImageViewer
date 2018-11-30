@@ -34,6 +34,7 @@ namespace OIV
         {
             //For faster refresh don't delete the old image before displaying the new one. 
             fPreviousImageChain = fCurrentImageChain;
+            fPreviousImageChainDirty = true;
 
             // hide previous image chain.
             if (fPreviousImageChain.Get(ImageChainStage::Resampled) != nullptr)
@@ -77,7 +78,12 @@ namespace OIV
 
     void ImageState::ResetPreviousImageChain()
     {
-        fPreviousImageChain.Reset();
+        if (fPreviousImageChainDirty == true)
+        {
+            fPreviousImageChain.Reset();
+            fPreviousImageChainDirty = false;
+        }
+        
     }
 
     void ImageState::SetUseRainbowNormalization(bool val)
@@ -100,12 +106,6 @@ namespace OIV
         fPreviousImageChain.Reset();
         fCurrentImageChain.Reset();
         fOpenedImage.reset();
-    }
-
-    void ImageState::ClearWorkingImageChain()
-    {
-        fPreviousImageChain = fCurrentImageChain;
-        fCurrentImageChain.Reset();
     }
 
     void ImageState::Transform(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
