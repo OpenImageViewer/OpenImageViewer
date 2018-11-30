@@ -36,12 +36,19 @@ if(WIN32)
     # set(GLEW_LIB GLEW_DIR/x64/glew32s.lib)
 elseif(UNIX)
     set(GLEW_DIR /usr/lib64/)
-    set(GLEW_LIB GLEW_DIR/libGLEW.a)
+    set(GLEW_LIB libGLEW.a)
 endif(WIN32)
 
 set(D3D11 FALSE)
 set(OPENGL TRUE)
 
+
+# set(VERSION_MAJOR "2")
+# set(VERSION_MINOR "6")
+# set(VERSION_PATCH "5")
+
+# set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+# set(SHARED_LIBRARY_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
 ############## CMake Project ################
 #        The main options of project        #
 #############################################
@@ -60,7 +67,6 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # Definition of Macros
 add_definitions(
-   -DOIV_NO_CLIENT_BUILD 
    -DWIN32_LEAN_AND_MEAN 
    -DVC_EXTRALEAN 
    -D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING 
@@ -103,13 +109,12 @@ option(BUILD_DEPENDS "Build other CMake project." ON)
 if(BUILD_DEPENDS)
     add_subdirectory(../ImageCodec/ImageLoader ${CMAKE_BINARY_DIR}/ImageLoader)
     add_subdirectory(../ImageUtil ${CMAKE_BINARY_DIR}/ImageUtil)
-    # if(D3D11)
-    #     add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
-    #     target_link_libraries(${PROJECT_NAME} OIVD3D11Renderer )
-    # endif(D3D11)
+    add_subdirectory(../Externals/freetype2/libfreetype2-4.0.7/freetype2 ${CMAKE_BINARY_DIR}/FreeType2) #TODO: Change to static lib prebuilt
+    if(D3D11)
+        add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
+    endif(D3D11)
     # if(OPENGL)
-    #     add_subdirectory(platform/cmake/OIVGLRenderer ${CMAKE_BINARY_DIR}/OIVGLRenderer)
-    #     target_link_libraries(${PROJECT_NAME} GLEW_LIB)
+    #     add_subdirectory(../Externals/glew/glew-2.1.0/build/cmake ${CMAKE_BINARY_DIR}/glew-2.1.0)
     # endif(OPENGL)
 else()
     link_directories(dependencies/ImageLoader/build/)
@@ -122,12 +127,7 @@ else()
     # endif(OPENGL)
 endif(BUILD_DEPENDS)
 
-if(D3D11)
-    link_directories(dependencies/OIVD3D11Renderer/build/)
-endif(D3D11)
-if(OPENGL)
-    link_directories(dependencies/OIVGLRenderer/build/)
-endif(OPENGL)
+
 
 ################# Flags ################
 # Defines Flags for Windows and Linux. #
@@ -138,7 +138,11 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /W3 /GL /Zi /EHsc")
 endif(MSVC)
 if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+    if(ALL_WARNING)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+    endif(ALL_WARNING)
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     endif()
@@ -173,4 +177,14 @@ add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 # Link with other dependencies.
 # target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil OIVD3D11Renderer )
-target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil)
+# target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil freetype glew)
+target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil freetype)
+
+if(D3D11)
+    link_directories(${D3D11_DIR})
+    target_link_libraries(${PROJECT_NAME} ${D3D11_LIB})
+endif(D3D11)
+if(OPENGL)
+    link_directories(${GLEW_DIR})
+    target_link_libraries(${PROJECT_NAME} ${GLEW_DIR}/${GLEW_LIB})
+endif(OPENGL)

@@ -4,9 +4,6 @@
 
 #define OIV_BUILD_FREETYPE 1
 
-#define OIV_CLIENT_BUILD 0
-
-
 //Renderer
 // Allow null render for debug purpose, this flag is disabled by default.
 #define OIV_ALLOW_NULL_RENDERER 1
