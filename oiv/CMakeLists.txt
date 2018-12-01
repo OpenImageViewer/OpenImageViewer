@@ -1,24 +1,33 @@
 cmake_minimum_required(VERSION 3.13.0 FATAL_ERROR)
 
+############## CMake Project ################
+#        The main options of project        #
+#############################################
+set(PROJECT_NAME SolarSystem)
+
+set(PROJECT_VERSION_MAJOR 0)
+set(PROJECT_VERSION_MINOR 2)
+set(PROJECT_VERSION_PATCH 0)
+set(PROJECT_VERSION_TWEAK 0)
+set(PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH})
+
+message(STATUS "Building Version: ${PROJECT_VERSION}")
+project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} DESCRIPTION "Open Image Viewer" LANGUAGES CXX)
+
 ################### Variables. ####################
 # Change if you want modify path or other values. #
 ###################################################
 
-set(PROJECT_NAME SolarSystem)
-set(PROJECT_VERSION 1.0.0.0)
 # Output Variables
 set(OUTPUT_DEBUG Debug/bin)
 set(OUTPUT_RELEASE Release/bin)
 # Folders files
 set(CPP_DIR_1 ./)
-# set(CPP_DIR_2 ./)
 set(CPP_DIR_3 API)
 set(CPP_DIR_4 Commands)
 set(CPP_DIR_5 Commands/Handlers)
 set(CPP_DIR_6 External/easyexif)
 set(CPP_DIR_7 FreeType)
-# set(CPP_DIR_8 ./)
-# set(CPP_DIR_9 ./)
 set(HEADER_DIR_1 )
 set(HEADER_DIR_2 API)
 set(HEADER_DIR_3 Commands)
@@ -29,31 +38,22 @@ set(HEADER_DIR_7 FreeType)
 set(HEADER_DIR_8 Interfaces)
 
 set(BASE_EXTERNAL_DIR ../Externals)
-set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2)
-if(WIN32)
-    set(GLEW_DIR ${BASE_EXTERNAL_DIR}/glew/glew-2.1.0-win32/glew-2.1.0/lib/Release)
-    set(GLEW_LIB GLEW_DIR/Win32/glew32s.lib)
-    # set(GLEW_LIB GLEW_DIR/x64/glew32s.lib)
-elseif(UNIX)
-    set(GLEW_DIR /usr/lib64/)
-    set(GLEW_LIB libGLEW.a)
-endif(WIN32)
+
+if(NOT CMAKE_GENERATOR_PLATFORM)
+    message(STATUS "CMAKE_GENERATOR_PLATFORM has no value. Defaulting to x64.")
+    set(X86 FALSE)
+endif(NOT CMAKE_GENERATOR_PLATFORM)
+
+set(FREETYPE2 TRUE)
+set(FREETYPE2_BASE_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2)
 
 set(D3D11 FALSE)
+set(D3D11_BASE_DIR ${BASE_EXTERNAL_DIR}/D3D11_NOT_SET_YET)
+
 set(OPENGL TRUE)
+set(GLEW_BASE_DIR ${BASE_EXTERNAL_DIR}/glew/glew-2.1.0-win32/glew-2.1.0)
 
-
-# set(VERSION_MAJOR "2")
-# set(VERSION_MINOR "6")
-# set(VERSION_PATCH "5")
-
-# set(PROJECT_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 # set(SHARED_LIBRARY_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
-############## CMake Project ################
-#        The main options of project        #
-#############################################
-
-project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} DESCRIPTION "Open Image Viewer" LANGUAGES CXX)
 
 # set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 # set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER API/api.h)
@@ -97,37 +97,83 @@ include_directories(../ImageCodec/Image/Include)
 include_directories(../ImageCodec/ImageLoader/Include)
 include_directories(../ImageUtil/Include)
 include_directories(../LLUtils/Include)
-include_directories(${FREETYPE2_DIR}/include)
 
 ################### Dependencies ##################
 # Add Dependencies to project.                    #
 ###################################################
 
 option(BUILD_DEPENDS "Build other CMake project." ON)
+option(BUILD_EXTERNAL_DEPENDS "Build 3rd party CMake projects." ON)
 
 # Dependencies : disable BUILD_DEPENDS to link with lib already build.
 if(BUILD_DEPENDS)
     add_subdirectory(../ImageCodec/ImageLoader ${CMAKE_BINARY_DIR}/ImageLoader)
     add_subdirectory(../ImageUtil ${CMAKE_BINARY_DIR}/ImageUtil)
-    add_subdirectory(../Externals/freetype2/libfreetype2-4.0.7/freetype2 ${CMAKE_BINARY_DIR}/FreeType2) #TODO: Change to static lib prebuilt
-    if(D3D11)
-        add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
-    endif(D3D11)
-    # if(OPENGL)
-    #     add_subdirectory(../Externals/glew/glew-2.1.0/build/cmake ${CMAKE_BINARY_DIR}/glew-2.1.0)
-    # endif(OPENGL)
 else()
     link_directories(dependencies/ImageLoader/build/)
     link_directories(dependencies/ImageUtil/build/)
-    # if(D3D11)
-    #     link_directories(dependencies/OIVD3D11Renderer/build/)
-    # endif(D3D11)
-    # if(OPENGL)
-    #     link_directories(dependencies/OIVGLRenderer/build/)
-    # endif(OPENGL)
 endif(BUILD_DEPENDS)
 
-
+if(BUILD_EXTERNAL_DEPENDS)
+    if(FREETYPE2)
+        set(FREETYPE2_LIB freetype)
+        # include_directories(${FREETYPE2_DIR}/include)
+        add_subdirectory(../Externals/freetype2/libfreetype2-4.0.7/freetype2 ${CMAKE_BINARY_DIR}/FreeType2)
+    endif(FREETYPE2)
+    if(D3D11)
+        add_subdirectory(platform/cmake/OIVD3D11Renderer ${CMAKE_BINARY_DIR}/OIVD3D11Renderer)
+        set(D3D11_LIB d3d11)
+    endif(D3D11)
+    if(OPENGL)
+        set(OpenGL_GL_PREFERENCE "GLVND")
+        set(GLEW_LIB glew)
+        add_subdirectory(../Externals/glew/glew-2.1.0/build/cmake ${CMAKE_BINARY_DIR}/glew-2.1.0)
+    endif(OPENGL)
+else()
+    if(FREETYPE2)
+        if(WIN32)
+            if(X86)
+                set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2/Win32)
+                set(FREETYPE2_LIB ${FREETYPE2_DIR}/freetype2.lib)
+            else()
+                set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2/x64)
+                set(FREETYPE2_LIB ${FREETYPE2_DIR}/freetype2.lib)
+            endif(X86)
+        elseif(UNIX)
+            set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2)
+            set(FREETYPE2_LIB freetype2.a)
+        endif(WIN32)
+        link_directories(${FREETYPE2_DIR})
+    endif(FREETYPE2)
+    if(D3D11)
+        if(WIN32)
+            set(D3D11_DIR ${D3D11_BASE_DIR}/D3D11_NOT_SET_YET)
+            set(D3D11_LIB ${D3D11_DIR}/D3D11_NOT_SET_YET.lib)
+        elseif(WIN64)
+            set(D3D11_DIR ${D3D11_BASE_DIR}/D3D11_NOT_SET_YET/x64)
+            set(D3D11_LIB ${D3D11_DIR}/D3D11_NOT_SET_YET.lib)
+        elseif(UNIX)
+            message(FATAL_ERROR "Direct3D is not supported on linux")
+        endif(WIN32)
+        link_directories(${D3D11_DIR})
+    endif(D3D11)
+    if(OPENGL)
+        if(WIN32)
+            if(X86)
+                set(GLEW_DIR ${GLEW_BASE_DIR}/lib/Release/Win32)
+                set(GLEW_LIB ${GLEW_DIR}/glew32s.lib)
+            else()
+                set(GLEW_DIR ${GLEW_BASE_DIR}/lib/Release/x64)
+                set(GLEW_LIB ${GLEW_DIR}/glew32s.lib)
+            endif()
+        elseif(UNIX)
+            set(GLEW_DIR /usr/lib64/)
+            set(GLEW_LIB ${GLEW_DIR}/libGLEW.a)
+        endif(WIN32)
+        link_directories(${GLEW_DIR})
+        # target_link_libraries(${PROJECT_NAME} ${GLEW_DIR}/${GLEW_LIB}) #TODO: DELETE
+    endif(OPENGL)
+endif(BUILD_EXTERNAL_DEPENDS)
 
 ################# Flags ################
 # Defines Flags for Windows and Linux. #
@@ -154,14 +200,11 @@ endif(NOT MSVC)
 
 file(GLOB SRC_FILES
     ${CPP_DIR_1}/*.cpp
-    # ${CPP_DIR_2}/*.cpp
     ${CPP_DIR_3}/*.cpp
     ${CPP_DIR_4}/*.cpp
     ${CPP_DIR_5}/*.cpp
     ${CPP_DIR_6}/*.cpp
     ${CPP_DIR_7}/*.cpp
-    # ${CPP_DIR_8}/*.cpp
-    # ${CPP_DIR_9}/*.cpp
     ${HEADER_DIR_1}/*.h
     ${HEADER_DIR_2}/*.h
     ${HEADER_DIR_3}/*.h
@@ -176,15 +219,26 @@ file(GLOB SRC_FILES
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 
 # Link with other dependencies.
-# target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil OIVD3D11Renderer )
-# target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil freetype glew)
-target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil freetype)
+target_link_libraries(${PROJECT_NAME} ImageLoader ImageUtil)
 
+if(FREETYPE2)
+    target_link_libraries(${PROJECT_NAME} ${FREETYPE2_LIB})
+endif(FREETYPE2)
 if(D3D11)
-    link_directories(${D3D11_DIR})
     target_link_libraries(${PROJECT_NAME} ${D3D11_LIB})
 endif(D3D11)
 if(OPENGL)
-    link_directories(${GLEW_DIR})
-    target_link_libraries(${PROJECT_NAME} ${GLEW_DIR}/${GLEW_LIB})
+    target_link_libraries(${PROJECT_NAME} ${GLEW_LIB})
 endif(OPENGL)
+
+# MACROS
+macro(print_all_variables)
+    message(STATUS "print_all_variables------------------------------------------{")
+    get_cmake_property(_variableNames VARIABLES)
+    foreach (_variableName ${_variableNames})
+        message(STATUS "${_variableName}=${${_variableName}}")
+    endforeach()
+    message(STATUS "print_all_variables------------------------------------------}")
+endmacro()
+
+# print_all_variables() # or debug
