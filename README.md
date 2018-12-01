@@ -1,5 +1,7 @@
 # [O]pen [I]mage [V]iewer
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/86c11bc7e75e4677b8c2b5d50f9cd1c3)](https://app.codacy.com/app/TheNicker/OIV?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OIV&utm_campaign=Badge_Grade_Settings)
+
 **OIV** is a hardware accelerated blazingly fast open code c++17 compliant cross-platform 'C' library and application for viewing and 
 manipulating images.
 
