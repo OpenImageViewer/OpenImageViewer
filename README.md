@@ -13,7 +13,7 @@ The motivation for this project is to create an open code image viewer with grea
 3. Image viewer - windows only, (linux, very soon)
 
 ## Highlights
-* Supports potentially any image format, pluginabble image codecs with FreeImage as fallback.
+* Supports potentially any image format, plugin based image codecs with FreeImage as fallback.
 * Fast initial image load.
 * Full Hardware acceleration by using OpenGL and Direct3D11.
 * Handles files up to 256 mega pixels (16 mega pixels per dimension).
