@@ -1,13 +1,13 @@
-# [O]pen [I]mage [V]iewer
+# Open Image Viewer
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/86c11bc7e75e4677b8c2b5d50f9cd1c3)](https://app.codacy.com/app/TheNicker/OIV?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OIV&utm_campaign=Badge_Grade_Settings)
 
-**OIV** is a hardware accelerated blazingly fast open code c++17 compliant cross-platform 'C' library and application for viewing and 
+**Open Image Viewer** is a hardware accelerated blazingly fast open code c++17 compliant cross-platform 'C' library and application for viewing and 
 manipulating images.
 
 The motivation for this project is to create an open code image viewer with great emphasis on ergonomics and performance for every type of user suitable for the starting novice or the hardcore power user.
 
-**OIV** in its current form is a collection of 3 projects:
+**Open Image Viewer** in its current form is a collection of 3 projects:
 1. Independent c++ Image codec library.
 2. C API image viewing engine.
 3. Image viewer - windows only, (linux, very soon)
