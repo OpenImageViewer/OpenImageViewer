@@ -37,7 +37,10 @@ set(HEADER_DIR_6 External/easyexif)
 set(HEADER_DIR_7 FreeType)
 set(HEADER_DIR_8 Interfaces)
 
-set(BASE_EXTERNAL_DIR ../Externals)
+if(NOT BASE_EXTERNAL_DIR)
+    message(STATUS "BASE_EXTERNAL_DIR has no value. Defaulting to ../Externals.")
+    set(BASE_EXTERNAL_DIR "../Externals" CACHE PATH "Build external base directory")
+endif(NOT BASE_EXTERNAL_DIR)
 
 if(NOT CMAKE_GENERATOR_PLATFORM)
     message(STATUS "CMAKE_GENERATOR_PLATFORM has no value. Defaulting to x64.")
@@ -54,7 +57,29 @@ set(OPENGL TRUE)
 set(GLEW_BASE_DIR ${BASE_EXTERNAL_DIR}/glew/glew-2.1.0-win32/glew-2.1.0)
 
 # set(SHARED_LIBRARY_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
-
+# target_compile_features(Catch2
+#   INTERFACE
+#     cxx_alignas
+#     cxx_alignof
+#     cxx_attributes
+#     cxx_auto_type
+#     cxx_constexpr
+#     cxx_defaulted_functions
+#     cxx_deleted_functions
+#     cxx_final
+#     cxx_lambdas
+#     cxx_noexcept
+#     cxx_override
+#     cxx_range_for
+#     cxx_rvalue_references
+#     cxx_static_assert
+#     cxx_strong_enums
+#     cxx_trailing_return_types
+#     cxx_unicode_literals
+#     cxx_user_literals
+#     cxx_variadic_macros
+# )
+# target_compile_options
 # set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 # set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER API/api.h)
 set_target_properties(${LIBRARY_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -117,7 +142,7 @@ endif(BUILD_DEPENDS)
 if(BUILD_EXTERNAL_DEPENDS)
     if(FREETYPE2)
         set(FREETYPE2_LIB freetype)
-        # include_directories(${FREETYPE2_DIR}/include)
+        include_directories(${FREETYPE2_BASE_DIR}/include)
         add_subdirectory(../Externals/freetype2/libfreetype2-4.0.7/freetype2 ${CMAKE_BINARY_DIR}/FreeType2)
     endif(FREETYPE2)
     if(D3D11)
@@ -133,14 +158,14 @@ else()
     if(FREETYPE2)
         if(WIN32)
             if(X86)
-                set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2/Win32)
+                set(FREETYPE2_DIR ${FREETYPE2_BASE_DIR}/Win32)
                 set(FREETYPE2_LIB ${FREETYPE2_DIR}/freetype2.lib)
             else()
-                set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2/x64)
+                set(FREETYPE2_DIR ${FREETYPE2_BASE_DIR}/x64)
                 set(FREETYPE2_LIB ${FREETYPE2_DIR}/freetype2.lib)
             endif(X86)
         elseif(UNIX)
-            set(FREETYPE2_DIR ${BASE_EXTERNAL_DIR}/freetype2/libfreetype2-4.0.7/freetype2)
+            set(FREETYPE2_DIR ${FREETYPE2_BASE_DIR})
             set(FREETYPE2_LIB freetype2.a)
         endif(WIN32)
         link_directories(${FREETYPE2_DIR})
