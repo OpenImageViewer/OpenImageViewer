@@ -55,7 +55,7 @@ namespace IMCodec
             CDDSImage image;
             try
             {
-                std::istream& tmpBuf = istream(&sbuf);
+                std::istream tmpBuf(&sbuf);
                 image.load(tmpBuf, false);
                 out_vec_properties.resize(image.get_num_mipmaps() + 1);
 
