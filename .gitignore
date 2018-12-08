@@ -16,3 +16,4 @@
 ImageCodec/Codecs/CodecTiff/CodecTiff.vcxproj.user
 /ImageCodec/Codecs/CodecGif/CodecGif.vcxproj.user
 /ImageCodec/Codecs/CodecGif/x64/
+Build/

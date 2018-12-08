@@ -1,5 +1,13 @@
 #include "EmbeddedPluginInstaller.h"
 #include "ImageLoader.h"
+#if __has_include(<EmbeddedCodecsBuildConfig.h>)
+    #include <EmbeddedCodecsBuildConfig.h>
+#else 
+    #pragma message("Warning: Could not find local user build configuration file for embedded codecs, adding support for DDS only.")
+    #define IMCODEC_BUILD_CODEC_DDS  1
+#endif
+
+
 
 //TODO: Take configuration out to a new file
 #if IMCODEC_BUILD_CODEC_PSD == 1
