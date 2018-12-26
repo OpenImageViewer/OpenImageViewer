@@ -163,11 +163,12 @@ namespace IMCodec
 				// Two or more image channels are interleaved
                 // Extract the first one, currently discard the others.
                 // TODO: return extra channel as subimage.				
-                if (samplesPerPixel > 1)
+                if (samplesPerPixel > 1 
+                    && (photoMetric == PHOTOMETRIC_MINISWHITE || photoMetric == PHOTOMETRIC_MINISBLACK))
                 {
 
-                    if (photoMetric != PHOTOMETRIC_MINISWHITE && photoMetric != PHOTOMETRIC_MINISBLACK)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Extracing channel for non grayscale image is yet to be implemented");
+                    //if (photoMetric != PHOTOMETRIC_MINISWHITE && photoMetric != PHOTOMETRIC_MINISBLACK)
+                      //  LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Extracing channel for non grayscale image is yet to be implemented");
                         
 
                     LLUtils::Buffer image(rowPitch / samplesPerPixel * height);
