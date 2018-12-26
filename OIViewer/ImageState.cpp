@@ -144,6 +144,14 @@ namespace OIV
             fDirtyStage = dirtyStage;
     }
 
+    void ImageState::ResetUserState()
+    {
+        fAxisAlignedRotation = OIV_AxisAlignedRotation::AAT_None;
+        fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
+        fUseRainbowNormalization = false;
+        SetDirtyStage(ImageChainStage::Deformed);
+    }
+
     void ImageState::ResetDirtyStage()
     {
         fDirtyStage = ImageChainStage::Count;

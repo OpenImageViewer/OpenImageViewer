@@ -30,21 +30,28 @@ namespace OIV
 
     class ImageState
     {
-    public:
+    public:// const methods:
 
+        const ImageChain& GetWorkingImageChain() const;
+        OIVBaseImageSharedPtr GetOpenedImage() const { return fOpenedImage; }
+        bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
+        OIV_AxisAlignedRotation GetAxisAlignedRotation() const { return fAxisAlignedRotation; }
+        OIV_AxisAlignedFlip     GetAxisAlignedFlip() const { return fAxisAlignedFlip; }
+    
+    public:// mutating methods:
         void SetImageChainRoot(OIVBaseImageSharedPtr image);
         ImageChain& GetWorkingImageChain();
-        const ImageChain& GetWorkingImageChain() const;
+
         OIVBaseImageSharedPtr ProcessStage(ImageChainStage stage, OIVBaseImageSharedPtr image);
         void Refresh();
         void ResetPreviousImageChain();
-        OIVBaseImageSharedPtr GetOpenedImage() const { return fOpenedImage; }
-        bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
+        
         void SetUseRainbowNormalization(bool val);
         void SetOpenedImage(const OIVBaseImageSharedPtr& image);
         void ClearAll();
         void Transform(OIV_AxisAlignedRotation relative_rotation, OIV_AxisAlignedFlip flip);
         void SetDirtyStage(ImageChainStage dirtyStage);
+        void ResetUserState();
 
 
     private: //methods 

@@ -280,7 +280,6 @@ namespace OIV
         if (fileName.empty() == false)
         {
             LoadFile(fileName, false);
-            //response.resValue = "Open file: " + LLUtils::StringUtility::ToAString(fileName);
         }
     }
 
@@ -305,7 +304,51 @@ namespace OIV
         if (rotation != OIV_AxisAlignedRotation::AAT_None || flip != OIV_AxisAlignedFlip::AAF_None)
         {
             TransformImage(rotation, flip);
-            response.resValue = LLUtils::StringUtility::ToWString(request.description);
+
+            std::wstring rotation;
+            switch (fImageState.GetAxisAlignedRotation())
+            {
+            case AAT_Rotate90CW:
+                rotation = L"90 degrees clockwise";
+                break;
+            case AAT_Rotate180:
+                rotation = L"180 degrees";
+                break;
+            case AAT_Rotate90CCW:
+                rotation = L"180 degrees counter clockwise";
+                break;
+            }
+            if (rotation.empty() == false)
+                response.resValue += std::wstring(L"Rotation <textcolor=#7672ff>(") + rotation +  L')';
+
+
+            std::wstring flip;
+
+            switch (fImageState.GetAxisAlignedFlip())
+            {
+            case AAF_Horizontal:
+                flip = L"horizontal";
+                break;
+            case AAF_Vertical:
+                flip = L"vertical";
+                break;
+            }
+
+            if (flip.empty() == false)
+            {
+                if (rotation.empty() == false)
+                    response.resValue += L'\n';
+
+                response.resValue += std::wstring(L"<textcolor=#ff8930>Flip <textcolor=#7672ff>(") + flip + L')';
+            }
+
+            if (flip.empty() == true && rotation.empty() == true)
+            {
+                response.resValue = L"No transformation";
+            }
+
+            
+            //response.resValue = LLUtils::StringUtility::ToWString(request.description);
         }
     }
 
@@ -864,9 +907,11 @@ namespace OIV
 
             
             fRefreshOperation.Begin();
+			
+            fImageState.ResetUserState();
+            RefreshImage(); // actual refresh is deferred due to 'fRefreshOperation.Begin'.
 
-            RefreshImage(); // actual refresh operation won't occur due to the line above.
-            UpdateOpenImageUI();
+
 			
             if (fResetTransformationMode == ResetTransformationMode::ResetAll)
                 FitToClientAreaAndCenter();
