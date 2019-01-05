@@ -58,7 +58,6 @@ namespace LLUtils
             Allocate(size);
         }
 
-
         void operator=(BufferBase&& rhs)
         {
             Swap(std::move(rhs));
@@ -69,10 +68,14 @@ namespace LLUtils
             Swap(std::move(rhs));
         }
 
-
         bool operator==(nullptr_t null) const
         {
             return fData == null;
+        }
+
+        bool operator!=(nullptr_t null) const
+        {
+            return fData != null;
         }
 
         BufferBase Clone() const
@@ -81,7 +84,6 @@ namespace LLUtils
             cloned.Write(fData, 0, fSize);
             return cloned;
         }
-
 
         const std::byte* GetBuffer() const
         {
