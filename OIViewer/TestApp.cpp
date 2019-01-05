@@ -938,12 +938,25 @@ namespace OIV
     }
 
 
-    void TestApp::AddImageToControl(ImageHandle handle, uint16_t imageSlot, uint16_t totalImages)
+    void TestApp::AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
         OIV_CMD_GetPixels_Request pixelsRequest;
         OIV_CMD_GetPixels_Response pixelsResponse;
-        pixelsRequest.handle = handle;
-        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
+        
+        OIVBaseImageSharedPtr bgraImage = OIVImageHelper::ConvertImage(image, TF_I_B8_G8_R8_A8, false);
+
+        OIVBaseImageSharedPtr systemCompatibleImage;
+        
+        
+        ImageHandle windowCompatibleBitmapHandle;
+        if (OIVCommands::TransformImage(bgraImage->GetDescriptor().ImageHandle, OIV_AxisAlignedRotation::AAT_None, OIV_AxisAlignedFlip::AAF_Vertical, windowCompatibleBitmapHandle) == RC_Success)
+        {
+            systemCompatibleImage = std::make_shared<OIVHandleImage>(windowCompatibleBitmapHandle);
+        }
+
+
+        pixelsRequest.handle = systemCompatibleImage->GetDescriptor().ImageHandle;
+            ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
         uint8_t bpp;
         OIV_Util_GetBPPFromTexelFormat(pixelsResponse.texelFormat, &bpp);
 
@@ -972,12 +985,12 @@ namespace OIV
         {
             const auto totalImages = subImages .size() + 1;
 
-            AddImageToControl(mainImage->GetDescriptor().ImageHandle, static_cast<uint16_t>(0), static_cast<uint16_t>(totalImages));
+            AddImageToControl(mainImage, static_cast<uint16_t>(0), static_cast<uint16_t>(totalImages));
 
             for (int i = 0; i < subImages.size(); i++)
             {
                 auto& currentSubImage = subImages[i];
-                AddImageToControl(currentSubImage->GetDescriptor().ImageHandle, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
+                AddImageToControl(currentSubImage, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
             }
         }
     }

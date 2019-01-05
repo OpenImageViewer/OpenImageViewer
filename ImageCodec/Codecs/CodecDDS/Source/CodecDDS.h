@@ -2,6 +2,7 @@
 
 #include <IImagePlugin.h>
 #include "nv_dds.h"
+#include "s3tc.h"
 
 namespace IMCodec
 {
@@ -22,15 +23,53 @@ namespace IMCodec
         }
 
 
-        void LoadSurface(const nv_dds::CSurface& surface , TexelFormat format, ImageDescriptor& out_properties)
+        void LoadSurface(bool isCompressed , unsigned storageFormat, const nv_dds::CSurface& surface , TexelFormat format, ImageDescriptor& out_properties)
         {
+
+            LLUtils::Buffer decompressedBuffer;
+
+            const uint32_t decompressedTexelSize = GetTexelFormatSize(format) / 8;
+            const uint32_t decompressedImageSize = decompressedTexelSize * surface.get_width() * surface.get_height();
+
+            if (isCompressed)
+            {
+                //Not sure why need to add extra padding here.
+                constexpr int padding = 4;
+                decompressedBuffer.Allocate(decompressedTexelSize * (surface.get_width() + padding) * surface.get_height());
+
+                switch (storageFormat)
+                {
+                case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+                case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+                    BlockDecompressImageDXT1(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.GetBuffer()));
+                    break;
+                case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+                    BlockDecompressImageDXT5(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.GetBuffer()));
+                    break;
+                    //TODO: add implementation for decompressing DXT3 
+                case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+                default:
+                    LL_EXCEPTION_NOT_IMPLEMENT(std::string(" DDS format: ") + std::to_string(storageFormat) + " is not implemented");
+                    break;
+                }
+            }
+            else
+            {
+                //Not compressed, copy as is.
+                decompressedBuffer.Allocate(surface.get_size());
+                decompressedBuffer.Write(reinterpret_cast<std::byte*>(static_cast<uint8_t*>(surface)), 0, surface.get_size());
+            }
+
+
+
+
             out_properties.fProperties.Width = surface.get_width();
             out_properties.fProperties.Height = surface.get_height();
             out_properties.fProperties.TexelFormatDecompressed = format;
-            out_properties.fData.Allocate(surface.get_size());
-            out_properties.fData.Write(reinterpret_cast<std::byte*>(static_cast<uint8_t*>(surface)), 0, surface.get_size());
+            out_properties.fData = std::move(decompressedBuffer);
+
             //TODO: chech if need to extract row pitch from DDS.
-            out_properties.fProperties.RowPitchInBytes = surface.get_width() * GetTexelFormatSize(out_properties.fProperties.TexelFormatDecompressed) / 8;
+            out_properties.fProperties.RowPitchInBytes = surface.get_width() * decompressedTexelSize;
         }
 
         virtual bool LoadImages(const uint8_t* buffer, std::size_t size, std::vector<ImageDescriptor>& out_vec_properties)
@@ -55,6 +94,7 @@ namespace IMCodec
             CDDSImage image;
             try
             {
+                
                 std::istream tmpBuf(&sbuf);
                 image.load(tmpBuf, false);
                 out_vec_properties.resize(image.get_num_mipmaps() + 1);
@@ -63,15 +103,29 @@ namespace IMCodec
                 TexelFormat texelFormat;
                 switch (format)
                 {
+                case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+                    texelFormat = TexelFormat::I_B8_G8_R8;
+                    break;
+                case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+                    texelFormat = TexelFormat::I_A8_B8_G8_R8;
+                    break;
+                case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+                    texelFormat = TexelFormat::I_A8_B8_G8_R8;
+                    break;
+                case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+                    texelFormat = TexelFormat::I_A8_B8_G8_R8;
+                    break;
                 case GL_BGRA_EXT:
                     texelFormat = TexelFormat::I_B8_G8_R8_A8;
                     break;
+                
                 case GL_BGR_EXT:
                     texelFormat = TexelFormat::I_B8_G8_R8;
                     break;
                 case GL_RGB:
                     texelFormat = TexelFormat::I_R8_G8_B8;
                     break;
+                
                 case GL_RGBA:
                     texelFormat = TexelFormat::I_R8_G8_B8_A8;
                     break;
@@ -81,7 +135,7 @@ namespace IMCodec
                 }
 
 
-                LoadSurface(image.get_surface(), texelFormat, out_vec_properties[0]);
+                LoadSurface(image.is_compressed(), format, image.get_surface(), texelFormat, out_vec_properties[0]);
                 
                 out_vec_properties[0].fProperties.NumSubImages = static_cast<uint32_t>(std::max<int>(0, image.get_num_mipmaps()));
                 out_vec_properties[0].fProperties.TexelFormatDecompressed = texelFormat;
@@ -94,7 +148,7 @@ namespace IMCodec
                     memset(&out_properties, 0, sizeof(ImageDescriptor));
                     const nv_dds::CSurface& surface = image.get_mipmap(i);
 
-                    LoadSurface(surface, texelFormat, out_properties);
+                    LoadSurface(image.is_compressed(), format, surface, texelFormat, out_properties);
                     out_properties.fProperties.TexelFormatDecompressed = texelFormat;
                 }
                 

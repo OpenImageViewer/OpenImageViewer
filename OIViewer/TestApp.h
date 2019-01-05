@@ -166,7 +166,7 @@ namespace OIV
         bool ToggleColorCorrection(); 
         void CancelSelection();
         void LoadSubImages();
-        void AddImageToControl(ImageHandle handle, uint16_t imageSlot, uint16_t totalImages);
+        void AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         
 
     private: // member fields

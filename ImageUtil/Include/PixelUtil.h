@@ -119,6 +119,56 @@ namespace IMUtil
             }
         }
 
+
+        static void ABGR32ToBGRA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            BitTexel32 * src = (BitTexel32*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = src[i].Y;
+                dst[i].Y = src[i].Z;
+                dst[i].Z = src[i].W;
+                dst[i].W = src[i].X;
+
+            }
+        }
+
+        
+
+        static void ABGR32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            BitTexel32 * src = (BitTexel32*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = src[i].W;
+                dst[i].Y = src[i].Z;
+                dst[i].Z = src[i].Y;
+                dst[i].W = src[i].X;
+
+            }
+        }
+
+
+        static void ARGB32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            BitTexel32 * src = (BitTexel32*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = src[i].Y;
+                dst[i].Y = src[i].Z;
+                dst[i].Z = src[i].W;
+                dst[i].W = src[i].X;
+            }
+        }
+
+        
+
         static void RGBA32ToBGRA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;

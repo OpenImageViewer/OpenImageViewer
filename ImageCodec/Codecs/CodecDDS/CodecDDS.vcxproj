@@ -137,11 +137,13 @@
   <ItemGroup>
     <ClCompile Include="Source\CodecDDSFactory.cpp" />
     <ClCompile Include="Source\nv_dds.cpp" />
+    <ClCompile Include="Source\s3tc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\CodecDDSFactory.h" />
     <ClInclude Include="Source\CodecDDS.h" />
     <ClInclude Include="Source\nv_dds.h" />
+    <ClInclude Include="Source\s3tc.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

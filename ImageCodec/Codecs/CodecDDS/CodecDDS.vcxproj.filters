@@ -24,6 +24,9 @@
     <ClCompile Include="Source\CodecDDSFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\s3tc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\CodecDDSFactory.h">
@@ -33,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\nv_dds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\s3tc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
