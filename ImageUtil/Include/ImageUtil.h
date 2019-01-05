@@ -155,7 +155,7 @@ namespace IMUtil
                 image = ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
                 break;
             case IMCodec::TexelFormat::I_X8:
-                image = ImageUtil::Normalize<int8_t>(image, targetTexelFormat, normalizeMode);
+                image = ImageUtil::Normalize<uint8_t>(image, targetTexelFormat, normalizeMode);
                 break;
 
             default:
