@@ -476,8 +476,11 @@ namespace OIV
     void TestApp::CMD_PasteFromClipboard(const CommandManager::CommandRequest& request,
         CommandManager::CommandResult& result)
     {
-        PasteFromClipBoard();
-        result.resValue = LLUtils::StringUtility::ToWString(request.description);
+        if (PasteFromClipBoard())
+            result.resValue = LLUtils::StringUtility::ToWString(request.description);
+        else
+            result.resValue = L"Nothing usable in clipboard";
+
     }
 
     void TestApp::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
@@ -1729,9 +1732,9 @@ namespace OIV
         FinalizeImageLoadThreadSafe(result);
     }
 
-    void TestApp::PasteFromClipBoard()
+    bool TestApp::PasteFromClipBoard()
     {
-
+        bool success = false;;
         if (IsClipboardFormatAvailable(CF_BITMAP) || IsClipboardFormatAvailable(CF_DIB) || IsClipboardFormatAvailable(CF_DIBV5))
         {
             if (OpenClipboard(NULL))
@@ -1778,12 +1781,15 @@ namespace OIV
                             , info->biBitCount == 24 ? OIV_TexelFormat::TF_I_B8_G8_R8 : OIV_TexelFormat::TF_I_B8_G8_R8_A8);
 
                         GlobalUnlock(dib);
+                        success = true;
                     }
                 }
 
                 CloseClipboard();
             }
         }
+
+        return success;
     }
 
 
@@ -2103,6 +2109,11 @@ namespace OIV
                 {
                     ToggleFullScreen();
                 }
+            }
+
+            if (IsRightDoubleClick)
+            {
+                ExecuteUserCommand({ "Paste image from clipboard","cmd_pasteFromClipboard","" });
             }
         }
 

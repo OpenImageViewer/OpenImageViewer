@@ -154,7 +154,7 @@ namespace OIV
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat);
-        void PasteFromClipBoard();
+        bool PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
