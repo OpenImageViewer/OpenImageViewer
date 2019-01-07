@@ -213,7 +213,13 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="spyglass.ico">
+    <Image Include="oivIcon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="oivIconDebug.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="oivIconRelease.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
