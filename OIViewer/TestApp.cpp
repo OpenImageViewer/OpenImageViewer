@@ -125,6 +125,35 @@ namespace OIV
             fResetTransformationMode = static_cast<ResetTransformationMode>((static_cast<int>(fResetTransformationMode) + 1) % static_cast<int>(ResetTransformationMode::Count));
             result.resValue = fResetTransformationMode == ResetTransformationMode::DoNothing ? L"Don't auto reset image state" : L"Auto reset image state";
         }
+        else if (type == "toggletransparencymode")
+        {
+            fTransparencyMode = static_cast<OIV_PROP_TransparencyMode>( (fTransparencyMode + 1) % static_cast<int>(OIV_PROP_TransparencyMode::TM_Count));
+            UpdateRenderViewParams();
+
+            std::wstring userMessage = L"Transparency: ";
+            std::wstring transparencyMode;
+
+            switch (fTransparencyMode)
+            {
+            case OIV_PROP_TransparencyMode::TM_Light:
+                transparencyMode = L"Light";
+                break;
+            case OIV_PROP_TransparencyMode::TM_Medium:
+                transparencyMode = L"Medium(default)";
+                break;
+            case OIV_PROP_TransparencyMode::TM_Dark:
+                transparencyMode = L"Dark";
+                break;
+            case OIV_PROP_TransparencyMode::TM_Darker:
+                transparencyMode = L"Darker";
+                break;
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+            }
+
+            result.resValue = userMessage + L"<textcolor=#7672ff>"+ transparencyMode;
+            
+        }
 
 
 
@@ -651,6 +680,7 @@ namespace OIV
             ,{ "Image filter up","cmd_view_state","type=imageFilterUp" ,"Period" }
             ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
             ,{ "Toggle reset offset on load","cmd_view_state","type=toggleresetoffset" ,"Backslash" }
+            ,{ "Toggle Transparency mode","cmd_view_state","type=toggletransparencymode" ,"T" }
 
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
@@ -1359,14 +1389,20 @@ namespace OIV
 
     void TestApp::ToggleGrid()
     {
-        CmdRequestTexelGrid grid;
         fIsGridEnabled = !fIsGridEnabled;
+        UpdateRenderViewParams();
+    }
+
+    void TestApp::UpdateRenderViewParams()
+    {
+        CmdRequestTexelGrid grid;
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
+        grid.transparencyMode = fTransparencyMode;
         if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
             fRefreshOperation.Queue();
         }
-        
+
     }
 
     bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)

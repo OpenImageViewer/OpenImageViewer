@@ -13,6 +13,8 @@ namespace OIV
     struct ViewParameters
     {
         LLUtils::PointI32 uViewportSize;
+        LLUtils::Color uTransparencyColor1;
+        LLUtils::Color uTransparencyColor2;
         bool showGrid;
     };
 }

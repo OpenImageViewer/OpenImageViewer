@@ -29,11 +29,21 @@ namespace OIV
 
     struct CONSTANT_BUFFER_IMAGE_MAIN
     {
+        //------------------------
+        float transparencyColor1[4];
+        //------------------------
+        float transparencyColor2[4];
+        //------------------------
         int32_t uShowGrid;
         float exposure;
         float offset;
         float gamma;
+        //------------------------
         float saturation;
+
+        float reserved[3];
+        //------------------------
+        
     };
 #pragma pack()
 

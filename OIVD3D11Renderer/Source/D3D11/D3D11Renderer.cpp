@@ -256,6 +256,9 @@ namespace OIV
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         
         buffer.uShowGrid = viewParams.showGrid;
+        memcpy(buffer.transparencyColor1, viewParams.uTransparencyColor1.GetNormalizedColorValue<float>(), sizeof(float) * 4);
+        memcpy(buffer.transparencyColor2, viewParams.uTransparencyColor2.GetNormalizedColorValue<float>(), sizeof(float) * 4);
+
         fIsParamsDirty = true;
         
         return 0;

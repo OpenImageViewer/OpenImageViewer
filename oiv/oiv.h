@@ -36,7 +36,7 @@ namespace OIV
         
         IMCodec::ImageSharedPtr GetImage(ImageHandle handle) const override;
         ResultCode GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& information) override;
-        int SetTexelGrid(double gridSize) override;
+        int SetTexelGrid(const CmdRequestTexelGrid& viewParams) override;
         int SetClientSize(uint16_t width, uint16_t height) override;
         ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request, OIV_CMD_AxisAlignedTransform_Response& response) override;
 #pragma endregion
@@ -58,6 +58,37 @@ namespace OIV
 #pragma region //-------------Private member fields------------------
 
     private:
+
+        const std::array<uint8_t, 6> sShades
+        {
+             255
+            ,204
+            ,153
+            ,102
+            ,51
+            ,0
+
+        };
+
+        struct CheckerBoard
+        {
+            LLUtils::Color color1;
+            LLUtils::Color color2;
+        };
+
+
+
+        const std::array<CheckerBoard, OIV_PROP_TransparencyMode::TM_Count> transparencyCheckerShades
+        {
+              CheckerBoard{ {sShades[0],sShades[0],sShades[0], 255}, {sShades[1],sShades[1],sShades[1] ,255} }
+            , CheckerBoard{ {sShades[2],sShades[2],sShades[2], 255}, {sShades[3],sShades[3],sShades[3] ,255} }
+            , CheckerBoard{ {sShades[3],sShades[3],sShades[3], 255}, {sShades[4],sShades[4],sShades[4] ,255} }
+            , CheckerBoard{ {sShades[4],sShades[4],sShades[4], 255}, {sShades[5],sShades[5],sShades[5] ,255} }
+        };
+
+
+        
+        OIV_PROP_TransparencyMode fTransparencyShade = OIV_PROP_TransparencyMode::TM_Medium;
         std::set<ImageHandle> fImagesUploadToRenderer;
         IMCodec::ImageLoader fImageLoader;
         ImageManager fImageManager;

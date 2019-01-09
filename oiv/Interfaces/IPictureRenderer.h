@@ -22,7 +22,7 @@ namespace OIV
 
         virtual ResultCode GetFileInformation(ImageHandle handle, OIV_CMD_QueryImageInfo_Response& information) = 0;
         virtual IMCodec::ImageSharedPtr GetImage(ImageHandle handle) const = 0;
-        virtual int SetTexelGrid(double gridSize) = 0;
+        virtual int SetTexelGrid(const CmdRequestTexelGrid& viewParams) = 0;
         virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
         virtual ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request, OIV_CMD_AxisAlignedTransform_Response& response) = 0;
         virtual ~IPictureRenderer() {}

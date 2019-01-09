@@ -282,25 +282,25 @@ typedef wchar_t OIVCHAR;
     };
 
 
-    enum OIV_PROP_Scale_Mode
+    /*enum OIV_PROP_Scale_Mode
     {
           SM_None = 0 << 0
         , SM_FitToWindow = 1 << 0
         , SM_OriginalSize = 1 << 1
         , SM_LockScale = 1 << 2
         , SM_KeepAspectRatio = 1 << 3
+    };*/
+
+
+    enum OIV_PROP_TransparencyMode
+    {
+          TM_Light 
+        , TM_Medium
+        , TM_Dark
+        , TM_Darker
+        , TM_Count
     };
 
-
-    /*struct OIV_CMD_ZoomScrollState_Request
-    {
-        double innerMarginsX;
-        double innerMarginsY;
-        double outermarginsX;
-        double outermarginsY;
-        uint8_t SmallImageOffsetStyle;
-        OIV_PROP_Scale_Mode scaleMode;
-    };*/
 
 
     struct OIV_CMD_GetKnownFileTypes_Response
@@ -337,18 +337,8 @@ typedef wchar_t OIVCHAR;
     struct CmdRequestTexelGrid
     {
         double gridSize;
-    };
-
-    struct CmdRequestTexelAtMousePos
-    {
-        int x;
-        int y;
-    };
-    
-    struct CmdResponseTexelAtMousePos
-    {
-        double x;
-        double y;
+        OIV_PROP_TransparencyMode transparencyMode;
+        
     };
 
     enum OIV_Filter_type

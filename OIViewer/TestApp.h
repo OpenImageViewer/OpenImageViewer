@@ -115,6 +115,7 @@ namespace OIV
         void SetFilterLevel(OIV_Filter_type filterType);
         OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
+        void UpdateRenderViewParams();
         void Pan(const LLUtils::PointF64& panAmount);
         void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
         void ZoomInternal(double amount, int zoomX, int zoomY);
@@ -185,6 +186,7 @@ namespace OIV
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         bool fIsGridEnabled = false;
+        OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;

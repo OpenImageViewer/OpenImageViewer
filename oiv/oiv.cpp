@@ -46,6 +46,8 @@ namespace OIV
     void OIV::UpdateGpuParams()
     {
         fViewParams.showGrid = fShowGrid;
+        fViewParams.uTransparencyColor1 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color1;
+        fViewParams.uTransparencyColor2 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color2;
         fViewParams.uViewportSize = GetClientSize();
         fRenderer->SetViewParams(fViewParams);
     }
@@ -505,9 +507,10 @@ namespace OIV
         return RC_InvalidImageHandle;
     }
 
-    int OIV::SetTexelGrid(double gridSize)
+    int OIV::SetTexelGrid(const CmdRequestTexelGrid& viewParams)
     {
-        fShowGrid = gridSize > 0.0;
+        fShowGrid = viewParams.gridSize > 0.0;
+        fTransparencyShade = viewParams.transparencyMode;
         return RC_Success;
     }
 

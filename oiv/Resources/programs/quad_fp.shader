@@ -24,6 +24,10 @@ STATIC_CONST float4 midnightBlue = float4(25 / 255.0, 25 / 255.0 , 112 / 255.0, 
 STATIC_CONST float4 darkBlue = float4(0 / 255.0, 0 / 255.0, 40 / 255.0, 1);
 STATIC_CONST float4 red = float4(1, 0, 0, 1);
 
+//TODO: extract background colours to the CPU.
+STATIC_CONST float4 BackgroundColor1  = black;
+STATIC_CONST float4 BackgroundColor2 = darkBlue;
+
 //Globals
 
 cbuffer BaseImageData_ : register(b0) 
@@ -33,11 +37,18 @@ BaseImageData baseImageData;
 
 cbuffer MainImageData : register(b1) 
 {
+	//------------------------
+	float4 uTransparencyColor1;
+	//------------------------
+	float4 uTransparencyColor2;
+	//------------------------
 	int   uShowGrid;
 	float uExposure;
 	float uOffset;
 	float uGamma;
+	//------------------------
 	float uSaturation;
+	float3 reserved;
 };
 
 uniform SAMPLER2D texture_1;
@@ -151,8 +162,8 @@ void DrawPixelGrid(
 
 void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
 {
-	if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-            texel = GetChecker(black, darkBlue, screenUV, viewportSize);
+	//if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+            texel = GetChecker(BackgroundColor1, BackgroundColor2, screenUV, viewportSize);
 }
 
 void DrawImage(float2 uv, float2 screenUV,float2 scale, float2 viewportSize,in float2 imageSize, inout float4 texel)
@@ -161,8 +172,8 @@ void DrawImage(float2 uv, float2 screenUV,float2 scale, float2 viewportSize,in f
     float4 sampledTexel = SampleTexture(texture_1,uv);
     sampledTexel.xyz =  pow(abs(sampledTexel.xyz * uExposure  + uOffset), 1.0 / uGamma);
     sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
-	
-    float4 checkerColor = GetChecker(white, gray25, screenUV, viewportSize);
+
+    float4 checkerColor = GetChecker(uTransparencyColor1, uTransparencyColor2, screenUV, viewportSize);
     texel = lerp(checkerColor, sampledTexel, sampledTexel.w);
 }
 
