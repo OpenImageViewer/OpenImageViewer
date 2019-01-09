@@ -21,7 +21,7 @@ namespace LLUtils
             uint32_t colorValue;
         };
         template <class T>
-        T* GetNormalizedColorValue()
+        const T* GetNormalizedColorValue() const
         {
             static_assert(std::is_floating_point<T>(), "Only floating point support normilization");
             static thread_local T normalizedColor[4];
