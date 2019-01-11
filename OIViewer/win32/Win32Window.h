@@ -76,6 +76,7 @@ namespace OIV
             WindowStyleFlags GetWindowStyles() const {return fWindowStyles;}
             bool GetTransparent() const { return fIsTransparent; }
             Win32Window* GetParent() const { return fParent; }
+            bool GetAlwaysOnTop() const;
             
             
             virtual ~Win32Window() {};
@@ -99,6 +100,8 @@ namespace OIV
             void SetWindowStyles(WindowStyle styles, bool enable);
             void SetParent(Win32Window* parent);
             void SetTransparent(bool transparent) {fIsTransparent = transparent;}
+            void SetAlwaysOnTop(bool alwaysOnTop);
+
 
         protected:
             bool RaiseEvent(const Event& evnt);
@@ -136,6 +139,7 @@ namespace OIV
             bool fIsMaximized = false;
             WindowStyleFlags fWindowStyles = WindowStyle::NoStyle;
             bool fIsTransparent = false;
+            bool fAlwaysOnTop = false;
         };
 
 

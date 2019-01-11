@@ -149,6 +149,7 @@
     <ClCompile Include="OIVImage\OIVTextImage.cpp" />
     <ClCompile Include="SelectionRect.cpp" />
     <ClCompile Include="TestApp.cpp" />
+    <ClCompile Include="win32\Timer.cpp" />
     <ClCompile Include="UserSettings.cpp" />
     <ClCompile Include="win32\DragAndDrop.cpp" />
     <ClCompile Include="win32\MainWindow.cpp" />
@@ -172,6 +173,7 @@
     <ClInclude Include="Keyboard\KeyCodeHelper.h" />
     <ClInclude Include="Keyboard\KeyCombination.h" />
     <ClInclude Include="Keyboard\KeyCode.h" />
+    <ClInclude Include="Keyboard\KeyDoubleTap.h" />
     <ClInclude Include="LabelManager.h" />
     <ClInclude Include="MonitorProvider.h" />
     <ClInclude Include="OIVImage\OIVBaseImage.h" />
@@ -185,6 +187,7 @@
     <ClInclude Include="AdaptiveMotion.h" />
     <ClInclude Include="SelectionRect.h" />
     <ClInclude Include="TestApp.h" />
+    <ClInclude Include="win32\Timer.h" />
     <ClInclude Include="UserSettings.h" />
     <ClInclude Include="VirtualStatusBar.h" />
     <ClInclude Include="win32\BitmapHelper.h" />
