@@ -15,6 +15,7 @@ namespace OIV
             , Zorder
             , UpdateFrame
             , Placement
+            , AlwaysOnTop
         };
 
 
@@ -38,8 +39,6 @@ namespace OIV
 
             static UINT GetFlagsForWindowSetPosOp(WindowPosOp op)
             {
-           
-
                 switch (op)
                 {
                 case WindowPosOp::None:
@@ -54,8 +53,11 @@ namespace OIV
                     return BaseFlags & ~SWP_NOSIZE;
                 case WindowPosOp::Zorder:
                     return BaseFlags & ~SWP_NOZORDER;
+                case WindowPosOp::AlwaysOnTop:
+                    return BaseFlags & ~SWP_NOZORDER;
+
                 default:
-                    return 0;
+                    LL_EXCEPTION_UNEXPECTED_VALUE;
                 }
             }
 
@@ -85,10 +87,15 @@ namespace OIV
                         result &= ~SWP_NOZORDER;
                         break;
                     default:
-                        break;
+                        LL_EXCEPTION_UNEXPECTED_VALUE;
                     }
                 }
                 return result;
+            }
+
+            static void SetAlwaysOnTop(HWND handle, bool ontop)
+            {
+                SetWindowPos(handle, ontop ? HWND_TOPMOST : HWND_NOTOPMOST , 0, 0, 0, 0, GetFlagsForWindowSetPosOp(WindowPosOp::AlwaysOnTop));
             }
 
             static void SetPosition(HWND handle, int32_t x, int32_t y)

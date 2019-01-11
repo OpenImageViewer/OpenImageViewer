@@ -22,6 +22,7 @@ namespace LLUtils
             , DuplicateItem
             , BadParameters
             , NotImplemented
+            , InvalidState
             , SystemError
             , __Count__
         };

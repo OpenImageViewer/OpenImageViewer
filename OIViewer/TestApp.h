@@ -4,6 +4,7 @@
 
 #include "win32/MainWindow.h"
 #include "win32/HighPrecisionTimer.h"
+#include "win32/Timer.h"
 #include "API/defs.h"
 #include "API/StringHelper.h"
 #include <Utility.h>
@@ -15,6 +16,7 @@
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
 #include "Keyboard/KeyBindings.h"
+#include "Keyboard/KeyDoubleTap.h"
 #include "SelectionRect.h"
 #include "OIVImage\OIVBaseImage.h"
 #include "LabelManager.h"
@@ -64,8 +66,10 @@ namespace OIV
     private: //methods
 #pragma region Win32 event handling
         bool handleKeyInput(const Win32::EventWinMessage* evnt);
-        void HideUserMessage();
+        void HideUserMessageGradually();
         LRESULT ClientWindwMessage(const Win32::Event * evnt1);
+        void SetTopMostUserMesage();
+        void ProcessTopMost();
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
@@ -77,8 +81,9 @@ namespace OIV
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
         void ProbeForMonitorChange();
         void PerformRefresh();
-        void SetUserMessage(const std::wstring& message);
+        void SetUserMessage(const std::wstring& message, int32_t hideDelay = 0);
         void SetDebugMessage(const std::string& message);
+        void HideUserMessage();
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
         void PostInitOperations();
 #pragma region Commands
@@ -182,7 +187,6 @@ namespace OIV
         AutoScrollUniquePtr fAutoScroll;
         RecrusiveDelayedOp fRefreshOperation;
         RecrusiveDelayedOp fPreserveImageSpaceSelection;
-        bool fIsSlideShowActive = false;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
         bool fIsGridEnabled = false;
@@ -191,11 +195,13 @@ namespace OIV
         DWORD fMainThreadID = GetCurrentThreadId();
         std::mutex fMutexWindowCreation;
         SelectionRect fSelectionRect;
-        const int cTimerID = 1500;
-        const int cTimerIDHideUserMessage = 1000;
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
+        Win32::Timer fTimerHideUserMessage;
+        Win32::Timer fTimerTopMostRetention;
+        Win32::Timer fTimerSlideShow;
+        int fTopMostCounter = 0;
         
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
@@ -223,7 +229,7 @@ namespace OIV
 
         CommandManager fCommandManager;
         LabelManager fLabelManager;
-        
+        KeyDoubleTap fDoubleTap;
 
         
         struct BindingElement

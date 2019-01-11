@@ -25,6 +25,7 @@
 #include "Helpers/OIVHelper.h"
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
+#include "Keyboard/KeyDoubleTap.h"
 #include "SelectionRect.h"
 #include "Helpers\PhotoshopFinder.h"
 #include "API/StringHelper.h"
@@ -35,6 +36,7 @@
 #include "Helpers\OIVImageHelper.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
+#include <UniqueIDProvider.h>
 
 
 namespace OIV
@@ -91,7 +93,7 @@ namespace OIV
         {
             ToggleSlideShow();
             result.resValue = L"Slideshow ";
-            result.resValue += fIsSlideShowActive == true ? L"on" : L"off";
+            result.resValue += fTimerSlideShow.GetInterval() > 0 ? L"on" : L"off";
         }
         else if (type == "toggleNormalization")
         {
@@ -1218,6 +1220,39 @@ namespace OIV
         fSettings.Load();
         fSettings.Save();
 
+        
+
+        fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
+        fTimerTopMostRetention.SetCallback([this]()
+        {
+            ProcessTopMost();
+        }
+        );
+  
+
+        fTimerSlideShow.SetTargetWindow(fWindow.GetHandle());
+        fTimerSlideShow.SetCallback([this]()
+        {
+            JumpFiles(1);
+        }
+        );
+
+        fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
+        fTimerHideUserMessage.SetCallback([this]()
+        {
+            HideUserMessageGradually();
+        }
+        );
+        
+        
+        fDoubleTap.callback = [this]()
+        {
+            fWindow.SetAlwaysOnTop(true);
+            fTopMostCounter = 3;
+            SetTopMostUserMesage();
+            fTimerTopMostRetention.SetInterval(1000);
+        };
+
         //If a file has been succesfuly loaded, index all the file in the folder
         if (IsOpenedImageIsAFile())
             LoadFileInFolder(GetOpenedFileName());
@@ -1368,14 +1403,10 @@ namespace OIV
 
     void TestApp::ToggleSlideShow()
     {
-        HWND hwnd = GetWindowHandle();
-        
-        if (fIsSlideShowActive == false)
-            SetTimer(hwnd, cTimerID, 3000, nullptr);
+        if (fTimerSlideShow.GetInterval() > 0)
+            fTimerSlideShow.SetInterval(0);
         else
-            KillTimer(hwnd, cTimerID);
-        fIsSlideShowActive = !fIsSlideShowActive;
-        
+            fTimerSlideShow.SetInterval(3000);
     }
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
@@ -1407,8 +1438,9 @@ namespace OIV
 
     bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
     {
-        const BindingElement& bindings = fKeyBindings.GetBinding(KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam), 
-            static_cast<uint32_t>(evnt->message.lParam)));
+        KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
+            static_cast<uint32_t>(evnt->message.lParam));
+        const BindingElement& bindings = fKeyBindings.GetBinding(keyCombination);
         if (bindings.command.empty() == false
             && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
                 return true; // return if operation has been handled.
@@ -1964,6 +1996,30 @@ namespace OIV
         return retValue;
     }
 
+    void TestApp::SetTopMostUserMesage()
+    {
+        std::wstring message = L"Top most ending in..." + std::to_wstring(fTopMostCounter);
+        SetUserMessage(message, -1);
+    }
+
+    void TestApp::ProcessTopMost()
+    {
+        if (fTopMostCounter > 0)
+        {
+            fTopMostCounter--;
+
+            if (fTopMostCounter == 0)
+            {
+                fTimerTopMostRetention.SetInterval(0);
+                fWindow.SetAlwaysOnTop(false);
+                HideUserMessageGradually();
+            }
+            else
+                SetTopMostUserMesage();
+        }
+
+    }
+
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         bool handled = false;
@@ -1982,13 +2038,7 @@ namespace OIV
             AfterFirstFrameDisplayed();
 
             break;
-        case WM_TIMER:
-            if (uMsg.wParam == cTimerID)
-            
-                JumpFiles(1);
-            else if (uMsg.wParam == cTimerIDHideUserMessage)
-                HideUserMessage();
-        break;
+        
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
             FinalizeImageLoadThreadSafe(static_cast<ResultCode>( evnt->message.wParam));
         break;
@@ -1999,8 +2049,19 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER:
             PerformRefresh();
             break;
+        case WM_SYSKEYUP:
+        case WM_KEYUP:
+        {
 
+            KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
+                static_cast<uint32_t>(evnt->message.lParam));
 
+            bool isAltup = (keyCombination.keycode == KeyCode::LALT || keyCombination.keycode == KeyCode::RIGHTALT || keyCombination.keycode == KeyCode::RALT);
+
+            if (isAltup)
+                fDoubleTap.SetState(false);
+        }
+            break;
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
             handled = handleKeyInput(evnt);
@@ -2202,7 +2263,7 @@ namespace OIV
     }
 
 
-    void TestApp::SetUserMessage(const std::wstring& message)
+    void TestApp::SetUserMessage(const std::wstring& message,int32_t hideDelay )
     {
         OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         if (userMessage == nullptr)
@@ -2235,8 +2296,19 @@ namespace OIV
         if (userMessage->Update() == RC_Success)
         {
             fRefreshOperation.Queue();
-            const uint32_t delayMessageBeforeHide = std::max(fMinDelayRemoveMessage, static_cast<uint32_t>( message.length() * fDelayPerCharacter));
-            SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, delayMessageBeforeHide, nullptr);
+
+            int32_t messageDelay = 0;
+            if (hideDelay == 0)     //Auto hide delay
+            {
+                messageDelay = std::max(fMinDelayRemoveMessage, static_cast<uint32_t>(message.length() * fDelayPerCharacter));
+            }
+            else
+            {
+                hideDelay = messageDelay;
+            }
+
+            if (messageDelay > 0 )
+                fTimerHideUserMessage.SetInterval(messageDelay);
         }
     }
 
@@ -2261,10 +2333,8 @@ namespace OIV
             fRefreshOperation.Queue();
         }
     }
-
-
-
-    void TestApp::HideUserMessage()
+    
+    void TestApp::HideUserMessageGradually()
     {
         OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         OIV_CMD_ImageProperties_Request& imageProperties = userMessage->GetImageProperties();
@@ -2272,7 +2342,7 @@ namespace OIV
         if (imageProperties.opacity == 1.0)
         {
             // start exponential fadeout after 'fDelayRemoveMessage' milliseconds.
-            SetTimer(fWindow.GetHandle(), cTimerIDHideUserMessage, 5, nullptr);
+            fTimerHideUserMessage.SetInterval(5);
             imageProperties.opacity = 0.99;
         }
 
@@ -2280,7 +2350,7 @@ namespace OIV
         if (imageProperties.opacity < 0.01)
         {
             imageProperties.opacity = 0;
-            KillTimer(fWindow.GetHandle(), cTimerIDHideUserMessage);
+            fTimerHideUserMessage.SetInterval(0);
         }
 
         if (userMessage->Update() == RC_Success)

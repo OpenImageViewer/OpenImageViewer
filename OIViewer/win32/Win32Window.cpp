@@ -51,6 +51,16 @@ namespace OIV
 
             }
         }
+		
+        void Win32Window::SetAlwaysOnTop(bool alwaysOnTop)
+        {
+            if (fAlwaysOnTop != alwaysOnTop)
+            {
+                fAlwaysOnTop = alwaysOnTop;
+                WindowPosHelper::SetAlwaysOnTop(GetHandle(), fAlwaysOnTop);
+            }
+        }
+		
         int Win32Window::Create()
         {
             HINSTANCE hInstance = GetModuleHandle(nullptr);
