@@ -1,0 +1,98 @@
+==============================================================
+Open image viewer 0.15 - Jan 10, 2019
+==============================================================
+
+Changed: checkered background tile size to be exactly 16 pixels
+Added: Label manager, virtual status bar and better compatibility for high DPI monitors.
+Added: support for subimages, currently implemented only for dds mipmaps.
+Fixed: many performance and stability issues.
+Improved: CMake compatibility.
+Improved: Tiff and PNG image format compatibility
+Added: option to paste from clipboard using right mouse double click
+Added: DDS support for compressed formats.
+Added: four transparency checkerboard modes (light, medium, dark and darker)
+
+Removed: unused dll jpeg62.dll
+Changed: Startup time reduced by delay loading dlls
+Refactored Win32 windowing system
+
+Changed: List only known file types in the folder of the loaded image
+Fixed: Pasting a bitmap from clipboard - fixed Bitmap start offset
+Added: better exception system with callstack
+Changed: VC platform toolset to 14.1, c++17 is now the minimum required
+Changed: C API calls max struct alignment to 16
+Add: support for 16 bit extended keyboard scan codes to support all the possible keys.
+Removed: annoying beep sound when pressing alt.
+Added: File name displayed on screen.
+Changed: LibJPGTurbo to version 2.0.
+Added: option to find and use the latest installed Photoshop using the 'P' key
+Changed: string system, introduced OivString and added preliminary support for choosing any desired type of string separated from the “native” string used by the system
+
+Changed: Draw selection rect before overlays
+Added: Option to resize selection rect using single axis
+Changed: keep selection rect in image space instead of screen space
+Added: Option to select all using CTRL+A
+Changed: Selection rect visualization significantly improved
+Fixed: selection rect performance by removing immediate refresh
+
+Added: support for 24 bit floating point image format
+Added: specialized Gif codec
+Added: auto-scroll cursors shows the direction of movement.
+Added: Frame limiter to improve performance, implementation previously was bottlenecking the GPU by presenting frames as many as it can.
+Added: major improvements for text rendering: font outline, support for subpixel antialiasing and font rendering DPI awareness.
+Added: option to not reset the visible image transformation when loading a new image, useful when looking for a specific area in a similar sized images.
+
+==============================================================
+Open image viewer 0.14 - Nov 21, 2017
+==============================================================
+
+Improved: Selection rect.
+Improved: Pixel grid.
+Added: color correction (Gamma, offset, exposure, saturation)
+Added: Adaptive zoom
+Added: Text support
+Added: application Icon
+Added: Command to open file (Ctrl+O)
+Added: option to get the texel value of an image.
+Fixed: Image offset precision
+Fixed: Auto scroll precision
+Added: option to copy file name to clipboard
+Fixed: Direct3D11 memory leak
+Fixed: row pitch when copying form clipboard
+Added: Text notification for common operations
+
+==============================================================
+Open image viewer 0.13b -  Sep 17, 2017
+==============================================================
+
+Added: option to delete file
+Added: support for normalize image to rainbow colors
+Added: support for 8 bit unsigned int Tiff format
+
+==============================================================
+Open image viewer 0.12 -  Jun 1, 2017
+==============================================================
+Improved: Startup time
+Changed: Window is displayed after initial image has loaded.
+Fixed: RAW input mouse events artifacts.
+Improved: monitors layout updates at run-time for multi-screen mode.
+Improved: Resize of window using CTRL key is now relative to the closest corner of the window.
+Added: CTRL + N to open a new window.
+
+==============================================================
+Open image viewer 0.11b -  May 27, 2017
+==============================================================
+
+Added: option to resize the viewer window from client area using the control modifier.
+Added: option to drag window from the client area.
+Replaced: FreeImage for reading Tiff by LibTiff.
+Added support for reading floating point Tiff 16 bit and 32 bit.
+Fixed: many WIN32 issues
+Changed: accept mouse input only when window is at foreground.
+Fixed: several stability issues.
+
+==============================================================
+Open image viewer 0.1b -  May 23, 2017
+==============================================================
+Initial release
+
