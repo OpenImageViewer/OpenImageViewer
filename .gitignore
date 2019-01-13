@@ -13,6 +13,7 @@
 /oiv.VC.db
 /oiv/oiv.vcxproj.user
 /.vs
+/.vscode
 ImageCodec/Codecs/CodecTiff/CodecTiff.vcxproj.user
 /ImageCodec/Codecs/CodecGif/CodecGif.vcxproj.user
 /ImageCodec/Codecs/CodecGif/x64/
