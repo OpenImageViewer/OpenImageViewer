@@ -81,10 +81,7 @@ namespace OIV
             ofn.lpstrTitle = L"Open a file";
             ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST;
 
-            if (GetOpenFileName(&ofn))
-                return filename;
-            else
-                return std::wstring();
+            return GetOpenFileName(&ofn) == TRUE ? filename : std::wstring();
         }
 
 
