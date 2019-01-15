@@ -38,11 +38,6 @@ namespace OIV
         fRenderer->Redraw();
     }
 
-    /*IMCodec::ImageSharedPtr OIV::GetDisplayImage() const
-    {
-        return  GetImage(ImageHandleDisplayed);
-    }*/
-
     void OIV::UpdateGpuParams()
     {
         fViewParams.showGrid = fShowGrid;
@@ -51,11 +46,6 @@ namespace OIV
         fViewParams.uViewportSize = GetClientSize();
         fRenderer->SetViewParams(fViewParams);
     }
-
-  /*  bool OIV::IsImageDisplayed() const
-    {
-        return GetDisplayImage() != nullptr;
-    }*/
 
     OIV_AxisAlignedRotation OIV::ResolveExifRotation(unsigned short exifRotation) const
     {
