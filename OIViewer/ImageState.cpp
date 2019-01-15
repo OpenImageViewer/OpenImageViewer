@@ -157,6 +157,50 @@ namespace OIV
         fDirtyStage = ImageChainStage::Count;
     }
 
+    void ImageState::SetScale(LLUtils::PointF64 scale)  
+    {
+        if (fScale != scale)
+        {
+            fScale = scale;
+            if (GetWorkingImageChain().Get(ImageChainStage::Resampled) != nullptr)
+            {
+                //Resampled image is alwways set to visible scale of 1.0
+                GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale = LLUtils::PointF64::One;
+                GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
+                SetDirtyStage(ImageChainStage::Resampled);
+            }
+            
+
+            if (GetWorkingImageChain().Get(ImageChainStage::Rasterized) != nullptr)
+            {
+                GetWorkingImageChain().Get(ImageChainStage::Rasterized)->GetImageProperties().scale = scale;
+                GetWorkingImageChain().Get(ImageChainStage::Rasterized)->Update();
+            }
+        }
+
+    }
+
+    void ImageState::UpdateOffset(ImageChainStage imageStage)
+    {
+        auto visibleImage = GetWorkingImageChain().Get(imageStage);
+        if (visibleImage != nullptr)
+        {
+            visibleImage->GetImageProperties().position = fOffset;
+            visibleImage->Update();
+        }
+    }
+
+    void ImageState::SetOffset(LLUtils::PointF64 offset)
+    {
+        if (fOffset != offset)
+        {
+            fOffset = offset;
+            UpdateOffset(ImageChainStage::Rasterized);
+            UpdateOffset(ImageChainStage::Resampled);
+        }
+    }
+
+
     void ImageState::SetImageChainRoot(OIVBaseImageSharedPtr image)
     {
         fPreviousImageChain.Get(ImageChainStage::SourceImage) = fCurrentImageChain.Get(ImageChainStage::SourceImage);
@@ -203,11 +247,30 @@ namespace OIV
 
             break;
         case ImageChainStage::Rasterized:
-            return OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Deformed), fUseRainbowNormalization);
-            break;
+        {
+            auto rasterized = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Deformed), fUseRainbowNormalization);
+            UpdateOffset(stage);
+            return rasterized;
+        }
+           break;
+
+
         case ImageChainStage::Resampled:
-            //TODO: implement re-samlping, currently return input iamge
-            return image;
+        {
+            if (GetScale().x >= 1.0 || GetScale().y >= 1)
+            {
+                return image;
+            }
+            else
+            {
+                auto rasterized = fCurrentImageChain.Get(ImageChainStage::Rasterized);
+                LLUtils::PointF64 originalImageSize = { static_cast<double>(rasterized->GetDescriptor().Width) , static_cast<double>(rasterized->GetDescriptor().Height) };
+                auto resampled = OIVImageHelper::ResampleImage(rasterized, static_cast<LLUtils::PointI32>((originalImageSize * GetScale()).Round()));
+                UpdateOffset(stage);
+                return resampled;
+            }
+                
+        }
             break;
         default:
             LL_EXCEPTION_UNEXPECTED_VALUE;

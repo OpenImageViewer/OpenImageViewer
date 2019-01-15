@@ -45,7 +45,9 @@ namespace OIV
         OIVBaseImageSharedPtr ProcessStage(ImageChainStage stage, OIVBaseImageSharedPtr image);
         void Refresh();
         void ResetPreviousImageChain();
-        
+        void SetScale(LLUtils::PointF64 scale);
+        void UpdateOffset(ImageChainStage imageStage);
+        void SetOffset(LLUtils::PointF64 offset);
         void SetUseRainbowNormalization(bool val);
         void SetOpenedImage(const OIVBaseImageSharedPtr& image);
         void ClearAll();
