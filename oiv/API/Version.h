@@ -1,6 +1,6 @@
 #pragma once
 
-#define OIV_VERSION_MAJOR 0
-#define OIV_VERSION_MINOR 15
-#define OIV_VERSION_REVISON 0
-#define OIV_VERSION_BUILD 0
+constexpr int OIV_VERSION_MAJOR   = 0 ;
+constexpr int OIV_VERSION_MINOR   = 15;
+constexpr int OIV_VERSION_REVISON = 0 ;
+constexpr int OIV_VERSION_BUILD   = 0 ;
