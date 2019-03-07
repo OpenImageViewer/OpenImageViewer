@@ -29,6 +29,44 @@ public:
 
     }
 
+    BitmapSharedPtr resize(int width, int height)
+    {
+        HDC dcSrc = CreateCompatibleDC(NULL);
+        SelectObject(dcSrc, fBitmap);
+
+        std::unique_ptr<std::uint8_t[]> emptyBuffer = std::make_unique<std::uint8_t[]>(width * height * 4);
+        memset(emptyBuffer.get(), 0, width * height * 4);
+
+        BitmapBuffer buf;
+        buf.bitsPerPixel = 32;
+        buf.buffer = reinterpret_cast<std::byte*>(emptyBuffer.get());
+        buf.width = width;
+        buf.height = height;
+        buf.rowPitch = 4 * width;
+
+        BitmapSharedPtr resized = std::make_shared<Bitmap>(buf);
+        HDC dst = CreateCompatibleDC(NULL);
+        SelectObject(dst, resized->fBitmap);
+        SetStretchBltMode(dst, STRETCH_HALFTONE);
+        //SetBkMode(dst, TRANSPARENT);
+        int finalWidth = std::min<int>(width, GetBitmapHeader().biWidth);
+        int finalHeight = std::min<int>(height, GetBitmapHeader().biHeight);
+
+        //blit image to the middle of the new image.
+        int posX = (width - finalWidth) / 2;
+        int posY = (height - finalHeight) / 2;
+
+        StretchBlt(dst, posX, posY, finalWidth, finalHeight, dcSrc, 0, 0, fBitmapInfo.bmiHeader.biWidth, fBitmapInfo.bmiHeader.biHeight, SRCCOPY);
+
+        DeleteDC(dcSrc);
+        DeleteDC(dst);
+
+        return resized;
+    }
+
+
+
+
     Bitmap(const std::wstring& fileName)
     {
         fBitmap = FromFileAnyFormat(fileName);

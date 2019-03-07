@@ -165,10 +165,6 @@ public:
             SetStretchBltMode(hdc, STRETCH_HALFTONE);
 
             
-            
-            
-
-            
 
             int finalWidth = std::min<int>(imageDestWidth, imageDesc.bitmap->GetBitmapHeader().biWidth);
             int finalHeight = std::min<int>(imageDestHeight, imageDesc.bitmap->GetBitmapHeader().biHeight);
@@ -176,8 +172,17 @@ public:
 
             int imageFinalLocalYPos = finalHeight < imageDestHeight ? (fEntryHeight - finalHeight) / 2 : imagePos;
 
+            BLENDFUNCTION bf{};      // structure for alpha blending 
+            bf.BlendOp = AC_SRC_OVER;
+            bf.BlendFlags = 0;
+            bf.SourceConstantAlpha = 0xef;  // half of 0xff = 50% transparency 
+            bf.AlphaFormat = 0;             // ignore source alpha channel 
 
-            StretchBlt(hdc, (entrywidth - finalWidth) / 2 , y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
+
+            AlphaBlend(hdc, (entrywidth - finalWidth) / 2, y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, bf);
+            
+
+            //StretchBlt(hdc, (entrywidth - finalWidth) / 2 , y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
             //BitBlt(hdc, 0, 0, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
             
             
@@ -197,6 +202,7 @@ public:
     {
         fImages.resize(imageDesc.index + 1);
         fImages[imageDesc.index] = imageDesc;
+        fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64,64);
     }
 
    static  HBITMAP HBitmapFromMemory()
