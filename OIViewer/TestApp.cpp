@@ -37,7 +37,7 @@
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include <UniqueIDProvider.h>
-
+#include <LogFile.h>
 
 namespace OIV
 {
@@ -600,21 +600,45 @@ namespace OIV
         }
     }
 
+    template< typename T >
+    std::wstring IntToHex(T val)
+    {
+        std::wstringstream ss;
+        ss 
+            << std::setfill(L'0') << std::setw(sizeof(T) * 2)
+            << std::hex << val;
 
-    void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
+        return ss.str();
+
+    }
+
+	std::wstring TestApp::GetLogFilePath()
+	{
+		std::wstring appDataNative;
+		LLUtils::default_string_type defaultString = LLUtils::PlatformUtility::GetAppDataFolder();
+		LLUtils::StringUtility::ConvertString(defaultString, appDataNative);
+		return appDataNative + L"/OIV/oiv.log";
+	}
+
+
+    void TestApp::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
     {
         using namespace std;
         wstringstream ss;
         std::wstring source = isFromLibrary ? L"OIV library" : L"OIV viewer";
+		ss << L"\n==================================================================================================\n";
         ss << LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " << args.functionName << L" at " << source << L"." << endl;
         ss << "Description: " << args.description << endl;
 
         if (args.systemErrorMessage.empty() == false)
             ss << "System error: " << args.systemErrorMessage;
+		
 
         ss << "call stack:" << endl << args.callstack;
 
-        MessageBoxW(nullptr, ss.str().c_str(), L"Unhandled exception has occured.", MB_OK);
+		mLogFile.Log(ss.str());
+
+        //MessageBoxW(fWindow.GetHandle(), ss.str().c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
         DebugBreak();
     }
 
@@ -627,13 +651,11 @@ namespace OIV
     {
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
-
-
         OIV_CMD_RegisterCallbacks_Request request;
+		
 
-        request.OnException = [](OIV_Exception_Args args)
+        request.OnException = [](OIV_Exception_Args args, void* userPointer)
         {
-
             using namespace std;
             //Convert from C to C++
             LLUtils::Exception::EventArgs localArgs;
@@ -642,14 +664,13 @@ namespace OIV
             localArgs.callstack = args.callstack;
             localArgs.description = args.description;
             localArgs.systemErrorMessage = args.systemErrorMessage;
-
-            HandleException(true, localArgs);
+			reinterpret_cast<TestApp*>(userPointer)->HandleException(true, localArgs);
         };
-
+		request.userPointer = this;
 
         OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
 
-        LLUtils::Exception::OnException.Add([](LLUtils::Exception::EventArgs args)
+        LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
         {
             HandleException(false, args);
         }

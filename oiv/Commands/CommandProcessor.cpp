@@ -70,7 +70,7 @@ namespace OIV
                 return pair->second->Execute(requestData, requestSize, responseData, responseSize);
             }
 
-            catch (LLUtils::Exception exc)
+            catch (...)
             {
                 return RC_InternalError;
             }

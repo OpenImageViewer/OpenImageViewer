@@ -163,7 +163,8 @@ typedef wchar_t OIVCHAR;
 
     struct OIV_CMD_RegisterCallbacks_Request
     {
-        void(*OnException) (OIV_Exception_Args);
+        void(*OnException) (OIV_Exception_Args, void*);
+		void* userPointer;
     };
 
 

@@ -25,6 +25,7 @@
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
+#include <LogFile.h>
 
 
 namespace OIV
@@ -64,6 +65,9 @@ namespace OIV
         using FileCountType = LLUtils::ListWString::size_type;
 
     private: //methods
+
+		std::wstring GetLogFilePath();
+		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args);
 #pragma region Win32 event handling
         bool handleKeyInput(const Win32::EventWinMessage* evnt);
         void HideUserMessageGradually();
@@ -230,6 +234,9 @@ namespace OIV
         CommandManager fCommandManager;
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
+        DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::None;
+
+		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 
         
         struct BindingElement

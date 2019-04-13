@@ -50,8 +50,15 @@ namespace LLUtils
             
             wstringstream ss;
 
-            for (const auto& f : stackTrace)
-                ss << f.fileName << L" at " << f.name << L" line: " << f.line << L" at address 0x" << hex << f.address << endl;
+			for (const auto& f : stackTrace)
+			{
+				ss << filesystem::path(f.moduleName).filename().wstring() << L"!" << f.name;
+				if (f.sourceFileName.empty() == false)
+					ss << L" at " << f.sourceFileName << dec << L" line: " << f.line << L" column: " << f.displacement;
+
+				ss << L" at address 0x" << hex << f.address << endl;
+			}
+			
 
             std::wstring callStack = ss.str();
             EventArgs args =

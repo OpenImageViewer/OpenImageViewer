@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "Platform.h"
 #if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
 #include <windows.h>
@@ -27,51 +28,108 @@ namespace LLUtils
     public:
         struct StackTraceEntry
         {
+			std::wstring moduleName;
             std::wstring name;
-            uint64_t address;
-            std::wstring fileName;
-            uint32_t line;
+            std::wstring sourceFileName;
+			uint64_t address = 0;
+			uint32_t line = 0;
+			uint32_t displacement = 0;
         };
 
         using StackTrace = std::vector<StackTraceEntry>;
 
         static StackTrace GetCallStack(int framesToSkip = 0)
         {
+			StackTrace stackTrace;
+
 #if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
-            unsigned int   i;
-            void* stack[std::numeric_limits<USHORT>::max()];
-            unsigned short frames;
-            HANDLE         process;
-
-            process = GetCurrentProcess();
-
-            SymInitializeW(process, nullptr, TRUE);
-
-            constexpr size_t maxNameLength = 255;
-            constexpr size_t sizeOfStruct = sizeof(SYMBOL_INFOW);
-
-            frames = CaptureStackBackTrace(framesToSkip, std::numeric_limits<USHORT>::max() , stack, nullptr);
+			constexpr size_t MaxStackTraceSize = std::numeric_limits<USHORT>::max();
             
-            SYMBOL_INFOW * symbol = reinterpret_cast<SYMBOL_INFOW *>(malloc(sizeOfStruct + (maxNameLength - 1) * sizeof(TCHAR)));
-            symbol->MaxNameLen = maxNameLength;
-            symbol->SizeOfStruct = sizeOfStruct;
-            StackTrace stackTrace(frames);
-            for (i = 0; i < frames; i++)
-            {
-                SymFromAddrW(process, reinterpret_cast<DWORD64>(stack[i]), 0, symbol);
-                IMAGEHLP_LINEW64 line;
-                line.SizeOfStruct = sizeof(IMAGEHLP_LINEW64);
-                DWORD displacement;
-                if (SymGetLineFromAddrW64(process, (DWORD64)(stack[i]), &displacement, &line) == TRUE)
-                    stackTrace[i] = { symbol->Name, symbol->Address,line.FileName, line.LineNumber };
-            } 
+			static thread_local std::array<void*, MaxStackTraceSize> stack;
+			const HANDLE         process = GetCurrentProcess();
+			            
 
-            free(symbol);
+			unsigned short frames = CaptureStackBackTrace(framesToSkip, MaxStackTraceSize, stack.data(), nullptr);
+			
+			static const std::string MutexPrefix = "OIV_Symbol_Api_Mutex";
+			
+			struct ScopedMutex
+			{
+				ScopedMutex(bool allowThrow) : mutexLock(CreateMutexA(nullptr, FALSE, (MutexPrefix + "_Lock").c_str()))
+				{
+					if (mutexLock != nullptr)
+						WaitForSingleObject(mutexLock, INFINITE);
+					else if (allowThrow == true)
+						throw std::logic_error("Error, can not create mutex");
+					
+				}
 
-            return stackTrace;
+				~ScopedMutex()
+				{
+					if (mutexLock != nullptr)
+					{
+						ReleaseMutex(mutexLock);
+						CloseHandle(mutexLock);
+					}
+				}
+			private:
+				   const HANDLE mutexLock = nullptr;
+			};
+
+			ScopedMutex lock(false);
+
+			constexpr size_t maxNameLength = 255;
+			constexpr size_t sizeOfStruct = sizeof(SYMBOL_INFOW);
+			auto symbolReservedMemory = std::make_unique<std::byte[]>(sizeOfStruct + (maxNameLength - 1) * sizeof(TCHAR));
+			SYMBOL_INFOW * symbol = reinterpret_cast<SYMBOL_INFOW*>(symbolReservedMemory.get());
+
+			if (SymInitializeW(process, nullptr, TRUE) == TRUE)
+			{
+				symbol->MaxNameLen = maxNameLength;
+				symbol->SizeOfStruct = sizeOfStruct;
+				
+				stackTrace.resize(frames);
+				for (size_t i = 0; i < frames; i++)
+				{
+					StackTraceEntry& entry = stackTrace[i];
+
+					const DWORD64 memoryAddress = reinterpret_cast<DWORD64>(stack[i]);
+
+					entry.address = memoryAddress;
+
+					if (SymFromAddrW(process, memoryAddress, nullptr, symbol) == TRUE)
+					{
+						entry.name = symbol->Name;
+						entry.address = symbol->Address;
+					}
+
+					IMAGEHLP_LINEW64 line;
+					line.SizeOfStruct = sizeof(IMAGEHLP_LINEW64);
+					DWORD disp;
+					if (SymGetLineFromAddrW64(process, memoryAddress, &disp, &line) == TRUE)
+					{
+						entry.line = line.LineNumber;
+						entry.displacement = disp;
+						entry.sourceFileName = line.FileName;
+					}
+
+					IMAGEHLP_MODULEW64 module64;
+					module64.SizeOfStruct = sizeof(IMAGEHLP_MODULEW64);
+
+					if (SymGetModuleInfoW64(process, memoryAddress, &module64) == TRUE)
+					{
+						entry.moduleName = module64.ImageName;
+					}
+				}
+				if (SymCleanup(process) == FALSE)
+				{
+					// something bad has happend.
+				}
+			}
             #else
-            return StackTrace();
+            // TODO: implement stack back trace for more platforms
             #endif
+			return stackTrace;
         }
 
         static default_string_type GetAppDataFolder()

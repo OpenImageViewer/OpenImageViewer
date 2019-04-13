@@ -24,12 +24,13 @@ namespace LLUtils
                 return std::string();
         }
 
-        static void WriteAllText(const std::wstring& filePath, const std::string& text, bool append = false)
-        {
-            using namespace std;
-            ofstream file(filePath, append ? std::ios_base::app : std::ios_base::out);
-            file << text;
-        }
+		template <class string_type, typename char_type = typename string_type::value_type >
+		static void WriteAllText(const std::wstring& filePath, const string_type& text, bool append = false)
+		{
+			using namespace std;
+			basic_ofstream<char_type, char_traits<char_type>> file(filePath, append ? std::ios_base::app : std::ios_base::out);
+			file << text;
+		}
 
         static LLUtils::Buffer ReadAllBytes(std::wstring filePath)
         {

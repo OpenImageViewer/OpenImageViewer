@@ -435,7 +435,7 @@ namespace OIV
                 localArgs.description = args.description.c_str();
                 localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
                 localArgs.functionName = args.functionName.c_str();
-                fCallBacks.OnException(localArgs);
+                fCallBacks.OnException(localArgs, fCallBacks.userPointer);
             }
         }
         );
