@@ -105,48 +105,47 @@ namespace OIV
         if (buffer == nullptr || size == 0)
             return RC_InvalidParameters;
 
+		ResultCode result = RC_FileNotSupported;
         using namespace IMCodec;
         VecImageSharedPtr images;
 
-        fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0, images);
+        bool loaded = fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0, images);
 
-        ImageSharedPtr mainImage = images.empty() == false ? images[0] : nullptr;
-        if (mainImage != nullptr)
-        {
-            int exifOrientation = 0;
-            easyexif::EXIFInfo exifInfo;
-            if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data
-                &&  exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-                exifOrientation = exifInfo.Orientation;
+		if (loaded == true)
+		{
+			ImageSharedPtr mainImage = images.empty() == false ? images[0] : nullptr;
+			if (mainImage != nullptr)
+			{
+				int exifOrientation = 0;
+				easyexif::EXIFInfo exifInfo;
+				if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data
+					&& exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
+					exifOrientation = exifInfo.Orientation;
 
 
-            if (exifOrientation != 0 )
-            {
-                    const_cast<ImageDescriptor::MetaData&>(mainImage->GetDescriptor().fMetaData).exifOrientation = exifOrientation;
+				if (exifOrientation != 0)
+				{
+					const_cast<ImageDescriptor::MetaData&>(mainImage->GetDescriptor().fMetaData).exifOrientation = exifOrientation;
 
-                    // I see no use of using the original image, discard source image and use the image with exif rotation applied. 
-                    // If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
-                    mainImage = ApplyExifRotation(mainImage);
-            
-            }
-            handle = fImageManager.AddImage(mainImage);
+					// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
+					// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
+					mainImage = ApplyExifRotation(mainImage);
 
-            for (int i = 1; i < images.size(); i++)
-            {
+				}
+				handle = fImageManager.AddImage(mainImage);
 
-                if (exifOrientation != 0)
-                    images[i] = ApplyExifRotation(images[i]);
+				for (int i = 1; i < images.size(); i++)
+				{
 
-                fImageManager.AddChildImage(images[i], handle);
-            }
-            return RC_Success;
-        }
-    
-        else
-        {
-            return RC_FileNotSupported;
-        }
-        
+					if (exifOrientation != 0)
+						images[i] = ApplyExifRotation(images[i]);
+
+					fImageManager.AddChildImage(images[i], handle);
+				}
+				result = RC_Success;
+			}
+		}
+		return result;
     }
 
     ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
