@@ -1206,6 +1206,12 @@ namespace OIV
         if (isInitialFile == true)
             fMutexWindowCreation.unlock();
         
+		fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
+		fTimerHideUserMessage.SetCallback([this]()
+			{
+				HideUserMessageGradually();
+			}
+		);
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
 
@@ -1267,12 +1273,7 @@ namespace OIV
         }
         );
 
-        fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
-        fTimerHideUserMessage.SetCallback([this]()
-        {
-            HideUserMessageGradually();
-        }
-        );
+     
         
         
         fDoubleTap.callback = [this]()

@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <Windows.h>
+#include <Exception.h>
 
 namespace OIV::Win32
 {
@@ -21,8 +22,6 @@ namespace OIV::Win32
             UINT message,     // WM_TIMER message 
             UINT idTimer,     // timer identifier 
             DWORD dwTime);     // current system time 
-
-
 
     private:
         using UniqueIdProviderType = LLUtils::UniqueIdProvider<TimerIDType, std::set<TimerIDType>>;
@@ -42,17 +41,15 @@ namespace OIV::Win32
             Unregister();
         }
 
-
-        void SetTargetWindow(HWND hwnd)
-        {
-
-            if (hwnd != fWindowHandle)
-            {
-                fWindowHandle = hwnd;
-                Register();
-            }
-
-        }
+		void SetTargetWindow(HWND hwnd)
+		{
+			if (hwnd == nullptr)
+				LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "null window as timer target is illegal");
+		
+			Unregister();
+			fWindowHandle = hwnd;
+			SetInterval(fInterval);
+		}
 
         uint32_t GetInterval() const
         {
@@ -63,14 +60,14 @@ namespace OIV::Win32
         {
             if (fInterval != interval)
             {
+				Register();
+
                 fInterval = interval;
                 if (fInterval == 0)
                     ::KillTimer(fWindowHandle, fTimerID);
                 else
                     ::SetTimer(fWindowHandle, fTimerID, fInterval, reinterpret_cast<TIMERPROC>(TimerManager::Timerproc));
             }
-
-
         }
         void SetCallback(Callback callback)
         {
@@ -93,8 +90,13 @@ namespace OIV::Win32
 
         void Register()
         {
-            Unregister();
-            fTimerID = TimerManager::GetSingleton().RegisterTimer(*this);
+			if (fTimerID == 0)
+			{
+				if (fWindowHandle == nullptr)
+					LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Timer is not bound to a window, call 'Win32::Timer::SetTargetWindow' first");
+				Unregister();
+				fTimerID = TimerManager::GetSingleton().RegisterTimer(*this);
+			}
         }
 
     private:
