@@ -12,8 +12,6 @@ namespace OIV
 {
     namespace Win32
     {
-        
-
         void Win32Window::AddChild(Win32Window* child)
         {
             fChildren.push_back(child);
@@ -260,6 +258,24 @@ namespace OIV
             }
         }
 
+		void Win32Window::SetBackgroundColor(const LLUtils::Color color)
+		{
+			if (fBackgroundColor != color)
+			{
+				fBackgroundColor = color;
+
+				if (fBackgroundCachedBrush != nullptr)
+				{
+					DeleteObject(fBackgroundCachedBrush);
+					fBackgroundCachedBrush = nullptr;
+				}
+				LLUtils::Color removeAlpha = fBackgroundColor;
+				removeAlpha.A = 0;
+
+				fBackgroundCachedBrush = CreateSolidBrush(removeAlpha.colorValue);
+			}
+		}
+
         void Win32Window::EnableDragAndDrop(bool enable)
         {
             bool const enabled = fDragAndDrop != nullptr;
@@ -483,7 +499,12 @@ namespace OIV
                 break;
 
             case WM_ERASEBKGND:
-                defaultProc = GetEraseBackground();
+			{
+				defaultProc = false; // custom handle background erasure 
+				retValue = 1; // always mark 'erased' flag.
+				if (GetEraseBackground() == true)
+					FillRect((HDC)message.wParam, &GetClientRectangle(), fBackgroundCachedBrush);
+			}
                 break;
             case WM_DESTROY:
                 DestroyResources();

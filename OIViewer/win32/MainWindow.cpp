@@ -81,7 +81,6 @@ namespace OIV
             fCanvasWindow.SetParent(this);
             fCanvasWindow.SetVisible(true);
             fCanvasWindow.SetTransparent(true);
-            fCanvasWindow.SetEraseBackground(false);
 
             SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
             SetStatusBarText(L"File: ", 1, 0);

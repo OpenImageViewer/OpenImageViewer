@@ -20,6 +20,16 @@ namespace OIV
 
         }
 
+		static void ProcessApplicationMessage()
+		{
+			MSG msg;
+			while ((PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) == TRUE)
+			{
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
+			}
+		}
+
         static void MessageLoop()
         {
             MSG msg;

@@ -12,6 +12,7 @@
 #include "Win32Common.h"
 #include <BitFlags.h>
 #include <Templates.h>
+#include <Color.h>
 
 namespace OIV
 {
@@ -93,6 +94,7 @@ namespace OIV
             void Move(const int16_t delta_x, const int16_t delta_y);
             void SetMouseCursor(HCURSOR cursor);
             void SetEraseBackground(bool eraseBackground) {fEraseBackground = eraseBackground;}
+			void SetBackgroundColor(const LLUtils::Color color);
             void SetDoubleClickMode(DoubleClickMode doubleClickMode) { fDoubleClickMode = doubleClickMode; }
             void EnableDragAndDrop(bool enable);
             void SetLockMouseToWindowMode(LockMouseToWindowMode mode);
@@ -140,10 +142,9 @@ namespace OIV
             WindowStyleFlags fWindowStyles = WindowStyle::NoStyle;
             bool fIsTransparent = false;
             bool fAlwaysOnTop = false;
+			LLUtils::Color fBackgroundColor = LLUtils::Color(255_u8, 255, 255);
+			HBRUSH fBackgroundCachedBrush = CreateSolidBrush(fBackgroundColor.colorValue);
         };
-
-
-  
     }
 }
 

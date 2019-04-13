@@ -639,7 +639,7 @@ namespace OIV
 		mLogFile.Log(ss.str());
 
         //MessageBoxW(fWindow.GetHandle(), ss.str().c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
-        DebugBreak();
+        //DebugBreak();
     }
 
     TestApp::TestApp()
@@ -1188,7 +1188,11 @@ namespace OIV
         fWindow.SetMenuChar(false);
         fWindow.ShowStatusBar(false);
         fWindow.EnableDragAndDrop(true);
-        fWindow.SetEraseBackground(false);
+		// Set canvas background the same color as in the renderer for flicker free startup.
+		//TODO: fix resize and disable background erasure of top level windows.
+		fWindow.SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
+		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
+
         fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
         {
             using namespace OIV::Win32;
@@ -1214,13 +1218,6 @@ namespace OIV
 		);
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
-
-        fVirtualStatusBar.Add("texelValue");
-        fVirtualStatusBar.Add("imageDescription");
-        fVirtualStatusBar.SetOpacity("imageDescription", 1.0);
-        fVirtualStatusBar.Add("texelPos");
-        fVirtualStatusBar.SetOpacity("texelPos", 1.0);
-
 
         fIsInitialLoad = isInitialFile;
 
@@ -1252,6 +1249,14 @@ namespace OIV
 
     void TestApp::PostInitOperations()
     {
+
+		fVirtualStatusBar.Add("texelValue");
+		fVirtualStatusBar.Add("imageDescription");
+		fVirtualStatusBar.SetOpacity("imageDescription", 1.0);
+		fVirtualStatusBar.Add("texelPos");
+		fVirtualStatusBar.SetOpacity("texelPos", 1.0);
+
+
         // load settings
         fSettings.Load();
         fSettings.Save();
@@ -1293,8 +1298,9 @@ namespace OIV
         AddCommandsAndKeyBindings();
 
         fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Add(std::bind(&TestApp::OnImageSelectionChanged, this, std::placeholders::_1));
-
-
+		
+		// renderer took over on the window, no need to erase background.
+		fWindow.GetCanvasWindow().SetEraseBackground(false);
     }
 
     void TestApp::Destroy()
@@ -2059,13 +2065,12 @@ namespace OIV
         case WM_SHOWWINDOW:
             if (fIsFirstFrameDisplayed == false)
             {
-                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED, 0, 0);
-                fIsFirstFrameDisplayed = true;
+				PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED, 0, 0);
+				fIsFirstFrameDisplayed = true;
             }
             break;
         case Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED:
             AfterFirstFrameDisplayed();
-
             break;
         
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:

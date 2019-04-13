@@ -52,6 +52,16 @@ namespace LLUtils
             colorValue = color;
         }
 
+		bool operator ==(const Color rhs) const
+		{
+			return this->colorValue == rhs.colorValue;
+		}
+
+		bool operator !=(const Color rhs) const
+		{
+			return this->colorValue != rhs.colorValue;
+		}
+
         Color Blend(const Color& source)
         {
             Color blended;
