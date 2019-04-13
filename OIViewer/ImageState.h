@@ -37,6 +37,16 @@ namespace OIV
         bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
         OIV_AxisAlignedRotation GetAxisAlignedRotation() const { return fAxisAlignedRotation; }
         OIV_AxisAlignedFlip     GetAxisAlignedFlip() const { return fAxisAlignedFlip; }
+        LLUtils::PointF64       GetScale() const { return fScale; }
+        LLUtils::PointF64       GetOffset() const { return fOffset; }
+        bool GetResample() const;
+        
+        LLUtils::PointF64 GetVisibleSize();
+        OIVBaseImageSharedPtr GetVisibleImage() const;
+        
+            
+        
+        
     
     public:// mutating methods:
         void SetImageChainRoot(OIVBaseImageSharedPtr image);
@@ -46,7 +56,6 @@ namespace OIV
         void Refresh();
         void ResetPreviousImageChain();
         void SetScale(LLUtils::PointF64 scale);
-        void UpdateOffset(ImageChainStage imageStage);
         void SetOffset(LLUtils::PointF64 offset);
         void SetUseRainbowNormalization(bool val);
         void SetOpenedImage(const OIVBaseImageSharedPtr& image);
@@ -54,11 +63,12 @@ namespace OIV
         void Transform(OIV_AxisAlignedRotation relative_rotation, OIV_AxisAlignedFlip flip);
         void SetDirtyStage(ImageChainStage dirtyStage);
         void ResetUserState();
+        void SetResample(bool resample);
 
 
     private: //methods 
-        void ProcessNextStage(ImageChainStage stage);
         void ResetDirtyStage();
+        bool IsActuallyResampled() const;
     private: // member fields
         OIV_AxisAlignedRotation fAxisAlignedRotation = OIV_AxisAlignedRotation::AAT_None;
         OIV_AxisAlignedFlip     fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
@@ -68,5 +78,9 @@ namespace OIV
         OIVBaseImageSharedPtr fOpenedImage;
         bool fPreviousImageChainDirty = false;
         bool fUseRainbowNormalization = false;
+        ImageChainStage fFinalProcessingStage = ImageChainStage::Rasterized;
+        OIV_Filter_type fFilterType= OIV_Filter_type::FT_None;
+        LLUtils::PointF64 fScale = LLUtils::PointF64::One;
+        LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
     };
 }

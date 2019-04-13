@@ -30,7 +30,6 @@
 
 namespace OIV
 {
-    struct MonitorDesc;
     enum class ImageSizeType
     {
           Original
@@ -47,7 +46,23 @@ namespace OIV
         , Count
     };
 
+    enum class DownscalingTechnique
+    {
+           None
+         , HardwareMipmaps
+         , Software
+         , Count
+    };
+
    
+
+    //Assue Count exists and presenting the total number of values in an enum.
+    template <typename T, typename UnderlyingType = typename std::underlying_type_t<T>>
+    T GetNextEnumValue(T enumVal)
+    {
+     //   using UnderlyingType = std::underlying_type_t<T>;
+        return static_cast<T>((static_cast<UnderlyingType>(enumVal) + static_cast<UnderlyingType>(1)) % static_cast<UnderlyingType>(T::Count));
+    }
 
     
 
@@ -219,6 +234,12 @@ namespace OIV
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         bool fShowBorders = true;
+        LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
+        LLUtils::Color DefaultTextValueColor = 0x7672ffff;
+        std::wstring DefaultTextKeyColorTag;
+        std::wstring DefaultTextValueColorTag;
+
+
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;

@@ -339,7 +339,7 @@ typedef wchar_t OIVCHAR;
     {
         double gridSize;
         OIV_PROP_TransparencyMode transparencyMode;
-        
+        bool generateMipmaps;
     };
 
     enum OIV_Filter_type

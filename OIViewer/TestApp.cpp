@@ -59,7 +59,7 @@ namespace OIV
         
         wstringstream ss;
         ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
-            << fixed << setprecision(2) << fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale.x * 100.0 << "%)";
+            << fixed << setprecision(2) << GetScale() * 100.0 << "%)";
 
         result.resValue = ss.str();
     }
@@ -651,6 +651,15 @@ namespace OIV
     {
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
+
+
+        DefaultTextKeyColorTag = std::wstring(L"<textcolor=#")
+            + IntToHex(DefaultTextKeyColor.colorValue) + L">";
+
+        DefaultTextValueColorTag = std::wstring(L"<textcolor=#")
+            + IntToHex(DefaultTextValueColor.colorValue) + L">"; 
+                
+
         OIV_CMD_RegisterCallbacks_Request request;
 		
 
@@ -703,7 +712,7 @@ namespace OIV
             ,{ "Image filter up","cmd_view_state","type=imageFilterUp" ,"Period" }
             ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
             ,{ "Toggle reset offset on load","cmd_view_state","type=toggleresetoffset" ,"Backslash" }
-            ,{ "Toggle Transparency mode","cmd_view_state","type=toggletransparencymode" ,"T" }
+            ,{ "Toggle transparency mode","cmd_view_state","type=toggletransparencymode" ,"T" }
 
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
@@ -935,7 +944,6 @@ namespace OIV
     {
         fRefreshOperation.Begin();
         fImageState.Refresh();
-        AutoPlaceImage();
         fRefreshOperation.End(true);
         UpdateOpenImageUI();
     }
@@ -967,10 +975,11 @@ namespace OIV
             fImageState.ResetUserState();
             RefreshImage(); // actual refresh is deferred due to 'fRefreshOperation.Begin'.
 
-
 			
             if (fResetTransformationMode == ResetTransformationMode::ResetAll)
                 FitToClientAreaAndCenter();
+            
+            AutoPlaceImage();
 
             if (fIsInitialLoad == false)
                 UpdateUIFileIndex();
@@ -1312,7 +1321,7 @@ namespace OIV
 
     OIV_Filter_type TestApp::GetFilterType() const
     {
-        return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().filterType;
+        return fImageState.GetVisibleImage()->GetImageProperties().filterType;
     }
 
     void TestApp::UpdateExposure()
@@ -1432,10 +1441,10 @@ namespace OIV
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().filterType =  std::clamp(filterType
+        fImageState.GetVisibleImage()->GetImageProperties().filterType =  std::clamp(filterType
             , FT_None, static_cast<OIV_Filter_type>( FT_Count - 1));
 
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
+        fImageState.GetVisibleImage()->Update();
         fRefreshOperation.Queue();
     }
 
@@ -1450,6 +1459,7 @@ namespace OIV
         CmdRequestTexelGrid grid;
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
         grid.transparencyMode = fTransparencyMode;
+        grid.generateMipmaps = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
         if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
         {
             fRefreshOperation.Queue();
@@ -1471,8 +1481,7 @@ namespace OIV
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position = ResolveOffset(offset);
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
+        fImageState.SetOffset(offset);
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
@@ -1488,10 +1497,7 @@ namespace OIV
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         if (fImageState.GetOpenedImage() != nullptr)
-        {
-            using namespace LLUtils;
-            SetOffset(panAmount + fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position);
-        }
+            SetOffset(panAmount + fImageState.GetOffset()) ;
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
@@ -1537,7 +1543,8 @@ namespace OIV
         case ImageSizeType::Transformed:
             return PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Height);
         case ImageSizeType::Visible:
-            return PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().Height) * GetScale();
+            return fImageState.GetVisibleSize();
+
         default:
             LL_EXCEPTION_UNEXPECTED_VALUE;
         }
@@ -1611,10 +1618,13 @@ namespace OIV
 
         PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
         PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale = zoomValue;
-        fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->Update();
 
+        fImageState.SetScale(zoomValue);
+        
         fRefreshOperation.Begin();
+
+        RefreshImage();
+        
         
         SetOffset(GetOffset() + offset);
         fPreserveImageSpaceSelection.End();
@@ -1629,10 +1639,7 @@ namespace OIV
 
     double TestApp::GetScale() const
     {
-        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled) != nullptr)
-            return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().scale.x;
-        else
-            return 1.0;
+        return fImageState.GetScale().x;
     }
 
     void TestApp::UpdateCanvasSize()
@@ -1654,7 +1661,7 @@ namespace OIV
 
     LLUtils::PointF64 TestApp::GetOffset() const
     {
-        return fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetImageProperties().position;
+        return fImageState.GetOffset();
     }
 
     LLUtils::PointF64 TestApp::ImageToClient(LLUtils::PointF64 imagepos) const
@@ -1900,7 +1907,7 @@ namespace OIV
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         ImageHandle croppedHandle = ImageHandleNull;
         ImageHandle clipboardCompatibleHandle = ImageHandleNull;
-        ResultCode result = OIVCommands::CropImage(fImageState.GetWorkingImageChain().Get(ImageChainStage::Resampled)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+        ResultCode result = OIVCommands::CropImage(fImageState.GetVisibleImage()->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
 
         if (result == RC_Success)
         {
