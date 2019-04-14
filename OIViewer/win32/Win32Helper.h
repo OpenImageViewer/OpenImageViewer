@@ -1,10 +1,9 @@
 #pragma once
 #include <windows.h>
 #include <Point.h>
+#include <string>
 namespace OIV
 {
-  
-
     class Win32Helper
     {
     public:
@@ -78,11 +77,8 @@ namespace OIV
 
         static std::wstring OpenFile(HWND ownerWindow)
         {        
-            wchar_t filename[MAX_PATH];
-
-            OPENFILENAME ofn;
-            ZeroMemory(&filename, sizeof(filename));
-            ZeroMemory(&ofn, sizeof(ofn));
+			wchar_t filename[MAX_PATH]{};
+			OPENFILENAME ofn{};
             ofn.lStructSize = sizeof(ofn);
             ofn.hwndOwner = ownerWindow;  // If you have a window to center over, put its HANDLE here
             ofn.lpstrFilter = L"Any File\0*.*\0";
@@ -93,9 +89,5 @@ namespace OIV
 
             return GetOpenFileName(&ofn) == TRUE ? filename : std::wstring();
         }
-
-
-
-      
     };
 }
