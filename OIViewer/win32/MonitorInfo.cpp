@@ -1,5 +1,6 @@
 #include "MonitorInfo.h"
 #include <algorithm>
+#include <string>
 #include <shellscalingapi.h>
 
 namespace OIV

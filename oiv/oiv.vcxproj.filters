@@ -63,7 +63,6 @@
     <ClInclude Include="Commands\Handlers\CommandHandlerRegisterCallbacks.h" />
     <ClInclude Include="FreeType\FreeTypeFont.h" />
     <ClInclude Include="FreeType\FreeTypeHeaders.h" />
-    <ClInclude Include="API\StringHelper.h" />
     <ClInclude Include="API\platform.h" />
     <ClInclude Include="API\Version.h" />
     <ClInclude Include="FreeType\FreeTypeRenderer.h" />

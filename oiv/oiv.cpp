@@ -8,7 +8,6 @@
 #include <ImageUtil.h>
 #include "Configuration.h"
 #include "API/functions.h"
-#include "API/StringHelper.h"
 #include "API/Version.h"
 
 #include "FreeType/FreeTypeConnector.h"
@@ -226,11 +225,11 @@ namespace OIV
 
         FreeTypeConnector::TextCreateParams createParams = {};
         createParams.backgroundColor = request.backgroundColor;
-        createParams.fontPath = LLUtils::StringUtility::ToAString(fontPath);
+        createParams.fontPath = LLUtils::StringUtility::ConvertString<std::string>(fontPath);
         createParams.fontSize = request.fontSize;
         createParams.outlineColor = request.outlineColor;
         createParams.outlineWidth = request.outlineWidth;
-        createParams.text = LLUtils::StringUtility::ToAString(text);
+        createParams.text = LLUtils::StringUtility::ConvertString<std::string>(text);
         createParams.renderMode = static_cast<FreeTypeConnector::RenderMode>(request.renderMode);
         createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
         createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
@@ -386,7 +385,7 @@ namespace OIV
     ResultCode OIV::GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res)
     {
         std::wstring knownFileTypes = fImageLoader.GetKnownFileTypes();
-        std::string knownFileTypesAnsi =  LLUtils::StringUtility::ToAString(knownFileTypes);
+        std::string knownFileTypesAnsi =  LLUtils::StringUtility::ConvertString<std::string>(knownFileTypes);
         res.bufferSize = knownFileTypesAnsi.size() + 1;
         if (res.knownFileTypes != nullptr)
             memcpy(res.knownFileTypes, knownFileTypesAnsi.data(), knownFileTypesAnsi.size() + 1);
@@ -452,7 +451,8 @@ namespace OIV
         };
 
         //TODO: add renderer properties to get a unique renderer name instead of hard coded "D3D11"
-        OIVString appDataPath = OIV_ToOIVString(LLUtils::PlatformUtility::GetAppDataFolder()) + OIV_TEXT("/OIV/") + GetVersionAsString() + OIV_TEXT("/Renderer/D3D11/.");
+		OIVString appDataPath = LLUtils::StringUtility::ConvertString<OIVString>(LLUtils::PlatformUtility::GetAppDataFolder()) + 
+			+ OIV_TEXT("/OIV/") + GetVersionAsString() + OIV_TEXT("/Renderer/D3D11/.");
         params.container = fParent;
         
         params.dataPath = appDataPath.c_str();

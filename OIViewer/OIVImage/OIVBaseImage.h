@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <memory>
 #include <StopWatch.h>
 #include <API/defs.h>
 

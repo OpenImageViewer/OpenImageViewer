@@ -132,7 +132,7 @@ namespace LLUtils
 			return stackTrace;
         }
 
-        static default_string_type GetAppDataFolder()
+        static native_string_type GetAppDataFolder()
         {
 #if LLUTILS_PLATFORM == LLUTILS_PLATFORM_WIN32
             native_char_type szPath[MAX_PATH];

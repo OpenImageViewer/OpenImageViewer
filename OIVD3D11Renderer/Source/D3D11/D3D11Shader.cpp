@@ -152,7 +152,7 @@ namespace  OIV
             D3DCompile(
                 static_cast<const void*>(fSourceCode.c_str())
                 , fSourceCode.length()
-                , fSourceFileName.empty() == false ? LLUtils::StringUtility::ToAString(fSourceFileName).c_str() : nullptr /*source name*/
+                , fSourceFileName.empty() == false ? LLUtils::StringUtility::ConvertString<std::string>(fSourceFileName).c_str() : nullptr /*source name*/
                 , &macros[0]
                 , &includeHandler
                 , "main"

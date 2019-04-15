@@ -6,7 +6,6 @@
 #include "win32/HighPrecisionTimer.h"
 #include "win32/Timer.h"
 #include "API/defs.h"
-#include "API/StringHelper.h"
 #include <Utility.h>
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"

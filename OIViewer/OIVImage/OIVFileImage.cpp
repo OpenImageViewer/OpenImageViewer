@@ -16,7 +16,7 @@ namespace OIV
         FileMapping fileMapping(fFileName);
         void* buffer = fileMapping.GetBuffer();
         std::size_t size = fileMapping.GetSize();
-        std::string extension = StringUtility::ToAString(StringUtility::GetFileExtension(fFileName));
+        std::string extension = LLUtils::StringUtility::ConvertString<std::string>(StringUtility::GetFileExtension(fFileName));
 
         using namespace LLUtils;
         OIV_CMD_LoadFile_Response loadResponse;

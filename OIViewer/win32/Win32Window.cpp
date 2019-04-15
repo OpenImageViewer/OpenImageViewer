@@ -58,6 +58,11 @@ namespace OIV
                 WindowPosHelper::SetAlwaysOnTop(GetHandle(), fAlwaysOnTop);
             }
         }
+
+		void Win32Window::SetTitle(const std::wstring& title)
+		{
+			SetWindowTextW(GetHandle(), title.c_str());
+		}
 		
         int Win32Window::Create()
         {
@@ -66,7 +71,6 @@ namespace OIV
             static TCHAR szWindowClass[] = _T("OIV_WINDOW_CLASS");
 
             // The string that appears in the application's title bar.
-            static TCHAR szTitle[] = _T("Open image viewer");
             WNDCLASSEX wcex;
 
             wcex.cbSize = sizeof(WNDCLASSEX);
@@ -105,7 +109,7 @@ namespace OIV
 
                 CreateWindow(
                     szWindowClass,
-                    szTitle,
+                    nullptr, // title;
                     0,
                     CW_USEDEFAULT,
                     CW_USEDEFAULT,

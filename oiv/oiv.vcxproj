@@ -157,7 +157,6 @@
     <ClInclude Include="API\defs.h" />
     <ClInclude Include="API\functions.h" />
     <ClInclude Include="API\platform.h" />
-    <ClInclude Include="API\StringHelper.h" />
     <ClInclude Include="API\Version.h" />
     <ClInclude Include="Commands\CommandHandler.h" />
     <ClInclude Include="Commands\CommandProcessor.h" />

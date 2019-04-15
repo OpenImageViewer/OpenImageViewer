@@ -103,6 +103,7 @@ namespace OIV
             void SetParent(Win32Window* parent);
             void SetTransparent(bool transparent) {fIsTransparent = transparent;}
             void SetAlwaysOnTop(bool alwaysOnTop);
+			void SetTitle(const std::wstring& title);
 
 
         protected:

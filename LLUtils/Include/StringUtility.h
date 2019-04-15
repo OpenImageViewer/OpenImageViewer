@@ -52,67 +52,63 @@ namespace LLUtils
             return elems;
         }
 
-        static inline default_string_type ToDefaultString(const native_string_type& str)
-        {
 
-            if (sizeof(default_string_type::value_type) != sizeof(native_string_type::value_type))
-                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
+#pragma region String conversions routines  
 
-            // a work around till the string convertions wil be fixed.
-            return default_string_type(reinterpret_cast<const default_string_type::value_type*>(str.data()));
-
-
-        }
-
-        static inline native_string_type ToNativeString(const default_string_type& str)
-        {
-            if (sizeof(default_string_type::value_type) != sizeof(native_string_type::value_type))
-                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
-
-            return native_string_type(reinterpret_cast<const native_string_type::value_type*>(str.data()));
-        }
-
-		static inline std::wstring ToWString( const std::string& str )
+	public:
+		template <typename DST, typename SRC, std::enable_if_t<!std::is_same_v<SRC, DST>, int> = 0>
+		static DST ConvertString(const SRC & sourceString)
 		{
-            const std::size_t size = str.size() * 2 + 2;
-			wchar_t* buf = new wchar_t[size];
-        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
-            swprintf_s(buf, size, L"%S", str.c_str()); //TODO: Can this be removed?
-        #else
-			std::swprintf(buf, size, L"%S", str.c_str());
-        #endif
-			std::wstring rval = buf;
-			delete[] buf;
-			return rval;
+			return ConvertStringImp(sourceString);
 		}
-        static const char* ToAString(const char* str)
-        {
-            return str;
-        }
-        static std::string ToAString(const wchar_t* str)
-        {
-            std::size_t strLength = wcslen(str) + 1;
-            char* pBuff = new char[strLength];
-            std::size_t converted;
-        #if LLUTILS_COMPILER_MIN_VERSION(LLUTILS_COMPILER_MSVC, 1700)
-            wcstombs_s(&converted, pBuff, strLength, str, strLength * 2);
-        #else
-            wcstombs(pBuff, str, strLength * 2);
-        #endif
-            
-            std::string retData = pBuff;
-            delete[] pBuff;
-            return retData;
-        }
-        static std::string ToAString(const std::string& str)
-        {
-            return str;
-        }
-        static std::string ToAString(const std::wstring& str)
-        {
-            return ToAString(str.c_str());
-        }
 
+		// Identity conversion.
+		template <typename DST, typename SRC, std::enable_if_t<std::is_same_v<SRC, DST>, int> = 0>
+		static DST ConvertString(const SRC & sourceString)
+		{
+			return sourceString;
+		}
+
+
+		
+
+		static std::string ToAString(const std::string& str)
+		{
+			return str;
+		}
+
+		static inline std::wstring ToWString(const std::string& str)
+		{
+			return ConvertStringImp(str);
+		}
+		static std::string ToAString(const wchar_t* str)
+		{
+			return ConvertStringImp(str);
+		}
+		static const char* ToAString(const char* str)
+		{
+			return str;
+		}
+
+		template <typename Source>
+		static inline native_string_type ToNativeString(const Source& str)
+		{
+			return ConvertString<native_string_type>(str);
+		}
+
+		template <typename Source>
+		static inline default_string_type ToDefaultString(const Source& str)
+		{
+			return ConvertString< default_string_type>(str);
+		}
+
+
+	
+
+
+		
+	
+#pragma endregion String conversions routines
   
         template <class string_type>
         static string_type GetFileExtension(const string_type& str)
@@ -146,40 +142,34 @@ namespace LLUtils
             return localStr;
         }
 
-        template <typename SRC, typename SourceString = std::basic_string<SRC>, typename DestString = std::basic_string<char>>
-        static DestString ToUTF8(const SourceString& source)
-        {
-            throw std::logic_error("not implemented");
-            //DestString result;
-            //std::wstring_convert<std::codecvt<SRC, char, std::mbstate_t>, SRC> convertor;
-            //result = convertor.to_bytes(source);
+		private:
+			static std::wstring ConvertStringImp(const char* sourceString)
+			{
+				const std::size_t size = (strlen(sourceString) + 1) * 2;
+				auto buf = std::make_unique<wchar_t[]>(size);
+				swprintf_s(buf.get(), size, L"%S", sourceString);
+				return std::wstring(buf.get());
+			}
 
-            //return result;
 
-        }
+			static std::wstring ConvertStringImp(const std::string & sourceString)
+			{
+				return ConvertStringImp(sourceString.c_str());
+			}
 
-        template <typename SRC, typename SourceString = std::basic_string<SRC>, typename DestString = std::basic_string<char>>
-        static void FromUTF8(const SourceString& source, DestString& result)
-        {
-            throw std::logic_error("not implemented");
-            //std::wstring_convert<std::codecvt<SRC,char, std::mbstate_t>, SRC> convertor;
-            //result = convertor.from_bytes(source);
-        }
+			static std::string ConvertStringImp(const wchar_t* sourceString)
+			{
+				std::size_t size = wcslen(sourceString) + 1;
+				auto pBuff = std::make_unique<char[]>(size);
+				std::size_t converted;
+				wcstombs_s(&converted, pBuff.get(), size, sourceString, size * 2);
+				return std::string(pBuff.get());
+			}
 
-        template <typename SourceString, typename DestString, typename SRC = typename SourceString::value_type, typename DST = typename DestString::value_type>
-        static void ConvertString(const SourceString& source, DestString& dest)
-        {
-        
-            if (sizeof(SRC) != sizeof(DST))
-                throw std::logic_error("string conversion not implemented yet, native and default character type must be identical ");
+			static std::string ConvertStringImp(const std::wstring & sourceString)
+			{
+				return ConvertStringImp(sourceString.c_str());
+			}
 
-            dest = DestString(reinterpret_cast<const typename DestString::value_type*>(source.data()));
-            
-
-            //TODO: complete string conversions functions and uncomment the following two lines
-
-            // std::string u8String = ToUTF8<SRC>(source);
-             //FromUTF8<DST>(u8String, dest);
-        }
     };
 }

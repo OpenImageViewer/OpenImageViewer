@@ -5,11 +5,15 @@
 
 namespace LLUtils
 {
+#if defined(UNICODE) || defined(_UNICODE)
     using native_char_type = wchar_t;
+#else
+	using native_char_type = char;
+#endif
     using native_string_type = std::basic_string<native_char_type>;
     using native_stringstream = std::basic_stringstream<native_char_type>;
 
-    using default_char_type = char16_t;
+    using default_char_type = wchar_t;
     using default_string_type = std::basic_string<default_char_type>;
     using default_stringstream_type = std::basic_stringstream<default_char_type>;
 
@@ -21,8 +25,4 @@ namespace LLUtils
     using ListAStringIterator = ListAString::iterator;
     using ListWString = ListString<std::wstring>;
     using ListWStringIterator = ListWString::iterator;
-
-
-}
-
-  
+}  

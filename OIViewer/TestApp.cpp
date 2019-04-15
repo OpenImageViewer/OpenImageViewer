@@ -28,7 +28,6 @@
 #include "Keyboard/KeyDoubleTap.h"
 #include "SelectionRect.h"
 #include "Helpers\PhotoshopFinder.h"
-#include "API/StringHelper.h"
 #include <API/Version.h>
 #include "OIVImage\OIVHandleImage.h"
 #include "OIVImage\OIVFileImage.h"
@@ -284,7 +283,7 @@ namespace OIV
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += LLUtils::StringUtility::ToWString(message);
         
-        requestText.text = OIV_ToOIVString(wmsg);
+        requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         requestText.backgroundColor = LLUtils::Color(0_u8, 0, 0, 216).colorValue;
         requestText.fontPath = LabelManager::sFixedFontPath;
         requestText.fontSize = 12;
@@ -614,10 +613,7 @@ namespace OIV
 
 	std::wstring TestApp::GetLogFilePath()
 	{
-		std::wstring appDataNative;
-		LLUtils::default_string_type defaultString = LLUtils::PlatformUtility::GetAppDataFolder();
-		LLUtils::StringUtility::ConvertString(defaultString, appDataNative);
-		return appDataNative + L"/OIV/oiv.log";
+		return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/oiv.log";
 	}
 
 
@@ -882,10 +878,14 @@ namespace OIV
 
     void TestApp::UpdateTitle()
     {
+		static std::wstring cachedVersionString = L"OpenImageViewer " + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR);
+
         std::wstringstream ss;
-        ss << GetOpenedFileName() << L" - OpenImageViewer " << OIV_VERSION_MAJOR << L"." << OIV_VERSION_MINOR;
-        HWND handle = GetWindowHandle();
-        SetWindowTextW(handle, ss.str().c_str());   
+		if (GetOpenedFileName().empty() == false)
+			ss << GetOpenedFileName() << L" - ";
+
+		ss << cachedVersionString;
+		fWindow.SetTitle(ss.str());
     }
 
 
@@ -1290,10 +1290,15 @@ namespace OIV
         };
 
         //If a file has been succesfuly loaded, index all the file in the folder
-        if (IsOpenedImageIsAFile())
-            LoadFileInFolder(GetOpenedFileName());
-        else
-            ShowWelcomeMessage();
+		if (IsOpenedImageIsAFile())
+		{
+			LoadFileInFolder(GetOpenedFileName());
+		}
+		else
+		{
+			ShowWelcomeMessage();
+			UpdateTitle();
+		}
 
         AddCommandsAndKeyBindings();
 
@@ -1735,7 +1740,7 @@ namespace OIV
                 if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
                 {
                     std::wstring message = OIVHelper::ParseTexelValue(texelInfoResponse);
-                    OIVString txt = OIV_ToOIVString(message);
+                    OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);
                     OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
 
                     fVirtualStatusBar.SetText("texelValue", txt);
@@ -2325,7 +2330,7 @@ namespace OIV
         
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += message;
-        textOptions.text = OIV_ToOIVString(wmsg);
+        textOptions.text = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
 
         if (userMessage->Update() == RC_Success)
         {
@@ -2356,7 +2361,7 @@ namespace OIV
         std::wstring wmsg = L"<textcolor=#ff8930>";
         wmsg += LLUtils::StringUtility::ToWString(message);
 
-        OIVString txt = OIV_ToOIVString(wmsg);
+        OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         CreateTextParams& textOptions = debugMessage->GetTextOptions();
         textOptions.text = txt;
         textOptions.backgroundColor = LLUtils::Color(0_u8, 0, 0, 180).colorValue;
@@ -2416,7 +2421,7 @@ namespace OIV
         
         std::wstring wmsg;
         wmsg += LLUtils::StringUtility::ToWString(message);
-        OIVString txt = OIV_ToOIVString(wmsg);
+        OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         
         CreateTextParams& params = welcomeMessage->GetTextOptions();
         
