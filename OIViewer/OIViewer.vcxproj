@@ -74,7 +74,6 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;d:\Development\json\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -120,7 +119,6 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);VC_EXTRALEAN;NOMINMAX</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\OIV;$(SolutionDir)\LLUtils\Include;D:\DevelopmentExternal\esj;d:\Development\json\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

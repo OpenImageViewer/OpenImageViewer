@@ -445,7 +445,7 @@ namespace OIV
         {
             constexpr auto dot = OIV_TEXT(".");
             OIVStringStream ss;
-            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_REVISON << dot << OIV_VERSION_BUILD;
+            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_REVISION << dot << OIV_VERSION_BUILD;
             return ss.str();
 
         };

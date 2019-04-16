@@ -3,6 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <OIV_OFFICIAL_BUILD>0</OIV_OFFICIAL_BUILD>
+    <OIV_VERSION_REVISION>L"Private build"</OIV_VERSION_REVISION>
+    <OIV_VERSION_BUILD>0</OIV_VERSION_BUILD>
   </PropertyGroup>
   <PropertyGroup>
     <OutDir>$(SolutionDir)Bin\$(Platform)\$(Configuration)\</OutDir>
@@ -10,7 +12,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;OIV_OFFICIAL_BUILD=$(OIV_OFFICIAL_BUILD);OIV_VERSION_REVISION=$(OIV_VERSION_REVISION);OIV_VERSION_BUILD=$(OIV_VERSION_BUILD);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
@@ -23,6 +25,14 @@
   <ItemGroup>
     <BuildMacro Include="OIV_OFFICIAL_BUILD">
       <Value>$(OIV_OFFICIAL_BUILD)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+    <BuildMacro Include="OIV_VERSION_REVISION">
+      <Value>$(OIV_VERSION_REVISION)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+    <BuildMacro Include="OIV_VERSION_BUILD">
+      <Value>$(OIV_VERSION_BUILD)</Value>
       <EnvironmentVariable>true</EnvironmentVariable>
     </BuildMacro>
   </ItemGroup>
