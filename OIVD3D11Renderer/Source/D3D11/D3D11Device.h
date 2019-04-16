@@ -1,9 +1,10 @@
 #pragma once
 #include <windows.h>
 #include <d3dcommon.h>
-#include <d3d11.h>
+#include <d3d11_2.h>
 #include "D3D11Common.h"
 #include "D3D11Error.h"
+#include <cstdlib>
 
 namespace OIV
 {
@@ -29,26 +30,22 @@ namespace OIV
         {
             fHWND = hwnd;
             D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_10_0 };
-            D3D_FEATURE_LEVEL obtainedLevel;
+			
+            DXGI_SWAP_CHAIN_DESC1 scd{};
 
-
-            DXGI_SWAP_CHAIN_DESC scd = { 0 };
-
-            scd.BufferCount = 1;
-            scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            scd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-            scd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+            scd.BufferCount = 2;
+            scd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			scd.Scaling = DXGI_SCALING_NONE;
+			scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			scd.Width = 1280;
+			scd.Height = 800;
+			scd.Stereo = false;
+			scd.SampleDesc.Count = 1;
+			scd.SampleDesc.Quality = 0;
             scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-
-            scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-            scd.OutputWindow = fHWND;
-            scd.SampleDesc.Count = 1;
-            scd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-            scd.Windowed = true;
-            scd.BufferDesc.Width = 1280;
-            scd.BufferDesc.Height = 800;
-            scd.BufferDesc.RefreshRate.Numerator = 0;
-            scd.BufferDesc.RefreshRate.Denominator = 1;
+			scd.Flags = static_cast<UINT>(0);
+			scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			
 
             UINT createFlags = 0;
             createFlags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -57,50 +54,58 @@ namespace OIV
             createFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-                //D3D11CreateDevice(
-                //    nullptr
-                //    , D3D_DRIVER_TYPE_HARDWARE
-                //    , nullptr
-                //    , createFlags
-                //    , requestedLevels
-                //    , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
-                //    , D3D11_SDK_VERSION
-                //    , fD3dDevice.GetAddressOf()
-                //    , &obtainedLevel
-                //    , fD3dContext.GetAddressOf()
-                //);
+                D3D11CreateDevice(
+                      nullptr
+                    , D3D_DRIVER_TYPE_HARDWARE
+                    , nullptr
+                    , createFlags
+                    , requestedLevels
+                    , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
+                    , D3D11_SDK_VERSION
+                    , fD3dDevice.GetAddressOf()
+                    , nullptr
+                    , fD3dContext.GetAddressOf()
+                );
 
-                //ComPtr<IDXGIDevice> dxgiDevice;
-                //ComPtr<IDXGIAdapter> dxgiAdapter;
-                //ComPtr<IDXGIFactory>  dxgiFactory;
-                //D3D11Error::HandleDeviceError(fD3dDevice.As(&dxgiDevice)
-                //    , "Could not query for a device");
-                //D3D11Error::HandleDeviceError(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)dxgiAdapter.GetAddressOf())
-                //    , "Could not query for a DXGI adapter");
-                //D3D11Error::HandleDeviceError(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void **)dxgiFactory.GetAddressOf())
-                //    , "Could not query for a DXGI factory");
+				ComPtr<IDXGIDevice> dxgiDevice;
+				ComPtr<IDXGIAdapter> dxgiAdapter;
+				ComPtr<IDXGIFactory2>  dxgiFactory;
 
-                //D3D11Error::HandleDeviceError(dxgiFactory->CreateSwapChain(fD3dDevice.Get(), &scd, fD3dSwapChain.GetAddressOf())
-                //    , "Could not create swap chain");
-         
+				if (SUCCEEDED(fD3dDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(dxgiDevice.GetAddressOf()))))
+					if (SUCCEEDED(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void**>(dxgiAdapter.GetAddressOf()))))
+						if (SUCCEEDED(dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(dxgiFactory.GetAddressOf()))))
+						{
 
+						}
+
+				if (dxgiFactory == nullptr)
+					LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "This software requires windows 8.1 or higher");
+
+
+				dxgiFactory->CreateSwapChainForHwnd(fD3dDevice.Get(), fHWND, &scd, nullptr, nullptr, fD3dSwapChain.GetAddressOf());
+				dxgiFactory->MakeWindowAssociation(fHWND, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES);
+
+			
+			/*
                 D3D11Error::HandleDeviceError(
 
-                    D3D11CreateDeviceAndSwapChain(
-                        nullptr,
-                        D3D_DRIVER_TYPE_HARDWARE,
-                        nullptr,
-                        createFlags,
-                        requestedLevels,
-                        sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL),
-                        D3D11_SDK_VERSION,
-                        &scd,
-                        fD3dSwapChain.GetAddressOf(),
-                        fD3dDevice.GetAddressOf(),
-                        &obtainedLevel,
-                        fD3dContext.GetAddressOf())
+                    D3D11CreateDeviceAndSwapChain (
+                          nullptr
+                        , D3D_DRIVER_TYPE_HARDWARE
+                        , nullptr
+                        , createFlags
+                        , requestedLevels
+                        , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
+                        , D3D11_SDK_VERSION
+                        , &scd
+                        , fD3dSwapChain.GetAddressOf()
+                        , fD3dDevice.GetAddressOf()
+                        , &obtainedLevel
+                        , fD3dContext.GetAddressOf())
                     , "Could not create device");
-            
+        
+
+		*/
 
         OIV_D3D_SET_OBJECT_NAME(fD3dDevice, "D3D11 device");
         OIV_D3D_SET_OBJECT_NAME(fD3dSwapChain, "D3D11 swap chain");
@@ -108,7 +113,7 @@ namespace OIV
         }
     private:
         HWND fHWND = nullptr;
-        ComPtr<IDXGISwapChain> fD3dSwapChain;
+        ComPtr<IDXGISwapChain1> fD3dSwapChain;
         ComPtr<ID3D11DeviceContext> fD3dContext;
         ComPtr<ID3D11Device> fD3dDevice;
     };

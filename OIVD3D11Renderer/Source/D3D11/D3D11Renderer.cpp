@@ -41,7 +41,7 @@ namespace OIV
         ID3D11Device* d3dDevice = fDevice->GetdDevice();
         
         fRenderTargetView.Reset();
-        D3D11Error::HandleDeviceError(d3dSwapChain->ResizeBuffers(1, x, y, DXGI_FORMAT_UNKNOWN, static_cast<UINT>(0)),
+        D3D11Error::HandleDeviceError(d3dSwapChain->ResizeBuffers(2, x, y, DXGI_FORMAT_UNKNOWN, static_cast<UINT>(0)),
             "can not resize swap chain");
         
         ComPtr<ID3D11Texture2D> backbuffer;
