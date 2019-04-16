@@ -68,7 +68,7 @@ namespace OIV
                     fCursorsInitialized = true;
                 }
                 fCurrentCursorType = type;
-                SetMouseCursor(fCursors[static_cast<int>(fCurrentCursorType)]);
+                SetMouseCursor(fCurrentCursorType == CursorType::SystemDefault ? nullptr : fCursors[static_cast<int>(fCurrentCursorType)]);
             }
         }
 
