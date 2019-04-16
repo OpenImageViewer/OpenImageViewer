@@ -16,17 +16,23 @@ namespace OIV
             fRefreshCallback = callback;
         }
 
-        void VirtualStatusBar::Add(std::string labelName)
-        {
-            OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
-            texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0_u8, 0, 0, 192).colorValue;
-            texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
-            texelValue->GetTextOptions().fontSize = 11;
-            texelValue->GetTextOptions().renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
-            texelValue->GetTextOptions().outlineWidth = 0;
+		OIVTextImage* VirtualStatusBar::GetOrCreateLabel(const std::string& labelName)
+		{
+			auto label = fMapLabels.find(labelName);
+			if (label == fMapLabels.end())
+			{
+				OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
+				texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0_u8, 0, 0, 192).colorValue;
+				texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
+				texelValue->GetTextOptions().fontSize = 11;
+				texelValue->GetTextOptions().renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+				texelValue->GetTextOptions().outlineWidth = 0;
 
-            fMapLabels.emplace(labelName, texelValue);
-        }
+				label = fMapLabels.emplace(labelName, texelValue).first;
+			}
+
+			return label->second;
+		}
 
 
         void RepositionLabels()
@@ -62,19 +68,19 @@ namespace OIV
 
         void SetText(std::string elementName, const OIVString& text)
         {
-            OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(elementName);
+			OIVTextImage* texelValue = GetOrCreateLabel(elementName);
             texelValue->GetTextOptions().text = text;
             RepositionLabels(); // size of text is most likely changed - reposition.
         }
 
         void SetOpacity(std::string elementName, double opacity)
         {
-            OIVTextImage* label = fLabelManager->GetOrCreateTextLabel(elementName);
+            OIVTextImage* label = GetOrCreateLabel(elementName);
             label->GetImageProperties().opacity = opacity;
             label->Update();
         }
-
     private:
+
         LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
         std::map<std::string, OIVTextImage*> fMapLabels;
         LabelManager* fLabelManager;

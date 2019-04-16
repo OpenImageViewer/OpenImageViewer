@@ -1249,14 +1249,7 @@ namespace OIV
 
     void TestApp::PostInitOperations()
     {
-
-		fVirtualStatusBar.Add("texelValue");
-		fVirtualStatusBar.Add("imageDescription");
-		fVirtualStatusBar.SetOpacity("imageDescription", 1.0);
-		fVirtualStatusBar.Add("texelPos");
-		fVirtualStatusBar.SetOpacity("texelPos", 1.0);
-
-
+			
         // load settings
         fSettings.Load();
         fSettings.Save();
