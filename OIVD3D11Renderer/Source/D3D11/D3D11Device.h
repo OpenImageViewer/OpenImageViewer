@@ -29,7 +29,7 @@ namespace OIV
         void Create(HWND hwnd)
         {
             fHWND = hwnd;
-            D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_10_0 };
+            D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_11_0 };
 			
             DXGI_SWAP_CHAIN_DESC1 scd{};
 
