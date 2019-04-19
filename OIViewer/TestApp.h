@@ -132,7 +132,7 @@ namespace OIV
         void UpdateStatusBar();
         void UpdateUIFileIndex();
         bool JumpFiles(FileIndexType step);
-        void ToggleFullScreen();
+		void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void ToggleSlideShow();
         void SetFilterLevel(OIV_Filter_type filterType);

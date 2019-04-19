@@ -113,12 +113,12 @@ namespace OIV
         }
         else if (type == "toggleFullScreen") // Toggle fullscreen
         {
-            fWindow.ToggleFullScreen(false);
+			ToggleFullScreen(false);
             fullscreenModeChanged = true;
         }
         else if (type == "toggleMultiFullScreen") //Toggle multi fullscreen
         {
-            fWindow.ToggleFullScreen(true);
+			ToggleFullScreen(true);
             fullscreenModeChanged = true;
         }
         else if (type == "toggleresetoffset")
@@ -1426,9 +1426,10 @@ namespace OIV
         return isLoaded;
     }
     
-    void TestApp::ToggleFullScreen()
+    void TestApp::ToggleFullScreen(bool multiFullScreen)
     {
-        fWindow.ToggleFullScreen(Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
+        fWindow.ToggleFullScreen(multiFullScreen);
+		Center();
     }
 
     void TestApp::ToggleBorders()
@@ -1781,10 +1782,15 @@ namespace OIV
 
     void TestApp::Center()
     {
-        using namespace LLUtils;
-        PointF64 offset = (PointF64(fWindow.GetCanvasSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
-        SetOffset(offset);
-        fIsOffsetLocked = true;
+		if (IsImageOpen() == true)
+		{
+			fRefreshOperation.Begin();
+			using namespace LLUtils;
+			PointF64 offset = (PointF64(fWindow.GetCanvasSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
+			SetOffset(offset);
+			fIsOffsetLocked = true;
+			fRefreshOperation.End();
+		}
     }
 
     double CalculateOffset(double clientSize, double imageSize, double offset, double margin)
@@ -2254,7 +2260,7 @@ namespace OIV
                 }
                 else
                 {
-                    ToggleFullScreen();
+                    ToggleFullScreen(Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
                 }
             }
 
