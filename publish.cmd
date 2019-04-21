@@ -14,7 +14,7 @@ For using this build and packaging script you'll need to define
 rem Set custom paths
 setlocal EnableDelayedExpansion
 rem Global build variables - START
-set MSBuildPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\Bin\amd64
+set MSBuildPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\amd64
 set SevenZipPath=C:\Program Files\7-Zip
 set GitPath=C:\Program Files\Git\bin
 set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%
@@ -51,6 +51,6 @@ echo ==============================================
 rem Build project
 msbuild.exe oiv.sln /m /p:configuration=Publish /t:%BuildOperation% /p:OIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% /p:OIV_VERSION_REVISION=L\"%OIV_VERSION_REVISION%\"
 rem Pack symbols into 7z file.
-7z a -mx9 OIV-%versionString%-Win32x64VC14.1-Symbols.7z %PublishPath%\*.pdb
+7z a -mx9 OIV-%versionString%-Win32x64VC14.2-Symbols.7z %PublishPath%\*.pdb
 rem Pack application into 7z file.
-7z a -mx9 OIV-!versionString!-Win32x64VC14.1.7z %PublishPath%\*.dll %PublishPath%\*.exe %PublishPath%\Resources
+7z a -mx9 OIV-!versionString!-Win32x64VC14.2.7z %PublishPath%\*.dll %PublishPath%\*.exe %PublishPath%\Resources
