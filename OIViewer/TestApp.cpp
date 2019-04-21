@@ -80,7 +80,7 @@ namespace OIV
         }
         else if (type == "quit")
         {
-            PostQuitMessage(0);
+			CloseApplication();
         }
         else if (type == "grid")
         {
@@ -2113,12 +2113,20 @@ namespace OIV
         case WM_MOUSEMOVE:
             UpdateTexelPos();
             break;
+		case WM_CLOSE:
+			CloseApplication();
         break;
+
         }
 
         return handled;
     }
     
+	void TestApp::CloseApplication()
+	{
+		fWindow.Destroy();
+	}
+
 
     bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
     {

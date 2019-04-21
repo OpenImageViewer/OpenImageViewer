@@ -83,7 +83,8 @@ namespace OIV
             virtual ~Win32Window() {};
 
         public: // mutating methods
-            int WINAPI Create();
+            void Create();
+			void Destroy();
             LRESULT SendMessage(UINT msg, WPARAM wParam, LPARAM lparam);
             void AddEventListener(EventCallback callback);
             void SetMenuChar(bool enabled);

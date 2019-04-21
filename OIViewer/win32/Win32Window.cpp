@@ -64,7 +64,8 @@ namespace OIV
 			SetWindowTextW(GetHandle(), title.c_str());
 		}
 		
-        int Win32Window::Create()
+	
+        void Win32Window::Create()
         {
             HINSTANCE hInstance = GetModuleHandle(nullptr);
             // The main window class name.
@@ -96,7 +97,6 @@ namespace OIV
                         _T("Win32 Guided Tour"),
                         MB_OK);
 
-                    return 1;
                 }
 
                 classRegistered = true;
@@ -132,29 +132,27 @@ namespace OIV
                     _T("Win32 Guided Tour"),
                     MB_OK);
 
-                return 1;
             }
-
-            //MSG msg;
-            //BOOL bRet;
-
-            //while ((bRet = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) != 0)
-            //{
-            //    if (bRet == -1)
-            //    {
-            //        // handle the error and possibly exit
-            //    }
-            //    else
-            //    {
-            //        TranslateMessage(&msg);
-            //        DispatchMessage(&msg);
-            //    }
-            //}
-
-
-
-            return 0;
         }
+
+
+		void Win32Window::Destroy()
+		{
+			// Destroy, but hide self and children first, for clean visuals. 
+			SetVisible(false);
+			for (auto& child : fChildren)
+				SetVisible(false);
+
+			for (auto& child : fChildren)
+			{
+				child->Destroy();
+				::DestroyWindow(GetHandle());
+			}
+		}
+
+
+
+
 
         void Win32Window::SetLockMouseToWindowMode(LockMouseToWindowMode mode)
         {
@@ -512,6 +510,7 @@ namespace OIV
                 break;
             case WM_DESTROY:
                 DestroyResources();
+				NotifyRemovedForRelatedWindows();
                 break;
 
             case WM_SYSCOMMAND:
@@ -526,7 +525,6 @@ namespace OIV
                 }
                 break;
             case WM_CLOSE:
-                NotifyRemovedForRelatedWindows();
                 break;
             }
 

@@ -89,6 +89,7 @@ namespace OIV
         void SetTopMostUserMesage();
         void ProcessTopMost();
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
+		void CloseApplication();
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
