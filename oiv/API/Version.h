@@ -1,7 +1,7 @@
 #pragma once
 
 constexpr int OIV_VERSION_MAJOR   = 0 ;
-constexpr int OIV_VERSION_MINOR   = 15;
+constexpr int OIV_VERSION_MINOR   = 16;
 
 //fallback in case the build system didn't define revision and build.
 #ifndef OIV_VERSION_REVISION
