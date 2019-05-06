@@ -1106,6 +1106,11 @@ namespace OIV
         return file != nullptr ? file->GetFileName() : emptyString;
     }
 
+	bool TestApp::IsImageOpen() const
+	{
+		return fImageState.GetOpenedImage() != nullptr;
+	}
+
     bool TestApp::IsOpenedImageIsAFile() const
     {
         return fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->GetDescriptor().Source == ImageSource::File;
@@ -1758,13 +1763,12 @@ namespace OIV
     }
 
 
-    void TestApp::AutoPlaceImage()
+    void TestApp::AutoPlaceImage(bool forceCenter)
     {
         fRefreshOperation.Begin();
         if (fIsLockFitToScreen == true)
             FitToClientAreaAndCenter();
-
-        else if (fIsOffsetLocked == true)
+        else if (fIsOffsetLocked == true || forceCenter == true)
             Center();
         fRefreshOperation.End();
     }
@@ -1837,8 +1841,11 @@ namespace OIV
 
     void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
+	   fRefreshOperation.Begin();
        fImageState.Transform(relativeRotation, flip);
-       RefreshImage();
+	   AutoPlaceImage(true);
+	   RefreshImage();
+	   fRefreshOperation.End();
     }
 
     void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
