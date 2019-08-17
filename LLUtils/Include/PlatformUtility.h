@@ -144,10 +144,10 @@ namespace LLUtils
                 szPath)))
             {
                 native_string_type result = szPath;
-                return StringUtility::ToDefaultString(result);
+				return result;
             }
 
-            return default_string_type();
+            return native_string_type();
 #else
             throw std::logic_error("GetAppDataFolder: Not supported in linux yet.");
             //TODO: Make the exception call below work here
