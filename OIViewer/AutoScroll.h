@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include <windows.h>
-#include "Point.h"
-#include "StopWatch.h"
+#include <LLUtils/Point.h>
+#include <LLUtils/StopWatch.h>
 #include "win32/HighPrecisionTimer.h"
 
 

@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <limits>
 #include "TexelFormat.h"
-#include "Buffer.h"
+#include <LLUtils/Buffer.h>
 
 
 namespace IMCodec
@@ -57,7 +57,7 @@ namespace IMCodec
         bool IsInitialized() const
         {
             return true
-                && fData.GetBuffer() != nullptr
+                && fData.data() != nullptr
                 && fProperties.IsInitialized() == true;
         }
     };

@@ -99,7 +99,7 @@ namespace OIV
         using MapImageEntry = std::map<uint16_t,ImageEntry>;
         MapImageEntry fImageEntries;
         OIVString fDataPath;
-        LLUtils::Color fBackgroundColor = { 45_u8,45,48,255 };
+        LLUtils::Color fBackgroundColor = { 45,45,48,255 };
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport = {0};

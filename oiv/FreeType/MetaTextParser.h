@@ -2,7 +2,7 @@
 #include "FreeTypeHeaders.h"
 #include <vector>
 #include <string>
-#include <Color.h>
+#include <LLUtils/Color.h>
 
 
 struct FormattedTextEntry
@@ -12,8 +12,9 @@ struct FormattedTextEntry
     //uint32_t size;
     //uint32_t outlineWidth;
     //uint32_t outlineColor;
-    u8string text;
-    static FormattedTextEntry Parse(const u8string& format);
+
+    std::string text;
+    static FormattedTextEntry Parse(const std::string& format);
 };
 
 using VecFormattedTextEntry = std::vector<FormattedTextEntry>;
@@ -21,5 +22,5 @@ using VecFormattedTextEntry = std::vector<FormattedTextEntry>;
 class MetaText
 {
 public:
-    static VecFormattedTextEntry GetFormattedText(u8string text, int fontSize);
+    static VecFormattedTextEntry GetFormattedText(std::string text, int fontSize);
 };

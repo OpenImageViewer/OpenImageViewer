@@ -1,7 +1,7 @@
 #pragma once
 #include "KeyCombination.h"
 #include <unordered_map>
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {

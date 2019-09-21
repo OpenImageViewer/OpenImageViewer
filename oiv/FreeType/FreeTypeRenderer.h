@@ -69,7 +69,7 @@ public:
         Buffer RGBABitmap(bufferSize);
         
         // Fill glyph background with background color.
-        uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.GetBuffer());
+        uint32_t* RGBABitmapPtr = reinterpret_cast<uint32_t*>(RGBABitmap.data());
         for (uint32_t i = 0; i < widthInPixels * HeightInPixels; i++)
         {
             RGBABitmapPtr[i] = backgroudColor.colorValue;

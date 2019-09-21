@@ -6,11 +6,11 @@
 #include "win32/HighPrecisionTimer.h"
 #include "win32/Timer.h"
 #include "API/defs.h"
-#include <Utility.h>
+#include <LLUtils/Utility.h>
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
 #include "UserSettings.h"
-#include <Rect.h>
+#include <LLUtils/Rect.h>
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
@@ -24,7 +24,7 @@
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
-#include <LogFile.h>
+#include <LLUtils/Logging/LogFile.h>
 
 
 namespace OIV

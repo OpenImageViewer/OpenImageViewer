@@ -3,10 +3,10 @@
 #include <unordered_map>
 #include <Image.h>
 #include "PixelUtil.h"
-#include <Rect.h>
+#include <LLUtils/Rect.h>
 #include "half.hpp"
 #include "HSLRGB.h"
-#include <Exception.h>
+#include <LLUtils/Exception.h>
 #include <Float24.h>
 
 
@@ -65,7 +65,7 @@ namespace IMUtil
                 ImageDescriptor transformedProperties;
                 transformedProperties.fProperties = image->GetDescriptor().fProperties;
                 transformedProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
-                std::byte* dest = transformedProperties.fData.GetBuffer();
+                std::byte* dest = transformedProperties.fData.data();
 
                 const size_t MegaBytesPerThread = 6;
                 static const uint8_t MaxGlobalThrads = 32;
@@ -184,7 +184,7 @@ namespace IMUtil
             normalizedImageProperties.fProperties = image->GetDescriptor().fProperties;
             normalizedImageProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
             uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
-            std::byte* newBuffer = normalizedImageProperties.fData.GetBuffer();
+            std::byte* newBuffer = normalizedImageProperties.fData.data();
             
             for (std::size_t y = 0; y < image->GetHeight(); y++)
                 for (std::size_t x = 0; x < targetRowPitch; x++)
@@ -218,7 +218,7 @@ namespace IMUtil
                 {
                     uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
                     properties.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
-                    std::byte* dest = properties.fData.GetBuffer();
+                    std::byte* dest = properties.fData.data();
                     
                     //TODO: convert without normalization.
                     convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : Normalize(sourceImage);
@@ -257,7 +257,7 @@ namespace IMUtil
                 ImageDescriptor props;
                 props.fProperties = sourceImage->GetDescriptor().fProperties;
                 props.fData.Allocate(destBufferSize);
-                std::byte* destBuffer = props.fData.GetBuffer();
+                std::byte* destBuffer = props.fData.data();
 
                 for (int32_t y = 0; y < subimage.GetHeight(); y++)
                 {
@@ -318,7 +318,7 @@ namespace IMUtil
             props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TexelFormat::I_R8_G8_B8_A8) / 8 * props.fProperties.Width;
             props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
             
-            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.GetBuffer());
+            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data());
 
 
             double length = max - min;

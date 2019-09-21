@@ -77,7 +77,7 @@
       </PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv;%(AdditionalIncludeDirectories);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -93,7 +93,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv;;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -110,7 +110,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\LLUtils\Include;$(SolutionDir)\oiv;;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

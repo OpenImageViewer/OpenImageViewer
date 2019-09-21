@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <d3dcommon.h>
 #include <d3d11.h>
-#include <PlatformUtility.h>
+#include <LLUtils/PlatformUtility.h>
 #include "D3D11Renderer.h"
 #include "D3D11Common.h"
 #include "D3D11VertexShader.h"
@@ -28,7 +28,7 @@ namespace OIV
         d3dContext->IASetVertexBuffers(0, 1, fVertexBuffer.GetAddressOf(), &stride, &offset);
         d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
         
-        d3dContext->OMSetBlendState(fBlendState.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>() , static_cast<UINT>(0xFFFFFFFF));
+        d3dContext->OMSetBlendState(fBlendState.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>().data() , static_cast<UINT>(0xFFFFFFFF));
         d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
         
         d3dContext->RSSetViewports(1, &fViewport);
@@ -56,7 +56,7 @@ namespace OIV
 
         
         d3dContext->OMSetRenderTargets(1, fRenderTargetView.GetAddressOf(), nullptr);
-        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>());
+        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>().data());
     }
 
     void D3D11Renderer::CreateBuffers()
@@ -101,7 +101,7 @@ namespace OIV
 
     D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateInputLayout(ied
         , 1
-            , fImageVertexShader->GetShaderData().GetBuffer()
+            , fImageVertexShader->GetShaderData().data()
             , fImageVertexShader->GetShaderData().Size(), fInputLayout.ReleaseAndGetAddressOf())
     , "Could not crate Input layout");
 
@@ -201,10 +201,10 @@ namespace OIV
     void D3D11Renderer::CreateShaders()
     {
         using namespace std;
-        using path = std::experimental::filesystem::path;
+        using path = std::filesystem::path;
 
         path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        path programsPath = executableDirPath / path(L"/Resources/programs");
+        path programsPath = executableDirPath / L"Resources/programs";
 
         fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
         fImageVertexShader->SetSourceFileName(programsPath / L"quad_vp.shader");
@@ -256,8 +256,8 @@ namespace OIV
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         
         buffer.uShowGrid = viewParams.showGrid;
-        memcpy(buffer.transparencyColor1, viewParams.uTransparencyColor1.GetNormalizedColorValue<float>(), sizeof(float) * 4);
-        memcpy(buffer.transparencyColor2, viewParams.uTransparencyColor2.GetNormalizedColorValue<float>(), sizeof(float) * 4);
+        memcpy(buffer.transparencyColor1, viewParams.uTransparencyColor1.GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        memcpy(buffer.transparencyColor2, viewParams.uTransparencyColor2.GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
 
         fIsParamsDirty = true;
         

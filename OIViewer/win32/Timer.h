@@ -1,10 +1,10 @@
 #pragma once
-#include <UniqueIDProvider.h>
-#include <Singleton.h>
+#include <LLUtils/UniqueIDProvider.h>
+#include <LLUtils/Singleton.h>
 #include <map>
 #include <set>
 #include <Windows.h>
-#include <Exception.h>
+#include <LLUtils/Exception.h>
 
 namespace OIV::Win32
 {

@@ -1,6 +1,6 @@
 #include "OIVFileImage.h"
-#include <FileMapping.h>
-#include <StringUtility.h>
+#include <LLUtils/FileMapping.h>
+#include <LLUtils/StringUtility.h>
 #include "../OIVCommands.h"
 
 namespace OIV

@@ -78,7 +78,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>OIV_LIBRARY_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.8.tar\freetype-2.8\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);d:\DevelopmentExternal\freetype-2.10.0\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
@@ -86,7 +86,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MTd.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;D:\DevelopmentExternal\freetype-2.10.0\objs\x64\Release Static\freetype.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>turbojpeg.dll;libpng16.dll;FreeImage.dll;D3DCompiler_47.dll;dbghelp.dll</DelayLoadDLLs>
     </Link>
     <CustomBuildStep>
@@ -108,12 +108,12 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>OIV_LIBRARY_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.8.tar\freetype-2.8\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);d:\DevelopmentExternal\freetype-2.10.0\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MT.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;D:\DevelopmentExternal\freetype-2.10.0\objs\x64\Release Static\freetype.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>turbojpeg.dll;libpng16.dll;FreeImage.dll;D3DCompiler_47.dll;dbghelp.dll</DelayLoadDLLs>
     </Link>
     <PreBuildEvent />
@@ -126,12 +126,12 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>OIV_LIBRARY_BUILD;%(PreprocessorDefinitions);WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;VC_EXTRALEAN</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);E:\Downloads\freetype-2.8.tar\freetype-2.8\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\LLUtils\Include;$(SolutionDir)\ImageCodec\Image\Include;$(SolutionDir)\ImageCodec\ImageLoader\Include;$(SolutionDir)\ImageUtil\Include;$(ProjectDir);d:\DevelopmentExternal\freetype-2.10.0\include;%(AdditionalIncludeDirectories);$(SolutionDir)\oiv</AdditionalIncludeDirectories>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;E:\Downloads\freetype-2.8.tar\freetype-2.8\objs\vc2010\x64\freetype28MT.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>E:\Downloads\glew-2.0.0-win32\glew-2.0.0\lib\Release\Win32\glew32s.lib;E:\Downloads\FreeImage3170Win32Win64\FreeImage\Dist\x64\FreeImage.lib;D:\DevelopmentExternal\libpng-code\projects\vstudio\x64\Release\libpng16.lib;D3D11.lib;D:\DevelopmentExternal\freetype-2.10.0\objs\x64\Release Static\freetype.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>turbojpeg.dll;libpng16.dll;FreeImage.dll;D3DCompiler_47.dll;dbghelp.dll</DelayLoadDLLs>
     </Link>
     <PreBuildEvent />

@@ -22,7 +22,7 @@ namespace OIV
         
         void CreateImpl()  override
         {
-            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData().GetBuffer(), GetShaderData().Size(), nullptr, fVertexShader.ReleaseAndGetAddressOf())
+            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreateVertexShader(GetShaderData().data(), GetShaderData().Size(), nullptr, fVertexShader.ReleaseAndGetAddressOf())
                 , " could not create vertex shader from microcode");
 
             OIV_D3D_SET_OBJECT_NAME(fVertexShader, "Vertex shader");

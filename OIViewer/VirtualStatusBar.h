@@ -22,7 +22,7 @@ namespace OIV
 			if (label == fMapLabels.end())
 			{
 				OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
-				texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0_u8, 0, 0, 192).colorValue;
+				texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0, 0, 0, 192).colorValue;
 				texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
 				texelValue->GetTextOptions().fontSize = 11;
 				texelValue->GetTextOptions().renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;

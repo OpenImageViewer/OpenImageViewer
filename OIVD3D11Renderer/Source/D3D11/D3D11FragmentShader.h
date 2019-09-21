@@ -20,7 +20,7 @@ namespace OIV
 
         void CreateImpl()  override
         {
-            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreatePixelShader(GetShaderData().GetBuffer(), GetShaderData().Size(), nullptr, fPixelShader.ReleaseAndGetAddressOf())
+            D3D11Error::HandleDeviceError(GetDevice()->GetdDevice()->CreatePixelShader(GetShaderData().data(), GetShaderData().Size(), nullptr, fPixelShader.ReleaseAndGetAddressOf())
                 , " could not create fragment shader from microcode");
 
             OIV_D3D_SET_OBJECT_NAME(fPixelShader, "Fragment shader");

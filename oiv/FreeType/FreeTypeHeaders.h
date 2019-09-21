@@ -8,4 +8,4 @@
 #endif
 #include <string>
 
-using u8string = std::string;
+using u8string = std::u8string;

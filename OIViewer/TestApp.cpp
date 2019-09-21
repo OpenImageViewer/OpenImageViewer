@@ -6,22 +6,21 @@
 #include <cassert>
 
 #include "TestApp.h"
-#include "StringUtility.h"
+#include <LLUtils/StringUtility.h>
 #include "win32/Win32Window.h"
 #include <windows.h>
 #include "win32/MonitorInfo.h"
-#include <FileSystemHelper.h>
+#include <LLUtils/FileSystemHelper.h>
 
 #include <API\functions.h>
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 #include "win32/Win32Helper.h"
-#include "FileHelper.h"
-#include <PlatformUtility.h>
+#include <LLUtils/FileHelper.h>
+#include <LLUtils/PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
 #include "OIVCommands.h"
-#include <Rect.h>
-#include <MathUtil.h>
+#include <LLUtils/Rect.h>
 #include "Helpers/OIVHelper.h"
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
@@ -35,8 +34,8 @@
 #include "Helpers\OIVImageHelper.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
-#include <UniqueIDProvider.h>
-#include <LogFile.h>
+#include <LLUtils/UniqueIDProvider.h>
+#include <LLUtils/Logging/LogFile.h>
 
 namespace OIV
 {
@@ -284,7 +283,7 @@ namespace OIV
         wmsg += LLUtils::StringUtility::ToWString(message);
         
         requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
-        requestText.backgroundColor = LLUtils::Color(0_u8, 0, 0, 216).colorValue;
+        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
         requestText.fontPath = LabelManager::sFixedFontPath;
         requestText.fontSize = 12;
         requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
@@ -1200,8 +1199,8 @@ namespace OIV
         fWindow.EnableDragAndDrop(true);
 		// Set canvas background the same color as in the renderer for flicker free startup.
 		//TODO: fix resize and disable background erasure of top level windows.
-		fWindow.SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
-		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
+		fWindow.SetBackgroundColor(LLUtils::Color(45, 45, 48));
+		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
 
         fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
         {
@@ -2383,7 +2382,7 @@ namespace OIV
         OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         CreateTextParams& textOptions = debugMessage->GetTextOptions();
         textOptions.text = txt;
-        textOptions.backgroundColor = LLUtils::Color(0_u8, 0, 0, 180).colorValue;
+        textOptions.backgroundColor = LLUtils::Color(0, 0, 0, 180).colorValue;
         textOptions.fontPath = LabelManager::sFontPath;
 
         if (debugMessage->Update() == RC_Success)

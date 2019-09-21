@@ -1,6 +1,6 @@
 #pragma once
-#include <Event.h>
-#include <Singleton.h>
+#include <LLUtils/Event.h>
+#include <LLUtils/Singleton.h>
 #include "win32/MonitorInfo.h"
 
 namespace OIV

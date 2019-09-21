@@ -6,7 +6,7 @@
 #include <tiffio.hxx>
 #include "TiffClientFunctions.h"
 #include "TiffFile.h"
-#include "../../../../LLUtils/Include/Exception.h"
+#include <LLUtils/Exception.h>
 
 namespace IMCodec
 {
@@ -130,14 +130,14 @@ namespace IMCodec
                     rowPitch = width * 4;
                     out_properties.fData.Allocate(height * rowPitch);
                     
-                    TIFFReadRGBAImage(tiff, width, height, reinterpret_cast<uint32*>(out_properties.fData.GetBuffer()));
+                    TIFFReadRGBAImage(tiff, width, height, reinterpret_cast<uint32*>(out_properties.fData.data()));
                     break;
                 case PHOTOMETRIC_MINISWHITE:
                 case PHOTOMETRIC_MINISBLACK:
                         texelFormat = GetTexelFormat(sampleFormat, bitsPerSample);
                         out_properties.fData.Allocate(height * rowPitch);
 
-                        uint8_t* currensPos = reinterpret_cast<uint8_t*>(out_properties.fData.GetBuffer());
+                        uint8_t* currensPos = reinterpret_cast<uint8_t*>(out_properties.fData.data());
 
                         if (stripSize != rowPitch * rowsPerStrip)
                             LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "CodecTiff: unsupported strip size.");
@@ -178,7 +178,7 @@ namespace IMCodec
                     for (size_t i = 0; i < samplesPerSingleCHannel; i++)
                     {
                         const size_t sourceIndex = i * samplesPerPixel * bytesPerSample;
-                        memcpy(reinterpret_cast<uint8_t*>(image.GetBuffer()) + destIndex, reinterpret_cast<uint8_t*>(out_properties.fData.GetBuffer()) + sourceIndex, bytesPerSample);
+                        memcpy(reinterpret_cast<uint8_t*>(image.data()) + destIndex, reinterpret_cast<uint8_t*>(out_properties.fData.data()) + sourceIndex, bytesPerSample);
                         destIndex += bytesPerSample;
                     }
                     out_properties.fData = std::move(image);

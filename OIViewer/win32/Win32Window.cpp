@@ -5,7 +5,7 @@
 #include "MonitorInfo.h"
 #include "Win32Helper.h"
 #include "../resource.h"
-#include "Buffer.h"
+#include <LLUtils/Buffer.h>
 #include "WindowPosHelper.h"
 
 namespace OIV

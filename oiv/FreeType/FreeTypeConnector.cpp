@@ -3,16 +3,16 @@
 #if OIV_BUILD_FREETYPE == 1
 #include "FreeTypeConnector.h"
 #include "FreeTypeRenderer.h"
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 #include "CodePoint.h"
 #include <vector>
-#include <StringUtility.h>
-#include <Utility.h>
-#include <Color.h>
+#include <LLUtils/StringUtility.h>
+#include <LLUtils/Utility.h>
+#include <LLUtils/Color.h>
 #include <locale>
 #include <string>
 #include <iostream>
-#include <Buffer.h>
+#include <LLUtils/Buffer.h>
 #include "BlitBox.h"
 #include "MetaTextParser.h"
 
@@ -155,8 +155,9 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
     
     FT_Error error;
     
-    if (error = FT_Library_SetLcdFilter(fLibrary, FT_LCD_FILTER_DEFAULT))
-        LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, GenerateFreeTypeErrorString("can not set LCD Filter", error));
+    //LCD filter is not supported yet
+    /*if (error = FT_Library_SetLcdFilter(fLibrary, FT_LCD_FILTER_DEFAULT))
+        LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, GenerateFreeTypeErrorString("can not set LCD Filter", error));*/
 
     font->SetSize(fontSize, textCreateParams.DPIx, textCreateParams.DPIy);
 
@@ -195,7 +196,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
 
     //Reset final text buffer to background color.
     for (uint32_t i = 0 ;i < destWidth * destHeight; i++)
-        reinterpret_cast<uint32_t*>(textBuffer.GetBuffer())[i] =  backgroundColor.colorValue;
+        reinterpret_cast<uint32_t*>(textBuffer.data())[i] =  backgroundColor.colorValue;
 
     LLUtils::Buffer outlineBuffer;
     BlitBox  destOutline = {};
@@ -204,9 +205,9 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
         outlineBuffer.Allocate(sizeOfDestBuffer);
         //Reset outline buffer to background color.
         for (uint32_t i = 0; i < destWidth * destHeight; i++)
-            reinterpret_cast<uint32_t*>(outlineBuffer.GetBuffer())[i] = backgroundColor.colorValue;
+            reinterpret_cast<uint32_t*>(outlineBuffer.data())[i] = backgroundColor.colorValue;
 
-        destOutline.buffer = outlineBuffer.GetBuffer();
+        destOutline.buffer = outlineBuffer.data();
         destOutline.width = destWidth;
         destOutline.height = destHeight;
         destOutline.pixelSizeInbytes = destPixelSize;
@@ -215,7 +216,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
 
     
     BlitBox  dest = {};
-    dest.buffer = textBuffer.GetBuffer();
+    dest.buffer = textBuffer.data();
     dest.width = destWidth; 
     dest.height = destHeight;
     dest.pixelSizeInbytes = destPixelSize;
@@ -267,7 +268,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                 LLUtils::Buffer rasterizedGlyph = std::move(FreeTypeRenderer::RenderGlyphToBuffer(params));
 
                 BlitBox source = {};
-                source.buffer = rasterizedGlyph.GetBuffer();
+                source.buffer = rasterizedGlyph.data();
                 source.width = bitmapProperties.width;
                 source.height = bitmapProperties.height;
                 source.pixelSizeInbytes = destPixelSize;
@@ -298,7 +299,7 @@ void FreeTypeConnector::CreateBitmap(const TextCreateParams& textCreateParams, B
                     LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "FreeType error, unable to render glyph");
 
                 BlitBox source = {};
-                source.buffer = rasterizedGlyph.GetBuffer();
+                source.buffer = rasterizedGlyph.data();
                 source.width = bitmapProperties.width;
                 source.height = bitmapProperties.height;
                 source.pixelSizeInbytes = destPixelSize;

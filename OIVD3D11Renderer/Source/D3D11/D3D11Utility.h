@@ -1,8 +1,8 @@
 #pragma once
 #include <d3d11.h>
 #include <API/defs.h>
-#include <FileHelper.h>
-#include <FileSystemHelper.h>
+#include <LLUtils/FileHelper.h>
+#include <LLUtils/FileSystemHelper.h>
 #include "D3D11Shader.h"
 
 
@@ -80,7 +80,7 @@ namespace OIV
             {
                 shader->Load();
                 LLUtils::FileSystemHelper::EnsureDirectory(cachePath);
-                LLUtils::File::WriteAllBytes(cachePath, shader->GetShaderData().Size() , shader->GetShaderData().GetBuffer());
+                LLUtils::File::WriteAllBytes(cachePath, shader->GetShaderData().Size() , shader->GetShaderData().data());
             }
         }
     };

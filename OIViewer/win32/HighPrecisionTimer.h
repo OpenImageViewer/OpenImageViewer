@@ -1,7 +1,7 @@
 #pragma once
 #include <windows.h>
-#include <Exception.h>
-#include <Templates.h>
+#include <LLUtils/Exception.h>
+#include <LLUtils/Templates.h>
 namespace OIV
 {
     namespace Win32

@@ -80,10 +80,10 @@ namespace OIV
 
         const std::array<CheckerBoard, OIV_PROP_TransparencyMode::TM_Count> transparencyCheckerShades
         {
-              CheckerBoard{ {sShades[0],sShades[0],sShades[0], 255}, {sShades[1],sShades[1],sShades[1] ,255} }
-            , CheckerBoard{ {sShades[2],sShades[2],sShades[2], 255}, {sShades[3],sShades[3],sShades[3] ,255} }
-            , CheckerBoard{ {sShades[3],sShades[3],sShades[3], 255}, {sShades[4],sShades[4],sShades[4] ,255} }
-            , CheckerBoard{ {sShades[4],sShades[4],sShades[4], 255}, {sShades[5],sShades[5],sShades[5] ,255} }
+              CheckerBoard{ {sShades[0],sShades[0],sShades[0], static_cast<uint8_t>(255)}, {sShades[1],sShades[1],sShades[1] ,static_cast<uint8_t>(255)} }
+            , CheckerBoard{ {sShades[2],sShades[2],sShades[2], static_cast<uint8_t>(255)}, {sShades[3],sShades[3],sShades[3] ,static_cast<uint8_t>(255)} }
+            , CheckerBoard{ {sShades[3],sShades[3],sShades[3], static_cast<uint8_t>(255)}, {sShades[4],sShades[4],sShades[4] ,static_cast<uint8_t>(255)} }
+            , CheckerBoard{ {sShades[4],sShades[4],sShades[4], static_cast<uint8_t>(255)}, {sShades[5],sShades[5],sShades[5] ,static_cast<uint8_t>(255)} }
         };
 
 

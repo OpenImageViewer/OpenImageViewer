@@ -1,12 +1,12 @@
 #pragma once
 #include "FreeTypeHeaders.h"
 #include <string>
-#include <Exception.h>
+#include <LLUtils/Exception.h>
 
 class FreeTypeFont
 {
 public:
-    FreeTypeFont(FT_Library ftLibrary, u8string fileName)
+    FreeTypeFont(FT_Library ftLibrary, std::string fileName)
     {
         fName = fileName;
         fLibrary = ftLibrary;
@@ -45,7 +45,7 @@ public:
 
 
 private:
-    u8string fName;
+    std::string fName;
     FT_Face fFace = nullptr;
     FT_Library fLibrary = nullptr;
     uint16_t fFontSize = 0;

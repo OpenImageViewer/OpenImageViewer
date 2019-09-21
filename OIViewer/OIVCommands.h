@@ -1,8 +1,8 @@
 #pragma once
 #include "API/defs.h"
 #include "API/functions.h"
-#include <Rect.h>
-#include <Exception.h>
+#include <LLUtils/Rect.h>
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {

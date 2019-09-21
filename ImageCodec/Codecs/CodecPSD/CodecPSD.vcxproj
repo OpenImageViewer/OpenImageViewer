@@ -98,7 +98,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalDependencies>d:\DevelopmentExternal\libpsd\build\libPSDLibVC142\x64\Release\libPSDLib.lib</AdditionalDependencies>
+      <AdditionalDependencies>D:\DevelopmentExternal\libpsd\build\libPSDLibVC142\x64\Release\libPSDLib.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Publish|x64'">

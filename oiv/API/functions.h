@@ -1,5 +1,5 @@
 #pragma once
-#include "platform.h"
+#include <LLUtils/Platform.h>
 #include "defs.h"
 
 #if OIV_LIBRARY_BUILD == 1

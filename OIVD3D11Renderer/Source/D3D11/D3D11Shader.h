@@ -3,7 +3,7 @@
 #include "D3D11Common.h"
 #include <d3dcompiler.h>
 #include "D3D11Error.h"
-#include <Buffer.h>
+#include <LLUtils/Buffer.h>
 
 namespace OIV
 {
