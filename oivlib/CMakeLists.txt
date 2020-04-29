@@ -1,0 +1,16 @@
+#OIV lib
+cmake_minimum_required(VERSION 3.8)
+
+
+
+#todo fix it.
+set(ExternalFolder ../External)
+
+include_directories(./oiv/Include)
+include_directories(renderers/OIVD3D11Renderer/Include)
+include_directories(${ExternalFolder}/ExoticNumbers/include)
+include_directories(${ExternalFolder}/LLUtils/Include)
+include_directories(${ExternalFolder}/ImageCodec/Image/include)
+
+add_subdirectory(oiv)
+add_subdirectory(renderers)

@@ -1,0 +1,48 @@
+#Image Codec
+cmake_minimum_required (VERSION 3.8)
+
+set(CMAKE_CXX_STANDARD 17)
+
+include_directories(./Image/Include)
+include_directories(./Imageloader/Include)
+include_directories(../External/LLUtils/Include)
+
+
+option(IMCODEC_BUILD_CODEC_PSD "Build Codec PSD" TRUE)
+option(IMCODEC_BUILD_CODEC_JPG "Build Codec JPG" TRUE)
+option(IMCODEC_BUILD_CODEC_PNG "Build Codec PNG" TRUE)
+option(IMCODEC_BUILD_CODEC_DDS "Build Codec DDS" TRUE)
+option(IMCODEC_BUILD_CODEC_GIF "Build Codec GIF" TRUE)
+option(IMCODEC_BUILD_CODEC_TIFF "Build Codec TIFF" TRUE)
+option(IMCODEC_BUILD_CODEC_WEBP "Build Codec WEBP" FALSE)
+option(IMCODEC_BUILD_CODEC_FREEIMAGE "Build Codec FREEIMAGE" TRUE)
+
+
+if ( ${IMCODEC_BUILD_CODEC_PSD})
+	add_definitions(-DIMCODEC_BUILD_CODEC_PSD=1)
+endif()
+
+if ( ${IMCODEC_BUILD_CODEC_JPG})
+	add_definitions(-DIMCODEC_BUILD_CODEC_JPG=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_PNG})
+	add_definitions(-DIMCODEC_BUILD_CODEC_PNG=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_DDS})
+	add_definitions(-DIMCODEC_BUILD_CODEC_DDS=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_GIF})
+	add_definitions(-DIMCODEC_BUILD_CODEC_GIF=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_TIFF})
+	add_definitions(-DIMCODEC_BUILD_CODEC_TIFF=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_WEBP})
+	add_definitions(-DIMCODEC_BUILD_CODEC_WEBP=1)
+endif()
+if ( ${IMCODEC_BUILD_CODEC_FREEIMAGE})
+	add_definitions(-DIMCODEC_BUILD_CODEC_FREEIMAGE=1)
+endif()
+
+add_subdirectory(Codecs)
+add_subdirectory(ImageLoader)

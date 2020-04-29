@@ -1,12 +1,55 @@
+#root CMake file
 cmake_minimum_required(VERSION 3.8)
+project(oiv)
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(./External/LLUtils/Include)
+if ( ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        #MSVC optimizations
+        #compiler optimizations
+        add_compile_options(/O2)    #maximum optimization
+	    add_compile_options(/Ob2)   #inline function expansion
+        add_compile_options(/Oi)    #enable instrinsic functions
+        add_compile_options(/Ot)    #favor fast code
+        add_compile_options(/Oy)    #Omit frame pointers
+        add_compile_options(/GT)    #enalbe fiber safe optimiations
+        add_compile_options(/GL)    #whole program optimization
+
+        #linker optimizations
+        add_link_options(/OPT:REF)  #remove unreferenced code/data
+        add_link_options(/OPT:ICF)  #enable COMDAT folding
+        add_link_options(/LTCG)     #link time code generation
+    endif()
+else()
+    
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wextra -Wpedantic)
+  # using Clang
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  # using GCC
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+  # using Intel C++
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    #add_compile_options(/W1)
+# using Visual Studio C++
+  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+    string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+  endif()
+endif()
+
+
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
+#include_directories(./External/LLUtils/Include)
 add_compile_definitions(UNICODE _UNICODE NOMINMAX)
 add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
 
-add_subdirectory(ImageCodec)
-add_subdirectory(ImageUtil)
-add_subdirectory(OIVD3D11Renderer)
-add_subdirectory(oiv)
-add_subdirectory(OIViewer)
+add_subdirectory(oivlib)
+add_subdirectory(Clients/OIViewer)

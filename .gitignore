@@ -20,3 +20,4 @@ ImageCodec/Codecs/CodecTiff/CodecTiff.vcxproj.user
 /ImageCodec/Codecs/CodecGif/x64/
 Build/
 /ImageCodec/Bin/
+/External/FreeTypeWrapper/External
