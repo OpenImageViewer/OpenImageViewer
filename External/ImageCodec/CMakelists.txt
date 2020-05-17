@@ -1,0 +1,15 @@
+
+cmake_minimum_required (VERSION 3.8)
+
+set(CMAKE_CXX_STANDARD 17)
+
+include_directories(./Image/Include)
+include_directories(./Imageloader/Include)
+include_directories(../External/LLUtils/Include)
+
+add_subdirectory(Codecs)
+add_subdirectory(ImageLoader)
+
+
+
+

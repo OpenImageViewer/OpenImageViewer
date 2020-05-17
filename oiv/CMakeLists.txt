@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.8)
 
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
-    "./*.h"
-    "./*.cpp"
+    "./Source/*.h"
+    "./Source/*.cpp"
 )
 
 set(TargetName oiv)
