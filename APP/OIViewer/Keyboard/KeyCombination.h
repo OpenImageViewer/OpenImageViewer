@@ -37,7 +37,7 @@ namespace OIV
         void AssignKey(KeyCode keyCode);
 
 #pragma region memeber fields
-
+    public:
         union
         {
             uint32_t keyValue = 0;

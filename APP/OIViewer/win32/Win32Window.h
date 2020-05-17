@@ -7,12 +7,12 @@
 #include "DragAndDrop.h"
 #include "../FullScreenState.h"
 #include "RawInput/RawInputMouseWindow.h"
-#include "StopWatch.h"
+#include <LLUtils/StopWatch.h>
 #include <wrl/client.h>
 #include "Win32Common.h"
-#include <BitFlags.h>
-#include <Templates.h>
-#include <Color.h>
+#include <LLUtils/BitFlags.h>
+#include <LLUtils/Templates.h>
+#include <LLUtils/Color.h>
 
 namespace OIV
 {
@@ -45,6 +45,8 @@ namespace OIV
             , ChildWindow    = 1 << 5 // WS_CHILD
             , All            = LLUtils::GetMaxBitsMask<uint32_t>()
         };
+
+		LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS(WindowStyle)
 
         using WindowStyleFlags = LLUtils::BitFlags<WindowStyle>;
         
@@ -144,7 +146,7 @@ namespace OIV
             WindowStyleFlags fWindowStyles = WindowStyle::NoStyle;
             bool fIsTransparent = false;
             bool fAlwaysOnTop = false;
-			LLUtils::Color fBackgroundColor = LLUtils::Color(255_u8, 255, 255);
+			LLUtils::Color fBackgroundColor = LLUtils::Color(255, 255, 255);
 			HBRUSH fBackgroundCachedBrush = CreateSolidBrush(fBackgroundColor.colorValue);
         };
     }

@@ -1,8 +1,8 @@
 
 #pragma once
 #include <cstdint>
-#include <Point.h>
-#include <Color.h>
+#include <LLUtils/Point.h>
+#include <LLUtils/Color.h>
 
 #ifdef __cplusplus
 extern "C"

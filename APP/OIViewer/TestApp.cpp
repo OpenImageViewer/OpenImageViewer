@@ -6,22 +6,21 @@
 #include <cassert>
 
 #include "TestApp.h"
-#include "StringUtility.h"
+#include <LLUtils/StringUtility.h>
 #include "win32/Win32Window.h"
 #include <windows.h>
 #include "win32/MonitorInfo.h"
-#include <FileSystemHelper.h>
+#include <LLUtils/FileSystemHelper.h>
 
 #include <API\functions.h>
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 #include "win32/Win32Helper.h"
-#include "FileHelper.h"
-#include <PlatformUtility.h>
+#include <LLUtils/FileHelper.h>
+#include <LLUtils/PlatformUtility.h>
 #include "win32/UserMessages.h"
 #include "UserSettings.h"
 #include "OIVCommands.h"
-#include <Rect.h>
-#include <MathUtil.h>
+#include <LLUtils/Rect.h>
 #include "Helpers/OIVHelper.h"
 #include "Keyboard/KeyCombination.h"
 #include "Keyboard/KeyBindings.h"
@@ -35,8 +34,8 @@
 #include "Helpers\OIVImageHelper.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
-#include <UniqueIDProvider.h>
-#include <LogFile.h>
+#include <LLUtils/UniqueIDProvider.h>
+#include <LLUtils/Logging/LogFile.h>
 
 namespace OIV
 {
@@ -284,7 +283,7 @@ namespace OIV
         wmsg += LLUtils::StringUtility::ToWString(message);
         
         requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
-        requestText.backgroundColor = LLUtils::Color(0_u8, 0, 0, 216).colorValue;
+        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
         requestText.fontPath = LabelManager::sFixedFontPath;
         requestText.fontSize = 12;
         requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
@@ -673,7 +672,7 @@ namespace OIV
         };
 		request.userPointer = this;
 
-        OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
+        OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &NullCommand);
 
         LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
         {
@@ -1200,8 +1199,8 @@ namespace OIV
         fWindow.EnableDragAndDrop(true);
 		// Set canvas background the same color as in the renderer for flicker free startup.
 		//TODO: fix resize and disable background erasure of top level windows.
-		fWindow.SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
-		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45_u8, 45, 48));
+		fWindow.SetBackgroundColor(LLUtils::Color(45, 45, 48));
+		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
 
         fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
         {
@@ -1317,7 +1316,7 @@ namespace OIV
         fImageState.ClearAll();
         fLabelManager.RemoveAll();
         // Destroy OIV when window is closed.
-        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &NullCommand, &NullCommand);
     }
 
     double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
@@ -1341,7 +1340,7 @@ namespace OIV
 
     void TestApp::UpdateExposure()
     {
-        OIVCommands::ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &NullCommand);
         fRefreshOperation.Queue();
     }
 
@@ -1476,7 +1475,7 @@ namespace OIV
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
         grid.transparencyMode = fTransparencyMode;
         grid.generateMipmaps = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
-        if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
+        if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &NullCommand) == RC_Success)
         {
             fRefreshOperation.Queue();
         }
@@ -1776,12 +1775,16 @@ namespace OIV
     void TestApp::UpdateWindowSize()
     {
         SIZE size = fWindow.GetCanvasSize();
+
+        CmdSetClientSizeRequest req{ static_cast<uint16_t>(size.cx),
+            static_cast<uint16_t>(size.cy) };
+
         OIVCommands::ExecuteCommand(CMD_SetClientSize,
-            &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
-            static_cast<uint16_t>(size.cy) }, &CmdNull());
+            &req, &NullCommand);
         UpdateCanvasSize();
 		AutoPlaceImage();
-        fVirtualStatusBar.ClientSizeChanged(static_cast<LLUtils::PointI32>( fWindow.GetCanvasSize()));
+        auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
+        fVirtualStatusBar.ClientSizeChanged(point);
     }
 
     void TestApp::Center()
@@ -2383,7 +2386,7 @@ namespace OIV
         OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         CreateTextParams& textOptions = debugMessage->GetTextOptions();
         textOptions.text = txt;
-        textOptions.backgroundColor = LLUtils::Color(0_u8, 0, 0, 180).colorValue;
+        textOptions.backgroundColor = LLUtils::Color(0, 0, 0, 180).colorValue;
         textOptions.fontPath = LabelManager::sFontPath;
 
         if (debugMessage->Update() == RC_Success)

@@ -8,9 +8,9 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <Color.h>
-#include <Buffer.h>
-#include <Singleton.h>
+#include <LLUtils/Color.h>
+#include <LLUtils/Buffer.h>
+#include <LLUtils/Singleton.h>
 
 
 class FreeTypeConnector : public LLUtils::Singleton<FreeTypeConnector>

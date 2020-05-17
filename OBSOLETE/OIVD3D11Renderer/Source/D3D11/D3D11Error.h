@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include <windows.h>
-#include <PlatformUtility.h>
-#include <Exception.h>
+#include <LLUtils/PlatformUtility.h>
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {

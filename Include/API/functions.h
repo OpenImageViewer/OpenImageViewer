@@ -1,8 +1,8 @@
 #pragma once
-#include "platform.h"
+#include <LLUtils/Platform.h>
 #include "defs.h"
 
-#if OIV_LIBRARY_BUILD == 1
+#ifdef OIV_LIBRARY_BUILD && OIV_LIBRARY_BUILD == 1
     #define OIV_EXPORT LLUTILS_EXPORT
 #else
     #define OIV_EXPORT LLUTILS_IMPORT

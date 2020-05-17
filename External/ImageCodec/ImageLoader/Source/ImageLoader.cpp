@@ -1,7 +1,7 @@
 #include "ImageLoader.h"
 #include "EmbeddedPluginInstaller.h"
-#include <StringUtility.h>
-#include <StopWatch.h>
+#include <LLUtils/StringUtility.h>
+#include <LLUtils/StopWatch.h>
 
 namespace IMCodec
 {

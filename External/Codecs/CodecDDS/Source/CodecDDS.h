@@ -41,10 +41,10 @@ namespace IMCodec
                 {
                 case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
                 case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-                    BlockDecompressImageDXT1(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.GetBuffer()));
+                    BlockDecompressImageDXT1(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.data()));
                     break;
                 case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-                    BlockDecompressImageDXT5(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.GetBuffer()));
+                    BlockDecompressImageDXT5(surface.get_width(), surface.get_height(), static_cast<uint8_t*>(surface), reinterpret_cast<unsigned long*>(decompressedBuffer.data()));
                     break;
                     //TODO: add implementation for decompressing DXT3 
                 case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:

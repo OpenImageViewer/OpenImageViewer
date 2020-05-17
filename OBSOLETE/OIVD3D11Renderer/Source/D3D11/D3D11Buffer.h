@@ -1,7 +1,7 @@
 #pragma once
 #include "D3D11Error.h"
 #include "D3D11Common.h"
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {

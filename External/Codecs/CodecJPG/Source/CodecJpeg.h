@@ -34,7 +34,7 @@ namespace IMCodec
                 size_t imageDataSize = width * height * bytesPerPixel;
                 out_properties.fData.Allocate(imageDataSize);
 
-                if (tjDecompress2(ftjHandle, const_cast< uint8_t*>(reinterpret_cast<const uint8_t*>( buffer)), jpegSize, reinterpret_cast<unsigned char*>( out_properties.fData.GetBuffer()), width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
+                if (tjDecompress2(ftjHandle, const_cast< uint8_t*>(reinterpret_cast<const uint8_t*>( buffer)), jpegSize, reinterpret_cast<unsigned char*>( out_properties.fData.data()), width, width * bytesPerPixel, height, TJPF_RGBA, 0) != -1)
                 {
                     out_properties.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
                     out_properties.fProperties.Width = width;

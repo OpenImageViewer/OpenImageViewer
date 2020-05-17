@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
-#include <Point.h>
+#include <LLUtils/Point.h>
+
 #include <string>
 namespace OIV
 {

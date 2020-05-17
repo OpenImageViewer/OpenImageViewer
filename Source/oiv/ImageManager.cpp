@@ -1,5 +1,5 @@
 #include "ImageManager.h"
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {

@@ -16,23 +16,25 @@ namespace OIV
 
         static std::string KeyCodeToString(OIV::KeyCode keycode)
         {
+			
             auto foundItem = std::find_if(KeyCodeString.begin(), KeyCodeString.end(),
-                [&keycode](KeyCodeKeyStringPair const& item)
+                [&keycode](decltype(KeyCodeString)::value_type const& item)
             {
-                return keycode == item.keyCode;
+                return keycode == item.first;
             });
-            return foundItem->keyName;
+			
+			return foundItem !=  KeyCodeString.end() ?  foundItem->second : "Key not found";
         }
 
         static KeyCode KeyNameToKeyCode(const std::string& keyName)
         {
             auto foundItem = std::find_if(KeyCodeString.begin(), KeyCodeString.end(),
-                [&keyName](KeyCodeKeyStringPair const& item)
+                [&keyName](decltype(KeyCodeString)::value_type const& item)
             {
-                return keyName == item.keyName;
+                return keyName == item.second;
             });
 
-            return foundItem != KeyCodeString.end() ? foundItem->keyCode :KeyCode::UNASSIGNED;
+            return foundItem != KeyCodeString.end() ? foundItem->first :KeyCode::UNASSIGNED;
         }
 
         static std::vector<std::vector<size_t>> ComputeCombinations(std::vector<size_t> groupSizes)
@@ -82,5 +84,28 @@ namespace OIV
             uint16_t scanCode = ((keydown->isExtented == true ? 0xe0 : 0)  << 8) |  MapVirtualKey(key, MAPVK_VK_TO_VSC_EX);
             return   static_cast<KeyCode>(scanCode);
         }
+
+		static KeyCode KeyCodeFromRawInput(const RAWKEYBOARD& keyboard)
+		{
+			return static_cast<KeyCode>
+				(
+			  static_cast<uint16_t>(0)
+			| (   (keyboard.Flags  & RI_KEY_E0) != 0  ? static_cast<uint16_t>(0xE000) : 0 )
+			| ( (keyboard.Flags  & RI_KEY_E1) != 0    ? static_cast<uint16_t>(0xE100) : 0)
+			| static_cast<uint16_t>(keyboard.MakeCode)
+					)
+				;
+				
+		}
+
+		static KeyEvent KeyEventFromRawInput(const RAWKEYBOARD& keyboard)
+		{
+			KeyCode keyCode  = KeyCodeFromRawInput(keyboard);
+			KeyState state = ( (keyboard.Flags & RI_KEY_BREAK) != 0) ? KeyState::Up : KeyState::Down;
+
+			return {keyCode, state};
+		}
+
+
     };
 }

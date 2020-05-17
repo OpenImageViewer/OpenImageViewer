@@ -91,7 +91,7 @@ namespace IMCodec
                         unsigned long alpha = idx == transparentColor ? 0 : 0xff;
                         GifColorType colorType = gif->SColorMap->Colors[idx];
                         const uint32_t RGBACOLOR = (alpha << 24) | (colorType.Blue << 16) | (colorType.Green << 8) | colorType.Red;
-                        ((uint32_t*)out_properties.fData.GetBuffer())[bufPos] = RGBACOLOR;
+                        ((uint32_t*)out_properties.fData.data())[bufPos] = RGBACOLOR;
                         
                     }
 

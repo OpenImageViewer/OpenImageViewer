@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include <windows.h>
-#include "Point.h"
-#include "StopWatch.h"
+#include <LLUtils/Point.h>
+#include <LLUtils/StopWatch.h>
 #include "win32/HighPrecisionTimer.h"
 
 
@@ -47,7 +47,7 @@ namespace OIV
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        Win32::HighPrecisionTimer fTimer = std::bind(&AutoScroll::OnScroll, this);
+        Win32::HighPrecisionTimer fTimer = Win32::HighPrecisionTimer(std::bind(&AutoScroll::OnScroll, this));
         HANDLE fAutoScrollTimerID = nullptr;
         CreateParams fCreateParams = {};
         

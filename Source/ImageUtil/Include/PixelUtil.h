@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "AxisAlignedTransform.h"
 #include "Int24.h"
-#include "../../LLUtils/Include/Exception.h"
+#include <LLUtils/Exception.h>
 
 namespace IMUtil
 {

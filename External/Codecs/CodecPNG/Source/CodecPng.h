@@ -2,7 +2,7 @@
 
 #include <IImagePlugin.h>
 #include <png.h>
-#include <BitFlags.h>
+#include <LLUtils/BitFlags.h>
 
 namespace IMCodec
 {
@@ -23,6 +23,9 @@ namespace IMCodec
             , Reserved9 = 1 << 8
 
         };
+
+		LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(PngFormatFlags)
+
             
     public:
 

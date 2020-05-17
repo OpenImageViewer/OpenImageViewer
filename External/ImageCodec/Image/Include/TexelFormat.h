@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <Platform.h>
-#include "Exception.h"
+#include <LLUtils/Platform.h>
+#include <LLUtils/Exception.h>
 
 namespace IMCodec
 {

@@ -1,9 +1,9 @@
 #pragma once
 #include  <windows.h>
 #include <vector>
-#include <StopWatch.h>
+#include <LLUtils/StopWatch.h>
 #include "../Win32Helper.h"
-#include "Exception.h"
+#include <LLUtils/Exception.h>
 #include <array>
 
 namespace OIV

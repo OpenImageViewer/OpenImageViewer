@@ -1,7 +1,7 @@
 #include "KeyCombination.h"
-#include <StringUtility.h>
+#include <LLUtils/StringUtility.h>
 #include "KeyCodeHelper.h"
-#include <Exception.h>
+#include <LLUtils/Exception.h>
 
 #ifdef _WIN32
 #include <windows.h>

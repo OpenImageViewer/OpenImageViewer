@@ -5,7 +5,7 @@
 #include "MonitorInfo.h"
 #include "Win32Helper.h"
 #include "../resource.h"
-#include "Buffer.h"
+#include <LLUtils/Buffer.h>
 #include "WindowPosHelper.h"
 
 namespace OIV
@@ -181,7 +181,8 @@ namespace OIV
 
         bool Win32Window::IsMouseCursorInClientRect() const
         {
-            return PtInRect(&GetClientRectangle(), GetMousePosition()) == TRUE;
+            auto clientRect = GetClientRectangle();
+            return PtInRect(&clientRect, GetMousePosition()) == TRUE;
         }
 
         void Win32Window::SetWindowed()
@@ -504,8 +505,11 @@ namespace OIV
 			{
 				defaultProc = false; // custom handle background erasure 
 				retValue = 1; // always mark 'erased' flag.
-				if (GetEraseBackground() == true)
-					FillRect((HDC)message.wParam, &GetClientRectangle(), fBackgroundCachedBrush);
+                if (GetEraseBackground() == true)
+                {
+                    auto clientRect = GetClientRectangle();
+                    FillRect((HDC)message.wParam, &clientRect, fBackgroundCachedBrush);
+                }
 			}
                 break;
             case WM_DESTROY:

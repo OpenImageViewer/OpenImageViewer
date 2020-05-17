@@ -1,5 +1,5 @@
-#include "CodecjpgFactory.h"
-#include "../Source/CodecJpeg.h"
+#include "../Include/CodecJPGFactory.h"
+#include "CodecJpeg.h"
 
 namespace IMCodec
 {
