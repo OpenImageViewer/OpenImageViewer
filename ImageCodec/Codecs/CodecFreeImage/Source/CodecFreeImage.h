@@ -60,7 +60,7 @@ namespace IMCodec
                         if (format == FIF_BMP)
                         {
                             // Hack: BMP isn't read with an alpha channel.
-                            uint32_t* line = (uint32_t*)out_properties.fData.GetBuffer();
+                            uint32_t* line = (uint32_t*)out_properties.fData.data();
                             for (uint32_t y = 0; y < out_properties.fProperties.Height; y++)
                             {
                                 for (uint32_t x = 0; x < out_properties.fProperties.Width; x++)

@@ -1,8 +1,9 @@
-/.vs/OIV/v14
+/.vs/
 /bin
 /OIViewer/OIViewer.vcxproj.user
 /OivTestDotNet/obj/
 /OivTestDotNet/bin/
+/ImageCodec/Bin/
 /ImageCodec/Codecs/CodecDDS/CodecDDS.vcxproj.user
 /ImageCodec/Codecs/CodecFreeImage/CodecFreeImage.vcxproj.user
 /ImageCodec/Codecs/CodecJPG/CodecJPG.vcxproj.user
@@ -18,3 +19,4 @@ ImageCodec/Codecs/CodecTiff/CodecTiff.vcxproj.user
 /ImageCodec/Codecs/CodecGif/CodecGif.vcxproj.user
 /ImageCodec/Codecs/CodecGif/x64/
 Build/
+/ImageCodec/Bin/

@@ -1,5 +1,5 @@
-#include "CodecFreeImageFactory.h"
-#include "../Source/CodecFreeImage.h"
+#include "../Include/CodecFreeImageFactory.h"
+#include "CodecFreeImage.h"
 
 namespace IMCodec
 {

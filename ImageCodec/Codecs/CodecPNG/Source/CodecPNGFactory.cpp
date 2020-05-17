@@ -1,5 +1,5 @@
-#include "CodecPNGFactory.h"
-#include "../Source/CodecPNG.h"
+#include "../Include/CodecPNGFactory.h"
+#include "CodecPNG.h"
 
 namespace IMCodec
 {

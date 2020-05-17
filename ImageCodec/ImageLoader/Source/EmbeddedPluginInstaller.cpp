@@ -7,31 +7,29 @@
     #define IMCODEC_BUILD_CODEC_DDS  1
 #endif
 
-
-
 //TODO: Take configuration out to a new file
 #if IMCODEC_BUILD_CODEC_PSD == 1
-    #include <Codecs/CodecPSD/Include/CodecPSDFactory.h>
+    #include <../../Codecs/CodecPSD/Include/CodecPSDFactory.h>
 #endif
 #if IMCODEC_BUILD_CODEC_JPG == 1
-    #include <Codecs/CodecJpg/Include/CodecJPGFactory.h>
+    #include <../../Codecs/CodecJpg/Include/CodecJPGFactory.h>
 #endif
 #if IMCODEC_BUILD_CODEC_PNG == 1
-    #include "Codecs/CodecPNG/Include/CodecPNGFactory.h"
+    #include "../../Codecs/CodecPNG/Include/CodecPNGFactory.h"
 #endif
 #if IMCODEC_BUILD_CODEC_DDS == 1
-#include "Codecs/CodecDDS/Include/CodecDDSFactory.h"
+#include "../../Codecs/CodecDDS/Include/CodecDDSFactory.h"
 #endif
 #if IMCODEC_BUILD_CODEC_FREE_IMAGE == 1
-    #include "Codecs/CodecFreeImage/Include/CodecFreeImageFactory.h"
+    #include "../../Codecs/CodecFreeImage/Include/CodecFreeImageFactory.h"
 #endif
 
 #if IMCODEC_BUILD_CODEC_TIFF == 1
-#include "Codecs/CodecTiff/Include/CodecTiffFactory.h"
+#include "../../Codecs/CodecTiff/Include/CodecTiffFactory.h"
 #endif
 
 #if IMCODEC_BUILD_CODEC_GIF == 1
-#include "Codecs/CodecGif/Include/CodecGifFactory.h"
+#include "../../Codecs/CodecGif/Include/CodecGifFactory.h"
 #endif
 
 namespace IMCodec

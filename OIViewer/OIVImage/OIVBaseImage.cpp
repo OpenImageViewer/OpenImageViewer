@@ -31,7 +31,8 @@ namespace OIV
         ResultCode result = ResultCode::RC_UknownError;
         if (memcmp(&fImagePropertiesCached, &fImageProperties, sizeof(fImageProperties)) != 0)
         {
-            result = OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &CmdNull());
+            CmdNull NullCommand;
+            result = OIVCommands::ExecuteCommand(OIV_CMD_ImageProperties, &fImageProperties, &NullCommand);
             fImagePropertiesCached = fImageProperties;
         }
         return result;

@@ -7,7 +7,7 @@
 #include "half.hpp"
 #include "HSLRGB.h"
 #include <LLUtils/Exception.h>
-#include <Float24.h>
+#include "Float24.h"
 
 
 namespace IMUtil

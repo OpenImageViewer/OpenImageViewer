@@ -351,14 +351,14 @@ namespace OIV
 
                 if (GetRawInputData((HRAWINPUT)message.lParam,
                     RID_INPUT,
-                    lpb.GetBuffer(),
+                    lpb.data(),
                     &dwSize,
                     sizeof(RAWINPUTHEADER)) != dwSize)
                 {
                     LL_EXCEPTION_SYSTEM_ERROR("can not get raw input data");
                 }
 
-                HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.GetBuffer()));
+                HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.data()));
             }
             break;
             case WM_SIZE:

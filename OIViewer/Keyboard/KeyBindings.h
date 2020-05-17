@@ -17,7 +17,8 @@ namespace OIV
           if (static_cast<KeyCode>(combination.keycode) == KeyCode::UNASSIGNED)
               LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError , "trying to add an 'Unassigned' key binding");
 
-          auto ib = mBindings.insert(MapCombinationToBinding::value_type(combination, binding));
+
+          auto ib = mBindings.emplace(combination, binding);
           if (ib.second == false)
               LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "duplicate entries are not allowed");
       }

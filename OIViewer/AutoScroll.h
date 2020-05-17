@@ -47,7 +47,7 @@ namespace OIV
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        Win32::HighPrecisionTimer fTimer = std::bind(&AutoScroll::OnScroll, this);
+        Win32::HighPrecisionTimer fTimer = Win32::HighPrecisionTimer(std::bind(&AutoScroll::OnScroll, this));
         HANDLE fAutoScrollTimerID = nullptr;
         CreateParams fCreateParams = {};
         

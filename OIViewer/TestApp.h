@@ -197,6 +197,7 @@ namespace OIV
 
     private: // member fields
 #pragma region FrameLimiter
+        static inline CmdNull NullCommand;
         const bool EnableFrameLimiter = true;
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
         Win32::HighPrecisionTimer fRefreshTimer;

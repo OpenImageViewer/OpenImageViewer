@@ -672,7 +672,7 @@ namespace OIV
         };
 		request.userPointer = this;
 
-        OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &(CmdNull()));
+        OIVCommands::ExecuteCommand(OIV_CMD_RegisterCallbacks, &request, &NullCommand);
 
         LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
         {
@@ -1316,7 +1316,7 @@ namespace OIV
         fImageState.ClearAll();
         fLabelManager.RemoveAll();
         // Destroy OIV when window is closed.
-        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &CmdNull(), &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &NullCommand, &NullCommand);
     }
 
     double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
@@ -1340,7 +1340,7 @@ namespace OIV
 
     void TestApp::UpdateExposure()
     {
-        OIVCommands::ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &CmdNull());
+        OIVCommands::ExecuteCommand(OIV_CMD_ColorExposure, &fColorExposure, &NullCommand);
         fRefreshOperation.Queue();
     }
 
@@ -1475,7 +1475,7 @@ namespace OIV
         grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
         grid.transparencyMode = fTransparencyMode;
         grid.generateMipmaps = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
-        if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &CmdNull()) == RC_Success)
+        if (OIVCommands::ExecuteCommand(CE_TexelGrid, &grid, &NullCommand) == RC_Success)
         {
             fRefreshOperation.Queue();
         }
@@ -1775,12 +1775,16 @@ namespace OIV
     void TestApp::UpdateWindowSize()
     {
         SIZE size = fWindow.GetCanvasSize();
+
+        CmdSetClientSizeRequest req{ static_cast<uint16_t>(size.cx),
+            static_cast<uint16_t>(size.cy) };
+
         OIVCommands::ExecuteCommand(CMD_SetClientSize,
-            &CmdSetClientSizeRequest{ static_cast<uint16_t>(size.cx),
-            static_cast<uint16_t>(size.cy) }, &CmdNull());
+            &req, &NullCommand);
         UpdateCanvasSize();
 		AutoPlaceImage();
-        fVirtualStatusBar.ClientSizeChanged(static_cast<LLUtils::PointI32>( fWindow.GetCanvasSize()));
+        auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
+        fVirtualStatusBar.ClientSizeChanged(point);
     }
 
     void TestApp::Center()

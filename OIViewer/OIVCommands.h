@@ -9,7 +9,8 @@ namespace OIV
     class OIVCommands
     {
     public:
-
+        static inline CmdNull NullCommand;
+        //static const 
         static OIV_RECT_I ToOIVRect(const LLUtils::RectI32& rect)
         {
             LLUtils::RectI32::Point_Type topleft = rect.GetCorner(LLUtils::Corner::TopLeft);
@@ -25,7 +26,7 @@ namespace OIV
 
         static ResultCode Refresh()
         {
-                return ExecuteCommand(CommandExecute::CE_Refresh, &CmdNull(), &CmdNull());
+                return ExecuteCommand(CommandExecute::CE_Refresh, &NullCommand, &NullCommand);
         }
 
 
@@ -36,10 +37,10 @@ namespace OIV
 
             ResultCode rc = RC_Success;
 
-            if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &CmdNull(), &res)) == RC_Success)
+            if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &NullCommand, &res)) == RC_Success)
             {
                 res.knownFileTypes = new char[res.bufferSize];
-                if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &CmdNull(), &res)) == RC_Success)
+                if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &NullCommand, &res)) == RC_Success)
                     o_fileTypes = res.knownFileTypes;
 
                 delete[] res.knownFileTypes;
@@ -54,7 +55,7 @@ namespace OIV
             {
                 OIV_CMD_UnloadFile_Request unloadRequest = {};
                 unloadRequest.handle = handle;
-                return ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &CmdNull());
+                return ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &NullCommand);
             }
             else return RC_InvalidHandle;
         }
@@ -114,20 +115,20 @@ namespace OIV
             request.rect.y0 = rect.GetCorner(LLUtils::TopLeft).y;
             request.rect.x1 = rect.GetCorner(LLUtils::BottomRight).x;
             request.rect.y1 = rect.GetCorner(LLUtils::BottomRight).y;
-            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &CmdNull());
+            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &NullCommand);
         }
 
         static void CancelSelectionRect()
         {
             OIV_CMD_SetSelectionRect_Request request = { -1,-1,-1,-1 };
-            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &CmdNull());
+            ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &NullCommand);
         }
         static void Init(HANDLE hwnd)
         {
             // Init OIV renderer
             CmdDataInit init;
             init.parentHandle = reinterpret_cast<std::size_t>(hwnd);
-            if (ExecuteCommand(CommandExecute::CE_Init, &init, &CmdNull()) != RC_Success)
+            if (ExecuteCommand(CommandExecute::CE_Init, &init, &NullCommand) != RC_Success)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable initialize OIV library");
             
         }

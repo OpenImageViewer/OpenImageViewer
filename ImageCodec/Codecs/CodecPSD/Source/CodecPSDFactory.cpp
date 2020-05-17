@@ -1,5 +1,5 @@
-#include "CodecPSDFactory.h"
-#include "../Source/CodecPSD.h"
+#include "../Include/CodecPSDFactory.h"
+#include "CodecPSD.h"
 
 namespace IMCodec
 {
