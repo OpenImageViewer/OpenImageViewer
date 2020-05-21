@@ -19,7 +19,7 @@ set SevenZipPath=C:\Program Files\7-Zip
 set GitPath=C:\Program Files\Git\bin
 set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%
 rem Change to 1 to make an official build
-set OIV_OFFICIAL_BUILD=0
+set OIV_OFFICIAL_BUILD=1
 set OIV_VERSION_REVISION=0
 set VersionPath=.\oiv\API\Version.h
 set PublishPath=.\Bin\x64\Publish
@@ -50,7 +50,17 @@ echo ==============================================
 
 rem Build project
 msbuild.exe oiv.sln /m /p:configuration=Publish /t:%BuildOperation% /p:OIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% /p:OIV_VERSION_REVISION=L\"%OIV_VERSION_REVISION%\"
+if  %errorlevel% neq 0 (
+    echo Compilation error
+    pause
+    goto END
+)
+
 rem Pack symbols into 7z file.
 7z a -mx9 OIV-%versionString%-Win32x64VC14.2-Symbols.7z %PublishPath%\*.pdb
 rem Pack application into 7z file.
 7z a -mx9 OIV-!versionString!-Win32x64VC14.2.7z %PublishPath%\*.dll %PublishPath%\*.exe %PublishPath%\Resources
+echo Success!
+pause
+
+:END

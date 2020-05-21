@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.8)
+
+add_subdirectory(CodecDDS)
+add_subdirectory(CodecFreeImage)
+add_subdirectory(CodecGif)
+add_subdirectory(CodecJPG)
+add_subdirectory(CodecPNG)
+add_subdirectory(CodecPSD)
+add_subdirectory(CodecTiff)

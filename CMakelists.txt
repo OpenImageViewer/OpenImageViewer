@@ -1,21 +1,12 @@
-cmake_minimum_required(VERSION 3.0.0 FATAL_ERROR)
-project(cpp)
+cmake_minimum_required(VERSION 3.8)
+set(CMAKE_CXX_STANDARD 17)
 
-#For the shared library:
-#set ( PROJECT_LINK_LIBS libcppDS.dylib libcppCommon.dylib)
-#link_directories( dataStructures/build )
-#link_directories( common/build )
+include_directories(./External/LLUtils/Include)
+add_compile_definitions(UNICODE _UNICODE NOMINMAX)
+add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
 
-#Bring the headers, into the project
-#include_directories(common/include)
-#include_directories(dataStructures/include)
-
-#Can manually add the sources using the set command as follows:
-#set(MAINEXEC main.cpp)
-
-#add_executable(testDS ${MAINEXEC})
-#target_link_libraries(testDS ${PROJECT_LINK_LIBS} )
-
-#add_subdirectory(ImageCodec)
-#add_subdirectory(dataStructures)
-#add_executable(prog /ImageLoader.cpp)
+add_subdirectory(ImageCodec)
+add_subdirectory(ImageUtil)
+add_subdirectory(OIVD3D11Renderer)
+add_subdirectory(oiv)
+add_subdirectory(OIViewer)
