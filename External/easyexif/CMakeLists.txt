@@ -1,4 +1,4 @@
-#Freetype Wrapper
+#Easyexif
  file(GLOB_RECURSE sourceFiles
      "./*.h"
      "./*.cpp"

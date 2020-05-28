@@ -1,3 +1,6 @@
 [submodule "External/LLUtils"]
 	path = External/LLUtils
 	url = https://github.com/TheNicker/LLUtils.git
+[submodule "External/FreeTypeWrapper"]
+	path = External/FreeTypeWrapper
+	url = https://github.com/OpenImageViewer/FreeTypeWrapper.git
