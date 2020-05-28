@@ -45,7 +45,7 @@ add_custom_command(TARGET ${TargetName}
                    /S 
                    /I
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/Resources\""
-                   "\"${CMAKE_CURRENT_BINARY_DIR}/Resources\""
+                   "\"${CMAKE_BINARY_DIR}/Resources\""
 
                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                    COMMENT "Copying resources to output dir..."
@@ -60,7 +60,7 @@ add_custom_command(TARGET ${TargetName}
                    /S 
                    /I
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources\""
-                   "\"${CMAKE_CURRENT_BINARY_DIR}/Resources\""
+                   "\"${CMAKE_BINARY_DIR}/Resources\""
 
                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                    COMMENT "Copying resources to output dir..."

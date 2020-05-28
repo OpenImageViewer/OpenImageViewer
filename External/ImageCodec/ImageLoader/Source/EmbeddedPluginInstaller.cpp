@@ -27,7 +27,7 @@
 #endif
 
 #if IMCODEC_BUILD_CODEC_WEBP == 1
-#include "../../Codecs/CodecGif/Include/CodecWebPFactory.h"
+#include "../../Codecs/CodecWebP/Include/CodecWebPFactory.h"
 #endif
 
 namespace IMCodec

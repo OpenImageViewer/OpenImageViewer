@@ -8,14 +8,14 @@ include_directories(./Imageloader/Include)
 include_directories(../External/LLUtils/Include)
 
 
-option(IMCODEC_BUILD_CODEC_PSD "Build Codec PSD" TRUE)
-option(IMCODEC_BUILD_CODEC_JPG "Build Codec JPG" TRUE)
-option(IMCODEC_BUILD_CODEC_PNG "Build Codec PNG" TRUE)
+option(IMCODEC_BUILD_CODEC_PSD "Build Codec PSD" FALSE)
+option(IMCODEC_BUILD_CODEC_JPG "Build Codec JPG" FALSE)
+option(IMCODEC_BUILD_CODEC_PNG "Build Codec PNG" FALSE)
 option(IMCODEC_BUILD_CODEC_DDS "Build Codec DDS" TRUE)
-option(IMCODEC_BUILD_CODEC_GIF "Build Codec GIF" TRUE)
-option(IMCODEC_BUILD_CODEC_TIFF "Build Codec TIFF" TRUE)
+option(IMCODEC_BUILD_CODEC_GIF "Build Codec GIF" FALSE)
+option(IMCODEC_BUILD_CODEC_TIFF "Build Codec TIFF" FALSE)
 option(IMCODEC_BUILD_CODEC_WEBP "Build Codec WEBP" FALSE)
-option(IMCODEC_BUILD_CODEC_FREEIMAGE "Build Codec FREEIMAGE" TRUE)
+option(IMCODEC_BUILD_CODEC_FREEIMAGE "Build Codec FREEIMAGE" FALSE)
 
 
 if ( ${IMCODEC_BUILD_CODEC_PSD})
