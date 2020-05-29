@@ -3,7 +3,35 @@ cmake_minimum_required(VERSION 3.8)
 project(oiv)
 set(CMAKE_CXX_STANDARD 17)
 
-if ( ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+
+option(OIV_OFFICIAL_BUILD "Build official release of OIV" FALSE)
+
+
+
+if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+#Debug build
+    set(OIV_BUILD_TYPE_STR "Debug")
+    set(OIV_BUILD_TYPE_ID 0)
+	add_definitions(-DOIV_BUILD_TYPE=0)
+elseif (${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+    
+    if(OIV_OFFICIAL_BUILD)  #Official release build (publish)
+        add_definitions(-DOIV_OFFICIAL_BUILD=1)
+        set(OIV_BUILD_TYPE_STR "Publish")
+        set(OIV_BUILD_TYPE_ID 2)
+	    add_definitions(-DOIV_BUILD_TYPE=2)
+    else()  # Release build
+        set(OIV_BUILD_TYPE_STR "Release")
+        set(OIV_BUILD_TYPE_ID 1)
+	    add_definitions(-DOIV_BUILD_TYPE=1)
+    endif()
+else()
+    message(FATAL_ERROR "Unknown build configuration" )
+endif()
+
+
+
+if ( ${OIV_BUILD_TYPE_STR} STREQUAL "Release" OR ${OIV_BUILD_TYPE_STR} STREQUAL "Publish")
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         #MSVC optimizations
         #compiler optimizations
@@ -13,14 +41,25 @@ if ( ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
         add_compile_options(/Ot)    #favor fast code
         add_compile_options(/Oy)    #Omit frame pointers
         add_compile_options(/GT)    #enalbe fiber safe optimiations
-        add_compile_options(/GL)    #whole program optimization
 
         #linker optimizations
         add_link_options(/OPT:REF)  #remove unreferenced code/data
         add_link_options(/OPT:ICF)  #enable COMDAT folding
-        add_link_options(/LTCG)     #link time code generation
+        
+        #   Publish specific optimization flags
+        if (${OIV_BUILD_TYPE_STR} STREQUAL "Publish")
+           add_compile_options(/GL)    #whole program optimization
+           add_link_options(/LTCG)     #link time code generation
+        endif()
+
     endif()
-else()
+
+
+
+elseif (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    add_definitions(-DOIV_BUILD_TYPE=1)
+elseif (${CMAKE_BUILD_TYPE} STREQUAL "Publish")
+    add_definitions(-DOIV_BUILD_TYPE=2)
     
 endif()
 

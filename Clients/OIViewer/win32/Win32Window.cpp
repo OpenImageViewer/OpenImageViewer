@@ -72,24 +72,21 @@ namespace OIV
             static TCHAR szWindowClass[] = _T("OIV_WINDOW_CLASS");
 
             // The string that appears in the application's title bar.
-            WNDCLASSEX wcex;
+            WNDCLASSEX wcex{};
 
             wcex.cbSize = sizeof(WNDCLASSEX);
-            wcex.style = 0;
             wcex.lpfnWndProc = WndProc;
-            wcex.cbClsExtra = 0;
-            wcex.cbWndExtra = 0;
             wcex.hInstance = hInstance;
-            wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+
+            auto iconPath = LLUtils::PlatformUtility::GetExeFolder() + L"/Resources/Icons/";
+            wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
             wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
             wcex.hbrBackground =  reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-            wcex.lpszMenuName = nullptr;
             wcex.lpszClassName = szWindowClass;
-            wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+
             static bool classRegistered = false;
             if (classRegistered == false)
             {
-
                 if (RegisterClassEx(&wcex) == false)
                 {
                     MessageBox(nullptr,

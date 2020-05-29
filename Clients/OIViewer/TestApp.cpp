@@ -879,7 +879,7 @@ namespace OIV
     {
 		static std::wstring cachedVersionString = L"OpenImageViewer " + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
 #if OIV_OFFICIAL_BUILD == 0
-			+ L'.' + OIV_VERSION_REVISION + L" - UNOFFICIAL"
+			+ L'.' + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L" - UNOFFICIAL"
 #endif			
 			;
 

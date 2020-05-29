@@ -2,6 +2,17 @@
 #OIV library
 cmake_minimum_required(VERSION 3.8)
 
+execute_process(COMMAND gitHead.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE GIT_HASH_ID)
+#execute_process(COMMAND gitCommitDate.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE  GIT_COMMIT_DATE)
+#execute_process(COMMAND gitBranch.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE GIT_BRANCH)
+string(REPLACE \n "" GIT_HASH_ID ${GIT_HASH_ID})
+#string(REPLACE \n "" GIT_COMMIT_DATE ${GIT_COMMIT_DATE})
+#string(REPLACE \n "" GIT_BRANCH ${GIT_BRANCH})
+
+add_definitions(-DOIV_VERSION_REVISION="${GIT_HASH_ID}")
+#add_definitions(-DGIT_COMMIT_DATE="${GIT_COMMIT_DATE}")
+#add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
+
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
     "./*.h"
@@ -11,6 +22,21 @@ file(GLOB_RECURSE sourceFiles
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)
 add_executable (${TargetName} ${sourceFiles} )
+
+
+add_custom_command(TARGET ${TargetName} 
+                   PRE_LINK
+                   COMMAND rc
+                   /r
+                   /v
+                   /d OIV_BUILD_TYPE=${OIV_BUILD_TYPE_ID}
+                   /fo "${CMAKE_BINARY_DIR}/Resource.res"
+                   "\"${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc\""
+                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                   COMMENT "Compiling resources"
+                   
+                   )
+
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Image/include)
@@ -36,9 +62,14 @@ shcore.lib
 include_directories(../oiv)
 
 
+#Build resources for embedding an Icon into the executable 
 
-add_custom_command(TARGET ${TargetName}
-                   POST_BUILD
+target_link_options(${TargetName} PRIVATE ${CMAKE_BINARY_DIR}/resource.res)
+
+
+#Copy own resources to the output dir 
+add_custom_command( TARGET ${TargetName}
+                   PRE_LINK
                    COMMAND xcopy
                    /Y 
                    /D 
@@ -52,6 +83,7 @@ add_custom_command(TARGET ${TargetName}
                    
                    )
                    
+#Copy oiv library resources to the output dir 
      add_custom_command(TARGET ${TargetName}
                    POST_BUILD
                    COMMAND xcopy
