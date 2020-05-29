@@ -31,7 +31,6 @@ add_custom_command(TARGET ${TargetName}
                    PRE_LINK
                    COMMAND rc
                    /r
-                   /v
                    /d OIV_BUILD_TYPE=${OIV_BUILD_TYPE}
                    /fo "${CMAKE_BINARY_DIR}/${CMAKE_INTDIR}/Resource.res"
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc\""
@@ -101,3 +100,14 @@ add_custom_command( TARGET ${TargetName}
                    
                    )
 
+#Embedd manifest 
+     add_custom_command(TARGET ${TargetName}
+                   POST_BUILD
+                   COMMAND mt
+                   -nologo 
+                   -manifest
+                   "\"${CMAKE_CURRENT_SOURCE_DIR}/OIViewerManifest.xml\""
+                   -outputresource:"\"${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${TargetName}.exe\""
+                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+                   COMMENT "Embedding manifest file"
+                   )
