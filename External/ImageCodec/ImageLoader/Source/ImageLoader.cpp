@@ -58,14 +58,19 @@ namespace IMCodec
         else 
         {
             loaded = plugin->LoadImage(buffer, size, descriptors[0]);
-            descriptors[0].fMetaData.LoadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
         }
+
+        auto loadTime = stopWatch.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
         if (loaded == true)
         {
-            for (const ImageDescriptor& imageDescriptor : descriptors)
+            for (ImageDescriptor& imageDescriptor : descriptors)
                 if ((imageDescriptor.IsInitialized() == true)) // verify image descriptor is properly initialized
+                {
+                    imageDescriptor.fMetaData.LoadTime = loadTime;
                     out_images.push_back(std::make_shared<Image>(imageDescriptor));
+                }
+            
         }
 
         return loaded;
