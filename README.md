@@ -1,6 +1,8 @@
 # Open Image Viewer
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/86c11bc7e75e4677b8c2b5d50f9cd1c3)](https://app.codacy.com/app/TheNicker/OIV?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OIV&utm_campaign=Badge_Grade_Settings)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/22d2c9bc0fa149fcaf0b84e009839fa9)](https://app.codacy.com/gh/OpenImageViewer/OpenImageViewer?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OpenImageViewer&utm_campaign=Badge_Grade_Dashboard)
+[![Build status](https://ci.appveyor.com/api/projects/status/yua3myv699sm3o17/branch/master?svg=true)](https://ci.appveyor.com/project/LiorL/openimageviewer/branch/master)
+
 
 **Open Image Viewer** is a hardware accelerated blazingly fast open code c++17 compliant cross-platform 'C' library and application for viewing and 
 manipulating images.
@@ -25,14 +27,14 @@ The motivation for this project is to create an open code image viewer with grea
 * Pixel grid.
 * Multi full screen - image spans across all monitors.
 * Support for image meta data, such as orientation.
+* The project is lightweight and using lightweight dependencies, no boost or other shenanigans.
 
 ## Todo
-* Complete CMake and compatibility with g++, Linux and MacOS.
-* Link the repositoty to continuous integration services. 
+* Add compatibility with g++, Linux and MacOS.
 * Implement Metal, Vulkan and Direct3D12 renderers.
 * Add GPU support for Lanczos re-sampling.
 * Support for images larger than 256 mega pixels.
-* Remove freeimage as a fallback codec and implement specialized codecs.
+* Implement more specialized codecs, thus decreasing further the dependency in freeimage.
 * Play animated images.
 * Suppport more types of meta data.
 
@@ -40,33 +42,24 @@ The motivation for this project is to create an open code image viewer with grea
 
 ## Build your copy from source / Start developing
 
-External dependencies are not mandatory, the core project relies solely on the standard CRT and STL.
 
 ### Instructions
 
-1. **Get The Source Code:**  
-Clone the repository by running the command:  
-`git clone https://github.com/OpenImageViewer/OIV`
+1. **Clone the repository and update the submodules recursivly.**  
 
-1. **Third Party Dependencies**  
-Modify "\oiv\Configuration.h" to choose which dependencies to use.
-Get the desired [libraries](#libraries) and add it to the relevant project.
+2. **If using visual studio then open the root cmake file as CMake project. if using cmake directly then run cmake.exe with the comamand line parameter -DCMAKE_BUILD_TYPE=RelWithDebInfo.**
 
-1. **Embedded Codec Dependencies:**  
-Modify "ImageCodec\ImageLoader\Source\BuildConfig.h" to choose which codecs are statically embedded into the image loader.
-Embedded codecs are optional and they can all be disabled.
-Get the desired [codec libraries](#codec-libraries-optional) and add it to the relevant project.
+3. **Compile and run.**
 
-### Build the project
+### Notes
+* IMCODEC_BUILD_CODEC_DDS is currently the only codec build flag that is enabled by default. For a full set of image format support, enable any of the the IMCODEC_BUILD_CODEC_* cmake options.
+* Only 64 bit is officialy supported.
+
 
 #### Windows
 ##### Requirements
 * Windows Vista/7/8/8.1/10
-* Microsoft build tools 2017 or higher ([download](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=15#))
-##### Build Command
-* Run the command: "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\MSBuild\15.0\Bin" oiv.sln  
-<span style="background-color: yellow;">**NOTE:** The path for msbuild may vary depending on your setup</span>
-
+* Microsoft build tools 2019 or higher
 ### Linux
 #### Requirements
 coming soon ...
@@ -79,13 +72,7 @@ coming soon ...
 #### Build Process
 coming soon ...
 
------------------------------
-## Libraries
-Name         | Link
------------- | -------------
-***libfreetype2*** | http://git.sv.nongnu.org/r/freetype/freetype2.git
-
-## Codec Libraries (optional)
+## Extra Codec Library dependecies (optional)
 Name | Link
 ------------ | -------------
 ***CodecJPG - libjpeg-turbo*** | https://sourceforge.net/projects/libjpeg-turbo/  
@@ -94,8 +81,6 @@ Name | Link
 ***CodecPSD - libpsd fork*** | https://github.com/TheNicker/libpsd  
 ***CodecFreeImage*** | http://freeimage.sourceforge.net/
 -----------------------------
-
-
 
 ## License
 OIV uses the [OpenImageViewer License](LICENSE.md) license.

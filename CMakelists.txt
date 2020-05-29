@@ -1,6 +1,6 @@
 #root CMake file
 cmake_minimum_required(VERSION 3.8)
-project(oiv)
+project(OpenImageViewer)
 set(CMAKE_CXX_STANDARD 17)
 
 
