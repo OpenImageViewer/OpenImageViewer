@@ -154,6 +154,32 @@ namespace OIV
             result.resValue = userMessage + L"<textcolor=#7672ff>"+ transparencyMode;
             
         }
+        else if (type == "toggledownsamplingtechnique")
+        {
+            DownscalingTechnique technique = GetNextEnumValue(fDownScalingTechnique);
+
+
+            std::wstring downscaleTechnique;
+
+            switch (technique)
+            {
+            case DownscalingTechnique::None:
+                downscaleTechnique = L"No downsamling";
+                break;
+            case DownscalingTechnique::HardwareMipmaps:
+                downscaleTechnique = L"Hardware mipmaps";
+                break;
+            case DownscalingTechnique::Software:
+                downscaleTechnique = L"Box filter";
+                break;
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+            }
+            result.resValue = DefaultTextKeyColorTag + L"Downscaling technique: " + DefaultTextValueColorTag + downscaleTechnique;
+
+            SetDownScalingTechnique(technique);
+        }
+
 
 
 
@@ -708,6 +734,7 @@ namespace OIV
             ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
             ,{ "Toggle reset offset on load","cmd_view_state","type=toggleresetoffset" ,"Backslash" }
             ,{ "Toggle transparency mode","cmd_view_state","type=toggletransparencymode" ,"T" }
+            ,{ "Toggle downsampling technique","cmd_view_state","type=toggledownsamplingtechnique" ,"M" }
 
             //Color correction
             ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
@@ -1225,6 +1252,16 @@ namespace OIV
 				HideUserMessageGradually();
 			}
 		);
+
+        fTimerNoActiveZoom.SetTargetWindow(fWindow.GetHandle());
+        fTimerNoActiveZoom.SetCallback([this]()
+            {
+                fTimerNoActiveZoom.SetInterval(0);
+                fImageState.SetResample(true);
+                fImageState.Refresh();
+                fRefreshOperation.Queue();
+            }
+        );
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
 
@@ -1633,6 +1670,13 @@ namespace OIV
 
         PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
         PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
+
+        if (fDownScalingTechnique == OIV::DownscalingTechnique::Software)
+        {
+            fImageState.SetResample(false);
+            fTimerNoActiveZoom.SetInterval(0);
+            fTimerNoActiveZoom.SetInterval(50);
+        }
 
         fImageState.SetScale(zoomValue);
         
@@ -2472,5 +2516,37 @@ namespace OIV
     {
         fLabelManager.Remove("welcomeMessage");
     }
+
+    void TestApp::SetDownScalingTechnique(DownscalingTechnique technique)
+    {
+        if (technique != fDownScalingTechnique)
+        {
+            fDownScalingTechnique = technique;
+            switch (fDownScalingTechnique)
+            {
+            case DownscalingTechnique::None:
+                fImageState.SetResample(false);
+                break;
+            case DownscalingTechnique::HardwareMipmaps:
+                fImageState.SetResample(false);
+                break;
+            case DownscalingTechnique::Software:
+                fImageState.SetResample(true);
+                break;
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+            }
+
+            if (IsImageOpen() == true)
+            {
+                fRefreshOperation.Begin();
+                RefreshImage();
+                UpdateRenderViewParams();
+                fRefreshOperation.End();
+            }
+        }
+
+    }
+
 }
 

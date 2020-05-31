@@ -37,5 +37,6 @@ namespace OIV
         virtual ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request, OIV_CMD_GetSubImages_Response& res) = 0;
 
         virtual ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) = 0;
+        virtual ResultCode ResampleImage(const OIV_CMD_Resample_Request&, ImageHandle&) = 0;
     };
 }
