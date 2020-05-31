@@ -323,7 +323,18 @@ namespace OIV
 
         case ImageChainStage::Resampled:
         {
-			return fCurrentImageChain.Get(ImageChainStage::Rasterized);
+            //TODO: adjust resampling conditions
+            if (GetScale().x > 0.8 || GetScale().y > 0.8)
+            {
+                return image;
+            }
+            else
+            {
+                auto rasterized = fCurrentImageChain.Get(ImageChainStage::Rasterized);
+                LLUtils::PointF64 originalImageSize = { static_cast<double>(rasterized->GetDescriptor().Width) , static_cast<double>(rasterized->GetDescriptor().Height) };
+                auto resampled = OIVImageHelper::ResampleImage(rasterized, static_cast<LLUtils::PointI32>((originalImageSize * GetScale()).Round()));
+                return resampled;
+            }
         }
             break;
         default:

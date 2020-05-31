@@ -20,6 +20,7 @@
 #include "Handlers/CommandHandlerGetKnownFileTypes.h"
 #include "Handlers/CommandHandlerRegisterCallbacks.h"
 #include "Handlers/CommandHandlerGetSubImages.h"
+#include "Handlers/CommandHandlerResampleImage.h"
 
 
 namespace OIV
@@ -29,28 +30,29 @@ namespace OIV
         using namespace std;
         fCommandHandlers =
         {
-              make_pair(CE_Init,new CommandHandlerInit())
-            , make_pair(OIV_CMD_LoadFile,new CommandHandlerLoadFile())
-            , make_pair(OIV_CMD_LoadRaw,new CommandHandlerLoadRaw())
-            , make_pair(OIV_CMD_UnloadFile,new CommandHandlerUnloadFile())
-            , make_pair(CE_Refresh,new CommandHandlerRefresh())
-            , make_pair(CE_TexelGrid,new CommandHandlerTexelGrid())
-            , make_pair(CMD_SetClientSize,new CommandHandlerSetClientSize())
-            , make_pair(OIV_CMD_Destroy,new CommandHandlerDestroy())
-            , make_pair(OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform())
-            , make_pair(OIV_CMD_ImageProperties,new CommandHandlerImageProperties())
-            , make_pair(OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect())
-            , make_pair(OIV_CMD_CropImage,new CommandHandlerCropImage())
-            , make_pair(OIV_CMD_GetPixels,new CommandHandlerGetPixels())
-            , make_pair(OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat())
-            , make_pair(OIV_CMD_ColorExposure,new CommandHandlerColorExposure())
-            , make_pair(OIV_CMD_TexelInfo,new CommandHandlerTexelInfo())
-            , make_pair(OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo())
-            , make_pair(OIV_CMD_CreateText,new CommandHandlerCreateText())
-            , make_pair(OIV_CMD_GetKnownFileTypes,new CommandHandlerGetKnownFileTypes())
-            , make_pair(OIV_CMD_RegisterCallbacks,new CommandHandlerRegisterCallbacks())
-            , make_pair(OIV_CMD_GetSubImages,new CommandHandlerGetSubImages())
-        };
+              {CE_Init,new CommandHandlerInit()}
+            , {OIV_CMD_LoadFile,new CommandHandlerLoadFile()}
+            , {OIV_CMD_LoadRaw,new CommandHandlerLoadRaw()}
+            , {OIV_CMD_UnloadFile,new CommandHandlerUnloadFile()}
+            , {CE_Refresh,new CommandHandlerRefresh()}
+            , {CE_TexelGrid,new CommandHandlerTexelGrid()}
+            , {CMD_SetClientSize,new CommandHandlerSetClientSize()}
+            , {OIV_CMD_Destroy,new CommandHandlerDestroy()}
+            , {OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform()}
+            , {OIV_CMD_ImageProperties,new CommandHandlerImageProperties()}
+            , {OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect()}
+            , {OIV_CMD_CropImage,new CommandHandlerCropImage()}
+            , {OIV_CMD_GetPixels,new CommandHandlerGetPixels()}
+            , {OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat()}
+            , {OIV_CMD_ColorExposure,new CommandHandlerColorExposure()}
+            , {OIV_CMD_TexelInfo,new CommandHandlerTexelInfo()}
+            , {OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo()}
+            , {OIV_CMD_CreateText,new CommandHandlerCreateText()}
+            , {OIV_CMD_GetKnownFileTypes,new CommandHandlerGetKnownFileTypes()}
+            , {OIV_CMD_RegisterCallbacks,new CommandHandlerRegisterCallbacks()}
+            , {OIV_CMD_GetSubImages,new CommandHandlerGetSubImages()}
+            , {OIV_CMD_ResampleImage,new CommandHandlerResampleImage()}
+        };    
     }
 
     CommandProcessor::~CommandProcessor()

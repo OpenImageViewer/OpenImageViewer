@@ -193,7 +193,7 @@ namespace OIV
         void CancelSelection();
         void LoadSubImages();
         void AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
-        
+        void SetDownScalingTechnique(DownscalingTechnique technique);
 
     private: // member fields
 #pragma region FrameLimiter
@@ -223,6 +223,7 @@ namespace OIV
         Win32::Timer fTimerTopMostRetention;
         Win32::Timer fTimerSlideShow;
         int fTopMostCounter = 0;
+        Win32::Timer fTimerNoActiveZoom;
         
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();

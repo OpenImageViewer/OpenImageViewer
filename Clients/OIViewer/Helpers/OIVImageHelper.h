@@ -43,5 +43,22 @@ namespace OIV
                 return image;
             }
         }
+        static OIVBaseImageUniquePtr ResampleImage(OIVBaseImageUniquePtr image, LLUtils::PointI32 scale)
+        {
+            OIV_CMD_Resample_Request req{};
+            req.imageHandle = image->GetDescriptor().ImageHandle;
+            req.size = static_cast<LLUtils::PointI32>(scale);
+            OIV_CMD_Resample_Response res;
+
+            if (OIVCommands::ExecuteCommand(OIV_CMD_ResampleImage, &req, &res) == RC_Success)
+            {
+                OIVBaseImageUniquePtr resampledImage = std::make_unique<OIVHandleImage>(res.imageHandle);
+                return resampledImage;
+            }
+            else
+            {
+                return OIVBaseImageUniquePtr();
+            }
+        }
     };
 }
