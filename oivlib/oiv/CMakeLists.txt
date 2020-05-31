@@ -9,6 +9,7 @@
 set(ExternalFolder ../../External)
 set(TargetName oiv)
 add_library (${TargetName} SHARED ${sourceFiles} )
+
 set_target_properties(${TargetName} PROPERTIES LINK_FLAGS 
 "/DELAYLOAD:\"libpng16.dll\" /DELAYLOAD:\"FreeImage.dll\" /DELAYLOAD:\"D3DCompiler_47.dll\" /DELAYLOAD:\"dbghelp.dll\" /DELAYLOAD:\"turbojpeg.dll\"")
 target_compile_definitions(${TargetName} PRIVATE OIV_LIBRARY_BUILD)
@@ -26,11 +27,11 @@ add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 target_link_libraries(${TargetName} 
 #Local libraries
 ImageLoader
+easyexif
 FreeTypeWrapper
 OIVD3D11Renderer
 dbghelp
 delayimp
-easyexif
 
 #external dependencies
 
