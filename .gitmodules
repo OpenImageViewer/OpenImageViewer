@@ -1,6 +1,15 @@
 [submodule "External/LLUtils"]
 	path = External/LLUtils
 	url = https://github.com/TheNicker/LLUtils.git
+[submodule "External/ImageCodec"]
+	path = External/ImageCodec
+	url = https://github.com/OpenImageViewer/ImageCodec.git
+[submodule "External/ExoticNumbers"]
+	path = External/ExoticNumbers
+	url = https://github.com/OpenImageViewer/ExoticNumbers.git
+[submodule "External/easyexif"]
+	path = External/easyexif
+	url = https://github.com/OpenImageViewer/easyexif.git
 [submodule "External/FreeTypeWrapper"]
 	path = External/FreeTypeWrapper
 	url = https://github.com/OpenImageViewer/FreeTypeWrapper.git

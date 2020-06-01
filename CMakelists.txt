@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(OIV_OFFICIAL_BUILD "Build official release of OIV" FALSE)
 
+# Define Release by default.
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+  message(STATUS "Build type not specified: Use Release by default.")
+endif(NOT CMAKE_BUILD_TYPE)
 
 
 if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
@@ -13,7 +18,7 @@ if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     set(OIV_BUILD_TYPE_STR "Debug")
     set(OIV_BUILD_TYPE_ID 0)
 	add_definitions(-DOIV_BUILD_TYPE=0)
-elseif (${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
+elseif (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
     
     if(OIV_OFFICIAL_BUILD)  #Official release build (publish)
         add_definitions(-DOIV_OFFICIAL_BUILD=1)
