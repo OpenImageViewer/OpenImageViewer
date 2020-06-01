@@ -13,60 +13,47 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 
-if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-#Debug build
-    set(OIV_BUILD_TYPE_STR "Debug")
-    set(OIV_BUILD_TYPE_ID 0)
-	add_definitions(-DOIV_BUILD_TYPE=0)
-elseif (${CMAKE_BUILD_TYPE} STREQUAL "Release" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo")
-    
-    if(OIV_OFFICIAL_BUILD)  #Official release build (publish)
-        add_definitions(-DOIV_OFFICIAL_BUILD=1)
-        set(OIV_BUILD_TYPE_STR "Publish")
-        set(OIV_BUILD_TYPE_ID 2)
-	    add_definitions(-DOIV_BUILD_TYPE=2)
-    else()  # Release build
-        set(OIV_BUILD_TYPE_STR "Release")
-        set(OIV_BUILD_TYPE_ID 1)
-	    add_definitions(-DOIV_BUILD_TYPE=1)
-    endif()
+#todo: fix OIV_BUILD_TYPE for debug
+
+add_compile_definitions($<$<CONFIG:DEBUG>:OIV_BUILD_TYPE=0>)
+set(OIV_BUILD_TYPE 0)
+
+if (OIV_OFFICIAL_BUILD)
+    set(OIV_BUILD_TYPE 2)
+    add_compile_definitions($<$<CONFIG:RELEASE>:OIV_BUILD_TYPE=2>)
 else()
-    message(FATAL_ERROR "Unknown build configuration" )
+    set(OIV_BUILD_TYPE 1)
+    add_compile_definitions($<$<CONFIG:RELEASE>:OIV_BUILD_TYPE=1>)
 endif()
 
 
-
-if ( ${OIV_BUILD_TYPE_STR} STREQUAL "Release" OR ${OIV_BUILD_TYPE_STR} STREQUAL "Publish")
-    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-        #MSVC optimizations
-        #compiler optimizations
-        add_compile_options(/O2)    #maximum optimization
-	    add_compile_options(/Ob2)   #inline function expansion
-        add_compile_options(/Oi)    #enable instrinsic functions
-        add_compile_options(/Ot)    #favor fast code
-        add_compile_options(/Oy)    #Omit frame pointers
-        add_compile_options(/GT)    #enalbe fiber safe optimiations
-
-        #linker optimizations
-        add_link_options(/OPT:REF)  #remove unreferenced code/data
-        add_link_options(/OPT:ICF)  #enable COMDAT folding
-        
-        #   Publish specific optimization flags
-        if (${OIV_BUILD_TYPE_STR} STREQUAL "Publish")
-           add_compile_options(/GL)    #whole program optimization
-           add_link_options(/LTCG)     #link time code generation
-        endif()
-
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    #MSVC optimizations
+    #compiler optimizations
+    add_compile_options($<$<CONFIG:RELEASE>:/O2>)    #maximum optimization
+    add_compile_options($<$<CONFIG:RELEASE>:/Ob2>)   #inline function expansion
+    add_compile_options($<$<CONFIG:RELEASE>:/Oi>)    #enable instrinsic functions
+    add_compile_options($<$<CONFIG:RELEASE>:/Ot>)    #favor fast code
+    add_compile_options($<$<CONFIG:RELEASE>:/Oy>)    #Omit frame pointers
+    add_compile_options($<$<CONFIG:RELEASE>:/GT>)    #enalbe fiber safe optimiations
+    
+    #linker optimizations
+    add_link_options($<$<CONFIG:RELEASE>:/OPT:REF>)  #remove unreferenced code/data
+    add_link_options($<$<CONFIG:RELEASE>:/OPT:ICF>)  #enable COMDAT folding
+    
+    #   Publish specific optimization flags
+    if (OIV_OFFICIAL_BUILD)
+       add_compile_options($<$<CONFIG:RELEASE>:/GL>)    #whole program optimization
+       add_link_options($<$<CONFIG:RELEASE>:/LTCG>)     #link time code generation
     endif()
 
+    #Always generate debug info
+    add_link_options(/DEBUG)    #(Generate Debug Info)
+    add_compile_options(/Zi)    #whole program optimization
+    add_compile_options($<$<CONFIG:RELEASE>:/Zo>)    #Enhance Optimized Debugging
+endif()    
 
 
-elseif (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DOIV_BUILD_TYPE=1)
-elseif (${CMAKE_BUILD_TYPE} STREQUAL "Publish")
-    add_definitions(-DOIV_BUILD_TYPE=2)
-    
-endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wextra -Wpedantic)
