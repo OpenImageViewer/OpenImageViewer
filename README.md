@@ -47,7 +47,7 @@ The motivation for this project is to create an open code image viewer with grea
 
 1. **Clone the repository and update the submodules recursivly.**  
 
-2. **If using visual studio then open the root cmake file as CMake project or use the CMake tool.
+2. **If using visual studio then open the root cmake file as CMake project or use the CMake tool.**
 
 3. **Compile and run.**
 
