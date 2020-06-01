@@ -47,7 +47,7 @@ The motivation for this project is to create an open code image viewer with grea
 
 1. **Clone the repository and update the submodules recursivly.**  
 
-2. **If using visual studio then open the root cmake file as CMake project. if using cmake directly then run cmake.exe with the comamand line parameter -DCMAKE_BUILD_TYPE=RelWithDebInfo.**
+2. **Use CMake to generate project files or open the root CMake file in visual studio as a CMake project.**
 
 3. **Compile and run.**
 

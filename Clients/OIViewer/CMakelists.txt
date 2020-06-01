@@ -24,13 +24,16 @@ set(TargetName OIViewer)
 add_executable (${TargetName} ${sourceFiles} )
 
 
+
+
+#Build resources for embedding an Icon into the executable 
 add_custom_command(TARGET ${TargetName} 
                    PRE_LINK
                    COMMAND rc
                    /r
                    /v
-                   /d OIV_BUILD_TYPE=${OIV_BUILD_TYPE_ID}
-                   /fo "${CMAKE_BINARY_DIR}/Resource.res"
+                   /d OIV_BUILD_TYPE=${OIV_BUILD_TYPE}
+                   /fo "${CMAKE_BINARY_DIR}/${CMAKE_INTDIR}/Resource.res"
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc\""
                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                    COMMENT "Compiling resources"
@@ -62,9 +65,8 @@ shcore.lib
 include_directories(../oiv)
 
 
-#Build resources for embedding an Icon into the executable 
-
-target_link_options(${TargetName} PRIVATE ${CMAKE_BINARY_DIR}/resource.res)
+#Link resources file to the executable
+target_link_options(${TargetName} PRIVATE ${CMAKE_BINARY_DIR}/${CMAKE_INTDIR}/resource.res)
 
 
 #Copy own resources to the output dir 
@@ -76,7 +78,7 @@ add_custom_command( TARGET ${TargetName}
                    /S 
                    /I
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/Resources\""
-                   "\"${CMAKE_BINARY_DIR}/Resources\""
+                   "\"${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Resources\""
 
                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                    COMMENT "Copying resources to output dir..."
@@ -92,7 +94,7 @@ add_custom_command( TARGET ${TargetName}
                    /S 
                    /I
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources\""
-                   "\"${CMAKE_BINARY_DIR}/Resources\""
+                   "\"${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Resources\""
 
                    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                    COMMENT "Copying resources to output dir..."
