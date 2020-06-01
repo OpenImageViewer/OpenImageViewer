@@ -2,7 +2,9 @@ platform:
   #- x86
   - x64
 
-configuration: Release
+configuration:
+  - Debug
+  - Release
 
 environment:
   matrix:
@@ -21,11 +23,10 @@ for:
       - cmd: |- 
           set arch=
           echo Platform is %PLATFORM%
-          if "%PLATFORM%"=="x64" ( set arch= Win64)
           echo %arch%
           echo %APPVEYOR_BUILD_WORKER_IMAGE%
           if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set generator="Visual Studio 16 2019" )
-          if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set cmake_architecture="-A %PLATFORM%" )
+          if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2019" ( set cmake_architecture=%PLATFORM%)
            
           echo %generator%
 
@@ -37,7 +38,7 @@ for:
           mkdir build
           cd build
           cmake --version
-          cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -G "Visual Studio 16 2019" -A x64
+          cmake .. -G "Visual Studio 16 2019" -A %cmake_architecture%
 
     build:
       project: c:/projects/openimageviewer/build/openimageviewer.sln
