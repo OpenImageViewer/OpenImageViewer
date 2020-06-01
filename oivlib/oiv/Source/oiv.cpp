@@ -126,8 +126,6 @@ namespace OIV
     }
 
 
-
-
 #pragma region IPictureViewer implementation
     // IPictureViewr implementation
     ResultCode OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)

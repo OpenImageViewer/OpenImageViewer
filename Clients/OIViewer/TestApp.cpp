@@ -1586,7 +1586,6 @@ namespace OIV
     
     LLUtils::PointF64 TestApp::GetImageSize(ImageSizeType imageSizeType)
     {
-        
         using namespace LLUtils;
         switch (imageSizeType)
         {
