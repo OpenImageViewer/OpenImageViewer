@@ -259,6 +259,7 @@ namespace OIV
 
     LLUtils::PointF64 ImageState::GetVisibleSize()
     {
+        Refresh();
         auto visiblImage = GetVisibleImage();
         using namespace LLUtils;
         PointF64 visibleImageSize(visiblImage->GetDescriptor().Width, visiblImage->GetDescriptor().Height);
@@ -276,6 +277,7 @@ namespace OIV
 
     ImageChain& ImageState::GetWorkingImageChain()
     {
+        Refresh();
         return fCurrentImageChain;
     }
 
