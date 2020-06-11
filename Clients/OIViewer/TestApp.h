@@ -26,6 +26,8 @@
 #include "ImageState.h"
 #include <LLUtils/Logging/LogFile.h>
 
+#include "ContextMenu.h"
+
 
 namespace OIV
 {
@@ -193,6 +195,7 @@ namespace OIV
         void CancelSelection();
         void LoadSubImages();
         void AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
+        void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
 
     private: // member fields
@@ -279,5 +282,17 @@ namespace OIV
             std::string keybindings;
         };
         std::vector<CommandDesc> fCommandDescription;
+
+        struct MenuItemData
+        {
+            std::string command;
+            std::string args;
+        };
+
+        std::unique_ptr<ContextMenu<MenuItemData>> fContextMenu;
+        LLUtils::PointI32 fDownPosition;
+        
+    	
+        Win32::Timer fContextMenuTimer;
     };
 }
