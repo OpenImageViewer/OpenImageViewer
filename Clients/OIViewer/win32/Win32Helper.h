@@ -1,7 +1,8 @@
 #pragma once
 #include <windows.h>
 #include <LLUtils/Point.h>
-
+#include <LLUtils/StringDefs.h>
+#include <shlobj_core.h>
 #include <string>
 namespace OIV
 {
@@ -90,5 +91,24 @@ namespace OIV
 
             return GetOpenFileName(&ofn) == TRUE ? filename : std::wstring();
         }
+
+    	
+    	static void BrowseToFile(LLUtils::native_string_type filename)
+        {
+        	struct  Deletor
+        	{
+                ITEMIDLIST* pidl = nullptr;
+        		~Deletor()
+        		{
+                    ILFree(pidl);
+        		}
+                
+        	} deletor;
+
+        	deletor.pidl = ILCreateFromPath(filename.c_str());
+            if (deletor.pidl != nullptr)
+                SHOpenFolderAndSelectItems(deletor.pidl, 0, 0, 0);
+        }
+    	
     };
 }

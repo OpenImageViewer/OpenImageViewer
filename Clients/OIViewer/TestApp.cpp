@@ -36,6 +36,7 @@
 #include "MonitorProvider.h"
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/Logging/LogFile.h>
+#include "ContextMenu.h"
 
 namespace OIV
 {
@@ -622,6 +623,11 @@ namespace OIV
             if (photoshopApplicationPath.empty() == false)
                 ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), GetOpenedFileName().c_str(), nullptr, SW_SHOWDEFAULT);
         }
+        else if (cmd == "containingFolder")
+        {
+            if (GetOpenedFileName().empty() == false)
+                Win32Helper::BrowseToFile(GetOpenedFileName());
+        }
     }
 
     template< typename T >
@@ -1018,7 +1024,9 @@ namespace OIV
             fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
             UnloadWelcomeMessage();
             DisplayOpenedFileName();
-            
+            fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), true);
+            fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
+        	
             //Don't refresh on initial file, wait for WM_SIZE
             fRefreshOperation.End(fIsInitialLoad == false);
         }
@@ -1065,6 +1073,21 @@ namespace OIV
         ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
          
         fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(), std::make_shared<BitmapSharedPtr::element_type>(bitmapBuffer) });
+    }
+
+    void TestApp::OnContextMenuTimer()
+    {
+        fContextMenuTimer.SetInterval(0);
+        auto pos = Win32Helper::GetMouseCursorPosition();
+        auto chosenItem = fContextMenu->Show(pos.x , pos.y);
+
+        if (chosenItem != nullptr)
+        {
+            CommandManager::CommandClientRequest request;
+            request.commandName = chosenItem->command;
+            request.args = chosenItem->args;
+            ExecuteUserCommand(request);
+        }
     }
 
 
@@ -1345,6 +1368,20 @@ namespace OIV
 		
 		// renderer took over on the window, no need to erase background.
 		fWindow.GetCanvasWindow().SetEraseBackground(false);
+
+        fContextMenuTimer.SetTargetWindow(fWindow.GetHandle());
+        fContextMenuTimer.SetCallback(std::bind(&TestApp::OnContextMenuTimer, this));
+        fContextMenu = std::make_unique<ContextMenu<MenuItemData>>(fWindow.GetHandle());
+    	
+        fContextMenu->AddItem(LLUTILS_TEXT("Open"), MenuItemData{ "cmd_open_file","" });
+        fContextMenu->AddItem(LLUTILS_TEXT("Open containing folder"), MenuItemData{ "cmd_shell","cmd=containingFolder" });
+    	fContextMenu->AddItem(LLUTILS_TEXT("Open in new window"), MenuItemData{ "cmd_shell","cmd=newWindow" });
+        fContextMenu->AddItem(LLUTILS_TEXT("Open in photoshop"), MenuItemData{ "cmd_shell","cmd=openPhotoshop" });
+        fContextMenu->AddItem(LLUTILS_TEXT("Quit"), MenuItemData{ "cmd_view_state","type=quit" });
+
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), false);
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), false);
+    	
     }
 
     void TestApp::Destroy()
@@ -2260,7 +2297,7 @@ namespace OIV
         /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
             evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/
 
-        if (IsRightCatured == true)
+        if (IsRightCatured == true && fContextMenu->IsVisible() == false)
         {
             if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
                 Pan(LLUtils::PointF64( evnt->DeltaX, evnt->DeltaY ));
@@ -2329,6 +2366,26 @@ namespace OIV
             {
                 ExecuteUserCommand({ "Paste image from clipboard","cmd_pasteFromClipboard","" });
             }
+
+            if (IsRightDown)
+            {
+                if (IsRightPressed)
+                {
+                    if (fContextMenuTimer.GetInterval() == 0)
+                    {
+                        fContextMenuTimer.SetInterval(500);
+                        fDownPosition = Win32Helper::GetMouseCursorPosition();
+                    }
+                }
+                LLUtils::PointI32  currentPosition = Win32Helper::GetMouseCursorPosition();
+                if (currentPosition.DistanceSquared(fDownPosition) > 25)
+                    fContextMenuTimer.SetInterval(0);
+            }
+            else
+            {
+                fContextMenuTimer.SetInterval(0);
+            }
+        	
         }
 
     }
