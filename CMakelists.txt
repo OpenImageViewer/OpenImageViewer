@@ -63,6 +63,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   # using Intel C++
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_compile_options(/permissive-)
     #add_compile_options(/W1)
 # using Visual Studio C++
   if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")

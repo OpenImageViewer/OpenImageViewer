@@ -12,14 +12,14 @@ namespace OIV
     {
     public:
 
-        static LLUtils::Buffer D3D11Utility::BufferFromBlob(ID3D10Blob* blob)
+        static LLUtils::Buffer BufferFromBlob(ID3D10Blob* blob)
         {
             LLUtils::Buffer buffer(blob->GetBufferSize());
             buffer.Write(static_cast<std::byte*>(blob->GetBufferPointer()), 0, buffer.Size());
             return buffer;
         }
 
-        static void D3D11Utility::CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend)
+        static void CreateD3D11DefaultBlendState(D3D11_BLEND_DESC& blend)
         {
             memset(&blend, 0, sizeof(blend));
             D3D11_RENDER_TARGET_BLEND_DESC& rt0 = blend.RenderTarget[0];
@@ -36,7 +36,7 @@ namespace OIV
 
         }
 
-        static void D3D11Utility::CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
+        static void CreateD3D11DefaultSamplerState(D3D11_SAMPLER_DESC &sampler)
         {
             sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
             sampler.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -50,7 +50,7 @@ namespace OIV
             sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
         }
 
-        static void D3D11Utility::LoadShader(D3D11ShaderUniquePtr& shader, OIVString cacheFolder)
+        static void LoadShader(D3D11ShaderUniquePtr& shader, OIVString cacheFolder)
         {
             //Try cache first;
 

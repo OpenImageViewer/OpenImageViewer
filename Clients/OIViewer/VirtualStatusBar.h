@@ -16,7 +16,7 @@ namespace OIV
             fRefreshCallback = callback;
         }
 
-		OIVTextImage* VirtualStatusBar::GetOrCreateLabel(const std::string& labelName)
+		OIVTextImage* GetOrCreateLabel(const std::string& labelName)
 		{
 			auto label = fMapLabels.find(labelName);
 			if (label == fMapLabels.end())

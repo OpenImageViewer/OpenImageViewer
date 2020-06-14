@@ -94,7 +94,7 @@ namespace OIV
         }
         
 
-        static ResultCode OIVCommands::CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
+        static ResultCode CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
         {
             OIV_CMD_CropImage_Request requestCropImage;
             OIV_CMD_CropImage_Response responseCropImage;

@@ -32,7 +32,7 @@ namespace OIV
       const BindingType& GetBinding(KeyCombination combination)
       {
           static BindingType empty;
-          MapCombinationToBinding::const_iterator it = mBindings.find(combination);
+          typename MapCombinationToBinding::const_iterator it = mBindings.find(combination);
           return it != mBindings.end() ? it->second : empty;
       }
 
