@@ -2,7 +2,7 @@
 #include <LLUtils/Platform.h>
 #include "defs.h"
 
-#ifdef OIV_LIBRARY_BUILD && OIV_LIBRARY_BUILD == 1
+#if defined(OIV_LIBRARY_BUILD) && OIV_LIBRARY_BUILD == 1
     #define OIV_EXPORT LLUTILS_EXPORT
 #else
     #define OIV_EXPORT LLUTILS_IMPORT

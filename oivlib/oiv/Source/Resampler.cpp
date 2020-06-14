@@ -173,20 +173,6 @@ void Resampler::Resample(const ResamplerParams& params)
 #endif
 }
 
-__forceinline void JoinArraySSE2(const uint8_t* in_arr, uint16_t* inout_result)
-{
-	alignas(16) static uint8_t mask128[16] = { 0, 0xff, 1 , 0xff, 2, 0xff, 3 , 0xff,
-					  4, 0xff, 5, 0xff, 6 , 0xff, 7, 0xff, };
-	static __m128i  shuffleMask = _mm_load_si128(reinterpret_cast<const __m128i*>(mask128));
-	__m128i v1 = _mm_loadu_si64(in_arr);
-	v1 = _mm_shuffle_epi8(v1, shuffleMask);
-	__m128i added16 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(inout_result));
-
-	added16 = _mm_adds_epi16(v1, added16);
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(inout_result), added16);
-}
-
-
 
 __forceinline uint32_t  Resampler::GetAverageAt(const AverageParams& params)
 {
@@ -287,7 +273,6 @@ __forceinline uint32_t  Resampler::GetAverageAt(const AverageParams& params)
 	//__m256i v2(= 12;
 	//__m256i v3 = _mm256_add_epi16(v1, v2);
 	
-	int i = 0;
 
 	for (size_t sourceY = sourceYStart; sourceY < sourceYEnd; sourceY++)
 		for (size_t sourceX = sourcexStart; sourceX < sourceXEnd; sourceX++)
@@ -300,18 +285,6 @@ __forceinline uint32_t  Resampler::GetAverageAt(const AverageParams& params)
 			accum.r += c->r;
 			accum.a += c->a;
 		}
-
-	//in case there was an odd number of averages.
-	/*RGBA_PAIR[i] = {};
-
-	size_t copies = LLUtils::Utility::Align(totalPixels,static_cast<size_t>(2)) / 2;
-	int currentCopy = 0;
-	while (currentCopy < copies)
-	{
-		JoinArraySSE2(reinterpret_cast<const uint8_t*>(&RGBA_PAIR[currentCopy * 2]), reinterpret_cast<uint16_t*>(accumColor));
-		currentCopy++;
-	}*/
-
 
 
 	alignas(16) Color c{ static_cast<uint8_t>(accum.b  / totalPixels)
@@ -386,7 +359,6 @@ void  Resampler::ResampleThreadEntryPoint(ResampleTask * task)
 
 
 			uint32_t* targetBuffer = task->resampleParams.targetBuffer;
-			size_t currentTargetPixel = task->TaskID;
 
 			AverageParams params1;
 			params1.imageBuffer = sourceBuffer;
