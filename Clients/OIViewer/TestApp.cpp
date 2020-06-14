@@ -1133,10 +1133,25 @@ namespace OIV
         FileLoadOptions loadOptions;
         loadOptions.onlyRegisteredExtension = onlyRegisteredExtension;
         ResultCode result = file->Load(loadOptions);
-        fImageState.SetOpenedImage(file);
-        //TODO: Load Sub images after finalizing image for faster experience.
-        LoadSubImages();
-        FinalizeImageLoadThreadSafe(result);
+        using namespace  std::string_literals;
+        switch (result)
+        {
+        case ResultCode::RC_Success:
+            fImageState.SetOpenedImage(file);
+
+            //TODO: Load Sub images after finalizing image for faster experience.
+            LoadSubImages();
+            FinalizeImageLoadThreadSafe(result);
+            break;
+        case ResultCode::RC_FileNotSupported:
+            SetUserMessage(L"Can not load the file: "s + filePath + L", image format is not supported"s);
+            break;
+        default:
+            SetUserMessage(L"Can not load the file: "s + filePath + L", unkown error"s);
+        }
+        	
+        
+
         return result == RC_Success;
     }
 
@@ -2335,18 +2350,20 @@ namespace OIV
                     std::unique_ptr< OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
                     FileLoadOptions options = {};
                     options.onlyRegisteredExtension = true;
-                    fileImage->Load(options);
-                    fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
-                    fileImage->GetImageProperties().opacity = 0.5;
-                    
-                
+                    if (fileImage->Load(options) == ResultCode::RC_Success)
+                    {
+                        fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
+                        fileImage->GetImageProperties().opacity = 0.5;
 
-                    fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
-                    fileImage->GetImageProperties().scale = { 1,1 };
-                    fileImage->GetImageProperties().opacity = 1.0;
 
-                    fAutoScrollAnchor = std::move(fileImage);
-                    fAutoScrollAnchor->Update();
+
+                        fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
+                        fileImage->GetImageProperties().scale = { 1,1 };
+                        fileImage->GetImageProperties().opacity = 1.0;
+
+                        fAutoScrollAnchor = std::move(fileImage);
+                        fAutoScrollAnchor->Update();
+                    }
                 }
             }
 
