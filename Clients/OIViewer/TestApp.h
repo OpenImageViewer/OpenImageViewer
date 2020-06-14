@@ -261,7 +261,7 @@ namespace OIV
         CommandManager fCommandManager;
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
-        DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::None;
+        DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 
