@@ -97,7 +97,7 @@ namespace OIV
         {
         	struct  Deletor
         	{
-                ITEMIDLIST* pidl = nullptr;
+                LPITEMIDLIST pidl = nullptr;
         		~Deletor()
         		{
                     ILFree(pidl);
