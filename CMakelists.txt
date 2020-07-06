@@ -4,7 +4,8 @@ project(OpenImageViewer)
 set(CMAKE_CXX_STANDARD 17)
 
 
-option(OIV_OFFICIAL_BUILD "Build official release of OIV" FALSE)
+option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
+option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
 
 # Define Release by default.
 if(NOT CMAKE_BUILD_TYPE)
@@ -12,19 +13,38 @@ if(NOT CMAKE_BUILD_TYPE)
   message(STATUS "Build type not specified: Use Release by default.")
 endif(NOT CMAKE_BUILD_TYPE)
 
+message("Build type: " ${CMAKE_BUILD_TYPE})
 
-#todo: fix OIV_BUILD_TYPE for debug
+
 
 add_compile_definitions($<$<CONFIG:DEBUG>:OIV_BUILD_TYPE=0>)
-set(OIV_BUILD_TYPE 0)
+add_compile_definitions($<$<CONFIG:RELEASE>:OIV_BUILD_TYPE=1>)
 
-if (OIV_OFFICIAL_BUILD)
-    set(OIV_BUILD_TYPE 2)
-    add_compile_definitions($<$<CONFIG:RELEASE>:OIV_BUILD_TYPE=2>)
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(OIV_BUILD_TYPE 0)
 else()
     set(OIV_BUILD_TYPE 1)
-    add_compile_definitions($<$<CONFIG:RELEASE>:OIV_BUILD_TYPE=1>)
 endif()
+
+
+if (OIV_OFFICIAL_BUILD)
+    set(OIV_OFFICIAL_BUILD 1)
+else()
+    set(OIV_OFFICIAL_BUILD 0)
+endif()
+
+add_compile_definitions(OIV_OFFICIAL_BUILD=${OIV_OFFICIAL_BUILD})
+
+if (OIV_OFFICIAL_RELEASE)
+    set(OIV_OFFICIAL_RELEASE 1)
+else()
+    set(OIV_OFFICIAL_RELEASE 0)
+endif()
+
+add_compile_definitions(OIV_OFFICIAL_RELEASE=${OIV_OFFICIAL_RELEASE})
+
+
+
 
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -42,10 +62,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_link_options($<$<CONFIG:RELEASE>:/OPT:ICF>)  #enable COMDAT folding
     
     #   Publish specific optimization flags
-    if (OIV_OFFICIAL_BUILD)
+    #if (OIV_OFFICIAL_BUILD)
        add_compile_options($<$<CONFIG:RELEASE>:/GL>)    #whole program optimization
        add_link_options($<$<CONFIG:RELEASE>:/LTCG>)     #link time code generation
-    endif()
+    #endif()
 
     #Always generate debug info
     add_link_options(/DEBUG)    #(Generate Debug Info)

@@ -910,11 +910,15 @@ namespace OIV
 
     void TestApp::UpdateTitle()
     {
-		static std::wstring cachedVersionString = L"OpenImageViewer " + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
-    	+ L'.' + std::to_wstring(OIV_VERSION_BUILD)
-#if OIV_OFFICIAL_BUILD == 0
-			+ L'.' + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L" - UNOFFICIAL"
+        static std::wstring cachedVersionString = L"OpenImageViewer " + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
+            + L'.' + std::to_wstring(OIV_VERSION_BUILD)
+#if OIV_OFFICIAL_RELEASE == 0
+            + L'.' + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION)
 #endif			
+
+#if OIV_OFFICIAL_BUILD == 0
+            + L" - UNOFFICIAL"
+#endif
 			;
 
 		std::wstring title;

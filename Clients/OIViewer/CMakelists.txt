@@ -32,6 +32,7 @@ add_custom_command(TARGET ${TargetName}
                    COMMAND rc
                    /r
                    /d OIV_BUILD_TYPE=${OIV_BUILD_TYPE}
+                   /d OIV_OFFICIAL_BUILD=${OIV_OFFICIAL_BUILD}
                    /fo "${CMAKE_BINARY_DIR}/${CMAKE_INTDIR}/Resource.res"
                    "\"${CMAKE_CURRENT_SOURCE_DIR}/Resource.rc\""
                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
