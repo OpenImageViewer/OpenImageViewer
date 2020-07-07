@@ -1029,8 +1029,12 @@ namespace OIV
             fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
             UnloadWelcomeMessage();
             DisplayOpenedFileName();
-            fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), true);
-            fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
+
+            if (fIsInitialLoad == false)
+            {
+                fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), true);
+                fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
+            }
         	
             //Don't refresh on initial file, wait for WM_SIZE
             fRefreshOperation.End(fIsInitialLoad == false);
@@ -1042,7 +1046,6 @@ namespace OIV
             fIsInitialLoad = false;
         }
     }
-
 
     void TestApp::AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
@@ -1134,7 +1137,8 @@ namespace OIV
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
-        std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(filePath);
+        std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
+        std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
         FileLoadOptions loadOptions;
         loadOptions.onlyRegisteredExtension = onlyRegisteredExtension;
         ResultCode result = file->Load(loadOptions);
@@ -1149,10 +1153,10 @@ namespace OIV
             FinalizeImageLoadThreadSafe(result);
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessage(L"Can not load the file: "s + filePath + L", image format is not supported"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
             break;
         default:
-            SetUserMessage(L"Can not load the file: "s + filePath + L", unkown error"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
         }
         	
         
@@ -1399,8 +1403,9 @@ namespace OIV
         fContextMenu->AddItem(LLUTILS_TEXT("Open in photoshop"), MenuItemData{ "cmd_shell","cmd=openPhotoshop" });
         fContextMenu->AddItem(LLUTILS_TEXT("Quit"), MenuItemData{ "cmd_view_state","type=quit" });
 
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), false);
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), false);
+
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), fImageState.GetOpenedImage() != nullptr);
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), fImageState.GetOpenedImage() != nullptr);
     	
     }
 
