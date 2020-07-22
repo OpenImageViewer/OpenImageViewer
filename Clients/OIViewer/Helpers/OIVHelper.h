@@ -64,6 +64,9 @@ public:
         case OIV_TexelFormat::TF_I_X8:
             ss << "8 bit integer: " << std::setw(3) << std::setfill(L'0') << *reinterpret_cast<const uint8_t*>(buffer);
             break;
+        case OIV_TexelFormat::TF_S_X16:
+            ss << "16 bit signed integer: " << std::setw(3) << std::setfill(L'0') << *reinterpret_cast<const int16_t*>(buffer);
+            break;
         default:
             ss << L"N/A";
             break;

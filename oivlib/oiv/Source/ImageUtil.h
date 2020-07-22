@@ -154,8 +154,13 @@ namespace IMUtil
             case IMCodec::TexelFormat::F_X32:
                 image = ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
                 break;
+				
             case IMCodec::TexelFormat::I_X8:
                 image = ImageUtil::Normalize<uint8_t>(image, targetTexelFormat, normalizeMode);
+                break;
+
+            case IMCodec::TexelFormat::S_X16:
+                image = ImageUtil::Normalize<int16_t>(image, targetTexelFormat, normalizeMode);
                 break;
 
             default:
@@ -314,14 +319,14 @@ namespace IMUtil
             IMCodec::ImageDescriptor props;
             props.fProperties = sourceImage->GetDescriptor().fProperties;
 
-            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(IMCodec::TexelFormat::I_R8_G8_B8_A8) / 8 * props.fProperties.Width;
+            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_B8_G8_R8_A8;
+            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(props.fProperties.TexelFormatDecompressed) / CHAR_BIT * props.fProperties.Width;
             props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
             
             PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data());
 
 
-            double length = max - min;
+            const T length = max - min;
 
             for (uint32_t i = 0; i < totalPixels; i++)
             {
@@ -332,21 +337,17 @@ namespace IMUtil
                 case NormalizeMode::Default:
                 case NormalizeMode::GrayScale:
                 {
-                    uint8_t grayValue = std::min(static_cast<uint8_t>(std::round((currentSample / length) * 255)), static_cast<uint8_t>(255));
+                    uint8_t grayValue = std::min(static_cast<uint8_t>(std::round( static_cast<double>(currentSample - min ) / length * 255.0)), static_cast<uint8_t>(255));
                     currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
                 }
                     break;
 
                 case NormalizeMode::RainBow:
                 {
-                    LLUtils::Color color(0, 0, 0);
-
-                    if (currentSample != 0)
-                    {
-                        int hue = static_cast<int>(((currentSample / length) * 300) + 240) % 360;
-                        color = LLUtils::Color::FromHSL(hue, 0.5, 0.5);
-                    }
-                    currentTexel[i].value = color.colorValue;
+                    
+                    //Red (0) is the minimum , Magenta is the maximum (300)
+                    const uint16_t hue = static_cast<uint16_t>(static_cast<double>(currentSample - min) / length * 300.0);
+                    currentTexel[i].value = LLUtils::Color::FromHSL(hue, 0.5, 0.5).colorValue;
                 }
                     break;
                 }

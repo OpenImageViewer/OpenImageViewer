@@ -23,7 +23,10 @@ namespace OIV
                     return convertedImage;
                 }
                 else
-                    return nullptr;
+                {
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable to convert image");
+                }
+
             }
             else
             {

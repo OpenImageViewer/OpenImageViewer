@@ -110,6 +110,9 @@ typedef wchar_t OIVCHAR;
         , TF_I_A8
         , TF_I_X1
         , TF_I_X8
+        , TF_I_X16
+        , TF_S_X8
+        , TF_S_X16
         , TF_F_X16
         , TF_F_X24
         , TF_F_X32
