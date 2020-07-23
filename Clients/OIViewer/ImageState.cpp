@@ -175,15 +175,8 @@ namespace OIV
         if (fFinalProcessingStage != targetProcessStage)
         {
             fFinalProcessingStage = targetProcessStage;
-            SetDirtyStage(fFinalProcessingStage);
 
-            //TOOD: No need to recreate rasterized image, it's already up to date.
-            //set dirty only for resampled. create special case to hide reampled image and show up to date rasteized image
-            //if (fFinalProcessingStage == ImageChainStage::Resampled)
-            //{
-                // No need to set dirty for raserized, it's already up to date.
-              //  SetDirtyStage(ImageChainStage::Resampled);
-            //}
+            SetDirtyStage(ImageChainStage::Resampled);
 
         }
     }
