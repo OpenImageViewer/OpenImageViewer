@@ -1,7 +1,7 @@
 #root CMake file
 cmake_minimum_required(VERSION 3.8)
 project(OpenImageViewer)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)

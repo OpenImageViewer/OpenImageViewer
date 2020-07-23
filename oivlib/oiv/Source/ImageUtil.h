@@ -8,20 +8,46 @@
 #include <ExoticNumbers/half.hpp>
 #include <LLUtils/Exception.h>
 #include <ExoticNumbers/Float24.h>
+#include <algorithm>
+#include <execution>
+#include <span>
 
 
 namespace IMUtil
 {
-#define RGBA(R,G,B,A) (A << 24 | B << 16 | G << 8 | R ) 
-#define RGBA_GRAYSCALE(X) (RGBA(X,X,X,255))
-#define RGBA_To_GRAYSCALE_LUMA(R,G,B,A) (RGBA((int)(R * 0.2126), (int)(G * 0.7152) ,(int)(B * 0.0722) ,255))
+
+
+
+    constexpr uint32_t RGBA(uint8_t R, uint8_t G, uint8_t B, uint8_t A)
+    {
+        return (static_cast<uint32_t>(A) << 24) | (static_cast<uint32_t>(B) << 16) | (static_cast<uint32_t>(G) << 8) | static_cast<uint32_t>(R);
+    }
+
+    constexpr uint32_t RGBA_GRAYSCALE(uint8_t Gray)
+    {
+        return RGBA(Gray, Gray, Gray, 255);
+    }
+
+    constexpr uint32_t RGBA_To_GRAYSCALE_LUMA(uint8_t R, uint8_t G, uint8_t B, uint8_t A)
+    {
+        return RGBA(static_cast<uint32_t>(R * 0.2126), static_cast<uint32_t>(G * 0.7152), static_cast<uint32_t>(B * 0.0722), 255);
+    }
+
 
     class ImageUtil
     {
     private:
+
+        enum class NormalizeMode
+        {
+              Default = 0
+            , GrayScale = 1
+            , RainBow = 2
+        };
+
         struct ConvertKey
         {
-            
+
             struct Hash
             {
                 std::size_t operator()(const ConvertKey& key) const
@@ -98,12 +124,12 @@ namespace IMUtil
                         threads[threadNum] = std::thread
                         (
                             [&descTemplate, rowsPerThread, threadNum]()
-                        {
-                            PixelUtil::TransformTexelsInfo desc = descTemplate;
-                            desc.startRow = rowsPerThread * threadNum;
-                            desc.endRow = rowsPerThread * (threadNum + 1);
-                            PixelUtil::TransformTexels(desc);
-                        }
+                            {
+                                PixelUtil::TransformTexelsInfo desc = descTemplate;
+                                desc.startRow = rowsPerThread * threadNum;
+                                desc.endRow = rowsPerThread * (threadNum + 1);
+                                PixelUtil::TransformTexels(desc);
+                            }
                         );
                     }
 
@@ -122,24 +148,24 @@ namespace IMUtil
                     PixelUtil::TransformTexels(descTemplate);
                 }
 
-                
+
 
                 if (transform.rotation == OIV_AxisAlignedRotation::Rotate90CW || transform.rotation == OIV_AxisAlignedRotation::Rotate90CCW)
                     swap(transformedProperties.fProperties.Height, transformedProperties.fProperties.Width);
 
                 transformedProperties.fProperties.RowPitchInBytes = transformedProperties.fProperties.Width * image->GetBytesPerTexel();
-                
+
                 return ImageSharedPtr(new Image(transformedProperties));
             }
             else
                 return image;
-            
+
         }
-        
+
         static IMCodec::ImageSharedPtr ConvertImageWithNormalization(IMCodec::ImageSharedPtr image, IMCodec::TexelFormat targetTexelFormat, bool isRainbow)
         {
 
-            const NormalizeMode normalizeMode = isRainbow ? ImageUtil::NormalizeMode::RainBow : ImageUtil::NormalizeMode::GrayScale;
+            const NormalizeMode normalizeMode = isRainbow ? NormalizeMode::RainBow : NormalizeMode::GrayScale;
 
             switch (image->GetImageType())
             {
@@ -148,13 +174,13 @@ namespace IMUtil
                 break;
 
             case IMCodec::TexelFormat::F_X24:
-                image = Normalize<float, Float24>(image, targetTexelFormat, normalizeMode);
+                image = Normalize<Float24>(image, targetTexelFormat, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::F_X32:
                 image = ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
                 break;
-				
+
             case IMCodec::TexelFormat::I_X8:
                 image = ImageUtil::Normalize<uint8_t>(image, targetTexelFormat, normalizeMode);
                 break;
@@ -172,7 +198,7 @@ namespace IMUtil
         }
 
 
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr image)
+        static IMCodec::ImageSharedPtr NormalizePitch(IMCodec::ImageSharedPtr image)
         {
             using namespace IMCodec;
 
@@ -190,7 +216,7 @@ namespace IMUtil
             normalizedImageProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
             uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
             std::byte* newBuffer = normalizedImageProperties.fData.data();
-            
+
             for (std::size_t y = 0; y < image->GetHeight(); y++)
                 for (std::size_t x = 0; x < targetRowPitch; x++)
                 {
@@ -202,7 +228,7 @@ namespace IMUtil
 
             normalizedImageProperties.fProperties.RowPitchInBytes = targetRowPitch;
 
-            
+
             return ImageSharedPtr(new Image(normalizedImageProperties));
         }
 
@@ -213,7 +239,7 @@ namespace IMUtil
 
             if (sourceImage->GetImageType() != targetPixelFormat)
             {
-                
+
                 ImageDescriptor properties;
                 properties.fProperties = sourceImage->GetDescriptor().fProperties;
 
@@ -224,10 +250,10 @@ namespace IMUtil
                     uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
                     properties.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
                     std::byte* dest = properties.fData.data();
-                    
+
                     //TODO: convert without normalization.
-                    convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : Normalize(sourceImage);
-                    
+                    convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
+
 
                     PixelUtil::Convert(converter->second
                         , &dest
@@ -236,7 +262,7 @@ namespace IMUtil
                         , convertedImage->GetTotalPixels());
 
                     properties.fProperties.TexelFormatDecompressed = targetPixelFormat;
-                    
+
                     properties.fProperties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
                     return ImageSharedPtr(new Image(properties));
                 }
@@ -258,6 +284,8 @@ namespace IMUtil
                 using namespace IMCodec;
                 const std::byte* sourceBuffer = sourceImage->GetBuffer();
 
+
+
                 const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
                 ImageDescriptor props;
                 props.fProperties = sourceImage->GetDescriptor().fProperties;
@@ -269,19 +297,19 @@ namespace IMUtil
                     for (int32_t x = 0; x < subimage.GetWidth(); x++)
                     {
                         decltype(subimage)::Point_Type topLeft = subimage.GetCorner(LLUtils::Corner::TopLeft);
-                        
+
                         const uint32_t idxDest = y * subimage.GetWidth() + x;
-                        const uint32_t idxSource = (y + topLeft.y)  * sourceImage->GetWidth() + (x + topLeft.x);
+                        const uint32_t idxSource = (y + topLeft.y) * sourceImage->GetWidth() + (x + topLeft.x);
                         PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest, sourceBuffer, idxSource);
                     }
                 }
 
-                
-       
+
+
 
                 props.fProperties.Height = subimage.GetHeight();
                 props.fProperties.Width = subimage.GetWidth();
-                
+
                 props.fProperties.RowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
 
                 ImageSharedPtr subImagePtr = ImageSharedPtr(new Image(props));
@@ -291,68 +319,63 @@ namespace IMUtil
             return IMCodec::ImageSharedPtr();
         }
 
-        enum class NormalizeMode
+
+
+
+        template <typename _FwdItDst, typename _FwdItSrc >
+        static void NormalizeAnyToBGRA(_FwdItDst _DstFirst, _FwdItDst _DstLast, _FwdItSrc _SrcFirst, _FwdItSrc _SrcLast, NormalizeMode mode)
         {
-              Default    = 0
-            , GrayScale  = 1
-            , RainBow    = 2
-        };
+            auto minMax = std::minmax_element(std::execution::parallel_unsequenced_policy(), _SrcFirst, _SrcLast);
+            const auto range = *minMax.second - *minMax.first;
 
-
-
-        template <class T, class SampleType = T>
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode)
-        {
-            const SampleType* sampleData = reinterpret_cast<const SampleType*> (sourceImage->GetBuffer());
-
-            T min = std::numeric_limits<T>::max();
-            T max = std::numeric_limits<T>::min();
-            
-            uint32_t totalPixels = sourceImage->GetTotalPixels();
-            for (uint32_t i = 0 ; i < totalPixels ;i++)
+            while (_SrcFirst != _SrcLast)
             {
-                T currentSample = static_cast< const T>(sampleData[i]);
-                min = std::min(min, currentSample);
-                max = std::max(max, currentSample);
-            }
+                const auto& sourceSample = *_SrcFirst;
+                auto& destSample = _DstFirst->value;
 
-            IMCodec::ImageDescriptor props;
-            props.fProperties = sourceImage->GetDescriptor().fProperties;
-
-            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_B8_G8_R8_A8;
-            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(props.fProperties.TexelFormatDecompressed) / CHAR_BIT * props.fProperties.Width;
-            props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
-            
-            PixelUtil::BitTexel32Ex* currentTexel = reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data());
-
-
-            const T length = max - min;
-
-            for (uint32_t i = 0; i < totalPixels; i++)
-            {
-                const T currentSample = sampleData[i];
-
-                switch (normalizeMode)
+                switch (mode)
                 {
                 case NormalizeMode::Default:
                 case NormalizeMode::GrayScale:
                 {
-                    uint8_t grayValue = std::min(static_cast<uint8_t>(std::round( static_cast<double>(currentSample - min ) / length * 255.0)), static_cast<uint8_t>(255));
-                    currentTexel[i].value = RGBA_GRAYSCALE(grayValue);
+                    uint8_t grayValue = std::min(static_cast<uint8_t>(static_cast<double>(sourceSample - *minMax.first) / range * 255.0 + 0.5), static_cast<uint8_t>(255));
+                    destSample = RGBA_GRAYSCALE(grayValue);
                 }
-                    break;
+                break;
 
                 case NormalizeMode::RainBow:
                 {
-                    
+
                     //Red (0) is the minimum , Magenta is the maximum (300)
-                    const uint16_t hue = static_cast<uint16_t>(static_cast<double>(currentSample - min) / length * 300.0);
-                    currentTexel[i].value = LLUtils::Color::FromHSL(hue, 0.5, 0.5).colorValue;
+                    const uint16_t hue = static_cast<uint16_t>(static_cast<double>(sourceSample - *minMax.first) / range * 300.0);
+                    destSample = LLUtils::Color::FromHSL(hue, 0.5, 0.5).colorValue;
                 }
-                    break;
+                break;
                 }
-             
+
+                _SrcFirst++;
+                _DstFirst++;
             }
+            
+        }
+
+        template <class SourceSampleType>
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode)
+        {
+            const SourceSampleType* sampleData = reinterpret_cast<const SourceSampleType*> (sourceImage->GetBuffer());
+            const uint32_t totalPixels = sourceImage->GetTotalPixels();
+
+            IMCodec::ImageDescriptor props;
+            props.fProperties = sourceImage->GetDescriptor().fProperties;
+            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_B8_G8_R8_A8;
+            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(props.fProperties.TexelFormatDecompressed) / CHAR_BIT * props.fProperties.Width;
+            props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
+
+            std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
+            std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data()), totalPixels);
+
+            NormalizeAnyToBGRA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+
             return IMCodec::ImageSharedPtr(new IMCodec::Image(props));
         }
     };
