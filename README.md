@@ -4,8 +4,10 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/yua3myv699sm3o17/branch/master?svg=true)](https://ci.appveyor.com/project/LiorL/openimageviewer/branch/master)
 
 
-**Open Image Viewer** is a hardware accelerated blazingly fast open code c++17 compliant cross-platform 'C' library and application for viewing and 
+**Open Image Viewer** is a hardware accelerated blazingly fast open code c++20 compliant cross-platform 'C' library and application for viewing and 
 manipulating images.
+
+For more information visit our website: www.openimageviewer.com
 
 The motivation for this project is to create an open code image viewer with great emphasis on ergonomics and performance for every type of user suitable for the starting novice or the hardcore power user.
 
