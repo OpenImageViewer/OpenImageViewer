@@ -1595,7 +1595,7 @@ namespace OIV
 
     void TestApp::SetOffset(LLUtils::PointF64 offset)
     {
-        fImageState.SetOffset(offset);
+        fImageState.SetOffset(ResolveOffset(offset));
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
         fIsOffsetLocked = false;
