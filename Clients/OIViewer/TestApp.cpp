@@ -2277,7 +2277,7 @@ namespace OIV
         using namespace Win32;
         LockMouseToWindowMode LockMode = LockMouseToWindowMode::NoLock;
         
-        if (IsLeftPressed)
+        if (IsLeftPressed && IsRightDown == false && IsRightPressed == false && IsRightCatured == false)
         {
             //Window drag and resize
             if (true
