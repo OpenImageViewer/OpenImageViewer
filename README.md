@@ -9,6 +9,8 @@ manipulating images.
 
 For more information visit our website: www.openimageviewer.com
 
+![](https://i.ibb.co/NZXpb2W/cut.gif "Preview")
+
 The motivation for this project is to create an open code image viewer with great emphasis on ergonomics and performance for every type of user suitable for the starting novice or the hardcore power user.
 
 **Open Image Viewer** in its current form is a collection of 3 projects:
