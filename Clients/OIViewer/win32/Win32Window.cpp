@@ -140,15 +140,16 @@ namespace OIV
 			for (auto& child : fChildren)
 				SetVisible(false);
 
-			for (auto& child : fChildren)
+
+            //Create a temporary list of children so fChildren won't get validated.
+            decltype(fChildren) copyOfChildren = fChildren;
+
+			for (auto& child : copyOfChildren)
 			{
 				child->Destroy();
 				::DestroyWindow(GetHandle());
 			}
 		}
-
-
-
 
 
         void Win32Window::SetLockMouseToWindowMode(LockMouseToWindowMode mode)
