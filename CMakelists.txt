@@ -43,6 +43,10 @@ endif()
 
 add_compile_definitions(OIV_OFFICIAL_RELEASE=${OIV_OFFICIAL_RELEASE})
 
+if (OIV_VERSION_BUILD)
+    add_compile_definitions(OIV_VERSION_BUILD=${OIV_VERSION_BUILD})
+endif()
+
 
 
 
