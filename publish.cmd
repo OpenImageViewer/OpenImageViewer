@@ -4,9 +4,10 @@ GOTO Commentends
 ===================================================================
 For using this build and packaging script you'll need to define 
 1. MS build path
-2. 7z Path.
-3. git Path.
-4. [optional] set OIV_OFFICIAL_BUILD to 1 if it's an official build.
+2. CMake path
+3. 7z Path.
+4. git Path.
+5. [optional] set OIV_OFFICIAL_BUILD to 1 if it's an official build.
 ====================================================================
 :Commentends
 
@@ -24,7 +25,7 @@ rem Change to 1 to make an official build
 set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
 set OIV_VERSION_REVISION=0
-set OIV_VERSION_BUILD=0
+set OIV_VERSION_BUILD=4
 
 set VersionPath=.\oivlib\oiv\Include\Version.h
 set BuildPath=.\Build\Release
@@ -51,27 +52,33 @@ if [%OIV_OFFICIAL_RELEASE%] == [0] (
 )
 
 set DATE_YYMMDD=%DATE:~6,4%-%DATE:~3,2%-%DATE:~0,2%
-
+set DATE_YYMMDD_HH_mm_SS=%DATE_YYMMDD%_%TIME:~0,2%-%TIME:~3,2%-%TIME:~6,2%
 echo ==============================================
 echo FOUND VERSION: !versionString!
 echo SHORT VERSION: !versionStringShort!
 echo ==============================================
 
-rem cmake -A x64 -DIMCODEC_BUILD_CODEC_PSD=ON -DIMCODEC_BUILD_CODEC_JPG=ON -DIMCODEC_BUILD_CODEC_PNG=ON -DIMCODEC_BUILD_CODEC_DDS=ON -DIMCODEC_BUILD_CODEC_GIF=ON -DIMCODEC_BUILD_CODEC_TIFF=ON -DIMCODEC_BUILD_CODEC_WEBP=ON -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -S . -B ./build
-
-
-
+cmake -DCMAKE_GENERATOR="Visual Studio 16 2019"  -A x64 -DIMCODEC_BUILD_CODEC_PSD=ON -DIMCODEC_BUILD_CODEC_JPG=ON -DIMCODEC_BUILD_CODEC_PNG=ON -DIMCODEC_BUILD_CODEC_DDS=ON -DIMCODEC_BUILD_CODEC_GIF=ON -DIMCODEC_BUILD_CODEC_TIFF=ON -DIMCODEC_BUILD_CODEC_WEBP=ON -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -S . -B ./build
+if  %errorlevel% neq 0 (
+    echo.
+    echo Error: Failed to generate cmake configuration, please make sure cmake is installed correctly: https://cmake.org
+    echo.
+    pause
+    goto END
+)
 
 rem Build project
-rem msbuild.exe .\Build\OpenImageViewer.sln /m /p:CLToolExe=clang-cl.exe /p:CLToolPath="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\bin"  /p:configuration=Release /t:%BuildOperation% /p:OIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% /p:OIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% /p:OIV_VERSION_REVISION=L\"%OIV_VERSION_REVISION%\"
+msbuild.exe .\Build\OpenImageViewer.sln /m /p:ToolExe=clang-cl.exe /p:ToolPath="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\bin"  /p:configuration=Release /t:%BuildOperation% /p:OIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD%;OIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE%
 if  %errorlevel% neq 0 (
+    echo.
     echo Compilation error
+    echo.
     pause
     goto END
 )
 
 
-set OutputPath=%DATE_YYMMDD%-v%versionStringShort%
+set OutputPath=%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
 copy %DependenciesPath%\*.dll %BuildPath%\
 md OutputPath
 
