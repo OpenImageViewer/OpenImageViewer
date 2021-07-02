@@ -68,6 +68,7 @@ namespace OIV
         properties.filterType = OIV_Filter_type::FT_None;
         properties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
         properties.scale = 1.0;
+        properties.visible = true;
         properties.opacity = 1.0;
         return std::move(text);
     }

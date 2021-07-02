@@ -443,6 +443,7 @@ typedef wchar_t OIVCHAR;
         LLUtils::PointF64 scale;
         OIV_Image_Render_mode imageRenderMode;
         double opacity;
+        bool visible;
         OIV_Filter_type filterType;
     };
 

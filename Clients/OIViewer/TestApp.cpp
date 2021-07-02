@@ -180,8 +180,11 @@ namespace OIV
 
             SetDownScalingTechnique(technique);
         }
-
-
+        else if (type == "toggleStatusBar")
+        {
+            fVirtualStatusBar.SetVisible(!fVirtualStatusBar.GetVisible());
+            fRefreshOperation.Queue();
+        }
 
 
         if (fullscreenModeChanged == true)
@@ -324,6 +327,7 @@ namespace OIV
         imageProperties.imageRenderMode = IRM_Overlay;
         imageProperties.scale = 1.0;
         imageProperties.opacity = 1.0;
+        imageProperties.visible = true;
 
         if ( text->Update() == RC_Success)
             fRefreshOperation.Queue();
@@ -730,6 +734,7 @@ namespace OIV
 
             //View state
             ,{ "Toggle full screen","cmd_view_state","type=toggleFullScreen" ,"Alt+Enter" }
+            ,{ "Toggle status bar","cmd_view_state","type=toggleStatusBar" ,"Tab" }
             ,{ "Toggle multi full screen","cmd_view_state","type=toggleMultiFullScreen" ,"Alt+Shift+Enter" }
             ,{ "Borders","cmd_view_state","type=toggleBorders" ,"B" }
             ,{ "Quit","cmd_view_state","type=quit" ,"Escape" }
@@ -2496,6 +2501,7 @@ namespace OIV
             properties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
             properties.scale = 1.0;
             properties.opacity = 1.0;
+            properties.visible = true;
         }
 
 
