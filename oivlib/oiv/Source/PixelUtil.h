@@ -9,6 +9,9 @@
 namespace IMUtil
 {
     typedef void(*PixelConvertFunc)(std::byte* i_dest, const std::byte* i_src, size_t start, size_t end);
+
+#pragma pack(push,1)
+
     class PixelUtil
     {
     public:
@@ -20,7 +23,7 @@ namespace IMUtil
 
         struct alignas(1) BitTexel32 : public BitTexel24 { uint8_t W; };
 
-#pragma pack(1)
+
         struct alignas(1) BitTexel32Ex
         {
             union
@@ -35,14 +38,14 @@ namespace IMUtil
                 };
             };
         };
-#pragma pack()
+#pragma pack(pop)
 
         // A function to copy a same format texel from one place to another
-        template <class BIT_TEXEL_TYPE>
-        static void CopyTexel(void* dest, const std::size_t idxDest, const void* src, const std::size_t idxSrc)
+        static void CopyTexel(void* dest, const std::size_t idxDest, const void* src, const std::size_t idxSrc, uint8_t texelSize)
         {
-            reinterpret_cast<BIT_TEXEL_TYPE*>(dest)[idxDest] = reinterpret_cast<const  BIT_TEXEL_TYPE*>(src)[idxSrc];
-
+            memcpy(reinterpret_cast<uint8_t*>(dest) + idxDest * texelSize
+                , reinterpret_cast<const uint8_t*>(src) + idxSrc * texelSize
+                , texelSize);
         }
 
         static void Convert(PixelConvertFunc convertFunc, std::byte** i_dest, const std::byte* i_src, const uint8_t dstTexelSizeinBits, const size_t numTexels)
@@ -135,6 +138,28 @@ namespace IMUtil
             }
         }
 
+        static void RGB48ToBGRA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+#pragma pack (push,1)
+            struct RGB48
+            {
+                uint16_t R;
+                uint16_t G;
+                uint16_t B;
+            };
+
+#pragma pack (pop)
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            RGB48* src = (RGB48*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = static_cast<uint8_t>(src[i].R >> 8);
+                dst[i].Y = static_cast<uint8_t>(src[i].G >> 8);
+                dst[i].Z = static_cast<uint8_t>(src[i].B >> 8);
+                dst[i].W = 255;
+            }
+        }
         
 
         static void ABGR32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
@@ -298,25 +323,7 @@ namespace IMUtil
 
                     const std::size_t idxDest =  destY * destWidth + destX;
 
-             
-                    switch (transformInfo.bytesPerTexel)
-                    {
-                    case 1:
-
-                        PixelUtil::CopyTexel <PixelUtil::BitTexel8>(transformInfo.dstBuffer, idxDest, srcRow, x);
-                        break;
-                    case 2:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel16>(transformInfo.dstBuffer, idxDest, srcRow, x);
-                        break;
-                    case 3:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel24>(transformInfo.dstBuffer, idxDest, srcRow, x);
-                        break;
-                    case 4:
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(transformInfo.dstBuffer, idxDest, srcRow, x);
-                        break;
-                    default:
-                        LL_EXCEPTION_UNEXPECTED_VALUE;
-                    }
+                    PixelUtil::CopyTexel(transformInfo.dstBuffer, idxDest, srcRow, x, transformInfo.bytesPerTexel);
                 }
         }
 

@@ -383,7 +383,7 @@ namespace OIV
             {
                 texelresponse.type = (OIV_TexelFormat)image->GetImageType();
                 OIV_Util_GetBPPFromTexelFormat(texelresponse.type, &texelresponse.size);
-                memcpy(texelresponse.buffer, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size);
+                memcpy_s(texelresponse.buffer, OIV_CMD_TexelInfo_Buffer_Size, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size / CHAR_BIT);
                     
                 return RC_Success;
             }

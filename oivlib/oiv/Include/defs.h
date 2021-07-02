@@ -102,11 +102,17 @@ typedef wchar_t OIVCHAR;
           TF_BEGIN
         , TF_UNKNOWN = TF_BEGIN
         , TF_I_R8_G8_B8
+        , TF_I_R16_G16_B16
         , TF_I_R8_G8_B8_A8
+        , TF_I_R16_G16_B16_A16
         , TF_I_B8_G8_R8
+        , TF_I_B16_G16_R16
         , TF_I_B8_G8_R8_A8
+        , TF_I_B16_G16_R16_A16
         , TF_I_A8_R8_G8_B8
+        , TF_I_A16_R16_G16_B16
         , TF_I_A8_B8_G8_R8
+        , TF_I_A16_B16_G16_R16
         , TF_I_A8
         , TF_I_X1
         , TF_I_X8
@@ -184,11 +190,13 @@ typedef wchar_t OIVCHAR;
     };
 
 
+    constexpr uint8_t OIV_CMD_TexelInfo_Buffer_Size = 32;
+
     struct OIV_CMD_TexelInfo_Response
     {
         OIV_TexelFormat type;
         uint8_t size;
-        uint8_t buffer[32];
+        uint8_t buffer[OIV_CMD_TexelInfo_Buffer_Size];
     };
 
     enum OIV_ConvertFormat_Flags
