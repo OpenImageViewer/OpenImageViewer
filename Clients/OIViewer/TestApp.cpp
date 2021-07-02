@@ -1304,6 +1304,8 @@ namespace OIV
 			}
 		);
 
+        fRefreshOperation.Begin();
+
         fTimerNoActiveZoom.SetTargetWindow(fWindow.GetHandle());
         fTimerNoActiveZoom.SetCallback([this]()
             {
