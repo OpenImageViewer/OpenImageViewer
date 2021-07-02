@@ -103,6 +103,7 @@ namespace OIV
         void ProbeForMonitorChange();
         void PerformRefresh();
         void SetUserMessage(const std::wstring& message, int32_t hideDelay = 0);
+        void SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay = 0);
         void SetDebugMessage(const std::string& message);
         void HideUserMessage();
         bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
@@ -197,6 +198,7 @@ namespace OIV
         void AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
+        bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
 
     private: // member fields
 #pragma region FrameLimiter
@@ -262,6 +264,7 @@ namespace OIV
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
+        std::wstring fLastMessageForMainThread;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 
