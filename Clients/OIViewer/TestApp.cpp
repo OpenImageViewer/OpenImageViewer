@@ -653,19 +653,19 @@ namespace OIV
         using namespace std;
         wstringstream ss;
         std::wstring source = isFromLibrary ? L"OIV library" : L"OIV viewer";
+        const wstring introMessage = LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " + args.functionName + L" at " + source + L".\nDescription: " + args.description ;
+        const wstring displayMessage = introMessage + L"\nPlease refer to the log file [" + mLogFile.GetLogPath() + L"] for more information"; 
+            
 		ss << L"\n==================================================================================================\n";
-        ss << LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) + L" exception has occured at " << args.functionName << L" at " << source << L"." << endl;
-        ss << "Description: " << args.description << endl;
+        ss << introMessage << endl;
 
         if (args.systemErrorMessage.empty() == false)
             ss << "System error: " << args.systemErrorMessage;
-		
-
+        
         ss << "call stack:" << endl << args.callstack;
 
 		mLogFile.Log(ss.str());
-
-        //MessageBoxW(fWindow.GetHandle(), ss.str().c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
+        //MessageBoxW(IsMainThread() ? fWindow.GetHandle() : nullptr, displayMessage.c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
         //DebugBreak();
     }
 
@@ -1010,9 +1010,7 @@ namespace OIV
         if (result == RC_Success)
         {
             // Enter this function only from the main thread.
-            assert("TestApp::FinalizeImageLoad() can be called only from the main thread" &&
-                GetCurrentThreadId() == fMainThreadID);
-
+            assert("TestApp::FinalizeImageLoad() can be called only from the main thread" && IsMainThread());
             
             fRefreshOperation.Begin();
 			
@@ -1123,7 +1121,7 @@ namespace OIV
 
     void TestApp::FinalizeImageLoadThreadSafe(ResultCode result)
     {
-        if (GetCurrentThreadId() == fMainThreadID)
+        if (IsMainThread())
         {
             FinalizeImageLoad(result);
         }
@@ -1155,14 +1153,11 @@ namespace OIV
             FinalizeImageLoadThreadSafe(result);
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
+            SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
             break;
         default:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
+            SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
         }
-        	
-        
-
         return result == RC_Success;
     }
 
@@ -1257,11 +1252,13 @@ namespace OIV
         
         wstring filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
 
-        const bool isInitialFile = filePath.empty() == false && filesystem::exists(filePath);
+        const bool isInitialFileProvided = filePath.empty() == false;
+        const bool isInitialFileExists = isInitialFileProvided && filesystem::exists(filePath);
+        
         
         future <bool> asyncResult;
         
-        if (isInitialFile == true)
+        if (isInitialFileExists == true)
         {
             fMutexWindowCreation.lock();
             // if initial file is provided, load asynchronously.
@@ -1292,7 +1289,7 @@ namespace OIV
         fWindow.GetCanvasWindow().AddEventListener(std::bind(&TestApp::HandleClientWindowMessages, this, _1));
 
 
-        if (isInitialFile == true)
+        if (isInitialFileExists == true)
             fMutexWindowCreation.unlock();
         
 		fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
@@ -1314,20 +1311,29 @@ namespace OIV
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
 
-        fIsInitialLoad = isInitialFile;
-
         // Update oiv lib client size
         UpdateWindowSize();
 
         // Wait for initial file to finish loading
         if (asyncResult.valid())
+        {
             asyncResult.wait();
+            fIsInitialLoad = asyncResult.get();
+        }
 
-        //If there is no initial file, perform post init operations at the beginning
+        // If there is no initial file or the file has failed to load, show the window now, otherwise show the window after 
+        // the image has rendered completely at the method FinalizeImageLoad.
         if (fIsInitialLoad == false)
             fWindow.SetVisible(true);
         
-            
+        //If initial file is provided but doesn't exist
+        if (isInitialFileProvided && !isInitialFileExists)
+        {
+            using namespace  std::string_literals;
+            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s);
+        }
+
+        fRefreshOperation.End(fIsInitialLoad == false);
     }
 
     void TestApp::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
@@ -2209,6 +2215,9 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER:
             PerformRefresh();
             break;
+        case Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE:
+            SetUserMessage(fLastMessageForMainThread, static_cast<int32_t>(uMsg.wParam));
+            break;
         case WM_SYSKEYUP:
         case WM_KEYUP:
         {
@@ -2452,10 +2461,25 @@ namespace OIV
         return false;
     }
 
+    void TestApp::SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay)
+    {
+        if (IsMainThread() == true)
+		{
+            SetUserMessage(message, hideDelay);
+		}
+        else
+        {
+            fLastMessageForMainThread = message;
+            // Wait for the main window to get initialized.
+            std::unique_lock<std::mutex> ul(fMutexWindowCreation);
+			
+            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE, hideDelay, 0);
+        }
+    }
 
     void TestApp::SetUserMessage(const std::wstring& message,int32_t hideDelay )
     {
-        OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
+            OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         if (userMessage == nullptr)
         {
             userMessage = fLabelManager.GetOrCreateTextLabel("userMessage");

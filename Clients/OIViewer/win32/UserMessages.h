@@ -11,8 +11,7 @@ namespace OIV
             static const UINT PRIVATE_WN_NOTIFY_LOADED          = WM_USER + 2;
             static const UINT PRIVATE_WM_REFRESH_TIMER          = WM_USER + 3;
             static const UINT PRIVATE_WN_FIRST_FRAME_DISPLAYED  = WM_USER + 4;
-            
+            static const UINT PRIVATE_WN_NOTIFY_USER_MESSAGE    = WM_USER + 5;
         };
-
     }
 }
