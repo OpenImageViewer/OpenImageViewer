@@ -1731,45 +1731,49 @@ namespace OIV
             zoomValue = std::clamp(zoomValue, minimum, MaxPixelSize);
         }
 
-        //Save image selection before view change
-        fPreserveImageSpaceSelection.Begin();
-
-        
-        PointI32 clientSize = fWindow.GetCanvasSize();
-        PointI32 clientZoomPoint = { clientX, clientY };
-        if (clientZoomPoint.x < 0)
-            clientZoomPoint.x = clientSize.x / 2;
-
-        if (clientZoomPoint.y < 0)
-            clientZoomPoint.y = clientSize.y / 2;
-
-
-        PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
-        PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
-
-        if (fDownScalingTechnique == OIV::DownscalingTechnique::Software)
+        if (zoomValue != fImageState.GetScale().x)
         {
-            fImageState.SetResample(false);
-            fTimerNoActiveZoom.SetInterval(0);
-            fTimerNoActiveZoom.SetInterval(50);
+            //Save image selection before view change
+            fPreserveImageSpaceSelection.Begin();
+
+
+            PointI32 clientSize = fWindow.GetCanvasSize();
+            PointI32 clientZoomPoint = { clientX, clientY };
+            if (clientZoomPoint.x < 0)
+                clientZoomPoint.x = clientSize.x / 2;
+
+            if (clientZoomPoint.y < 0)
+                clientZoomPoint.y = clientSize.y / 2;
+
+
+            PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
+            PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
+
+
+            if (fDownScalingTechnique == OIV::DownscalingTechnique::Software)
+            {
+                fImageState.SetResample(false);
+                fTimerNoActiveZoom.SetInterval(0);
+                fTimerNoActiveZoom.SetInterval(50);
+            }
+
+            fImageState.SetScale(zoomValue);
+
+            fRefreshOperation.Begin();
+
+            RefreshImage();
+
+
+            SetOffset(GetOffset() + offset);
+            fPreserveImageSpaceSelection.End();
+
+            fRefreshOperation.End();
+
+            UpdateCanvasSize();
+            UpdateUIZoom();
+
+            fIsLockFitToScreen = false;
         }
-
-        fImageState.SetScale(zoomValue);
-        
-        fRefreshOperation.Begin();
-
-        RefreshImage();
-        
-        
-        SetOffset(GetOffset() + offset);
-        fPreserveImageSpaceSelection.End();
-        
-        fRefreshOperation.End();
-
-        UpdateCanvasSize();
-        UpdateUIZoom();
-
-        fIsLockFitToScreen = false;
     }
 
     double TestApp::GetScale() const
