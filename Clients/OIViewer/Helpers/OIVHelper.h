@@ -52,6 +52,12 @@ public:
                 << green << " " << std::setw(3) << buffer[1]
                 << blue << " " << std::setw(3) << buffer[2];
             break;
+        case OIV_TexelFormat::TF_I_R16_G16_B16:
+            ss << "RGB:" << std::setfill(L'0')
+                << red << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[0]
+                << green << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[1]
+                << blue << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[2];
+            break;
         case OIV_TexelFormat::TF_F_X32:
             ss << "32 bit float: " << std::setw(10) << std::setfill(L'0') << std::fixed << std::setprecision(6) << *reinterpret_cast<const float*>(buffer);
             break;

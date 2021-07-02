@@ -285,7 +285,6 @@ namespace IMUtil
                 const std::byte* sourceBuffer = sourceImage->GetBuffer();
 
 
-
                 const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
                 ImageDescriptor props;
                 props.fProperties = sourceImage->GetDescriptor().fProperties;
@@ -300,11 +299,9 @@ namespace IMUtil
 
                         const uint32_t idxDest = y * subimage.GetWidth() + x;
                         const uint32_t idxSource = (y + topLeft.y) * sourceImage->GetWidth() + (x + topLeft.x);
-                        PixelUtil::CopyTexel<PixelUtil::BitTexel32>(destBuffer, idxDest, sourceBuffer, idxSource);
+                        PixelUtil::CopyTexel(destBuffer, idxDest, sourceBuffer, idxSource, sourceImage->GetBytesPerTexel());
                     }
                 }
-
-
 
 
                 props.fProperties.Height = subimage.GetHeight();
