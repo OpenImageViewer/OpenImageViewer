@@ -13,6 +13,7 @@ namespace OIV
         fImageProperties.imageRenderMode = OIV_Image_Render_mode::IRM_MainImage;
         fImageProperties.scale = 1.0;
         fImageProperties.opacity = 0.0;
+        fImageProperties.visible = true;
     }
 
     ResultCode OIVBaseImage::Update()

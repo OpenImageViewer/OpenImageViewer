@@ -22,6 +22,7 @@ namespace OIV
 			if (label == fMapLabels.end())
 			{
 				OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
+                texelValue->GetImageProperties().visible = fVisible;
 				texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0, 0, 0, 192).colorValue;
 				texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
 				texelValue->GetTextOptions().fontSize = 11;
@@ -73,6 +74,24 @@ namespace OIV
             RepositionLabels(); // size of text is most likely changed - reposition.
         }
 
+        bool GetVisible() const
+        {
+            return fVisible;
+        }
+
+        void SetVisible(bool visible)
+        {
+            if (fVisible != visible)
+            {
+                fVisible = visible;
+                for (auto [name, text] : fMapLabels)
+                {
+                    text->GetImageProperties().visible = fVisible;
+                    text->Update();
+                }
+            }
+        }
+
         void SetOpacity(std::string elementName, double opacity)
         {
             OIVTextImage* label = GetOrCreateLabel(elementName);
@@ -85,6 +104,7 @@ namespace OIV
         std::map<std::string, OIVTextImage*> fMapLabels;
         LabelManager* fLabelManager;
         RefreshCallback fRefreshCallback;
+        bool fVisible = false;
 
     };
 }
