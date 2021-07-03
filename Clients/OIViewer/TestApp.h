@@ -151,7 +151,7 @@ namespace OIV
         void UpdateUIZoom();
         void SaveImageSpaceSelection();
         void LoadImageSpaceSelection();
-        void SetZoomInternal(double zoom, int x = -1, int y = -1);
+        void SetZoomInternal(double zoom, int x = -1, int y = -1, bool preserveFitToScreenState = false);
         double GetScale() const;
         LLUtils::PointF64 GetOffset() const;
         LLUtils::PointF64 ImageToClient(LLUtils::PointF64 imagepos) const;
@@ -164,7 +164,7 @@ namespace OIV
         void UpdateWindowSize();
         void Center();
         LLUtils::PointF64 ResolveOffset(const LLUtils::PointF64& point);
-        void SetOffset(LLUtils::PointF64 offset);
+        void SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState = false);
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
