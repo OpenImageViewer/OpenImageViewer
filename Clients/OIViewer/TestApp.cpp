@@ -1608,13 +1608,14 @@ namespace OIV
         return false;
     }
 
-    void TestApp::SetOffset(LLUtils::PointF64 offset)
+    void TestApp::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
     {
         fImageState.SetOffset(ResolveOffset(offset));
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
-        fIsOffsetLocked = false;
-        fIsLockFitToScreen = false;
+
+        if (preserveOffsetLockState == false)
+            fIsOffsetLocked = false;
     }
 
     void TestApp::SetOriginalSize()
@@ -1655,9 +1656,9 @@ namespace OIV
         PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
         double zoom = std::min(ratio.x, ratio.y);
         fRefreshOperation.Begin();
-        SetZoomInternal(zoom, -1, -1);
-        Center();
         fIsLockFitToScreen = true;
+        SetZoomInternal(zoom, -1, -1, true);
+        Center();
         fRefreshOperation.End();
     }
     
@@ -1713,13 +1714,12 @@ namespace OIV
         
     }
 
-    void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY)
+    void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY, bool preserveFitToScreenState)
     {
         using namespace LLUtils;
 
         const double MinImagePixelsInSmallAxis = 150.0;
         const double MaxPixelSize = 30.0;
-
 
         //Apply zoom limits only if zoom is not bound to the client window
         if (fIsLockFitToScreen == false)
@@ -1763,8 +1763,8 @@ namespace OIV
 
             RefreshImage();
 
-
-            SetOffset(GetOffset() + offset);
+            // preserve offset lock (image centering) if zoom is realtive to the center of the image
+            SetOffset(GetOffset() + offset, clientX == -1 && clientY == -1);
             fPreserveImageSpaceSelection.End();
 
             fRefreshOperation.End();
@@ -1772,7 +1772,8 @@ namespace OIV
             UpdateCanvasSize();
             UpdateUIZoom();
 
-            fIsLockFitToScreen = false;
+            if (preserveFitToScreenState == false)
+                fIsLockFitToScreen = false;
         }
     }
 
@@ -1889,7 +1890,7 @@ namespace OIV
     void TestApp::AutoPlaceImage(bool forceCenter)
     {
         fRefreshOperation.Begin();
-        if (fIsLockFitToScreen == true)
+        if (fIsLockFitToScreen == true && fIsOffsetLocked)
             FitToClientAreaAndCenter();
         else if (fIsOffsetLocked == true || forceCenter == true)
             Center();
@@ -1918,8 +1919,9 @@ namespace OIV
 			fRefreshOperation.Begin();
 			using namespace LLUtils;
 			PointF64 offset = (PointF64(fWindow.GetCanvasSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
-			SetOffset(offset);
-			fIsOffsetLocked = true;
+            //Lock offset when centering
+            fIsOffsetLocked = true;
+            SetOffset(offset, true);
 			fRefreshOperation.End();
 		}
     }
