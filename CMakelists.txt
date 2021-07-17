@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(OpenImageViewer)
 set(CMAKE_CXX_STANDARD 20)
-
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
 option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
