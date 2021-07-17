@@ -50,6 +50,32 @@ namespace OIV
         return it == mHMonitorToDesc.end() ? mEmptyMonitorDesc : it->second;
 
     }
+
+    MonitorInfo::OSVersionInfo MonitorInfo::GetOSVersion()
+    {
+        HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
+
+        using NTSTATUS = LONG;
+        constexpr NTSTATUS STATUS_SUCCESS = 0x00000000;
+        using RtlGetVersionPtr = NTSTATUS(WINAPI*)(OSVersionInfo*);
+
+        OSVersionInfo vi{};
+        
+        if (hMod != nullptr) 
+        {
+            RtlGetVersionPtr fxPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+            if (fxPtr != nullptr) 
+            {
+                vi.dwOSVersionInfoSize = sizeof(vi);
+                if (STATUS_SUCCESS != fxPtr(&vi))
+                {
+                    // error
+                }
+            }
+        }
+        return vi;
+    }
+
     //---------------------------------------------------------------------
     BOOL CALLBACK MonitorInfo::MonitorEnumProc(_In_ HMONITOR hMonitor, _In_ HDC hdcMonitor, _In_ LPRECT lprcMonitor, _In_ LPARAM dwData)
     {
@@ -63,10 +89,26 @@ namespace OIV
             {
                 desc.monitorInfo = monitorInfo;
                 desc.handle = hMonitor;
-
                 UINT dpix;
                 UINT dpiy;
-                GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy);
+
+                const static OSVersionInfo versionInfo = GetOSVersion();
+                const static double windowsVersion = versionInfo.dwMajorVersion + versionInfo.dwMinorVersion / 10.0;
+
+                
+                if (windowsVersion >= 6.3)
+                {
+                    GetDpiForMonitor(hMonitor, MDT_EFFECTIVE_DPI, &dpix, &dpiy);
+                }
+                else
+                {
+                    HWND desktopWindow = GetDesktopWindow();
+                    HDC hDC = ::GetDC(desktopWindow);
+                    dpix = static_cast<UINT>(::GetDeviceCaps(hDC, LOGPIXELSX));
+                    dpiy = static_cast<UINT>(::GetDeviceCaps(hDC, LOGPIXELSY));
+                    ::ReleaseDC(desktopWindow, hDC);
+                }
+
                 desc.DPIx = dpix;
                 desc.DPIy = dpiy;
 

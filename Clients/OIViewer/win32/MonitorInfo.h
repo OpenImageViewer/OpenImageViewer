@@ -27,6 +27,8 @@ namespace OIV
         const size_t getMonitorsCount() const;
         RECT getBoundingMonitorArea();
     private:
+        using OSVersionInfo = RTL_OSVERSIONINFOW;
+        static OSVersionInfo GetOSVersion() ;
         using MapHMonitorToDesc = std::map<HMONITOR, MonitorDesc>;
         std::vector<MonitorDesc> mDisplayDevices;
         MapHMonitorToDesc mHMonitorToDesc;

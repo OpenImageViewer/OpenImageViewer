@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <d3dcommon.h>
 #include <d3d11_2.h>
+#include <dxgi1_4.h>
 #include "D3D11Common.h"
 #include "D3D11Error.h"
 #include <cstdlib>
@@ -29,23 +30,9 @@ namespace OIV
         void Create(HWND hwnd)
         {
             fHWND = hwnd;
-            D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_11_0 };
+            D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_11_0};
 			
-            DXGI_SWAP_CHAIN_DESC1 scd{};
-
-            scd.BufferCount = 2;
-            scd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			scd.Scaling = DXGI_SCALING_NONE;
-			scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-			scd.Width = 1280;
-			scd.Height = 800;
-			scd.Stereo = false;
-			scd.SampleDesc.Count = 1;
-			scd.SampleDesc.Quality = 0;
-            scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			scd.Flags = static_cast<UINT>(0);
-			scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-			
+          
 
             UINT createFlags = 0;
             createFlags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -54,9 +41,24 @@ namespace OIV
             createFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
-                D3D11CreateDevice(
-                      nullptr
-                    , D3D_DRIVER_TYPE_HARDWARE
+
+            HRESULT res = D3D11CreateDevice(
+                nullptr
+                , D3D_DRIVER_TYPE_HARDWARE
+                , nullptr
+                , createFlags
+                , requestedLevels
+                , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
+                , D3D11_SDK_VERSION
+                , fD3dDevice.GetAddressOf()
+                , nullptr
+                , fD3dContext.GetAddressOf());
+
+            if (FAILED(res))
+            {
+                res = D3D11CreateDevice(
+                    nullptr
+                    , D3D_DRIVER_TYPE_WARP
                     , nullptr
                     , createFlags
                     , requestedLevels
@@ -64,8 +66,13 @@ namespace OIV
                     , D3D11_SDK_VERSION
                     , fD3dDevice.GetAddressOf()
                     , nullptr
-                    , fD3dContext.GetAddressOf()
-                );
+                    , fD3dContext.GetAddressOf());
+            }
+
+            if (FAILED(res))
+                D3D11Error::HandleDeviceError(res, "Could not create D3D11 device");
+                
+            
 
 				ComPtr<IDXGIDevice> dxgiDevice;
 				ComPtr<IDXGIAdapter> dxgiAdapter;
@@ -79,33 +86,41 @@ namespace OIV
 						}
 
 				if (dxgiFactory == nullptr)
-					LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "This software requires windows 8.1 or higher");
+					LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "This software requires windows 7 with platform update or higher");
+
+
+                DXGI_SWAP_CHAIN_DESC1 scd{};
+
+                ComPtr<IDXGIFactory4>  dxgiFactory4;
+                if (SUCCEEDED(dxgiFactory->QueryInterface(__uuidof(IDXGIFactory4), reinterpret_cast<void**>(dxgiFactory4.GetAddressOf()))))
+                {
+                    scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+                    scd.Scaling = DXGI_SCALING_NONE;
+                }
+                else
+                {
+                    scd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+                    scd.Scaling = DXGI_SCALING_STRETCH;
+                }
+
+                
+
+                scd.BufferCount = 2;
+                scd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                
+                scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+                scd.Width = 1280;
+                scd.Height = 800;
+                scd.Stereo = false;
+                scd.SampleDesc.Count = 1;
+                scd.SampleDesc.Quality = 0;
+                scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+                scd.Flags = static_cast<UINT>(0);
 
 
 				dxgiFactory->CreateSwapChainForHwnd(fD3dDevice.Get(), fHWND, &scd, nullptr, nullptr, fD3dSwapChain.GetAddressOf());
 				dxgiFactory->MakeWindowAssociation(fHWND, DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES);
 
-			
-			/*
-                D3D11Error::HandleDeviceError(
-
-                    D3D11CreateDeviceAndSwapChain (
-                          nullptr
-                        , D3D_DRIVER_TYPE_HARDWARE
-                        , nullptr
-                        , createFlags
-                        , requestedLevels
-                        , sizeof(requestedLevels) / sizeof(D3D_FEATURE_LEVEL)
-                        , D3D11_SDK_VERSION
-                        , &scd
-                        , fD3dSwapChain.GetAddressOf()
-                        , fD3dDevice.GetAddressOf()
-                        , &obtainedLevel
-                        , fD3dContext.GetAddressOf())
-                    , "Could not create device");
-        
-
-		*/
 
         OIV_D3D_SET_OBJECT_NAME(fD3dDevice, "D3D11 device");
         OIV_D3D_SET_OBJECT_NAME(fD3dSwapChain, "D3D11 swap chain");
