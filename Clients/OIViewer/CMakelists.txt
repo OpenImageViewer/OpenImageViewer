@@ -63,7 +63,7 @@ shcore.lib
 )
 
 set_target_properties(${TargetName} PROPERTIES LINK_FLAGS 
-"/DELAYLOAD:\"advapi32.dll\" /DELAYLOAD:\"SHELL32.dll\" /DELAYLOAD:\"MSIMG32.dll\" /DELAYLOAD:\"dbghelp.dll\" /DELAYLOAD:\"COMDLG32.dll\" /DELAYLOAD:\"SHCORE.dll\"")
+"/DELAYLOAD:\"advapi32.dll\" /DELAYLOAD:\"SHELL32.dll\" /DELAYLOAD:\"MSIMG32.dll\" /DELAYLOAD:\"dbghelp.dll\" /DELAYLOAD:\"COMDLG32.dll\" /DELAYLOAD:\"Shcore.dll\" /DELAYLOAD:\"API-MS-WIN-SHCORE-SCALING-L1-1-1.DLL\"")
 
 include_directories(../oiv)
 
