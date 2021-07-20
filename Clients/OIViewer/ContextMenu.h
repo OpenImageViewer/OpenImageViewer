@@ -95,7 +95,7 @@ namespace OIV
 		MenuItemData* GetItemByID(uint32_t itemId)
 		{
 			auto it = std::find_if(std::begin(fMapCommandToData), std::end(fMapCommandToData), [itemId]
-			(const decltype(fMapCommandToData)::value_type& pair) -> bool
+			(const typename decltype(fMapCommandToData)::value_type& pair) -> bool
 				{
 					return pair.second.id == itemId;
 				});

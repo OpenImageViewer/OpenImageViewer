@@ -136,8 +136,6 @@ namespace OIV
                     fwheel += static_cast<SHORT>(mouse.usButtonData) / WHEEL_DELTA;
                 for (int i = 0; i < Max_Buttons; i++)
                 {
-
-                    State state = fButtons[i];
                     Button button = static_cast<Button>(i);
                     if (mouse.ulButtons & (1ul << (i * 2)))
                     {
