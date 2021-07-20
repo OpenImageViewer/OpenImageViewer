@@ -1375,12 +1375,10 @@ namespace OIV
         fTimerSlideShow.SetTargetWindow(fWindow.GetHandle());
         fTimerSlideShow.SetCallback([this]()
         {
-            JumpFiles(1);
+            if (JumpFiles(1) == false && fCurrentFileIndex == std::distance(fListFiles.begin(), fListFiles.end()) - 1)
+                JumpFiles(FileIndexStart);
         }
         );
-
-     
-        
         
         fDoubleTap.callback = [this]()
         {
