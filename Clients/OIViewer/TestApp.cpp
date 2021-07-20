@@ -1050,8 +1050,28 @@ namespace OIV
             fWindow.SetVisible(true);
             fIsInitialLoad = false;
         }
+        else
+        {
+            WatchCurrentFolder();
+        }
     }
 
+    void TestApp::WatchCurrentFolder()
+    {
+        if (GetOpenedFileName().empty() == false)
+        {
+            std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
+            if (absoluteFolderPath != fCurrentFolderWatched)
+            {
+                if (fCurrentFolderWatched.empty() == false)
+                    fFileWatcher.RemoveFolder(fCurrentFolderWatched);
+
+                fCurrentFolderWatched = absoluteFolderPath;
+                fFileWatcher.AddFolder(absoluteFolderPath);
+            }
+        }
+    }
+    
     void TestApp::AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
         OIV_CMD_GetPixels_Request pixelsRequest;
@@ -1216,7 +1236,6 @@ namespace OIV
 
         std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
-
         std::string fileTypesAnsi;
         OIVCommands::GetKnownFileTypes(fileTypesAnsi);
          
@@ -1224,6 +1243,7 @@ namespace OIV
 
         LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
 
+        std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
 
         UpdateOpenedFileIndex();
         UpdateUIFileIndex();
@@ -1355,14 +1375,78 @@ namespace OIV
         fRefreshOperation.End();
     }
 
+
+    void TestApp::UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& filePath)
+    {
+        switch (fileOp)
+        {
+        case FileWatcher::FileChangedOp::Add:
+        {
+            //Add file to list only if it's a known file type
+            std::wstring extension = LLUtils::StringUtility::ToLower(std::filesystem::path(filePath).extension().wstring());
+            std::wstring_view sv(extension);
+            if (sv.empty() == false)
+                sv = sv.substr(1);
+
+            if (fKnownFileTypesSet.contains(sv.data()))
+            {
+                //TODO: add file sorted 
+                auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileListSorter);
+
+                if (*it == filePath)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
+                else
+                    fListFiles.insert(it,filePath);
+            }
+        }
+        break;
+
+        case FileWatcher::FileChangedOp::Remove:
+        {
+            auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            if (it != fListFiles.end())
+                fListFiles.erase(it);
+        }
+        break;
+        }
+    }
+
+    void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
+    {
+        std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
+        std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
+        std::wstring changedFileName = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring();
+        std::wstring changedFileName2 = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).wstring();
+
+        switch (fileChangedEventArgs.fileOp)
+        {
+        case FileWatcher::FileChangedOp::None:
+            break;
+        case FileWatcher::FileChangedOp::Add:
+            UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+            break;
+        case FileWatcher::FileChangedOp::Remove:
+            UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+            break;
+        case FileWatcher::FileChangedOp::Modified:
+            if (absoluteFilePath == changedFileName)
+                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
+            break;
+        case FileWatcher::FileChangedOp::Rename:
+            if (absoluteFilePath == changedFileName2)
+                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
+
+            UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
+            UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
+            break;
+        }
+    }
+
     void TestApp::PostInitOperations()
     {
-			
         // load settings
         fSettings.Load();
         fSettings.Save();
-
-        
 
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
@@ -1388,10 +1472,13 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
+        fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
+
         //If a file has been succesfuly loaded, index all the file in the folder
 		if (IsOpenedImageIsAFile())
 		{
 			LoadFileInFolder(GetOpenedFileName());
+            WatchCurrentFolder();
 		}
 		else
 		{
@@ -1419,6 +1506,14 @@ namespace OIV
 
         fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), fImageState.GetOpenedImage() != nullptr);
         fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), fImageState.GetOpenedImage() != nullptr);
+
+        std::string fileTypesAnsi;
+        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
+        fKnownFileTypes = LLUtils::StringUtility::ToWString(LLUtils::StringUtility::ToLower(fileTypesAnsi));
+        
+        auto fileTypeList =  LLUtils::StringUtility::split(fKnownFileTypes, L';');
+        for (const auto& fileType : fileTypeList)
+            fKnownFileTypesSet.insert(fileType);
     	
     }
 
@@ -2198,6 +2293,26 @@ namespace OIV
 
     }
 
+    void TestApp::ProcessCurrentFileChanged()
+    {
+
+        using namespace std::string_literals;
+        if (fFileReloadPending == false)
+        {
+            fFileReloadPending = true;
+            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
+            fFileReloadPending = false;
+            if (mbResult == IDYES)
+            {
+                LoadFile(GetOpenedFileName(), false);
+            }
+            else if (mbResult == IDNO)
+            {
+
+            }
+        }
+    }
+
     bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
     {
         bool handled = false;
@@ -2228,6 +2343,9 @@ namespace OIV
             break;
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE:
             SetUserMessage(fLastMessageForMainThread, static_cast<int32_t>(uMsg.wParam));
+            break;
+        case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
+            ProcessCurrentFileChanged();
             break;
         case WM_SYSKEYUP:
         case WM_KEYUP:

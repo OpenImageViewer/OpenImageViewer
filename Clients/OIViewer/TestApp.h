@@ -25,9 +25,8 @@
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
 #include <LLUtils/Logging/LogFile.h>
-
 #include "ContextMenu.h"
-
+#include "FileWatcher.h"
 
 namespace OIV
 {
@@ -199,7 +198,11 @@ namespace OIV
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
         bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
-
+        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);
+        void ProcessCurrentFileChanged();
+        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
+        void WatchCurrentFolder();
+		
     private: // member fields
 #pragma region FrameLimiter
         static inline CmdNull NullCommand;
@@ -242,6 +245,7 @@ namespace OIV
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         bool fShowBorders = true;
+        bool fFileReloadPending = false;
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
         LLUtils::Color DefaultTextValueColor = 0x7672ffff;
         std::wstring DefaultTextKeyColorTag;
@@ -265,6 +269,10 @@ namespace OIV
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
         std::wstring fLastMessageForMainThread;
+        FileWatcher fFileWatcher;
+        std::wstring fCurrentFolderWatched;
+        std::set<std::wstring> fKnownFileTypesSet;
+        std::wstring fKnownFileTypes;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 
@@ -297,5 +305,14 @@ namespace OIV
         
     	
         Win32::Timer fContextMenuTimer;
+
+        struct 
+        {
+            bool operator() (const std::wstring& A, const std::wstring& B) const
+            {
+                return LLUtils::StringUtility::ToLower(A) < LLUtils::StringUtility::ToLower(B);
+            }
+        } const fFileListSorter;
+
     };
 }
