@@ -76,7 +76,7 @@ namespace OIV
         class MouseState
         {
         protected:
-            static const int Max_Buttons = 3;
+            static const int Max_Buttons = 5;
         
             public:
             enum class Button { Left,Right,Middle,Third, Forth, Fifth};
