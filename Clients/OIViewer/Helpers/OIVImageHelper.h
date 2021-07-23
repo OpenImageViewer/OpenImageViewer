@@ -15,7 +15,7 @@ namespace OIV
         static OIVBaseImageUniquePtr ConvertImage(OIVBaseImageUniquePtr image, OIV_TexelFormat texelFormat, bool useRainbow)
         {
             ImageHandle convertedHandle = ImageHandleNull;
-            if (image->GetDescriptor().texelFormat != TF_I_R8_G8_B8_A8)
+            if (image->GetDescriptor().texelFormat != texelFormat)
             {
                 if (OIVCommands::ConvertImage(image->GetDescriptor().ImageHandle, texelFormat, useRainbow, convertedHandle) == RC_Success)
                 {

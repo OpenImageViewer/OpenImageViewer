@@ -263,7 +263,7 @@ namespace IMUtil
 
                     properties.fProperties.TexelFormatDecompressed = targetPixelFormat;
 
-                    properties.fProperties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * (targetPixelSize / 8);
+                    properties.fProperties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
                     return ImageSharedPtr(new Image(properties));
                 }
             }
