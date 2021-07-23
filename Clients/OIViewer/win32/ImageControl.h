@@ -41,14 +41,7 @@ namespace OIV
                 {
                     int xPos = GET_X_LPARAM(msg.lParam);
                     int yPos = GET_Y_LPARAM(msg.lParam);
-
-
                     fImageList.MouseClick(xPos, yPos);
-
-                    InvalidateRect(msg.hWnd, nullptr, TRUE);
-
-                    //int selected = yPos / 100 + fImageList.GetPos();
-
                 }
 
                 break;

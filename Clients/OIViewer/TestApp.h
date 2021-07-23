@@ -232,6 +232,7 @@ namespace OIV
         Win32::Timer fTimerSlideShow;
         int fTopMostCounter = 0;
         Win32::Timer fTimerNoActiveZoom;
+        Win32::Timer fTimerNavigation;
         
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
@@ -273,6 +274,7 @@ namespace OIV
         std::wstring fCurrentFolderWatched;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
+        LLUtils::StopWatch fLastImageLoadTimeStamp;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 

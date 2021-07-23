@@ -594,18 +594,24 @@ namespace OIV
     void TestApp::CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace std;
-        string amount = request.args.GetArgValue("amount");
-        if (amount == "start")
-            JumpFiles(FileIndexStart);
-
-        else if (amount == "end")
-            JumpFiles(FileIndexEnd);
+        const string amountStr = request.args.GetArgValue("amount");
+        const string isSubImage = request.args.GetArgValue("subimage");
+        FileIndexType amount = amountStr == "start" ? FileIndexStart : amountStr == "end" ? FileIndexEnd : std::stoi(amountStr, nullptr);
+        if (isSubImage == "true")
+        {
+            
+            auto& imageList = fWindow.GetImageControl().GetImageList();
+            const auto numElements = imageList.GetNumberOfElements();
+            if (numElements > 0)
+            {
+                FileIndexType nextIndex = LLUtils::Math::Modulu<FileIndexType>(imageList.GetSelected() + amount, numElements);
+                imageList.SetSelected(nextIndex);
+            }
+        }
         else
         {
-            int amountVal = std::stoi(amount, nullptr);
-            JumpFiles(amountVal);
+            JumpFiles(amount);
         }
-
     }
 
     void TestApp::CMD_Shell(const CommandManager::CommandRequest& request,
@@ -795,6 +801,8 @@ namespace OIV
             ,{ "Previous","cmd_navigate","amount=-1" ,"GREYPGUP" }
             ,{ "Next","cmd_navigate","amount=1" ,"GREYRIGHT" }
             ,{ "Next","cmd_navigate","amount=1" ,"GREYPGDN" }
+            ,{ "NextSubImage","cmd_navigate","amount=1;subimage=true" ,"GREYDOWN" }
+            ,{ "PreviousSubImage","cmd_navigate","amount=-1;subimage=true" ,"GREYUP" }
 
 
             ,{ "First","cmd_navigate","amount=start" ,"GREYHOME" }
@@ -1043,6 +1051,8 @@ namespace OIV
         	
             //Don't refresh on initial file, wait for WM_SIZE
             fRefreshOperation.End(fIsInitialLoad == false);
+
+            fLastImageLoadTimeStamp.Start(); 
         }
 
         if (fIsInitialLoad == true)
@@ -1141,6 +1151,12 @@ namespace OIV
                 auto& currentSubImage = subImages[i];
                 AddImageToControl(currentSubImage, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
             }
+            //Reset selected sub image when loading new set of subimages
+            fWindow.GetImageControl().GetImageList().SetSelected(-1);
+        }
+        else
+        {
+            fWindow.GetImageControl().GetImageList().Clear();
         }
     }
 
@@ -1335,6 +1351,32 @@ namespace OIV
                 fRefreshOperation.Queue();
             }
         );
+
+
+        fTimerNavigation.SetTargetWindow(fWindow.GetHandle());
+         fTimerNavigation.SetCallback([this]()
+            {
+                 using namespace Win32;
+                 const auto & mouseState = fWindow.GetMouseState();
+                 const int jump = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down) ? 1 : (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down) ? -1 : 0;
+
+
+                 if (jump != 0 && fLastImageLoadTimeStamp.GetElapsedTimeReal(LLUtils::StopWatch::Seconds) > 0.1)
+                 {
+                     
+                     fLastImageLoadTimeStamp.Start();
+                     fLastImageLoadTimeStamp.Stop();
+                     
+                     if (JumpFiles(jump) == false)
+                     {
+                         fLastImageLoadTimeStamp.Start();
+                     }
+                 }
+                
+            }
+        );
+
+
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
 
@@ -1365,14 +1407,16 @@ namespace OIV
 
     void TestApp::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
     {
-        int index = ImageSelectionChangeArgs.imageIndex - 1;
-        
-        auto image = index == -1 ? fImageState.GetOpenedImage() : fImageState.GetOpenedImage()->GetSubImages()[index];
-        fImageState.SetImageChainRoot(image);
-        fRefreshOperation.Begin();
-        RefreshImage();
-        FitToClientAreaAndCenter();
-        fRefreshOperation.End();
+        auto imageIndex = ImageSelectionChangeArgs.imageIndex;
+        if (imageIndex  >= 0)
+        {
+            auto image = imageIndex == 0 ? fImageState.GetOpenedImage() : fImageState.GetOpenedImage()->GetSubImages()[imageIndex - 1];
+            fImageState.SetImageChainRoot(image);
+            fRefreshOperation.Begin();
+            RefreshImage();
+            FitToClientAreaAndCenter();
+            fRefreshOperation.End();
+        }
     }
 
 
@@ -2416,6 +2460,22 @@ namespace OIV
 
         using namespace Win32;
         LockMouseToWindowMode LockMode = LockMouseToWindowMode::NoLock;
+
+
+        //Quick browse feature
+        const bool isNavigationBackwardDown = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down);
+        const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Up);
+        const bool isNavigationForwardDown = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down);
+        const bool isNavigationForwardUp = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Up);
+        const bool isNavigationBackwardReleased = evnt->GetButtonEvent(MouseState::Button::Third) == MouseState::EventType::Released;
+        const bool isNavigationForwardReleased = evnt->GetButtonEvent(MouseState::Button::Forth) == MouseState::EventType::Released;
+        
+
+        if (isMouseUnderCursor && (isNavigationForwardDown || isNavigationBackwardDown))
+                fTimerNavigation.SetInterval(100);
+
+        if (isMouseUnderCursor == false || isNavigationBackwardReleased || isNavigationForwardReleased)
+            fTimerNavigation.SetInterval(0);
         
         if (IsLeftPressed && IsRightDown == false && IsRightPressed == false && IsRightCatured == false)
         {

@@ -36,6 +36,16 @@ public:
         fTargetWindow = hwnd;
     }
 
+    int GetSelected() const
+    {
+        return fSelected;
+    }
+
+    void Clear()
+    {
+        fImages.clear();
+    }
+
     void SetSelected(int selected)
     {
         if (selected != fSelected)
@@ -44,6 +54,7 @@ public:
             ImageSelectionChangeArgs args;
             args.imageIndex = selected;
             ImageSelectionChanged.Raise(args);
+            InvalidateRect(fTargetWindow, nullptr, FALSE);
         }
     }
 
@@ -203,6 +214,7 @@ public:
         fImages.resize(imageDesc.index + 1);
         fImages[imageDesc.index] = imageDesc;
         fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64,64);
+        InvalidateRect(this->fTargetWindow, nullptr, TRUE);
     }
 
    static  HBITMAP HBitmapFromMemory()
@@ -226,11 +238,7 @@ public:
         bi.bmiColors[0] = rgb;
         bi.bmiHeader = bih;
 
-
-
-
         char* pPixels = (pBuffer + bfh.bfOffBits);
-
         char* ppvBits;
 
 
