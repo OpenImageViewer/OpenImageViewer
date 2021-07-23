@@ -58,7 +58,7 @@ The motivation for this project is to create an open code image viewer with grea
 
 ### Notes
 
-* IMCODEC_BUILD_CODEC_DDS  is currently the only codec build flag that is enabled by default. For a full set of image format support, enable any of the the IMCODEC_BUILD_CODEC_* cmake options.
+* IMCODEC_BUILD_CODEC_DDS and  IMCODEC_BUILD_CODEC_ICON are currently the only codec build flags that are enabled by default. For a full set of image format support, enable any of the the IMCODEC_BUILD_CODEC_* cmake options.
 * Only 64 bit is officialy supported.
 
 #### Windows
