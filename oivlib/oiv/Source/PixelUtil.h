@@ -223,6 +223,24 @@ namespace IMUtil
             }
         }
 
+        static void A1ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            for (size_t i = start; i < end; i++)
+            {
+                const int byteOffset = i / CHAR_BIT;
+                const int bitOffset = i % CHAR_BIT;
+                //OutputDebugString(byteOffset)
+                uint8_t currentByte = (reinterpret_cast<const uint8_t*>(i_src))[byteOffset];
+                uint8_t color = ((currentByte & (1 << (7 - bitOffset))) != 0) ? 255 : 0;
+
+                dst[i].X = color;
+                dst[i].Y = color;
+                dst[i].Z = color;
+                dst[i].W = 255;
+            }
+        }
+
         static void BGRA32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
