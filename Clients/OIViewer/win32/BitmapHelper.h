@@ -1,6 +1,7 @@
 #pragma once
 #include <fstream>
 #include <LLUtils/PlatformUtility.h>
+#include <LLUtils/FileHelper.h>
 
 struct BitmapBuffer
 {
@@ -29,20 +30,26 @@ public:
 
     }
 
-    BitmapSharedPtr resize(int width, int height)
+    BitmapSharedPtr resize(int width, int height, uint8_t background = 0)
     {
         HDC dcSrc = CreateCompatibleDC(NULL);
         SelectObject(dcSrc, fBitmap);
 
-        std::unique_ptr<std::uint8_t[]> emptyBuffer = std::make_unique<std::uint8_t[]>(width * height * 4);
-        memset(emptyBuffer.get(), 0, width * height * 4);
+        const auto& header = GetBitmapHeader();
+        const uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(header.biBitCount * width / CHAR_BIT, sizeof(DWORD));
+        const uint32_t pixelsDataSize = rowPitch * width;
+
+        std::unique_ptr<std::uint8_t[]> emptyBuffer = std::make_unique<std::uint8_t[]>(pixelsDataSize);
+        memset(emptyBuffer.get(), background, pixelsDataSize);
+
+
 
         BitmapBuffer buf;
-        buf.bitsPerPixel = 32;
+        buf.bitsPerPixel = header.biBitCount;
         buf.buffer = reinterpret_cast<std::byte*>(emptyBuffer.get());
         buf.width = width;
         buf.height = height;
-        buf.rowPitch = 4 * width;
+        buf.rowPitch = rowPitch;
 
         BitmapSharedPtr resized = std::make_shared<Bitmap>(buf);
         HDC dst = CreateCompatibleDC(NULL);
@@ -80,6 +87,33 @@ public:
     }
 
 
+    void SaveToFile(const std::wstring& fileName)
+    {
+        BITMAPFILEHEADER fileHeader{};
+        fileHeader.bfType = 0x4D42; // "BM"
+        fileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+
+        const auto& header = GetBitmapHeader();
+        size_t pixelsSize = header.biWidth * header.biBitCount / CHAR_BIT * header.biHeight;
+        LLUtils::Buffer pixelsData(pixelsSize);
+
+        HDC hDC = GetDC(nullptr);
+
+        BITMAPINFO info{};
+        info.bmiHeader = header;
+
+         int returnedLines = GetDIBits(hDC, fBitmap, 0, header.biHeight, pixelsData.data(), &info, DIB_RGB_COLORS);
+        
+        ReleaseDC(nullptr, hDC);
+        fileHeader.bfSize = fileHeader.bfOffBits + pixelsSize;
+
+        LLUtils::File::WriteAllBytes(fileName, sizeof(BITMAPFILEHEADER), reinterpret_cast<std::byte*>(&fileHeader));
+        LLUtils::File::WriteAllBytes(fileName, sizeof(BITMAPINFOHEADER), reinterpret_cast<const std::byte*>(&header), true);
+        LLUtils::File::WriteAllBytes(fileName, pixelsSize, reinterpret_cast<const std::byte*>(pixelsData.data()), true);
+
+    }
+
 
     const BITMAPINFOHEADER& GetBitmapHeader()
     {
@@ -103,27 +137,14 @@ public:
         const int bpp = bitmapBuffer.bitsPerPixel;
         const int rowPitch = bitmapBuffer.rowPitch;
 
-        BITMAPINFO bi;
-        bi.bmiHeader = {};
+        BITMAPINFO bi{};
+
         bi.bmiHeader.biBitCount = bpp;
-        bi.bmiHeader.biClrImportant = 0;
-        bi.bmiHeader.biClrUsed = 0;
-        bi.bmiHeader.biCompression = 0;
         bi.bmiHeader.biHeight = height;
         bi.bmiHeader.biWidth = width;
         bi.bmiHeader.biPlanes = 1;
         bi.bmiHeader.biSize = 40;
         bi.bmiHeader.biSizeImage = rowPitch * height;
-
-        bi.bmiHeader.biXPelsPerMeter = 11806;
-        bi.bmiHeader.biYPelsPerMeter = 11806;
-
-
-        bi.bmiColors[0].rgbBlue = 0;
-        bi.bmiColors[0].rgbGreen = 0;
-        bi.bmiColors[0].rgbRed = 0;
-        bi.bmiColors[0].rgbReserved = 0;
-
         const std::byte* pPixels = (bitmapBuffer.buffer);
 
         char* ppvBits;
