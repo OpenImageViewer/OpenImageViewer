@@ -57,6 +57,10 @@ namespace OIV
         class Win32Window
         {
         public:
+            static constexpr LLUtils::native_char_type WindowClassName[] = LLUTILS_TEXT("OIV_WINDOW_CLASS");
+        private:
+            static constexpr LLUtils::native_char_type WindowAddressPropertyName[] = LLUTILS_TEXT("windowClass");
+        public:
             // const methods
             void SetFocused() const;
             HWND GetHandle() const;
@@ -102,6 +106,8 @@ namespace OIV
             void EnableDragAndDrop(bool enable);
             void SetLockMouseToWindowMode(LockMouseToWindowMode mode);
             void SetVisible(bool visible);
+
+            void SetForground();
             void SetWindowStyles(WindowStyle styles, bool enable);
             void SetParent(Win32Window* parent);
             void SetTransparent(bool transparent) {fIsTransparent = transparent;}

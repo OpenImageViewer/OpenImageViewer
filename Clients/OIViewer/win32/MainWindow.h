@@ -43,7 +43,8 @@ namespace OIV
             void HandleRawInput(RAWINPUT* event_raw_input);
             void SetInputFlushTimer(bool enable);
             void SetStatusBarText(std::wstring message, int part, int type);
-
+            void SetIsTrayWindow(bool isTrayWindow);
+            static bool GetIsTrayWindow(HWND hwnd);
 
 
         private: // methods

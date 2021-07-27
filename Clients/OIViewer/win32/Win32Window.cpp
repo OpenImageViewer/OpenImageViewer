@@ -68,8 +68,6 @@ namespace OIV
         void Win32Window::Create()
         {
             HINSTANCE hInstance = GetModuleHandle(nullptr);
-            // The main window class name.
-            static TCHAR szWindowClass[] = _T("OIV_WINDOW_CLASS");
 
             // The string that appears in the application's title bar.
             WNDCLASSEX wcex{};
@@ -82,7 +80,7 @@ namespace OIV
             wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
             wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
             wcex.hbrBackground =  reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-            wcex.lpszClassName = szWindowClass;
+            wcex.lpszClassName = WindowClassName;
 
             static bool classRegistered = false;
             if (classRegistered == false)
@@ -105,7 +103,7 @@ namespace OIV
             HWND handleWindow =
 
                 CreateWindow(
-                    szWindowClass,
+                    WindowClassName,
                     nullptr, // title;
                     0,
                     CW_USEDEFAULT,
@@ -423,6 +421,12 @@ namespace OIV
             }
         }
 
+
+        void Win32Window::SetForground()
+        {
+            ::SetForegroundWindow(GetHandle());
+        }
+
         LLUtils::PointI32 Win32Window::GetWindowSize() const
         {
             RECT r;
@@ -557,7 +561,7 @@ namespace OIV
 
             }
 
-            Win32Window* window = reinterpret_cast<Win32Window*>(GetProp(hWnd, _T("windowClass")));
+            Win32Window* window = reinterpret_cast<Win32Window*>(GetProp(hWnd, WindowAddressPropertyName));
             if (window != nullptr)
                 return window->WindowProc({ hWnd,message,wParam,lParam });
             else return DefWindowProc(hWnd, message, wParam, lParam);

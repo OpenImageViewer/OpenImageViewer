@@ -74,19 +74,17 @@ namespace OIV
 
         void MainWindow::OnCreate()
         {
-            fHandleStatusBar = DoCreateStatusBar(GetHandle(), 12, GetModuleHandle(nullptr), 3);
-            ResizeStatusBar();
+            //fHandleStatusBar = DoCreateStatusBar(GetHandle(), 12, GetModuleHandle(nullptr), 3);
+            //ResizeStatusBar();
 
             fCanvasWindow.Create();
             fCanvasWindow.SetParent(this);
             fCanvasWindow.SetVisible(true);
             fCanvasWindow.SetTransparent(true);
 
-            SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
-            SetStatusBarText(L"File: ", 1, 0);
+            //SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
+            //SetStatusBarText(L"File: ", 1, 0);
 
-            fImageControl.Create();
-            fImageControl.SetParent(this);
 
             RawInput::ResiterWindow(GetHandle());
         }
@@ -275,10 +273,14 @@ namespace OIV
             }
 
             SetWindowPos(fCanvasWindow.GetHandle(), nullptr, 0, 0, clientSize.cx, clientSize.cy, 0);
-            fImageControl.SetVisible(isImageControlVisible);
 
-            if (isImageControlVisible)
-                SetWindowPos(fImageControl.GetHandle(), nullptr, clientSize.cx, 0, ImageListWidth, clientSize.cy, SWP_NOACTIVATE | SWP_NOZORDER);
+            if (fImageControl.GetHandle() != nullptr)
+            {
+                fImageControl.SetVisible(isImageControlVisible);
+
+                if (isImageControlVisible)
+                    SetWindowPos(fImageControl.GetHandle(), nullptr, clientSize.cx, 0, ImageListWidth, clientSize.cy, SWP_NOACTIVATE | SWP_NOZORDER);
+            }
 
             ShowWindow(fHandleStatusBar, GetFullScreenState() == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
         }
@@ -297,6 +299,11 @@ namespace OIV
             if (show != fShowImageControl)
             {
                 fShowImageControl = show;
+                if (fImageControl.GetHandle() == nullptr)
+				{
+                    fImageControl.Create();
+		            fImageControl.SetParent(this);
+				}
                 HandleResize();
             }
         }
@@ -366,9 +373,22 @@ namespace OIV
                 break;
             case WM_DESTROY:
                 PostQuitMessage(0);
+            case WM_ACTIVATE:
+                if (message.wParam != WA_INACTIVE)
+                 SetIsTrayWindow(false);
                 break;
             }
             return retValue;
         }
+
+        void MainWindow::SetIsTrayWindow(bool isTrayWindow)
+        {
+            ::SetProp(GetHandle(), LLUTILS_TEXT("isTrayWindow"), isTrayWindow ?  reinterpret_cast<HANDLE>(1) : nullptr);
+        }
+        
+        bool MainWindow::GetIsTrayWindow(HWND hwnd)
+        {
+            return ::GetProp(hwnd, LLUTILS_TEXT("isTrayWindow")) != nullptr;
+       }
     }
 }

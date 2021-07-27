@@ -27,6 +27,7 @@
 #include <LLUtils/Logging/LogFile.h>
 #include "ContextMenu.h"
 #include "FileWatcher.h"
+#include "win32/NotificationIconGroup.h"
 
 namespace OIV
 {
@@ -75,6 +76,7 @@ namespace OIV
         void Run();
         void Destroy();
         static std::wstring GetAppDataFolder();
+        static HWND FindTrayBarWindow();
 
     private:// types
         using FileIndexType = LLUtils::ListWString::difference_type;
@@ -91,7 +93,7 @@ namespace OIV
         void SetTopMostUserMesage();
         void ProcessTopMost();
         bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
-		void CloseApplication();
+		void CloseApplication(bool closeToTray);
         bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
@@ -203,6 +205,7 @@ namespace OIV
         void ProcessCurrentFileChanged();
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
+        void OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args);
 		
     private: // member fields
 #pragma region FrameLimiter
@@ -253,7 +256,6 @@ namespace OIV
         std::wstring DefaultTextKeyColorTag;
         std::wstring DefaultTextValueColorTag;
 
-
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
@@ -276,6 +278,10 @@ namespace OIV
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
+        Win32::NotificationIconGroup fNotificationIcons;
+        Win32::NotificationIconGroup::IconID fNotificationIconID;
+
+        std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 

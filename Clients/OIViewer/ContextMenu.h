@@ -3,18 +3,30 @@
 #include <string>
 #include <map>
 
-#include "LLUtils/StringDefs.h"
+#include <LLUtils/StringDefs.h>
+#include <LLUtils/BitFlags.h>
+
 
 namespace OIV
 {
 
+	enum class AlignmentHorizontal { None, Left, Center, Right};
+	enum class AlignmentVertical { None, Top, Center, Bottom };
 	template <typename T>
 	class ContextMenu final
 	{
-	struct MenuItemData : public T
+	struct MenuItemData
 	{
 		int id;
 		MENUITEMINFO info;
+		T userData;
+		LLUtils::native_string_type itemDisplayName;
+	};
+
+	struct UserItemData
+	{
+		T userData;
+		LLUtils::native_string_type itemDisplayName;
 	};
 		
 	public:
@@ -27,13 +39,41 @@ namespace OIV
 		{
 			::DestroyMenu(fMenu);
 		}
-		T* Show(int x, int y)
+
+		MenuItemData* Show(int x, int y, AlignmentHorizontal horizontal, AlignmentVertical vertical)
 		{
 			fVisible = true;
-			auto itemId = TrackPopupMenu(fMenu, TPM_CENTERALIGN | TPM_VCENTERALIGN | TPM_RETURNCMD | TPM_RIGHTBUTTON, x, y, 0, fHandle, nullptr);
+
+			LLUtils::BitFlags<UINT> flags(TPM_RETURNCMD | TPM_RIGHTBUTTON);
+			switch (horizontal)
+			{
+			case AlignmentHorizontal::Left:
+				flags.set(TPM_LEFTALIGN);
+					break;
+				case AlignmentHorizontal::Center:
+					flags.set(TPM_CENTERALIGN);
+						break;
+				case AlignmentHorizontal::Right:
+					flags.set(TPM_RIGHTALIGN);
+						break;
+			}
+
+			switch (vertical)
+			{
+			case AlignmentVertical::Top:
+				flags.set(TPM_TOPALIGN);
+					break;
+				case AlignmentVertical::Center:
+					flags.set(TPM_VCENTERALIGN);
+						break;
+				case AlignmentVertical::Bottom:
+					flags.set(TPM_BOTTOMALIGN);
+						break;
+			}
+
+			auto itemId = TrackPopupMenu(fMenu, flags, x, y, 0, fHandle, nullptr);
 			fVisible = false;
 			return GetItemByID(itemId);
-			
 		}
 
 		void EnableItem(LLUtils::native_string_type name, bool enabled)
@@ -61,11 +101,11 @@ namespace OIV
 		
 		void AddItem(LLUtils::native_string_type name, const T& data)
 		{
-			
 			MenuItemData menuData;
-			static_cast<T&>(menuData) = data;
 			
 			menuData.id = ++fCurrentItemID;
+			menuData.itemDisplayName = name;
+			menuData.userData = data;
 			
 			const auto it = fMapCommandToData.emplace (name, menuData).first;
 
