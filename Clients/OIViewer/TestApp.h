@@ -313,7 +313,17 @@ namespace OIV
         {
             bool operator() (const std::wstring& A, const std::wstring& B) const
             {
-                return LLUtils::StringUtility::ToLower(A) < LLUtils::StringUtility::ToLower(B);
+                using namespace LLUtils;
+                using path = std::filesystem::path;
+                path aPath(StringUtility::ToLower(A));
+                std::wstring aName = aPath.stem();
+                std::wstring aExt = aPath.extension();
+                
+                path bPath(StringUtility::ToLower(B));
+                std::wstring bName = bPath.stem();
+                std::wstring bExt = bPath.extension();
+
+                return aName < bName || ((aName == bName) && aExt < bExt);
             }
         } const fFileListSorter;
 
