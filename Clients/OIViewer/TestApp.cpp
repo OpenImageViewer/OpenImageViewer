@@ -37,6 +37,7 @@
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/Logging/LogFile.h>
 #include "ContextMenu.h"
+#include "globals.h"
 
 namespace OIV
 {
@@ -80,7 +81,9 @@ namespace OIV
         }
         else if (type == "quit")
         {
-			CloseApplication();
+            string op = request.args.GetArgValue("op");
+            bool closeToTray = op == "closetotray";
+			CloseApplication(closeToTray);
         }
         else if (type == "grid")
         {
@@ -657,7 +660,20 @@ namespace OIV
         return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/";
     }
 
-	std::wstring TestApp::GetLogFilePath()
+    HWND TestApp::FindTrayBarWindow()
+    {
+        using namespace Win32;
+        
+        HWND nextChild = nullptr; 
+
+        do 
+        {
+            nextChild = FindWindowEx(nullptr, nextChild, Win32Window::WindowClassName, nullptr);
+        } while (nextChild != nullptr && MainWindow::GetIsTrayWindow(nextChild) == false);
+
+        return nextChild;
+    }
+	
     std::wstring TestApp::GetLogFilePath()
 	{
 		return GetAppDataFolder() + L"oiv.log";
@@ -749,7 +765,8 @@ namespace OIV
             ,{ "Toggle status bar","cmd_view_state","type=toggleStatusBar" ,"Tab" }
             ,{ "Toggle multi full screen","cmd_view_state","type=toggleMultiFullScreen" ,"Alt+Shift+Enter" }
             ,{ "Borders","cmd_view_state","type=toggleBorders" ,"B" }
-            ,{ "Quit","cmd_view_state","type=quit" ,"Escape" }
+            ,{ "Close","cmd_view_state","type=quit" ,"Shift+Escape" }
+            ,{ "Close to tray","cmd_view_state","type=quit;op=closetotray" ,"Escape" }
             ,{ "Grid","cmd_view_state","type=grid" ,"G" }
             ,{ "Slide show","cmd_view_state","type=slideShow" ,"Space" }
             ,{ "Toggle normalization","cmd_view_state","type=toggleNormalization" ,"N" }
@@ -1113,54 +1130,115 @@ namespace OIV
             }
         }
     }
-    
+
     void TestApp::AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
         OIV_CMD_GetPixels_Request pixelsRequest;
         OIV_CMD_GetPixels_Response pixelsResponse;
-        
+
         OIVBaseImageSharedPtr bgraImage = OIVImageHelper::ConvertImage(image, TF_I_B8_G8_R8_A8, false);
 
-        OIVBaseImageSharedPtr systemCompatibleImage;
-        
-        
+
         ImageHandle windowCompatibleBitmapHandle;
+
         if (OIVCommands::TransformImage(bgraImage->GetDescriptor().ImageHandle, OIV_AxisAlignedRotation::AAT_None, OIV_AxisAlignedFlip::AAF_Vertical, windowCompatibleBitmapHandle) == RC_Success)
         {
-            systemCompatibleImage = std::make_shared<OIVHandleImage>(windowCompatibleBitmapHandle);
+            bgraImage = std::make_shared<OIVHandleImage>(windowCompatibleBitmapHandle);
         }
 
 
-        pixelsRequest.handle = systemCompatibleImage->GetDescriptor().ImageHandle;
-            ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
+        pixelsRequest.handle = bgraImage->GetDescriptor().ImageHandle;
+        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
+
+        OIVBaseImageSharedPtr bgrImage = OIVImageHelper::ConvertImage(bgraImage, TF_I_B8_G8_R8, false);
+        OIV_CMD_GetPixels_Request pixelsRequestBGR;
+        OIV_CMD_GetPixels_Response pixelsResponseBGR;
+        pixelsRequestBGR.handle = bgrImage->GetDescriptor().ImageHandle;
+        OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequestBGR, &pixelsResponseBGR);
+
         uint8_t bpp;
-        OIV_Util_GetBPPFromTexelFormat(pixelsResponse.texelFormat, &bpp);
+        OIV_Util_GetBPPFromTexelFormat(pixelsResponseBGR.texelFormat, &bpp);
 
 
-        BitmapBuffer bitmapBuffer = {};
+        BitmapBuffer bitmapBuffer{};
         bitmapBuffer.bitsPerPixel = bpp;
-        bitmapBuffer.buffer = pixelsResponse.pixelBuffer;
-        bitmapBuffer.height = pixelsResponse.height;
-        bitmapBuffer.width = pixelsResponse.width;
-        bitmapBuffer.rowPitch = pixelsResponse.rowPitch;
+        bitmapBuffer.rowPitch = LLUtils::Utility::Align<uint32_t>(pixelsResponseBGR.rowPitch, sizeof(DWORD));
+
+        LLUtils::Buffer colorBuffer(pixelsResponseBGR.width * bitmapBuffer.rowPitch);
+        bitmapBuffer.buffer = colorBuffer.data();
+        bitmapBuffer.height = pixelsResponseBGR.height;
+        bitmapBuffer.width = pixelsResponseBGR.width;
+
+
+        //Create 24 bit mask image.
+        BitmapBuffer maskBuffer{};
+        maskBuffer.bitsPerPixel = 24;
+        maskBuffer.height = pixelsResponse.height;
+        maskBuffer.width = pixelsResponse.width;
+        maskBuffer.rowPitch = LLUtils::Utility::Align<uint32_t>(maskBuffer.width * maskBuffer.bitsPerPixel / CHAR_BIT, sizeof(DWORD));
+        LLUtils::Buffer maskPixelsBuffer(maskBuffer.height * maskBuffer.rowPitch);
+        maskBuffer.buffer = maskPixelsBuffer.data();
+
+#pragma pack(push,1)
+
+        struct Color32
+        {
+            uint8_t R;
+            uint8_t G;
+            uint8_t B;
+            uint8_t A;
+        };
+
+        struct Color24
+        {
+            uint8_t R;
+            uint8_t G;
+            uint8_t B;
+        };
+#pragma pop
+        for (int l = 0; l < maskBuffer.height; l++)
+        {
+            const uint32_t sourceOffset = l * pixelsResponse.rowPitch;
+            const uint32_t colorOffset = l * bitmapBuffer.rowPitch;
+            const uint32_t maskOffset = l * maskBuffer.rowPitch;
+
+            for (int x = 0; x < maskBuffer.width; x++)
+            {
+                Color24& destMask = reinterpret_cast<Color24*>(reinterpret_cast<uint8_t*>(maskPixelsBuffer.data()) + maskOffset)[x];
+                Color24& destImage = reinterpret_cast<Color24*>(reinterpret_cast<uint8_t*>(colorBuffer.data()) + colorOffset)[x];
+                const Color32& sourceColor = reinterpret_cast<const Color32*>(reinterpret_cast<const uint8_t*>(pixelsResponse.pixelBuffer) + sourceOffset)[x];
+
+                const uint8_t AlphaChannel = sourceColor.A;
+                const uint8_t invAlpha = 0xFF - AlphaChannel;
+                destMask.R = AlphaChannel;
+                destMask.G = AlphaChannel;
+                destMask.B = AlphaChannel;
+                
+                destImage.R = sourceColor.R | invAlpha;
+                destImage.G = sourceColor.G | invAlpha;
+                destImage.B = sourceColor.B | invAlpha;
+            }
+        }
 
         std::wstringstream ss;
         ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
-         
-        fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(), std::make_shared<BitmapSharedPtr::element_type>(bitmapBuffer) });
+
+        fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(),
+                std::make_shared<BitmapSharedPtr::element_type>(bitmapBuffer)
+                , std::make_shared<BitmapSharedPtr::element_type>(maskBuffer) });
     }
 
     void TestApp::OnContextMenuTimer()
     {
         fContextMenuTimer.SetInterval(0);
         auto pos = Win32Helper::GetMouseCursorPosition();
-        auto chosenItem = fContextMenu->Show(pos.x , pos.y);
+        auto chosenItem = fContextMenu->Show(pos.x - 16  , pos.y +-16, AlignmentHorizontal::Center, AlignmentVertical::Center);
 
         if (chosenItem != nullptr)
         {
             CommandManager::CommandClientRequest request;
-            request.commandName = chosenItem->command;
-            request.args = chosenItem->args;
+            request.commandName = chosenItem->userData.command;
+            request.args = chosenItem->userData.args;
             ExecuteUserCommand(request);
         }
     }
@@ -1279,23 +1357,26 @@ namespace OIV
 
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
-        using namespace std::filesystem;
-        fListFiles.clear();
-        fCurrentFileIndex = FileIndexStart;
+        if (absoluteFilePath.empty() == false)
+        {
+            using namespace std::filesystem;
+            fListFiles.clear();
+            fCurrentFileIndex = FileIndexStart;
 
-        std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
+            std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
-        std::string fileTypesAnsi;
-        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
-         
-        std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
+            std::string fileTypesAnsi;
+            OIVCommands::GetKnownFileTypes(fileTypesAnsi);
 
-        LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
+            std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
 
-        std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
+            LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
 
-        UpdateOpenedFileIndex();
-        UpdateUIFileIndex();
+            std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
+
+            UpdateOpenedFileIndex();
+            UpdateUIFileIndex();
+        }
     }
 
     void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
@@ -1594,6 +1675,50 @@ namespace OIV
         for (const auto& fileType : fileTypeList)
             fKnownFileTypesSet.insert(fileType);
     	
+        fNotificationIconID =  fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), OIV_TEXT("Open image viewer"));
+        fNotificationIcons.OnNotificationIconEvent.Add(std::bind(&TestApp::OnNotificationIcon, this, std::placeholders::_1));
+
+        fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
+        fNotificationContextMenu->AddItem(OIV_TEXT("Quit"), int{});
+    }
+
+
+    void TestApp::OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args)
+    {
+        using namespace Win32;
+        switch (args.action) 
+        {
+        case NotificationIconGroup::NotificationIconAction::Select:
+            if (fWindow.GetVisible() == false)
+            {
+                fWindow.SetVisible(true);
+                fWindow.SetForground();
+            }
+            else
+            {
+                fWindow.SetVisible(false);
+            }
+            break;
+            case NotificationIconGroup::NotificationIconAction::ContextMenu:
+            {
+                auto rect = fNotificationIcons.GetIconRect(fNotificationIconID);
+                auto bottomLeft = rect.GetCorner(LLUtils::Corner::TopRight);
+                bottomLeft.x += rect.GetWidth() / 2;
+                bottomLeft.y += rect.GetHeight() / 2;
+
+                fWindow.SetForground();
+                auto chosenItem = fNotificationContextMenu->Show(bottomLeft.x, bottomLeft.y, AlignmentHorizontal::Right, AlignmentVertical::Bottom);
+                if (chosenItem != nullptr)
+                {
+                    using namespace std::string_literals;
+                    CommandManager::CommandClientRequest request;
+                    request.commandName = "cmd_view_state";
+                    request.args = "type="s + LLUtils::StringUtility::ToLower(LLUtils::StringUtility::ConvertString<decltype(request.commandName)>(chosenItem->itemDisplayName));
+                    ExecuteUserCommand(request);
+                }
+             }
+            break;
+        }
     }
 
     void TestApp::Destroy()
@@ -2422,6 +2547,19 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
             ProcessCurrentFileChanged();
             break;
+
+            case WM_COPYDATA:
+            {
+                COPYDATASTRUCT* cds = (COPYDATASTRUCT*)uMsg.lParam;
+                if (uMsg.wParam == OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY)
+                {
+                    wchar_t* fileToLoad = reinterpret_cast<wchar_t*>(cds->lpData);
+                    LoadFile(fileToLoad, false);
+                    fWindow.SetVisible(true);
+                }
+            }
+            break;
+
         case WM_SYSKEYUP:
         case WM_KEYUP:
         {
@@ -2444,7 +2582,7 @@ namespace OIV
             UpdateTexelPos();
             break;
 		case WM_CLOSE:
-			CloseApplication();
+			CloseApplication(false);
         break;
 
         }
@@ -2452,22 +2590,54 @@ namespace OIV
         return handled;
     }
     
-	void TestApp::CloseApplication()
-	{
-		fWindow.Destroy();
-	}
+
+    void TestApp::CloseApplication(bool closeToTray)
+    {
+        HANDLE mutex = CreateMutex(NULL, FALSE,  (LLUtils::native_string_type(Globals::ProgramGuid) + LLUTILS_TEXT("_CLOSEAPP")).c_str() );
+        if (mutex == nullptr)
+        {
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be created.");
+        }
+
+        const DWORD result = WaitForSingleObject(
+            mutex,    // handle to mutex
+            INFINITE);  // no time-out interval
+
+
+        switch (result)
+        {
+        case WAIT_OBJECT_0:
+
+            fWindow.SetVisible(false);
+
+            if (closeToTray == false || FindTrayBarWindow() != nullptr)
+            {
+                fWindow.Destroy();
+            }
+            else
+            {
+                fWindow.SetIsTrayWindow(true);
+            }
+
+            
+            break;
+        default:
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex ownership cannot be acquired.");
+        }
+
+        if (!ReleaseMutex(mutex))
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be released.");
+
+
+        if (CloseHandle(mutex) == FALSE)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be closed.");
+    }
 
 
     bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
-        if (LoadFile(event_ddrag_drop_file->fileName, false))
-        {
-            LoadFileInFolder(event_ddrag_drop_file->fileName);
-        }
-        return false;
-        
+        return LoadFile(event_ddrag_drop_file->fileName, false);
     }
-
     void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
     {
         using namespace Win32;
