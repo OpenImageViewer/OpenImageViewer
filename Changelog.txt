@@ -1,7 +1,28 @@
 ==============================================================
-Open image viewer 0.15 - Jan 10, 2019
+==============================================================
+Open image viewer 0.16RC2 - July 07, 2020
+==============================================================
+Added: Webp Codec
+Completed migration to Cmake
+Added: per monitor DPI awareness for windows 8.1 and up.
+Added: cubic downsampling for large images.
+Added: basic context menu, when long pressing mouse right button
+
+==============================================================
+Open image viewer 0.16RC1 - Apr 27, 2019
 ==============================================================
 
+Fix mouse cursor hotspots
+General performance and stability improvements
+Fixed: Exception stack backtrace
+Improved: startup time
+Improved performance for Windows 8.1 and up by using DXGI flip model.
+Application closes gracefully.
+Fixed: Image centering after axis aligned transformation
+
+==============================================================
+Open image viewer 0.15 - Jan 10, 2019
+==============================================================
 Changed: checkered background tile size to be exactly 16 pixels
 Added: Label manager, virtual status bar and better compatibility for high DPI monitors.
 Added: support for subimages, currently implemented only for dds mipmaps.
