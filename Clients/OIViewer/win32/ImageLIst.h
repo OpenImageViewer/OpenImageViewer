@@ -21,6 +21,7 @@ public:
         uint32_t index;
         std::wstring title;
         BitmapSharedPtr bitmap;
+        BitmapSharedPtr mask;
     };
 
     struct RGBAImageDesc
@@ -141,12 +142,6 @@ public:
         int y = fPos * -100;
         for (const ImageDesc& imageDesc : fImages)
         {
-            
-            BITMAP bm;
-            HBITMAP currentBitmap = imageDesc.bitmap->GetHBitmap();
-            
-            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, currentBitmap);
-            GetObject(currentBitmap, sizeof(bm), &bm);
             RECT r;
             r.top = y;
             r.bottom = y + fEntryHeight;
@@ -189,13 +184,14 @@ public:
             bf.SourceConstantAlpha = 0xef;  // half of 0xff = 50% transparency 
             bf.AlphaFormat = 0;             // ignore source alpha channel 
 
+            HBITMAP currentMask = imageDesc.mask->GetHBitmap();
+            HBITMAP currentBitmap = imageDesc.bitmap->GetHBitmap();
+            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, currentMask);
+            BitBlt(hdc, (entrywidth - finalWidth) / 2, y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, SRCPAINT);
 
-            AlphaBlend(hdc, (entrywidth - finalWidth) / 2, y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, bf);
-            
+            hbmOld = (HBITMAP)SelectObject(hdcMem, currentBitmap); 
 
-            //StretchBlt(hdc, (entrywidth - finalWidth) / 2 , y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
-            //BitBlt(hdc, 0, 0, bm.bmWidth, bm.bmHeight, hdcMem, 0, 0, SRCCOPY);
-            
+            BitBlt(hdc, (entrywidth - finalWidth) / 2, y + imageFinalLocalYPos, finalWidth, finalHeight, hdcMem, 0, 0, SRCAND);
             
             
             currentEntry++;
@@ -213,14 +209,13 @@ public:
     {
         fImages.resize(imageDesc.index + 1);
         fImages[imageDesc.index] = imageDesc;
-        fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64,64);
+        fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64,64,255);
+        fImages[imageDesc.index].mask = fImages[imageDesc.index].mask->resize(64, 64, 0);
         InvalidateRect(this->fTargetWindow, nullptr, TRUE);
     }
 
    static  HBITMAP HBitmapFromMemory()
     {
-        //400x240x24
-
         std::ifstream is;
         is.open("d:\\ImagesCopy\\loading.bmp", std::ios::binary);
         is.seekg(0, std::ios::end);
