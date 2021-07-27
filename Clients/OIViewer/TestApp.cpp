@@ -651,10 +651,16 @@ namespace OIV
         return ss.str();
 
     }
+    
+    std::wstring TestApp::GetAppDataFolder()
+    {
+        return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/";
+    }
 
 	std::wstring TestApp::GetLogFilePath()
+    std::wstring TestApp::GetLogFilePath()
 	{
-		return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/oiv.log";
+		return GetAppDataFolder() + L"oiv.log";
 	}
 
 
@@ -923,7 +929,25 @@ namespace OIV
 
     void TestApp::UpdateTitle()
     {
-        const static std::wstring cachedVersionString = L"OpenImageViewer " + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
+        auto GetBuildTimeStamp = []()-> std::wstring
+        {
+            auto time = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
+            auto ticks = time.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
+            auto systemClockTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
+            auto in_time_t = std::chrono::system_clock::to_time_t(systemClockTime);
+            std::wstringstream ss;
+            tm tmDest;
+            errno_t errorCode = localtime_s(&tmDest, &in_time_t) != 0;
+            if (errorCode != 0)
+            {
+                using namespace std::string_literals;
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "could not convert time_t to a tm structure, error code: "s + std::to_string(errorCode));
+            }
+            ss << std::put_time(&tmDest, OIV_TEXT("%Y-%m-%d %X"));
+            return ss.str();
+        };
+    
+        const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
         
  // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
@@ -932,13 +956,20 @@ namespace OIV
 
  // If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
 #if OIV_OFFICIAL_BUILD == 0
-            + L" - UNOFFICIAL"
+
+            + OIV_TEXT(" | ") + GetBuildTimeStamp() +  OIV_TEXT(" | UNOFFICIAL")
 #endif
 			;
 
 		std::wstring title;
-		if (GetOpenedFileName().empty() == false)
-			title = GetOpenedFileName() + L" - ";
+        if (GetOpenedFileName().empty() == false)
+        {
+            std::wstringstream ss;
+            ss << L"File " << (fCurrentFileIndex == FileIndexStart ?
+                0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size() << " | ";
+            
+            title = ss.str() + GetOpenedFileName() + L" - ";
+        }
 		title += cachedVersionString;
 
 
@@ -1036,32 +1067,33 @@ namespace OIV
             
             AutoPlaceImage();
 
-            if (fIsInitialLoad == false)
-                UpdateUIFileIndex();
+            if (fIsTryToLoadInitialFile == false)
+                UpdateTitle();
 
             fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
             UnloadWelcomeMessage();
             DisplayOpenedFileName();
 
-            if (fIsInitialLoad == false)
+            if (fIsTryToLoadInitialFile == false)
             {
                 fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), true);
                 fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
             }
         	
             //Don't refresh on initial file, wait for WM_SIZE
-            fRefreshOperation.End(fIsInitialLoad == false);
+            fRefreshOperation.End(fIsTryToLoadInitialFile == false);
 
             fLastImageLoadTimeStamp.Start(); 
         }
 
-        if (fIsInitialLoad == true)
+        if (fIsTryToLoadInitialFile == true)
         {
             fWindow.SetVisible(true);
-            fIsInitialLoad = false;
+            fIsTryToLoadInitialFile = false;
         }
         else
         {
+            LoadFileInFolder(GetOpenedFileName());
             WatchCurrentFolder();
         }
     }
@@ -1199,6 +1231,7 @@ namespace OIV
         default:
             SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
         }
+
         return result == RC_Success;
     }
 
@@ -1301,6 +1334,8 @@ namespace OIV
         
         if (isInitialFileExists == true)
         {
+            fIsTryToLoadInitialFile = true;
+                 
             fMutexWindowCreation.lock();
             // if initial file is provided, load asynchronously.
             asyncResult = async(launch::async, &TestApp::LoadFile, this, filePath, false);
@@ -1384,16 +1419,16 @@ namespace OIV
         UpdateWindowSize();
 
         // Wait for initial file to finish loading
+        bool isInitialFileLoadedSuccesfuly = false;
         if (asyncResult.valid())
         {
             asyncResult.wait();
-            fIsInitialLoad = asyncResult.get();
+            isInitialFileLoadedSuccesfuly = asyncResult.get();
         }
 
         // If there is no initial file or the file has failed to load, show the window now, otherwise show the window after 
         // the image has rendered completely at the method FinalizeImageLoad.
-        if (fIsInitialLoad == false)
-            fWindow.SetVisible(true);
+        fWindow.SetVisible(!isInitialFileLoadedSuccesfuly);
         
         //If initial file is provided but doesn't exist
         if (isInitialFileProvided && !isInitialFileExists)
@@ -1402,7 +1437,7 @@ namespace OIV
             SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s);
         }
 
-        fRefreshOperation.End(fIsInitialLoad == false);
+        fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
     }
 
     void TestApp::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
@@ -1621,11 +1656,7 @@ namespace OIV
 
     void TestApp::UpdateUIFileIndex()
     {
-        std::wstringstream ss;
-        ss << L"File " << (fCurrentFileIndex == FileIndexStart ? 
-            0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size();
-
-        fWindow.SetStatusBarText(ss.str(), 1, 0);
+        UpdateTitle();
     }
 
     bool TestApp::JumpFiles(FileIndexType step)

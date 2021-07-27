@@ -74,6 +74,7 @@ namespace OIV
         void Init(std::wstring filePath);
         void Run();
         void Destroy();
+        static std::wstring GetAppDataFolder();
 
     private:// types
         using FileIndexType = LLUtils::ListWString::difference_type;
@@ -241,7 +242,7 @@ namespace OIV
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart = { -1,-1 };
         UserSettings fSettings;
-        bool fIsInitialLoad = false;
+        bool fIsTryToLoadInitialFile = false; // determines whether the current loaded file is the initial file being loaded at startup
         bool fIsFirstFrameDisplayed = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
