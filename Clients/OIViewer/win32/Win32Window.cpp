@@ -531,6 +531,7 @@ namespace OIV
                 }
                 break;
             case WM_CLOSE:
+                defaultProc = fDestroyOnClose;
                 break;
             }
 

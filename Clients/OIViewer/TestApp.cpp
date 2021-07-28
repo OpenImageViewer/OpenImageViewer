@@ -1426,6 +1426,7 @@ namespace OIV
         fWindow.Create();
         fWindow.SetMenuChar(false);
         fWindow.ShowStatusBar(false);
+        fWindow.SetDestoryOnClose(false);
         fWindow.EnableDragAndDrop(true);
 		// Set canvas background the same color as in the renderer for flicker free startup.
 		//TODO: fix resize and disable background erasure of top level windows.
