@@ -992,16 +992,11 @@ namespace OIV
 
 		fWindow.SetTitle(title);
     }
-
-
-    void TestApp::UpdateStatusBar()
-    {
-        fWindow.SetStatusBarText(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription(), 0, 0);
-    }
+    
    
     void TestApp::UnloadOpenedImaged()
     {
-        fImageState.GetWorkingImageChain().Reset();
+        fImageState.ClearAll();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
     }
@@ -1032,17 +1027,6 @@ namespace OIV
         int shResult = SHFileOperation(&file_op);
 
 
-        if (shResult == 0 && file_op.fAnyOperationsAborted == FALSE)
-        {
-            bool isLoaded = JumpFiles(1);
-            if (isLoaded == false)
-                isLoaded = JumpFiles(-1);
-
-            ReloadFileInFolder();
-
-            if (isLoaded == false)
-                UnloadOpenedImaged();
-        }
     }
 
     void TestApp::RefreshImage()
@@ -1195,7 +1179,7 @@ namespace OIV
             uint8_t G;
             uint8_t B;
         };
-#pragma pop
+#pragma pack(pop)
         for (int l = 0; l < maskBuffer.height; l++)
         {
             const uint32_t sourceOffset = l * pixelsResponse.rowPitch;
@@ -1315,11 +1299,12 @@ namespace OIV
 
     void TestApp::UpdateOpenImageUI()
     {
-        UpdateTitle();
-        UpdateStatusBar();
-        fVirtualStatusBar.SetText("imageDescription", fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription());
+        if (IsImageOpen())
+        {
+            UpdateTitle();
+            fVirtualStatusBar.SetText("imageDescription", fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription());
+        }
     }
-
 
     const std::wstring& TestApp::GetOpenedFileName() const
     {
@@ -1336,12 +1321,6 @@ namespace OIV
     bool TestApp::IsOpenedImageIsAFile() const
     {
         return fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->GetDescriptor().Source == ImageSource::File;
-    }
-    
-    void TestApp::ReloadFileInFolder()
-    {
-        if (IsOpenedImageIsAFile())
-            LoadFileInFolder(GetOpenedFileName());
     }
 
     void TestApp::UpdateOpenedFileIndex()
@@ -1375,7 +1354,7 @@ namespace OIV
             std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
 
             UpdateOpenedFileIndex();
-            UpdateUIFileIndex();
+            UpdateTitle();
         }
     }
 
@@ -1554,10 +1533,17 @@ namespace OIV
                 //TODO: add file sorted 
                 auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileListSorter);
 
-                if (*it == filePath)
-                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
-                else
-                    fListFiles.insert(it,filePath);
+                if (it != fListFiles.end() && *it == filePath)
+                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
+
+                fListFiles.insert(it, filePath);
+
+                if (IsImageOpen()  == false)
+                {
+                    auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+                    fCurrentFileIndex = std::distance(fListFiles.begin(), it);
+                }
+                UpdateTitle();
             }
         }
         break;
@@ -1566,7 +1552,51 @@ namespace OIV
         {
             auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
             if (it != fListFiles.end())
+            {
+                const bool isOpenedFileDeleted = *it == GetOpenedFileName();
                 fListFiles.erase(it);
+
+                bool isFileLoaded = false;
+                //If the current open file is removed, try load another one in the folder if not unload it
+                if (isOpenedFileDeleted)
+                {
+
+                    if (fListFiles.size() == 1)
+                    {
+                        fCurrentFileIndex = FileIndexStart;
+                       isFileLoaded = JumpFiles(FileIndexStart);
+                    }
+                    else
+                    {
+                        fCurrentFileIndex -= 1;
+                        isFileLoaded = JumpFiles(1);
+                        if (isFileLoaded == false)
+                        {
+                            fCurrentFileIndex += 1;
+                            isFileLoaded = JumpFiles(-1);
+                        }
+                    }
+                }
+
+                if (isFileLoaded == false)
+                {
+                    
+                    if (isOpenedFileDeleted)
+                    {
+                        //current open file has been deleted and no other file has been loaded instead - so remove it
+                        UnloadOpenedImaged();
+                        fCurrentFileIndex = FileIndexStart;
+                    }
+                    else
+                    {
+                        //other file deleted but no file has been loaded, just update title and fileindex
+                        auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+                        fCurrentFileIndex = std::distance(fListFiles.begin(), it);
+                    }
+                    
+                    UpdateTitle();
+                }
+            }
         }
         break;
         }
@@ -1599,6 +1629,10 @@ namespace OIV
 
             UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
             UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
+            break;
+
+        case FileWatcher::FileChangedOp::WatchedFolderRemoved:
+            fCurrentFolderWatched.clear();
             break;
         }
     }
@@ -1780,10 +1814,6 @@ namespace OIV
         Win32Helper::MessageLoop();
     }
 
-    void TestApp::UpdateUIFileIndex()
-    {
-        UpdateTitle();
-    }
 
     bool TestApp::JumpFiles(FileIndexType step)
     {
@@ -1833,7 +1863,7 @@ namespace OIV
         {
             assert(fileIndex >= 0 && fileIndex < static_cast<FileIndexType>(totalFiles));
             fCurrentFileIndex = fileIndex;
-            UpdateUIFileIndex();
+            UpdateTitle();
         }
         return isLoaded;
     }
@@ -1945,15 +1975,18 @@ namespace OIV
     
     void TestApp::FitToClientAreaAndCenter()
     {
-        using namespace LLUtils;
-        SIZE clientSize = fWindow.GetCanvasSize();
-        PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
-        double zoom = std::min(ratio.x, ratio.y);
-        fRefreshOperation.Begin();
-        fIsLockFitToScreen = true;
-        SetZoomInternal(zoom, -1, -1, true);
-        Center();
-        fRefreshOperation.End();
+        if (IsImageOpen())
+        {
+            using namespace LLUtils;
+            SIZE clientSize = fWindow.GetCanvasSize();
+            PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
+            double zoom = std::min(ratio.x, ratio.y);
+            fRefreshOperation.Begin();
+            fIsLockFitToScreen = true;
+            SetZoomInternal(zoom, -1, -1, true);
+            Center();
+            fRefreshOperation.End();
+        }
     }
     
     LLUtils::PointF64 TestApp::GetImageSize(ImageSizeType imageSizeType)
@@ -1971,19 +2004,6 @@ namespace OIV
         default:
             LL_EXCEPTION_UNEXPECTED_VALUE;
         }
-    }
-   
-
-    void TestApp::UpdateUIZoom()
-    {
-        std::wstringstream ss;
-        ss << L"Scale: " << std::fixed << std::setprecision(2);
-        if (GetScale() >= 1)
-            ss << "x" << GetScale();
-        else
-            ss << "1/" << 1 / GetScale();
-
-        fWindow.SetStatusBarText(ss.str(), 4, 0);
     }
 
     void TestApp::SaveImageSpaceSelection()
@@ -2063,8 +2083,8 @@ namespace OIV
 
             fRefreshOperation.End();
 
-            UpdateCanvasSize();
-            UpdateUIZoom();
+            /*UpdateCanvasSize();
+            UpdateUIZoom();*/
 
             if (preserveFitToScreenState == false)
                 fIsLockFitToScreen = false;
@@ -2076,7 +2096,7 @@ namespace OIV
         return fImageState.GetScale().x;
     }
 
-    void TestApp::UpdateCanvasSize()
+    /*void TestApp::UpdateCanvasSize()
     {
         if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed) != nullptr)
         {
@@ -2089,7 +2109,7 @@ namespace OIV
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.y;
             fWindow.SetStatusBarText(ss.str(), 3, 0);
         }
-    }
+    }*/
 
 
 
@@ -2144,7 +2164,7 @@ namespace OIV
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
             fVirtualStatusBar.SetText("texelPos", ss.str());
             
-            fWindow.SetStatusBarText(ss.str(), 2, 0);
+            //fWindow.SetStatusBarText(ss.str(), 2, 0);
 
             PointF64 storageImageSize = GetImageSize(ImageSizeType::Transformed);
 
@@ -2179,8 +2199,6 @@ namespace OIV
 
         }
     }
-
-
     void TestApp::AutoPlaceImage(bool forceCenter)
     {
         fRefreshOperation.Begin();
@@ -2200,7 +2218,7 @@ namespace OIV
 
         OIVCommands::ExecuteCommand(CMD_SetClientSize,
             &req, &NullCommand);
-        UpdateCanvasSize();
+        //UpdateCanvasSize();
 		AutoPlaceImage();
         auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
         fVirtualStatusBar.ClientSizeChanged(point);

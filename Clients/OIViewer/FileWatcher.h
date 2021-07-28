@@ -10,10 +10,14 @@
 
 class FileWatcher
 {
+private:
     struct FolderData;
     using FILE_NOTIFY_INFORMATION = FILE_NOTIFY_INFORMATION;
+    using UniqueIDProvider = LLUtils::UniqueIdProvider<uint16_t>;
+    using FolderID = UniqueIDProvider::underlying_type;
+
 public:
-    enum class FileChangedOp { None, Add, Remove, Modified , Rename};
+    enum class FileChangedOp { None, Add, Remove, Modified, Rename, WatchedFolderRemoved };
     struct FileChangedEventArgs
     {
         FileChangedOp fileOp;
@@ -99,15 +103,9 @@ public:
         fUniqueIDProvider.Reset();
     }
 
-    void RemoveFolder(const std::wstring& folder)
+    void RemoveFolder(FolderID folderID)
     {
-        std::lock_guard<std::mutex> Lock(fDataMutex);
-        auto it = fMapFolderID.find(folder);
-        if (it == fMapFolderID.end())
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Folder not found.");
-
-        
-        auto itData = fMapIDData.find(it->second);
+        auto itData = fMapIDData.find(folderID);
         if (itData == fMapIDData.end())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Incoherent data structures.");
 
@@ -116,13 +114,26 @@ public:
 
         fUniqueIDProvider.Release(itData->second.uniqueID);
 
-        fMapFolderID.erase(it);
+        fMapFolderID.erase(itData->second.folderPath);
         fMapIDData.erase(itData);
+    }
+
+    void RemoveFolder(const std::wstring& folder)
+    {
+        std::lock_guard<std::mutex> Lock(fDataMutex);
+        auto it = fMapFolderID.find(folder);
+        if (it == fMapFolderID.end())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Folder not found.");
+
+        RemoveFolder(it->second);
+
+
+
 
     }
-   
-    static VOID CALLBACK QueueShutdownBackgroundThread(ULONG_PTR dwParam) 
-    { 
+
+    static VOID CALLBACK QueueShutdownBackgroundThread(ULONG_PTR dwParam)
+    {
         reinterpret_cast<FileWatcher*>(dwParam)->fQueueShutdownBackgroundThread = true;
     }
 
@@ -163,14 +174,14 @@ public:
 
             if (result == TRUE)
             {
-                std::map<UniqueIDProvider::underlying_type, std::vector<FileChangedEventArgs>> eventsToRaise;
+                std::map<FolderID, std::vector<FileChangedEventArgs>> eventsToRaise;
                 {
                     std::lock_guard<std::mutex> lock(fDataMutex);
                     for (size_t i = 0; i < numEntiresReceived; i++)
                     {
 
-                        const OVERLAPPED_ENTRY & overlappedEntry= overlappedEntires[i];
-                        UniqueIDProvider::underlying_type folderID = static_cast<UniqueIDProvider::underlying_type>(overlappedEntry.lpCompletionKey);
+                        const OVERLAPPED_ENTRY& overlappedEntry = overlappedEntires[i];
+                        FolderID folderID = static_cast<FolderID>(overlappedEntry.lpCompletionKey);
                         auto it = fMapIDData.find(folderID);
 
                         if (it != fMapIDData.end())
@@ -221,7 +232,7 @@ public:
                                     it = eventsToRaise.emplace(folderID, std::vector< FileChangedEventArgs>()).first;
 
                                 it->second.push_back(FileChangedEventArgs{ fileOp,folderData.folderPath,fileName,newName });
-                                
+
 
                                 currentOffset += currentPacket->NextEntryOffset;
                                 if (currentPacket->NextEntryOffset == 0)
@@ -239,28 +250,56 @@ public:
                         FileChangedEvent.Raise(eventArgs);
                 }
 
+                std::set<FolderID> foldersToRemove;
+
+                std::vector<FileChangedEventArgs> folderRemovalEvents;
                 {
-                    
                     //Lock mutex and restart Directory monitoring if directory is still registered.
                     std::lock_guard<std::mutex> lock(fDataMutex);
-
                     for (auto& [folderID, events] : eventsToRaise)
                     {
                         auto it = fMapIDData.find(folderID);
                         if (it != fMapIDData.end())
                         {
-                            if (ReadDirectoryChanges(it->second) == 0)
-                                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Can not read directory changes");
+                            //TODO: handle directory removal using a better way, e.g. an event from the system.
+                            if (std::filesystem::exists(it->second.folderPath))
+                            {
+                                if (ReadDirectoryChanges(it->second) == 0)
+                                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Can not read directory changes");
+                            }
+                            else
+                            {
+                                foldersToRemove.insert(folderID);
+                            }
                         }
                     }
+
+                    for (FolderID folderID : foldersToRemove)
+                    {
+                        auto it = fMapIDData.find(folderID);
+                        folderRemovalEvents.push_back(FileChangedEventArgs{ FileChangedOp::WatchedFolderRemoved ,it->second.folderPath });
+                        RemoveFolder(folderID); 
+                    }
                 }
+
+
+                // Unlock mutex and Raise events 
+                for (const auto& eventArgs : folderRemovalEvents)
+                {
+                    for (const auto& eventArgs : folderRemovalEvents)
+                        FileChangedEvent.Raise(eventArgs);
+                }
+
             }
             else if (fQueueShutdownBackgroundThread == false)
             {
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "can not get completion status");
             }
+
         }
     }
+
+
     private:
         DWORD ReadDirectoryChanges(FolderData& folderData)
         {
@@ -277,7 +316,6 @@ public:
         }
 private:
     static constexpr uint32_t BufferSize = 8192;
-    using UniqueIDProvider = LLUtils::UniqueIdProvider<uint16_t>;
     
 
     struct FolderData
@@ -290,8 +328,9 @@ private:
     };
 
 private:
-    using MapFolderID = std::map < std::wstring, UniqueIDProvider::underlying_type>;
-    using MapIDData = std::map < UniqueIDProvider::underlying_type, FolderData>;
+
+    using MapFolderID = std::map <std::wstring, FolderID>;
+    using MapIDData = std::map <FolderID, FolderData>;
     MapFolderID fMapFolderID;
     MapIDData fMapIDData;
     HANDLE fCompletionPortHandle = nullptr;

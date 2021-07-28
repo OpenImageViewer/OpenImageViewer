@@ -135,8 +135,7 @@ namespace OIV
         void OnPreserveSelectionRect();
         HWND GetWindowHandle() const;
         void UpdateTitle();
-        void UpdateStatusBar();
-        void UpdateUIFileIndex();
+        //bool JumpTo(FileIndexType fileIndex);
         bool JumpFiles(FileIndexType step);
 		void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
@@ -150,7 +149,7 @@ namespace OIV
         void ZoomInternal(double amount, int zoomX, int zoomY);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
-        void UpdateUIZoom();
+        //void UpdateUIZoom();
         void SaveImageSpaceSelection();
         void LoadImageSpaceSelection();
         void SetZoomInternal(double zoom, int x = -1, int y = -1, bool preserveFitToScreenState = false);
@@ -158,7 +157,7 @@ namespace OIV
         LLUtils::PointF64 GetOffset() const;
         LLUtils::PointF64 ImageToClient(LLUtils::PointF64 imagepos) const;
         LLUtils::RectF64 ImageToClient(LLUtils::RectF64 clientRect) const;
-        void UpdateCanvasSize();
+        //void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
         void UpdateTexelPos();
@@ -180,7 +179,6 @@ namespace OIV
         const std::wstring& GetOpenedFileName() const;
 		bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
-        void ReloadFileInFolder();
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
