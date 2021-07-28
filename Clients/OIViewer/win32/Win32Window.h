@@ -101,6 +101,8 @@ namespace OIV
             void Move(const int16_t delta_x, const int16_t delta_y);
             void SetMouseCursor(HCURSOR cursor);
             void SetEraseBackground(bool eraseBackground) {fEraseBackground = eraseBackground;}
+            void SetDestoryOnClose(bool destoryOnClose) {fDestroyOnClose = destoryOnClose;}
+            
 			void SetBackgroundColor(const LLUtils::Color color);
             void SetDoubleClickMode(DoubleClickMode doubleClickMode) { fDoubleClickMode = doubleClickMode; }
             void EnableDragAndDrop(bool enable);
@@ -144,6 +146,7 @@ namespace OIV
             WINDOWPLACEMENT fLastWindowPlacement = { 0 };
             Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
             bool fEraseBackground = true;
+            bool fDestroyOnClose = true;
             DoubleClickMode fDoubleClickMode = DoubleClickMode::NotSet;
             friend DragAndDropTarget;
             LockMouseToWindowMode fLockMouseToWindowMode = LockMouseToWindowMode::NoLock;
