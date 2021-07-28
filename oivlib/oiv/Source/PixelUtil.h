@@ -254,6 +254,22 @@ namespace IMUtil
             }
         }
 
+        static void A16ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            uint16_t* src = (uint16_t*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                dst[i].X = src[i] >> 8;
+                dst[i].Y = src[i] >> 8;
+                dst[i].Z = src[i] >> 8;
+                dst[i].W = 255;
+            }
+        }
+
+
+
         static void BGRA32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
             BitTexel32* dst = (BitTexel32*)i_dest;
