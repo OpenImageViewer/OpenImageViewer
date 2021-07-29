@@ -2277,14 +2277,18 @@ namespace OIV
         return offset;
     }
 
-
+    
     void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
 	   fRefreshOperation.Begin();
+       fImageState.SetResample(false);
        fImageState.Transform(relativeRotation, flip);
 	   AutoPlaceImage(true);
 	   RefreshImage();
 	   fRefreshOperation.End();
+
+       fTimerNoActiveZoom.SetInterval(0);
+       fTimerNoActiveZoom.SetInterval(50);
     }
 
     void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
