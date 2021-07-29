@@ -69,9 +69,13 @@ namespace OIV
 
         void SetText(std::string elementName, const OIVString& text)
         {
-			OIVTextImage* texelValue = GetOrCreateLabel(elementName);
+            OIVTextImage* texelValue = GetOrCreateLabel(elementName);
             texelValue->GetTextOptions().text = text;
-            RepositionLabels(); // size of text is most likely changed - reposition.
+
+            if (GetVisible())
+            {
+                RepositionLabels(); // size of text is most likely changed - reposition.
+            }
         }
 
         bool GetVisible() const
