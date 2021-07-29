@@ -170,7 +170,7 @@ void DrawImage(float2 uv, float2 screenUV,float2 scale, float2 viewportSize,in f
 {
  
     float4 sampledTexel = SampleTexture(texture_1,uv);
-    sampledTexel.xyz =  pow(abs(sampledTexel.xyz * uExposure  + uOffset), 1.0 / uGamma);
+    sampledTexel.xyz = clamp(0, 1.0, pow(abs(sampledTexel.xyz * uExposure  + uOffset), 1.0 / uGamma)) ;
     sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
 
     float4 checkerColor = GetChecker(uTransparencyColor1, uTransparencyColor2, screenUV, viewportSize);
