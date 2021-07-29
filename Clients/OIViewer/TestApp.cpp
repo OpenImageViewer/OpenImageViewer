@@ -968,12 +968,14 @@ namespace OIV
  // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
         + L"." +  LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
+            + OIV_TEXT(" | ") + GetBuildTimeStamp()
 #endif			
+        
 
- // If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
+// If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
 #if OIV_OFFICIAL_BUILD == 0
 
-            + OIV_TEXT(" | ") + GetBuildTimeStamp() +  OIV_TEXT(" | UNOFFICIAL")
+             + OIV_TEXT(" | UNOFFICIAL")
 #endif
 			;
 
