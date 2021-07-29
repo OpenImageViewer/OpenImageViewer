@@ -2657,7 +2657,13 @@ namespace OIV
 
     bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
-        return LoadFile(event_ddrag_drop_file->fileName, false);
+        if (LoadFile(event_ddrag_drop_file->fileName, false))
+        {
+            fWindow.SetForground();
+            return true;
+        }
+        return false;
+        
     }
     void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
     {
