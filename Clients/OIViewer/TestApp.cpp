@@ -896,7 +896,6 @@ namespace OIV
                 OIVCommands::Refresh();
                 fLastRefreshTime = now;
                 //Clear last image chain if exists, this operation is deffered to this moment to display the new image faster.
-                fImageState.ResetPreviousImageChain();
             }
             else
             {
@@ -1060,9 +1059,7 @@ namespace OIV
             fRefreshOperation.Begin();
 			
             fImageState.ResetUserState();
-            RefreshImage(); // actual refresh is deferred due to 'fRefreshOperation.Begin'.
 
-			
             if (fResetTransformationMode == ResetTransformationMode::ResetAll)
                 FitToClientAreaAndCenter();
             
@@ -1071,6 +1068,7 @@ namespace OIV
             if (fIsTryToLoadInitialFile == false)
                 UpdateTitle();
 
+            fImageState.Refresh(); // Make sure a render compatible image is available.
             fWindow.SetShowImageControl(fImageState.GetOpenedImage()->GetDescriptor().NumSubImages > 0);
             UnloadWelcomeMessage();
             DisplayOpenedFileName();
@@ -1302,7 +1300,7 @@ namespace OIV
         if (IsImageOpen())
         {
             UpdateTitle();
-            fVirtualStatusBar.SetText("imageDescription", fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescription());
+            fVirtualStatusBar.SetText("imageDescription", fImageState.GetImage(ImageChainStage::Deformed)->GetDescription());
         }
     }
 
@@ -1995,9 +1993,9 @@ namespace OIV
         switch (imageSizeType)
         {
         case ImageSizeType::Original:
-            return  fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage) != nullptr ? PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::SourceImage)->GetDescriptor().Height) : PointF64(0, 0);
+            return  fImageState.GetImage(ImageChainStage::SourceImage) != nullptr ? PointF64(fImageState.GetImage(ImageChainStage::SourceImage)->GetDescriptor().Width, fImageState.GetImage(ImageChainStage::SourceImage)->GetDescriptor().Height) : PointF64(0, 0);
         case ImageSizeType::Transformed:
-            return PointF64(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Width, fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().Height);
+            return PointF64(fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().Width, fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().Height);
         case ImageSizeType::Visible:
             return fImageState.GetVisibleSize();
 
@@ -2098,7 +2096,7 @@ namespace OIV
 
     /*void TestApp::UpdateCanvasSize()
     {
-        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed) != nullptr)
+        if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
         {
             using namespace  LLUtils;
             PointF64 canvasSize = (PointF64)fWindow.GetCanvasSize() / GetScale();
@@ -2152,7 +2150,7 @@ namespace OIV
     void TestApp::UpdateTexelPos()
     {
 
-        if (fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed) != nullptr)
+        if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
         {
             using namespace LLUtils;
             PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
@@ -2174,7 +2172,7 @@ namespace OIV
                 || storageImageSpace.y >= storageImageSize.y
                 ))
             {
-                OIV_CMD_TexelInfo_Request texelInfoRequest = { fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
+                OIV_CMD_TexelInfo_Request texelInfoRequest = { fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
            ,static_cast<uint32_t>(storageImageSpace.x)
            ,static_cast<uint32_t>(storageImageSpace.y) };
                 OIV_CMD_TexelInfo_Response  texelInfoResponse;
@@ -2447,7 +2445,7 @@ namespace OIV
         ImageHandle croppedHandle;
 
         
-        ResultCode result = OIVCommands::CropImage(fImageState.GetWorkingImageChain().Get(ImageChainStage::Deformed)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+        ResultCode result = OIVCommands::CropImage(fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
         
         if (result == RC_Success)
         {
