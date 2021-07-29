@@ -93,11 +93,8 @@ namespace OIV
 				{
 					//error
 				}
-			
 			}
 		}
-		
-	
 		
 		void AddItem(LLUtils::native_string_type name, const T& data)
 		{

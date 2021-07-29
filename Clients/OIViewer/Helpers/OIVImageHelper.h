@@ -36,7 +36,6 @@ namespace OIV
 
         static OIVBaseImageUniquePtr GetRendererCompatibleImage(OIVBaseImageUniquePtr image, bool useRainbow)
         {
-            ImageHandle convertedHandle = ImageHandleNull;
             if (image->GetDescriptor().texelFormat != TF_I_R8_G8_B8_A8)
             {
                 return ConvertImage(image, TF_I_R8_G8_B8_A8, useRainbow);
