@@ -14,7 +14,6 @@ namespace OIV
     const OIVBaseImageSharedPtr& ImageChain::Get(ImageChainStage stage) const
     {
         return const_cast<ImageChain*>(this)->Get(stage);
-        //return Chain[static_cast<size_t>(stage)];
     }
 
     void ImageChain::Reset()
@@ -25,39 +24,18 @@ namespace OIV
 
 
     //Image state
+    
+    void ImageState::Refresh()
+    {
+        Refresh(fFinalProcessingStage);
+    }
 
 
     // Reprocess image according to dirty stage. 
-    void ImageState::Refresh()
+    void ImageState::Refresh(ImageChainStage requiredImageStage)
     {
-        if (fDirtyStage <= ImageChainStage::Resampled && fOpenedImage != nullptr)
+        if (fDirtyStage <= requiredImageStage && fOpenedImage != nullptr)
         {
-            //For faster refresh don't delete the old image before displaying the new one. 
-            fPreviousImageChain = fCurrentImageChain;
-            fPreviousImageChainDirty = true;
-
-            // hide previous image chain.
-            if (fPreviousImageChain.Get(ImageChainStage::Resampled) != nullptr)
-            {
-                fPreviousImageChain.Get(ImageChainStage::Resampled)->GetImageProperties().opacity = 0.0;
-                fPreviousImageChain.Get(ImageChainStage::Resampled)->Update();
-            }
-
-            if (fPreviousImageChain.Get(ImageChainStage::Rasterized) != nullptr)
-            {
-                fPreviousImageChain.Get(ImageChainStage::Rasterized)->GetImageProperties().opacity = 0.0;
-                fPreviousImageChain.Get(ImageChainStage::Rasterized)->Update();
-            }
-
-
-
-            //If a new image has been opened set it as the first
-            if (fDirtyStage == ImageChainStage::NewImage)
-            {
-                SetImageChainRoot(fOpenedImage);
-                fDirtyStage = ImageChainStage::SourceImage;
-            }
-
             ImageChainStage currentStage = fDirtyStage;
             ImageChainStage previousStage = static_cast<ImageChainStage>(std::max((int)currentStage - 1, 0));
 
@@ -67,38 +45,18 @@ namespace OIV
                 currentStage = static_cast<ImageChainStage>((int)previousStage + 1);
             }
 
+            ImageChainStage maxImageStage = std::min(requiredImageStage, fFinalProcessingStage);
 
-
-
-            while (currentStage <= fFinalProcessingStage)
+            while (currentStage <= maxImageStage)
             {
                 ImageChainStage previousStage = static_cast<ImageChainStage>(std::max((int)currentStage - 1, 0));
                 ImageChainStage nextStage = static_cast<ImageChainStage>(static_cast<int>(currentStage) + 1);
                 fCurrentImageChain.Get(currentStage) = ProcessStage(currentStage, fCurrentImageChain.Get(previousStage));
                 currentStage = nextStage;
             }
+            fDirtyStage = static_cast<ImageChainStage>( std::min<int>(static_cast<int>(maxImageStage) + static_cast<int>(1), static_cast<int>(ImageChainStage::Count)));
 
-            auto visibleImage = GetVisibleImage();
-            
-            // update image properties after reprocessing.
-            
-            visibleImage->GetImageProperties().position = GetOffset();
-            visibleImage->GetImageProperties().scale = IsActuallyResampled() == true ? LLUtils::PointF64::One : fScale;
-            visibleImage->GetImageProperties().opacity = 1.0;
-            visibleImage->Update();
-
-            ResetDirtyStage();
         }
-    }
-
-    void ImageState::ResetPreviousImageChain()
-    {
-        if (fPreviousImageChainDirty == true)
-        {
-            fPreviousImageChain.Reset();
-            fPreviousImageChainDirty = false;
-        }
-
     }
 
     void ImageState::SetUseRainbowNormalization(bool val)
@@ -113,12 +71,12 @@ namespace OIV
     void ImageState::SetOpenedImage(const OIVBaseImageSharedPtr& image)
     {
         fOpenedImage = image;
-        fDirtyStage = ImageChainStage::NewImage;
+        SetImageChainRoot(fOpenedImage);
+        SetDirtyStage(ImageChainStage::Begin);
     }
 
     void ImageState::ClearAll()
     {
-        fPreviousImageChain.Reset();
         fCurrentImageChain.Reset();
         fOpenedImage.reset();
     }
@@ -169,29 +127,27 @@ namespace OIV
 
     void ImageState::SetResample(bool resample)
     {
-
         ImageChainStage targetProcessStage = resample ? ImageChainStage::Resampled : ImageChainStage::Rasterized;
 
         if (fFinalProcessingStage != targetProcessStage)
         {
             fFinalProcessingStage = targetProcessStage;
 
-            SetDirtyStage(ImageChainStage::Resampled);
-
+            if (fFinalProcessingStage == ImageChainStage::Rasterized)
+            {
+                        UpdateImageParameters(fCurrentImageChain.Get(ImageChainStage::Rasterized), true);
+                        fCurrentImageChain.Get(ImageChainStage::Resampled).reset();
+            }
+            else if (fFinalProcessingStage == ImageChainStage::Resampled)
+			{
+                SetDirtyStage(ImageChainStage::Resampled);
+			}
         }
-    }
-
-    void ImageState::ResetDirtyStage()
-    {
-        fDirtyStage = ImageChainStage::Count;
     }
 
     bool ImageState::IsActuallyResampled() const
     {
-        //If there is a resampled image and it's different than the rasterized image, we know resampling took place.
-        return GetResample() == true
-            && GetWorkingImageChain().Get(ImageChainStage::Resampled) != nullptr
-            && GetWorkingImageChain().Get(ImageChainStage::Resampled) != GetWorkingImageChain().Get(ImageChainStage::Rasterized);
+        return GetWorkingImageChain().Get(ImageChainStage::Resampled) != nullptr;
     }
 
     void ImageState::SetScale(LLUtils::PointF64 scale)  
@@ -200,24 +156,16 @@ namespace OIV
         {
             fScale = scale;
             auto visibleImage = GetVisibleImage();
-            visibleImage->GetImageProperties().scale = IsActuallyResampled() == true ? LLUtils::PointF64::One : fScale;
-            visibleImage->Update();
+            if (visibleImage != nullptr)
+            {
+                visibleImage->GetImageProperties().scale = IsActuallyResampled() == true ? LLUtils::PointF64::One : fScale;
+                visibleImage->Update();
+            }
 
             if (GetResample() == true)
                 SetDirtyStage(ImageChainStage::Resampled);
         }
     }
-
-    /*
-    void ImageState::UpdateOffset(OIVBaseImageSharedPtr imageToUpdate)
-    {
-        if (imageToUpdate != nullptr)
-        {
-            imageToUpdate->GetImageProperties().position = fOffset;
-            imageToUpdate->Update();
-        }
-    }
-    */
 
     void ImageState::SetOffset(LLUtils::PointF64 offset)
     {
@@ -231,6 +179,14 @@ namespace OIV
     }
 
 
+
+    void ImageState::UpdateImageParameters(OIVBaseImageSharedPtr visibleImage, bool visible)
+    {
+        visibleImage->GetImageProperties().position = GetOffset();
+        visibleImage->GetImageProperties().opacity = 1.0;
+        visibleImage->GetImageProperties().visible = visible;
+        visibleImage->Update();
+    }
 
     OIVBaseImageSharedPtr ImageState::GetVisibleImage() const
     {
@@ -252,7 +208,7 @@ namespace OIV
 
     LLUtils::PointF64 ImageState::GetVisibleSize()
     {
-        Refresh();
+        Refresh(fFinalProcessingStage);
         auto visiblImage = GetVisibleImage();
         using namespace LLUtils;
         PointF64 visibleImageSize(visiblImage->GetDescriptor().Width, visiblImage->GetDescriptor().Height);
@@ -263,14 +219,18 @@ namespace OIV
 
     void ImageState::SetImageChainRoot(OIVBaseImageSharedPtr image)
     {
-        fPreviousImageChain.Get(ImageChainStage::SourceImage) = fCurrentImageChain.Get(ImageChainStage::SourceImage);
         fCurrentImageChain.Get(ImageChainStage::SourceImage) = image;
         SetDirtyStage(ImageChainStage::SourceImage);
     }
 
+    OIVBaseImageSharedPtr& ImageState::GetImage(ImageChainStage imageStage)
+    {
+        Refresh(imageStage);
+        return fCurrentImageChain.Get(imageStage);
+    }
+
     ImageChain& ImageState::GetWorkingImageChain()
     {
-        Refresh();
         return fCurrentImageChain;
     }
 
@@ -280,37 +240,44 @@ namespace OIV
     }
 
 
-    OIVBaseImageSharedPtr ImageState::ProcessStage(ImageChainStage stage, OIVBaseImageSharedPtr image)
+    OIVBaseImageSharedPtr ImageState::ProcessStage(ImageChainStage stage, OIVBaseImageSharedPtr inputImage)
     {
         switch (stage)
         {
-        case ImageChainStage::NewImage:
-            //Nothing to do.
-            return image;
             break;
         case ImageChainStage::SourceImage:
             //Nothing to do.
-            return image;
+            return inputImage;
             break;
         case ImageChainStage::Deformed:
             if (fAxisAlignedRotation != OIV_AxisAlignedRotation::AAT_None || fAxisAlignedFlip != OIV_AxisAlignedFlip::AAF_None)
             {
-
                 ImageHandle transformedHandle = ImageHandleNull;
-                OIVCommands::TransformImage(fCurrentImageChain.Get(ImageChainStage::SourceImage)->GetDescriptor().ImageHandle
+                
+                OIVCommands::TransformImage(inputImage->GetDescriptor().ImageHandle
                     , fAxisAlignedRotation, fAxisAlignedFlip, transformedHandle);
+                
+                inputImage->GetImageProperties().visible = false;
+                inputImage->Update();
 
-                return std::make_shared<OIVHandleImage>(transformedHandle);
+                auto deformed = std::make_shared<OIVHandleImage>(transformedHandle);
+                return deformed;
             }
             else
             {
-                return image;
+                return inputImage;
             }
 
             break;
         case ImageChainStage::Rasterized:
         {
-            auto rasterized = OIVImageHelper::GetRendererCompatibleImage(fCurrentImageChain.Get(ImageChainStage::Deformed), fUseRainbowNormalization);
+
+            inputImage->GetImageProperties().visible = false;
+            inputImage->Update();
+
+            auto rasterized = OIVImageHelper::GetRendererCompatibleImage(inputImage, fUseRainbowNormalization);
+            rasterized->GetImageProperties().scale = fScale;
+            UpdateImageParameters(rasterized, true);
             return rasterized;
         }
            break;
@@ -319,15 +286,25 @@ namespace OIV
         case ImageChainStage::Resampled:
         {
             //TODO: adjust resampling conditions
+            auto& rasterizedInfo = fCurrentImageChain.Get(ImageChainStage::Rasterized)->GetDescriptor();
+            
             if (GetScale().x > 0.8 || GetScale().y > 0.8)
             {
-                return image;
+                return nullptr;
             }
             else
             {
                 auto rasterized = fCurrentImageChain.Get(ImageChainStage::Rasterized);
                 LLUtils::PointF64 originalImageSize = { static_cast<double>(rasterized->GetDescriptor().Width) , static_cast<double>(rasterized->GetDescriptor().Height) };
                 auto resampled = OIVImageHelper::ResampleImage(rasterized, static_cast<LLUtils::PointI32>((originalImageSize * GetScale()).Round()));
+                //Resampled image is pixel perfect in relation to the client window, so no scale.
+
+                resampled->GetImageProperties().scale = LLUtils::PointF64::One;
+
+                inputImage->GetImageProperties().visible = false;
+                inputImage->Update();
+                
+                UpdateImageParameters(resampled, true);
                 return resampled;
             }
         }
