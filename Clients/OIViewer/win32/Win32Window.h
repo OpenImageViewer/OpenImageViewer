@@ -143,7 +143,7 @@ namespace OIV
             EventCallbackCollection fListeners;
             bool fEnableMenuChar = true;
             FullSceenState fFullSceenState = FullSceenState::Windowed;
-            WINDOWPLACEMENT fLastWindowPlacement = { 0 };
+            WINDOWPLACEMENT fLastWindowPlacement { };
             Microsoft::WRL::ComPtr<DragAndDropTarget> fDragAndDrop;
             bool fEraseBackground = true;
             bool fDestroyOnClose = true;

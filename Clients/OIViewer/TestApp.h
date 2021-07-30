@@ -81,6 +81,11 @@ namespace OIV
     private:// types
         using FileIndexType = LLUtils::ListWString::difference_type;
         using FileCountType = LLUtils::ListWString::size_type;
+        struct CommandRequestIntenal
+        {
+            std::string commandName;
+            std::string args;
+        };
 
     private: //methods
 
@@ -109,7 +114,9 @@ namespace OIV
         void SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay = 0);
         void SetDebugMessage(const std::string& message);
         void HideUserMessage();
-        bool ExecuteUserCommand(const CommandManager::CommandClientRequest&);
+        bool ExecuteCommandInternal(const CommandRequestIntenal& request);
+        bool ExecuteCommand(const CommandManager::CommandRequest& request);
+        bool ExecutePredefinedCommand(std::string command);
         void PostInitOperations();
 #pragma region Commands
         void CMD_Zoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
@@ -238,13 +245,12 @@ namespace OIV
         int fTopMostCounter = 0;
         Win32::Timer fTimerNoActiveZoom;
         Win32::Timer fTimerNavigation;
-        
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
         static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
         FileIndexType  fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
-        LLUtils::PointI32 fDragStart = { -1,-1 };
+        LLUtils::PointI32 fDragStart { -1,-1 };
         UserSettings fSettings;
         bool fIsTryToLoadInitialFile = false; // determines whether the current loaded file is the initial file being loaded at startup
         bool fIsFirstFrameDisplayed = false;
@@ -302,7 +308,6 @@ namespace OIV
             std::string arguments;
             std::string keybindings;
         };
-        std::vector<CommandDesc> fCommandDescription;
 
         struct MenuItemData
         {

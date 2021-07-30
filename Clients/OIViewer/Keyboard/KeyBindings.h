@@ -29,11 +29,16 @@ namespace OIV
               AddBinding(comb, binding);
       }
 
-      const BindingType& GetBinding(KeyCombination combination)
+      bool GetBinding(KeyCombination combination, BindingType& bindingType)
       {
           static BindingType empty;
           typename MapCombinationToBinding::const_iterator it = mBindings.find(combination);
-          return it != mBindings.end() ? it->second : empty;
+          if (it != mBindings.end())
+          {
+              bindingType = it->second;
+              return true;
+          }
+          return false;
       }
 
     private:

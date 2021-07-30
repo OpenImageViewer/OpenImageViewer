@@ -118,7 +118,7 @@ public:
 
 
 
-        LOGFONT font = { 0 };
+        LOGFONT font {};
         
         font.lfHeight = 20;
         font.lfWeight = FW_NORMAL;
