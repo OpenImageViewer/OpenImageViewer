@@ -2707,7 +2707,16 @@ namespace OIV
 
         if (wheelDelta != 0)
         {
-            if (IsRightCatured || isMouseUnderCursor)
+            //Browse files
+            if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_MENU))
+            {
+                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousSubImage" : "NextSubImage"); 
+            }
+            else if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_SHIFT))
+            {
+                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousImageInFolder" : "NextImageInFolder");
+            }
+            else if (IsRightCatured || isMouseUnderCursor)
             {
                 POINT mousePos = fWindow.GetMousePosition();
                 //20% percent zoom in each wheel step
