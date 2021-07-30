@@ -38,6 +38,7 @@
 #include <LLUtils/Logging/LogFile.h>
 #include "ContextMenu.h"
 #include "globals.h"
+#include "ConfigurationLoader.h"
 
 namespace OIV
 {
@@ -226,7 +227,7 @@ namespace OIV
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
-
+        const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
         if (text != nullptr)
         {
             fLabelManager.Remove("keyBindings");
@@ -244,17 +245,24 @@ namespace OIV
              size_t maxSecondLength;
         };
         //TODO: get max lines from window height
+        
         const int MaxLines = 24;
-        const int totalColumns = static_cast<int>(std::ceil(static_cast<double>(fCommandDescription.size()) / MaxLines));
+
+        auto keybindingsList = ConfigurationLoader::LoadKeyBindings();
+
+        const int totalColumns = static_cast<int>(std::ceil(static_cast<double>(keybindingsList.size()) / MaxLines));
         std::vector<ColumnInfo> columnInfo(totalColumns);
         int currentcolumn = 0;
         int currentLine = 0;
         
-        for (const CommandDesc& desc : fCommandDescription)
+        for (const auto& binding : keybindingsList)
         {
-            
-            columnInfo[currentcolumn].maxFirstLength = std::max(columnInfo[currentcolumn].maxFirstLength, desc.description.length());
-            columnInfo[currentcolumn].maxSecondLength = std::max(columnInfo[currentcolumn].maxSecondLength, desc.keybindings.length());
+            auto it = commandGroups.find(binding.GroupID);
+            auto commandName = it != commandGroups.end() ? it->second.commandDisplayName : "N/A";
+
+
+            columnInfo[currentcolumn].maxFirstLength = std::max(columnInfo[currentcolumn].maxFirstLength, commandName.length());
+            columnInfo[currentcolumn].maxSecondLength = std::max(columnInfo[currentcolumn].maxSecondLength, binding.KeyCombinationName.length());
             currentLine++;
             if (currentLine >= MaxLines)
             {
@@ -269,20 +277,22 @@ namespace OIV
         vector<std::string> lines(MaxLines);
 
 
-        for (const CommandDesc& desc : fCommandDescription)
+        for (const auto& binding : keybindingsList)
         {
+            auto it = commandGroups.find(binding.GroupID);
+            auto commandName = it != commandGroups.end() ? it->second.commandDisplayName : "N/A";
             stringstream ss;
-            ss << "<textcolor=#ff8930>" << desc.description;
+            ss << "<textcolor=#ff8930>" << commandName;
             
 
-            size_t currentLength = desc.description.length();
+            size_t currentLength = commandName.length();
             while (currentLength++ < columnInfo[currentcolumn].maxFirstLength)
                 ss << ".";
 
-            ss << "..." << "<textcolor=#98f733>" << desc.keybindings ;
+            ss << "..." << "<textcolor=#98f733>" << binding.KeyCombinationName ;
             if (currentcolumn < totalColumns - 1)
             {
-                size_t currentLength = desc.keybindings.length();
+                size_t currentLength = binding.KeyCombinationName.length();
                 while (currentLength++ < columnInfo[currentcolumn].maxSecondLength)
                     ss << " ";
                 
@@ -438,7 +448,7 @@ namespace OIV
         else if (type == "permanently")
             DeleteOpenedFile(true);
 
-        result.resValue = LLUtils::StringUtility::ToWString(request.description);
+        result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
     }
 
 
@@ -508,7 +518,7 @@ namespace OIV
 
         std::wstringstream ss;
 
-        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.description) << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.displayName) << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
 
         result.resValue = ss.str();
 
@@ -525,13 +535,13 @@ namespace OIV
             if (IsOpenedImageIsAFile())
             {
                 LLUtils::PlatformUtility::CopyTextToClipBoard(GetOpenedFileName());
-                result.resValue = LLUtils::StringUtility::ToWString(request.description);
+                result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
             }
         }
         else if (cmd == "selectedArea")
         {
             CopyVisibleToClipBoard();
-            result.resValue = LLUtils::StringUtility::ToWString(request.description);
+            result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
     }
 
@@ -540,7 +550,7 @@ namespace OIV
         CommandManager::CommandResult& result)
     {
         if (PasteFromClipBoard())
-            result.resValue = LLUtils::StringUtility::ToWString(request.description);
+            result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         else
             result.resValue = L"Nothing usable in clipboard";
 
@@ -557,7 +567,7 @@ namespace OIV
         }
         else if (cmd == "selectAll")
         {
-            result.resValue = LLUtils::StringUtility::ToWString(request.description);
+            result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
             using namespace LLUtils;
             RectI32 imageInScreenSpace = static_cast<LLUtils::RectI32>(ImageToClient({ { 0.0,0.0 }, { GetImageSize(ImageSizeType::Transformed) } }));
 
@@ -588,7 +598,7 @@ namespace OIV
 
         wstringstream ss;
 
-        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.description);// << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
+        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.displayName);// << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
 
         result.resValue = ss.str();
 
@@ -622,7 +632,7 @@ namespace OIV
     {
         using namespace std;
         string cmd = request.args.GetArgValue("cmd");
-        result.resValue = LLUtils::StringUtility::ToWString(request.description);
+        result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
 
         if (cmd == "newWindow")
         {
@@ -640,6 +650,12 @@ namespace OIV
         {
             if (GetOpenedFileName().empty() == false)
                 Win32Helper::BrowseToFile(GetOpenedFileName());
+        }
+        else if (cmd == "openWith")
+        {
+            if (GetOpenedFileName().empty() == false)
+                ShellExecute(nullptr, L"open", LLUtils::StringUtility::ToNativeString(request.args.GetArgValue("app")).c_str() , GetOpenedFileName().c_str(), nullptr, SW_SHOWDEFAULT);
+                
         }
     }
 
@@ -743,97 +759,29 @@ namespace OIV
             HandleException(false, args);
         }
         );
-
     }
-
 
     void TestApp::AddCommandsAndKeyBindings()
     {
 
+        auto commandGroups = ConfigurationLoader::LoadCommandGroups();
+        auto keyBindings = ConfigurationLoader::LoadKeyBindings();
 
-        std::vector<CommandDesc> localDesc
-
+        for (const auto& commandGroup : commandGroups)
         {
-            //general
-             { "Key bindings","cmd_toggle_keybindings","" ,"F1" }
-            ,{ "Open file","cmd_open_file","" ,"Control+O" }
-            ,{ "Delete file","cmd_delete_file","type=recyclebin" ,"GreyDelete" }
-            ,{ "Delete file permanently","cmd_delete_file","type=permanently" ,"Shift+GreyDelete" }
+            fCommandManager.AddCommandGroup(
+                { commandGroup.commandGroupID,
+                commandGroup.commandDisplayName,
+                commandGroup.commandName,
+                commandGroup.arguments
+                });
+        }
 
-            //View state
-            ,{ "Toggle full screen","cmd_view_state","type=toggleFullScreen" ,"Alt+Enter" }
-            ,{ "Toggle status bar","cmd_view_state","type=toggleStatusBar" ,"Tab" }
-            ,{ "Toggle multi full screen","cmd_view_state","type=toggleMultiFullScreen" ,"Alt+Shift+Enter" }
-            ,{ "Borders","cmd_view_state","type=toggleBorders" ,"B" }
-            ,{ "Close","cmd_view_state","type=quit" ,"Shift+Escape" }
-            ,{ "Close to tray","cmd_view_state","type=quit;op=closetotray" ,"Escape" }
-            ,{ "Grid","cmd_view_state","type=grid" ,"G" }
-            ,{ "Slide show","cmd_view_state","type=slideShow" ,"Space" }
-            ,{ "Toggle normalization","cmd_view_state","type=toggleNormalization" ,"N" }
-            ,{ "Image filter up","cmd_view_state","type=imageFilterUp" ,"Period" }
-            ,{ "Image filter down","cmd_view_state","type=imageFilterDown" ,"Comma" }
-            ,{ "Toggle reset offset on load","cmd_view_state","type=toggleresetoffset" ,"Backslash" }
-            ,{ "Toggle transparency mode","cmd_view_state","type=toggletransparencymode" ,"T" }
-            ,{ "Toggle downsampling technique","cmd_view_state","type=toggledownsamplingtechnique" ,"M" }
-
-            //Color correction
-            ,{ "Increase Gamma","cmd_color_correction","type=gamma;op=add;val=0.05" ,"Q" }
-            ,{ "Decrease Gamma","cmd_color_correction","type=gamma;op=subtract;val=0.05" ,"A" }
-            ,{ "Increase Exposure","cmd_color_correction","type=exposure;op=add;val=0.05" ,"W" }
-            ,{ "Decrease Exposure","cmd_color_correction","type=exposure;op=subtract;val=0.05" ,"S" }
-            ,{ "Increase Offset","cmd_color_correction","type=offset;op=add;val=0.01" ,"E" }
-            ,{ "Decrease Offset","cmd_color_correction","type=offset;op=subtract;val=0.01" ,"D" }
-            ,{ "Increase Saturation","cmd_color_correction","type=saturation;op=add;val=0.05" ,"R" }
-            ,{ "Decrease Saturation","cmd_color_correction","type=saturation;op=subtract;val=0.05" ,"F" }
-            ,{ "Toggle color correction","cmd_toggle_correction","" ,"Z" }
-
-            //Axis aligned transformations
-            ,{ "Horizontal flip","cmd_axis_aligned_transform","type=hflip" ,"H" }
-            ,{ "Vertical flip","cmd_axis_aligned_transform","type=vflip" ,"V" }
-            ,{ "Rotate clockwise","cmd_axis_aligned_transform","type=rotatecw" ,"RBracket" }
-            ,{ "Rotate counter clockwise","cmd_axis_aligned_transform","type=rotateccw" ,"LBracket" }
-
-            //Pan
-            ,{ "Pan up","cmd_pan","direction=up;amount=1" ,"Numpad8" }
-            ,{ "Pan down","cmd_pan","direction=down;amount=1" ,"Numpad2" }
-            ,{ "Pan left","cmd_pan","direction=left;amount=1" ,"Numpad4" }
-            ,{ "Pan right","cmd_pan","direction=right;amount=1" ,"Numpad6" }
-
-            //Zoom
-            ,{ "Zoom in ","cmd_zoom","val=0.1" ,"Add" }
-            ,{ "Zoom out","cmd_zoom","val=-0.1" ,"Subtract" }
-
-            //Image placement
-            ,{ "Original size","cmd_placement","cmd=originalSize" ,"Multiply" }
-            ,{ "Fit to screen","cmd_placement","cmd=fitToScreen" ,"KeyPadDivide" }
-            ,{ "Center","cmd_placement","cmd=center" ,"Numpad5" }
-
-            //Image manipulation
-            ,{ "Crop to selected area","cmd_imageManipulation","cmd=cropSelectedArea" ,"C" }
-            ,{ "Select all","cmd_imageManipulation","cmd=selectAll" ,"Control+A" }
-
-            //Shell
-            ,{ "Open new window","cmd_shell","cmd=newWindow" ,"Control+N" }
-            ,{ "Open in photoshop","cmd_shell","cmd=openPhotoshop" ,"P" }
-
-            //Clipboard
-            ,{ "Copy selected area to clipboard","cmd_copyToClipboard","cmd=selectedArea" ,"Control+C" }
-            ,{ "Copy file name to clipboard","cmd_copyToClipboard","cmd=fileName" ,"Control+Shift+C" }
-            ,{ "Paste image from clipboard","cmd_pasteFromClipboard","" ,"Control+V" }
-            ,{ "Previous","cmd_navigate","amount=-1" ,"GREYLEFT" }
-            ,{ "Previous","cmd_navigate","amount=-1" ,"GREYPGUP" }
-            ,{ "Next","cmd_navigate","amount=1" ,"GREYRIGHT" }
-            ,{ "Next","cmd_navigate","amount=1" ,"GREYPGDN" }
-            ,{ "NextSubImage","cmd_navigate","amount=1;subimage=true" ,"GREYDOWN" }
-            ,{ "PreviousSubImage","cmd_navigate","amount=-1;subimage=true" ,"GREYUP" }
-
-
-            ,{ "First","cmd_navigate","amount=start" ,"GREYHOME" }
-            ,{ "Last","cmd_navigate","amount=end" ,"GREYEND" }
-        };
-
-        fCommandDescription = localDesc;
-
+        for (const auto& keyBindings : keyBindings)
+        {
+            fKeyBindings.AddBinding(KeyCombination::FromString(keyBindings.KeyCombinationName)
+                , { keyBindings.GroupID, ""});
+        }
         using namespace std;
         using namespace placeholders;
 
@@ -853,12 +801,7 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)));
 
-
-        for (const CommandDesc& desc : fCommandDescription)
-            fKeyBindings.AddBinding(KeyCombination::FromString(desc.keybindings)
-                , { desc.description, desc.command,desc.arguments });
     }
-
 
     void TestApp::OnLabelRefreshRequest()
     {
@@ -1220,10 +1163,10 @@ namespace OIV
 
         if (chosenItem != nullptr)
         {
-            CommandManager::CommandClientRequest request;
+            CommandRequestIntenal request;
             request.commandName = chosenItem->userData.command;
             request.args = chosenItem->userData.args;
-            ExecuteUserCommand(request);
+            ExecuteCommandInternal(request);
         }
     }
 
@@ -1746,10 +1689,10 @@ namespace OIV
                 if (chosenItem != nullptr)
                 {
                     using namespace std::string_literals;
-                    CommandManager::CommandClientRequest request;
+                    CommandRequestIntenal request;
                     request.commandName = "cmd_view_state";
                     request.args = "type="s + LLUtils::StringUtility::ToLower(LLUtils::StringUtility::ConvertString<decltype(request.commandName)>(chosenItem->itemDisplayName));
-                    ExecuteUserCommand(request);
+                    ExecuteCommandInternal(request);
                 }
              }
             break;
@@ -1924,12 +1867,8 @@ namespace OIV
     {
         KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
             static_cast<uint32_t>(evnt->message.lParam));
-        const BindingElement& bindings = fKeyBindings.GetBinding(keyCombination);
-        if (bindings.command.empty() == false
-            && ExecuteUserCommand({ bindings.commandDescription, bindings.command, bindings.arguments }))
-                return true; // return if operation has been handled.
-        
-        return false;
+        BindingElement bindings;
+        return  fKeyBindings.GetBinding(keyCombination, bindings) && ExecutePredefinedCommand(bindings.commandDescription);
     }
 
     void TestApp::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
@@ -1956,13 +1895,13 @@ namespace OIV
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )
     {
-        if (fImageState.GetOpenedImage() != nullptr)
+        if (IsImageOpen())
         {
-            CommandManager::CommandClientRequest request;
-            request.description = "Zoom";
-            request.args = "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY);
+            CommandManager::CommandRequest request;
+            request.displayName = "Zoom";
+            request.args = CommandManager::CommandArgs::FromString("val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY));
             request.commandName = "cmd_zoom";
-            ExecuteUserCommand(request);
+            ExecuteCommand(request);
         }
     }
 
@@ -2025,7 +1964,6 @@ namespace OIV
     {
         fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, { 0,0 });
         fImageSpaceSelection = decltype(fImageSpaceSelection)::Zero;
-        
     }
 
     double TestApp::GetMinimumPixelSize()
@@ -2668,6 +2606,12 @@ namespace OIV
         return false;
         
     }
+    bool TestApp::ExecutePredefinedCommand(std::string command)
+    {
+        CommandManager::CommandRequest commandRequest = fCommandManager.GetCommandRequestGroup(command);
+        return  commandRequest.commandName.empty() == false && ExecuteCommand(commandRequest);
+    }
+
     void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
     {
         using namespace Win32;
@@ -2822,7 +2766,7 @@ namespace OIV
 
             if (IsRightDoubleClick)
             {
-                ExecuteUserCommand({ "Paste image from clipboard","cmd_pasteFromClipboard","" });
+                ExecutePredefinedCommand("PasteImageFromClipboard");
             }
 
             if (IsRightDown)
@@ -2993,7 +2937,13 @@ namespace OIV
         
     }
 
-    bool TestApp::ExecuteUserCommand(const CommandManager::CommandClientRequest& request)
+    bool TestApp::ExecuteCommandInternal(const CommandRequestIntenal& requestInternal)
+    {
+        CommandManager::CommandRequest request{ "",requestInternal.commandName,CommandManager::CommandArgs::FromString(requestInternal.args) };
+        return ExecuteCommand(request);
+    }
+
+    bool TestApp::ExecuteCommand(const CommandManager::CommandRequest& request)
     {
         CommandManager::CommandResult res;
         if (fCommandManager.ExecuteCommand(request, res))

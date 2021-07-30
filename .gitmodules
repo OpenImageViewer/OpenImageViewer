@@ -13,3 +13,6 @@
 [submodule "External/FreeTypeWrapper"]
 	path = External/FreeTypeWrapper
 	url = https://github.com/OpenImageViewer/FreeTypeWrapper.git
+[submodule "External/json"]
+	path = External/json
+	url = https://github.com/nlohmann/json.git

@@ -1,0 +1,328 @@
+{
+  "commands": [
+    {
+      "GroupID": "ToggleKeyBindings",
+      "DisplayName": "Toggle Key bindings",
+      "Name": "cmd_toggle_keybindings",
+      "arguments": ""
+    },
+    {
+      "GroupID": "OpenFile",
+      "DisplayName": "Open file",
+      "Name": "cmd_open_file",
+      "arguments": ""
+    },
+    {
+      "GroupID": "MoveFileToRecycleBin",
+      "DisplayName": "move to recycle bin",
+      "Name": "cmd_delete_file",
+      "arguments": "type=recyclebin"
+    },
+    {
+      "GroupID": "DeleteFile",
+      "DisplayName": "Delete file permanently",
+      "Name": "cmd_delete_file",
+      "arguments": "type=permanently"
+    },
+    {
+      "GroupID": "ToggleFullScren",
+      "DisplayName": "Toggle full screen",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleFullScreen"
+    },
+    {
+      "GroupID": "ToggleMultiFullScreen",
+      "DisplayName": "Toggle multi fullscreen",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleMultiFullScreen"
+    },
+    {
+      "GroupID": "ToggleStatusBar",
+      "DisplayName": "Toggle status bar",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleStatusBar"
+    },
+    {
+      "GroupID": "ToggleWindowBorders",
+      "DisplayName": "Toggle window borders",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleBorders"
+    },
+    {
+      "GroupID": "CloseApplication",
+      "DisplayName": "Close application",
+      "Name": "cmd_view_state",
+      "arguments": "type=quit"
+    },
+    {
+      "GroupID": "CloseToTray",
+      "DisplayName": "Minimize to tray",
+      "Name": "cmd_view_state",
+      "arguments": "type=quit;op=closetotray"
+    },
+    {
+      "GroupID": "ToggleGrid",
+      "DisplayName": "Toggle Grid",
+      "Name": "cmd_view_state",
+      "arguments": "type=grid"
+    },
+    {
+      "GroupID": "ToggleSlideShow",
+      "DisplayName": "Toggle slide show",
+      "Name": "cmd_view_state",
+      "arguments": "type=slideShow"
+    },
+    {
+      "GroupID": "ToggleImageNormalization",
+      "DisplayName": "Toggle normalization",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleNormalization"
+    },
+    {
+      "GroupID": "ImageFilterNext",
+      "DisplayName": "Next image filter",
+      "Name": "cmd_view_state",
+      "arguments": "type=imageFilterUp"
+    },
+    {
+      "GroupID": "ImageFilterPrevious",
+      "DisplayName": "Previous image filter",
+      "Name": "cmd_view_state",
+      "arguments": "type=imageFilterDown"
+    },
+    {
+      "GroupID": "ToggleResetImageState",
+      "DisplayName": "Toggle reset image state",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleresetoffset"
+    },
+    {
+      "GroupID": "ToggleTransparencyMode",
+      "DisplayName": "Toggle transparency mode",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggletransparencymode"
+    },
+    {
+      "GroupID": "ToggleDownsamplingTechnique",
+      "DisplayName": "Toggle downsampling technique",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggledownsamplingtechnique"
+    },
+    {
+      "GroupID": "IncreaseGamma",
+      "DisplayName": "Increase Gamma by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=gamma;op=add;val=0.05"
+    },
+    {
+      "GroupID": "DecreaseGamma",
+      "DisplayName": "Decrease gamma by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=gamma;op=subtract;val=0.05"
+    },
+    {
+      "GroupID": "IncreaseExposure",
+      "DisplayName": "Increase exposure by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=exposure;op=add;val=0.05"
+    },
+    {
+      "GroupID": "Decrease Exposure",
+      "DisplayName": "Decrease exposure by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=exposure;op=subtract;val=0.05"
+    },
+    {
+      "GroupID": "IncreaseOffset",
+      "DisplayName": "Increase offset by 1%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=offset;op=add;val=0.01"
+    },
+    {
+      "GroupID": "DecreaseOffset",
+      "DisplayName": "Decrease offset by 1%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=offset;op=subtract;val=0.01"
+    },
+    {
+      "GroupID": "IncreaseSaturation",
+      "DisplayName": "Increase saturation by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=saturation;op=add;val=0.05"
+    },
+    {
+      "GroupID": "DecreaseSaturation",
+      "DisplayName": "Decrease saturation by 5%",
+      "Name": "cmd_color_correction",
+      "arguments": "type=saturation;op=subtract;val=0.05"
+    },
+    {
+      "GroupID": "ToggleColorCorrection",
+      "DisplayName": "Toggle color correction",
+      "Name": "cmd_toggle_correction",
+      "arguments": ""
+    },
+    {
+      "GroupID": "HorizontalFlip",
+      "DisplayName": "Horizontal flip",
+      "Name": "cmd_axis_aligned_transform",
+      "arguments": "type=hflip"
+    },
+    {
+      "GroupID": "VerticalFlip",
+      "DisplayName": "Vertical flip",
+      "Name": "cmd_axis_aligned_transform",
+      "arguments": "type=vflip"
+    },
+    {
+      "GroupID": "RotateClockwise",
+      "DisplayName": "Rotate clockwise",
+      "Name": "cmd_axis_aligned_transform",
+      "arguments": "type=rotatecw"
+    },
+    {
+      "GroupID": "RotateCounterClockwise",
+      "DisplayName": "Rotate Counterclockwise",
+      "Name": "cmd_axis_aligned_transform",
+      "arguments": "type=rotateccw"
+    },
+    {
+      "GroupID": "PanUp",
+      "DisplayName": "Pan up",
+      "Name": "cmd_pan",
+      "arguments": "direction=up;amount=1"
+    },
+    {
+      "GroupID": "PanDown",
+      "DisplayName": "Pan down",
+      "Name": "cmd_pan",
+      "arguments": "direction=down;amount=1"
+    },
+    {
+      "GroupID": "PanLeft",
+      "DisplayName": "Pan left",
+      "Name": "cmd_pan",
+      "arguments": "direction=left;amount=1"
+    },
+    {
+      "GroupID": "PanRight",
+      "DisplayName": "Pan right",
+      "Name": "cmd_pan",
+      "arguments": "direction=right;amount=1"
+    },
+    {
+      "GroupID": "ZoomIn",
+      "DisplayName": "Zoom in",
+      "Name": "cmd_zoom",
+      "arguments": "val=0.1"
+    },
+    {
+      "GroupID": "ZoomOut",
+      "DisplayName": "Zoom out",
+      "Name": "cmd_zoom",
+      "arguments": "val=-0.1"
+    },
+    {
+      "GroupID": "ViewOriginalSize",
+      "DisplayName": "Original image size",
+      "Name": "cmd_placement",
+      "arguments": "cmd=originalSize"
+    },
+    {
+      "GroupID": "FitToWindow",
+      "DisplayName": "Fit to window",
+      "Name": "cmd_placement",
+      "arguments": "cmd=fitToScreen"
+    },
+    {
+      "GroupID": "Center",
+      "DisplayName": "Center image",
+      "Name": "cmd_placement",
+      "arguments": "cmd=center"
+    },
+    {
+      "GroupID": "CropToSelectedArea",
+      "DisplayName": "Crop to selected area",
+      "Name": "cmd_imageManipulation",
+      "arguments": "cmd=cropSelectedArea"
+    },
+    {
+      "GroupID": "SelectEntireImage",
+      "DisplayName": "Select entire image",
+      "Name": "cmd_imageManipulation",
+      "arguments": "cmd=selectAll"
+    },
+    {
+      "GroupID": "OpenImageInNewWindow",
+      "DisplayName": "Open image in a new window",
+      "Name": "cmd_shell",
+      "arguments": "cmd=newWindow"
+    },
+    {
+      "GroupID": "OpenInPhotoshop",
+      "DisplayName": "Open in photoshop",
+      "Name": "cmd_shell",
+      "arguments": "cmd=openPhotoshop"
+    },
+    {
+      "GroupID": "OpenWithVivaldi",
+      "DisplayName": "Open with vivaldi",
+      "Name": "cmd_shell",
+      "arguments": "cmd=openWith;app=C:/Users/Nicker/AppData/Local/Vivaldi/Application/vivaldi.exe"
+    },
+    {
+      "GroupID": "CopySelectedAreaToClipboard",
+      "DisplayName": "Copy selected area to clipboard",
+      "Name": "cmd_copyToClipboard",
+      "arguments": "cmd=selectedArea"
+    },
+    {
+      "GroupID": "CopyFileNameToClipboard",
+      "DisplayName": "copy full file path to clipboard",
+      "Name": "cmd_copyToClipboard",
+      "arguments": "cmd=fileName"
+    },
+    {
+      "GroupID": "PasteImageFromClipboard",
+      "DisplayName": "Paste image from clipboard",
+      "Name": "cmd_pasteFromClipboard",
+      "arguments": ""
+    },
+    {
+      "GroupID": "NextImageInFolder",
+      "DisplayName": "Next image",
+      "Name": "cmd_navigate",
+      "arguments": "amount=1"
+    },
+    {
+      "GroupID": "PreviousImageInFolder",
+      "DisplayName": "Previous image",
+      "Name": "cmd_navigate",
+      "arguments": "amount=-1"
+    },
+    {
+      "GroupID": "NextSubImage",
+      "DisplayName": "Next sub-image",
+      "Name": "cmd_navigate",
+      "arguments": "amount=1;subimage=true"
+    },
+    {
+      "GroupID": "PreviousSubImage",
+      "DisplayName": "Previous sub-image",
+      "Name": "cmd_navigate",
+      "arguments": "amount=-1;subimage=true"
+    },
+    {
+      "GroupID": "FirstImageInFolder",
+      "DisplayName": "Goto first image in folder",
+      "Name": "cmd_navigate",
+      "arguments": "amount=start"
+    },
+    {
+      "GroupID": "LastImageInFolder",
+      "DisplayName": "Goto last image in folder",
+      "Name": "cmd_navigate",
+      "arguments": "amount=end"
+    }
+  ]
+}

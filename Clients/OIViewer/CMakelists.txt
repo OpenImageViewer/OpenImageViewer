@@ -43,6 +43,7 @@ add_custom_command(TARGET ${TargetName}
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Image/include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/include)
 target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
 target_link_libraries(${TargetName}

@@ -1,5 +1,5 @@
 #pragma once
-#include <unordered_map>
+#include <map>
 #include <functional>
 
 namespace OIV
@@ -16,6 +16,16 @@ namespace OIV
         };
 
         using ListKeyValue = std::vector<KeyValuePair>;
+
+        struct CommandGroup
+        {
+            std::string GroupID;
+            std::string commandDisplayName;
+            std::string commandName;
+            std::string arguments;
+        };
+
+        using MapCommandGroup = std::map<std::string, CommandGroup>;
 
         struct CommandResult
         {
@@ -52,20 +62,13 @@ namespace OIV
             }
         };
 
-        struct CommandClientRequest
-        {
-            std::string description;
-            std::string commandName;
-            std::string args;
-        };
-
+    
         struct CommandRequest
         {
-            std::string description;
+            std::string displayName;
             std::string commandName;
             CommandArgs args;
         };
-        
 
         using CommandCallback = std::function<void(const CommandRequest&, CommandResult&)>;
 
@@ -96,31 +99,49 @@ namespace OIV
             std::string fCommandName;
             CommandCallback fCallBack;
         };
-
         
-        
-        using MapCommands = std::unordered_map<std::string, Command>;
+        using MapCommands = std::map<std::string, Command>;
     public:
-        bool ExecuteCommand(const CommandClientRequest& commandRequest,CommandResult& out_result)
+        CommandRequest GetCommandRequestGroup(const std::string& commandGroupID)
         {
-            MapCommands::iterator it = fCommands.find(commandRequest.commandName);
+            auto itCommadnGroup = fMapCommandGroup.find(commandGroupID);
+            if (itCommadnGroup != fMapCommandGroup.end())
+            {
+                const auto& group = itCommadnGroup->second;
+                return CommandRequest{ group.commandDisplayName , group.commandName,CommandArgs::FromString(group.arguments) };
+            }
+            return {};
+        }
+
+        bool ExecuteCommand(const CommandManager::CommandRequest& request, CommandResult& out_result)
+        {
+            auto it = fCommands.find(request.commandName);
+
             if (it != fCommands.end())
             {
-                CommandRequest CommandRequestParsed;
-                CommandRequestParsed.description = commandRequest.description;
-                CommandRequestParsed.commandName = commandRequest.commandName;
-                CommandRequestParsed.args = CommandArgs::FromString(commandRequest.args);
-
-                it->second.Execute(CommandRequestParsed, out_result);
+                it->second.Execute(request, out_result);
                 return true;
             }
             return false;
         }
+
+        void AddCommandGroup(const CommandGroup& commandGroup)
+        {
+            fMapCommandGroup.emplace(commandGroup.GroupID, commandGroup);
+        }
+
         void AddCommand(const Command& command)
         {
             fCommands.insert(std::make_pair(command.GetName(), command));
         }
+
+        const MapCommandGroup& GetPredefinedCommandGroup() const
+        {
+            return fMapCommandGroup;
+        }
+
     private:
+        MapCommandGroup fMapCommandGroup;
         MapCommands fCommands;
     };
 }
