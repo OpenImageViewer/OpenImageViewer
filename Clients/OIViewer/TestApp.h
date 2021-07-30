@@ -98,6 +98,7 @@ namespace OIV
         void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
         bool HandleMessages(const Win32::Event* evnt);
         bool HandleClientWindowMessages(const Win32::Event* evnt);
+        double GetMinimumPixelSize();
         
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
@@ -220,6 +221,8 @@ namespace OIV
         RecrusiveDelayedOp fPreserveImageSpaceSelection;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
+        static constexpr double MaxPixelSize = 30.0;
+        static constexpr double MinImagePixelsInSmallAxis = 150.0;
         bool fIsGridEnabled = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;

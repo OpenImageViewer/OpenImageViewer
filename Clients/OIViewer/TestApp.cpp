@@ -2028,21 +2028,22 @@ namespace OIV
         
     }
 
+    double TestApp::GetMinimumPixelSize()
+    {
+        using namespace LLUtils;
+        PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::Transformed);
+        return std::min(std::max(minimumZoom.x, minimumZoom.y), 1.0);
+    }
+
     void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY, bool preserveFitToScreenState)
     {
         using namespace LLUtils;
-
-        const double MinImagePixelsInSmallAxis = 150.0;
-        const double MaxPixelSize = 30.0;
 
         //Apply zoom limits only if zoom is not bound to the client window
         if (fIsLockFitToScreen == false)
         {
             //We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::Transformed);
-            double minimum = std::min(std::max(minimumZoom.x, minimumZoom.y),1.0);
-            
-            zoomValue = std::clamp(zoomValue, minimum, MaxPixelSize);
+            zoomValue = std::clamp(zoomValue, GetMinimumPixelSize(), MaxPixelSize);
         }
 
         if (zoomValue != fImageState.GetScale().x)
