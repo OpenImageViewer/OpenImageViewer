@@ -13,8 +13,11 @@ namespace OIV
     //---------------------------------------------------------------------
     void MonitorInfo::Refresh()
     {
+        fBoundAreaOutOfDate = true;
         mDisplayDevices.clear();
         mHMonitorToDesc.clear();
+        fPrimaryMonitorIterator = mHMonitorToDesc.end();
+        
         DISPLAY_DEVICE disp;
         disp.cb = sizeof(disp);;
         DWORD devNum = 0;
@@ -34,11 +37,17 @@ namespace OIV
     //---------------------------------------------------------------------
     const MonitorDesc& MonitorInfo::getMonitorInfo(size_t monitorIndex, bool allowRefresh /*= false*/)
     {
-        MonitorDesc* result = nullptr;
         if (monitorIndex >= mDisplayDevices.size() && allowRefresh)
             Refresh();
 
 		return monitorIndex < mDisplayDevices.size() ? mDisplayDevices[monitorIndex] : mEmptyMonitorDesc;
+    }
+    //---------------------------------------------------------------------
+    const MonitorDesc& MonitorInfo::GetPrimaryMonitor(bool allowRefresh)
+    {
+        if (allowRefresh)
+            Refresh();
+        return fPrimaryMonitorIterator->second;
     }
     //---------------------------------------------------------------------
     const MonitorDesc&  MonitorInfo::getMonitorInfo(HMONITOR hMonitor, bool allowRefresh )
@@ -77,7 +86,7 @@ namespace OIV
     }
 
     //---------------------------------------------------------------------
-    BOOL CALLBACK MonitorInfo::MonitorEnumProc(_In_ HMONITOR hMonitor, _In_ HDC hdcMonitor, _In_ LPRECT lprcMonitor, _In_ LPARAM dwData)
+    BOOL CALLBACK MonitorInfo::MonitorEnumProc(_In_ HMONITOR hMonitor,[[maybe_unused]] _In_ HDC hdcMonitor, [[maybe_unused]] _In_ LPRECT lprcMonitor, _In_ LPARAM dwData)
     {
         MonitorInfo* _this = (MonitorInfo*)dwData;
         MONITORINFOEX monitorInfo;
@@ -109,10 +118,13 @@ namespace OIV
                     ::ReleaseDC(desktopWindow, hDC);
                 }
 
-                desc.DPIx = dpix;
-                desc.DPIy = dpiy;
+                desc.DPIx = static_cast<uint16_t>(dpix);
+                desc.DPIy = static_cast<uint16_t>(dpiy);
 
-                _this->mHMonitorToDesc.insert(std::make_pair(hMonitor, desc));
+                auto it = _this->mHMonitorToDesc.insert(std::make_pair(hMonitor, desc));
+                
+                if ((monitorInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY)
+                    _this->fPrimaryMonitorIterator = it.first;
                 break;
             }
         }
@@ -126,6 +138,16 @@ namespace OIV
     }
 
     RECT MonitorInfo::getBoundingMonitorArea()
+    {
+        if (fBoundAreaOutOfDate == true)
+        {
+            fBoundArea = getBoundingMonitorAreaInternal();
+            fBoundAreaOutOfDate = false;
+        }
+        return fBoundArea;
+    }
+
+    RECT MonitorInfo::getBoundingMonitorAreaInternal()
     {
         using namespace std;
         RECT rect = { 0 };

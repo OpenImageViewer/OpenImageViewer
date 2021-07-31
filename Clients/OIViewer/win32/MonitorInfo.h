@@ -24,15 +24,22 @@ namespace OIV
 
         const MonitorDesc& getMonitorInfo(size_t monitorIndex, bool allowRefresh = false);
         const MonitorDesc& getMonitorInfo(HMONITOR hMonitor, bool allowRefresh = false);
+        const MonitorDesc& GetPrimaryMonitor(bool allowRefresh);
         const size_t getMonitorsCount() const;
         RECT getBoundingMonitorArea();
+
     private:
+        RECT getBoundingMonitorAreaInternal();
         using OSVersionInfo = RTL_OSVERSIONINFOW;
         static OSVersionInfo GetOSVersion() ;
         using MapHMonitorToDesc = std::map<HMONITOR, MonitorDesc>;
         std::vector<MonitorDesc> mDisplayDevices;
         MapHMonitorToDesc mHMonitorToDesc;
-        inline static MonitorDesc mEmptyMonitorDesc = { };
+        MapHMonitorToDesc::iterator fPrimaryMonitorIterator = mHMonitorToDesc.end();
+        inline static MonitorDesc mEmptyMonitorDesc { };
+
+        bool fBoundAreaOutOfDate = true;
+        RECT fBoundArea;
 
         static BOOL CALLBACK MonitorEnumProc(
             _In_  HMONITOR hMonitor,
