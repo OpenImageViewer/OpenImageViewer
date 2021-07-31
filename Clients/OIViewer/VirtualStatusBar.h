@@ -95,13 +95,25 @@ namespace OIV
                 }
             }
         }
-
-        void SetOpacity(std::string elementName, double opacity)
+        /// <summary>
+        /// Sets the opacity of a label and return true if update is needed.
+        /// </summary>
+        /// <param name="elementName"></param>
+        /// <param name="opacity"></param>
+        /// <returns></returns>
+        bool SetOpacity(std::string elementName, double opacity)
         {
             OIVTextImage* label = GetOrCreateLabel(elementName);
-            label->GetImageProperties().opacity = opacity;
-            label->Update();
+            if (label->GetImageProperties().opacity != opacity)
+            {
+                label->GetImageProperties().opacity = opacity;
+                label->Update();
+                return true;
+            }
+
+            return false;
         }
+
     private:
 
         LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
