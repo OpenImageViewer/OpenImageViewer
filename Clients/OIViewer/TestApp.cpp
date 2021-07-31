@@ -2118,52 +2118,53 @@ namespace OIV
 
     void TestApp::UpdateTexelPos()
     {
-
-        if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
+        if (fVirtualStatusBar.GetVisible() == true)
         {
-            using namespace LLUtils;
-            PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
-
-            std::wstringstream ss;
-            ss << L"Texel: "
-                << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.x
-                << L" X "
-                << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
-            fVirtualStatusBar.SetText("texelPos", ss.str());
-            
-            //fWindow.SetStatusBarText(ss.str(), 2, 0);
-
-            PointF64 storageImageSize = GetImageSize(ImageSizeType::Transformed);
-
-            if (!(storageImageSpace.x < 0
-                || storageImageSpace.y < 0
-                || storageImageSpace.x >= storageImageSize.x
-                || storageImageSpace.y >= storageImageSize.y
-                ))
+            if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
             {
-                OIV_CMD_TexelInfo_Request texelInfoRequest = { fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
-           ,static_cast<uint32_t>(storageImageSpace.x)
-           ,static_cast<uint32_t>(storageImageSpace.y) };
-                OIV_CMD_TexelInfo_Response  texelInfoResponse;
+                using namespace LLUtils;
+                PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
 
-                if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
+                std::wstringstream ss;
+                ss << L"Texel: "
+                    << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.x
+                    << L" X "
+                    << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << storageImageSpace.y;
+                fVirtualStatusBar.SetText("texelPos", ss.str());
+
+                //fWindow.SetStatusBarText(ss.str(), 2, 0);
+
+                PointF64 storageImageSize = GetImageSize(ImageSizeType::Transformed);
+
+                if (!(storageImageSpace.x < 0
+                    || storageImageSpace.y < 0
+                    || storageImageSpace.x >= storageImageSize.x
+                    || storageImageSpace.y >= storageImageSize.y
+                    ))
                 {
-                    std::wstring message = OIVHelper::ParseTexelValue(texelInfoResponse);
-                    OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);
-                    OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
+                    OIV_CMD_TexelInfo_Request texelInfoRequest = { fImageState.GetImage(ImageChainStage::Deformed)->GetDescriptor().ImageHandle
+               ,static_cast<uint32_t>(storageImageSpace.x)
+               ,static_cast<uint32_t>(storageImageSpace.y) };
+                    OIV_CMD_TexelInfo_Response  texelInfoResponse;
 
-                    fVirtualStatusBar.SetText("texelValue", txt);
-                    fVirtualStatusBar.SetOpacity("texelValue",1.0);
-                    fRefreshOperation.Queue(); 
+                    if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
+                    {
+                        std::wstring message = OIVHelper::ParseTexelValue(texelInfoResponse);
+                        OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);
+                        OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
+
+                        fVirtualStatusBar.SetText("texelValue", txt);
+                        fVirtualStatusBar.SetOpacity("texelValue", 1.0);
+                        fRefreshOperation.Queue();
+                    }
+
                 }
-                
+                else
+                {
+                    if (fVirtualStatusBar.SetOpacity("texelValue", 0))
+                        fRefreshOperation.Queue();
+                }
             }
-            else
-            {
-                fVirtualStatusBar.SetOpacity("texelValue", 0);
-                fRefreshOperation.Queue();
-            }
-
         }
     }
     void TestApp::AutoPlaceImage(bool forceCenter)
