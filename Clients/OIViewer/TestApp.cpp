@@ -1024,8 +1024,7 @@ namespace OIV
                 fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
             }
         	
-            //Don't refresh on initial file, wait for WM_SIZE
-            fRefreshOperation.End(fIsTryToLoadInitialFile == false);
+            fRefreshOperation.End();
 
             fLastImageLoadTimeStamp.Start(); 
         }
@@ -1037,6 +1036,7 @@ namespace OIV
         }
         else
         {
+            SetResamplingEnabled(true);
             LoadFileInFolder(GetOpenedFileName());
             WatchCurrentFolder();
         }
@@ -1224,8 +1224,8 @@ namespace OIV
         switch (result)
         {
         case ResultCode::RC_Success:
+            SetResamplingEnabled(false);
             fImageState.SetOpenedImage(file);
-
             //TODO: Load Sub images after finalizing image for faster experience.
             LoadSubImages();
             FinalizeImageLoadThreadSafe(result);
@@ -1322,6 +1322,14 @@ namespace OIV
         fWindow.SetCursorType(cursorType);
     }
     
+    void TestApp::DelayResamplingCallback()
+    {
+        fTimerNoActiveZoom.SetInterval(0);
+        fImageState.SetResample(true);
+        fImageState.Refresh();
+        fRefreshOperation.Queue();
+    }
+
     void TestApp::Init(std::wstring relativeFilePath)
     {
         using namespace std;
@@ -1382,15 +1390,8 @@ namespace OIV
         fRefreshOperation.Begin();
 
         fTimerNoActiveZoom.SetTargetWindow(fWindow.GetHandle());
-        fTimerNoActiveZoom.SetCallback([this]()
-            {
-                fTimerNoActiveZoom.SetInterval(0);
-                fImageState.SetResample(true);
-                fImageState.Refresh();
-                fRefreshOperation.Queue();
-            }
-        );
-
+        
+        fTimerNoActiveZoom.SetCallback(std::bind(&TestApp::DelayResamplingCallback, this));
 
         fTimerNavigation.SetTargetWindow(fWindow.GetHandle());
          fTimerNavigation.SetCallback([this]()
@@ -1973,6 +1974,39 @@ namespace OIV
         return std::min(std::max(minimumZoom.x, minimumZoom.y), 1.0);
     }
 
+    void TestApp::QueueResampling()
+    {
+        if (GetResamplingEnabled() && IsImageOpen() && fDownScalingTechnique == DownscalingTechnique::Software)
+        {
+            fImageState.SetResample(false);
+            fTimerNoActiveZoom.SetInterval(0);
+            fTimerNoActiveZoom.SetInterval(fQueueResamplingDelay);
+        }
+    }
+
+
+    void TestApp::SetResamplingEnabled(bool enable)
+    {
+        if (fIsResamplingEnabled != enable)
+        {
+            fIsResamplingEnabled = enable;
+            if (fIsResamplingEnabled == false)
+            {
+                fTimerNoActiveZoom.SetInterval(0);
+                fImageState.SetResample(false);
+            }
+            else
+            {
+                QueueResampling();
+            }
+        }
+    }
+    
+    bool TestApp::GetResamplingEnabled() const
+    {
+        return fIsResamplingEnabled;
+    }
+
     void TestApp::SetZoomInternal(double zoomValue, int clientX, int clientY, bool preserveFitToScreenState)
     {
         using namespace LLUtils;
@@ -2002,13 +2036,7 @@ namespace OIV
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
             PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
 
-
-            if (fDownScalingTechnique == OIV::DownscalingTechnique::Software)
-            {
-                fImageState.SetResample(false);
-                fTimerNoActiveZoom.SetInterval(0);
-                fTimerNoActiveZoom.SetInterval(50);
-            }
+            QueueResampling();
 
             fImageState.SetScale(zoomValue);
 
@@ -2222,14 +2250,12 @@ namespace OIV
     void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
 	   fRefreshOperation.Begin();
-       fImageState.SetResample(false);
+       SetResamplingEnabled(false);
        fImageState.Transform(relativeRotation, flip);
 	   AutoPlaceImage(true);
 	   RefreshImage();
 	   fRefreshOperation.End();
-
-       fTimerNoActiveZoom.SetInterval(0);
-       fTimerNoActiveZoom.SetInterval(50);
+       SetResamplingEnabled(true);
     }
 
     void TestApp::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat)
@@ -2479,11 +2505,11 @@ namespace OIV
     {
         bool handled = false;
 
-        const Win32::WinMessage & uMsg = evnt->message;
+        const Win32::WinMessage& uMsg = evnt->message;
         switch (uMsg.message)
         {
         case WM_SHOWWINDOW:
-            if (fIsFirstFrameDisplayed == false)
+            if (fIsFirstFrameDisplayed == false && uMsg.wParam == TRUE)
             {
 				PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED, 0, 0);
 				fIsFirstFrameDisplayed = true;

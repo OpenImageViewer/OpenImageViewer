@@ -212,6 +212,7 @@ namespace OIV
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
         void OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args);
+        void DelayResamplingCallback();
 		
     private: // member fields
 #pragma region FrameLimiter
@@ -238,6 +239,7 @@ namespace OIV
         SelectionRect fSelectionRect;
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
+        uint32_t fQueueResamplingDelay = 50;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
         Win32::Timer fTimerHideUserMessage;
         Win32::Timer fTimerTopMostRetention;
@@ -245,6 +247,7 @@ namespace OIV
         int fTopMostCounter = 0;
         Win32::Timer fTimerNoActiveZoom;
         Win32::Timer fTimerNavigation;
+        bool fIsResamplingEnabled = false;
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
         static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
@@ -287,6 +290,9 @@ namespace OIV
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         Win32::NotificationIconGroup fNotificationIcons;
         Win32::NotificationIconGroup::IconID fNotificationIconID;
+        void SetResamplingEnabled(bool enable);
+        bool GetResamplingEnabled() const; 
+        void QueueResampling();
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 

@@ -127,23 +127,26 @@ namespace OIV
 
     void ImageState::SetResample(bool resample)
     {
-        ImageChainStage targetProcessStage = resample ? ImageChainStage::Resampled : ImageChainStage::Rasterized;
+            ImageChainStage targetProcessStage = resample ? ImageChainStage::Resampled : ImageChainStage::Rasterized;
 
-        if (fFinalProcessingStage != targetProcessStage)
-        {
-            fFinalProcessingStage = targetProcessStage;
-
-            if (fFinalProcessingStage == ImageChainStage::Rasterized)
+            if (fFinalProcessingStage != targetProcessStage)
             {
-                        UpdateImageParameters(fCurrentImageChain.Get(ImageChainStage::Rasterized), true);
-                        fCurrentImageChain.Get(ImageChainStage::Resampled).reset();
+                fFinalProcessingStage = targetProcessStage;
+
+                if (fFinalProcessingStage == ImageChainStage::Rasterized)
+                {
+                    auto rasterized = fCurrentImageChain.Get(ImageChainStage::Rasterized);
+                    if (rasterized != nullptr)
+                        UpdateImageParameters(rasterized, true);
+                    fCurrentImageChain.Get(ImageChainStage::Resampled).reset();
+                }
+                else if (fFinalProcessingStage == ImageChainStage::Resampled)
+                {
+                    SetDirtyStage(ImageChainStage::Resampled);
+                }
             }
-            else if (fFinalProcessingStage == ImageChainStage::Resampled)
-			{
-                SetDirtyStage(ImageChainStage::Resampled);
-			}
         }
-    }
+       
 
     bool ImageState::IsActuallyResampled() const
     {
@@ -219,7 +222,18 @@ namespace OIV
 
     void ImageState::SetImageChainRoot(OIVBaseImageSharedPtr image)
     {
-        fCurrentImageChain.Get(ImageChainStage::SourceImage) = image;
+        auto& souceImageSlot = fCurrentImageChain.Get(ImageChainStage::SourceImage);
+
+        //If current source image is still open and yet to be released from memory like when subimages are available, 
+        // hide the current active source image.
+        if (souceImageSlot != nullptr)
+        {
+            souceImageSlot->GetImageProperties().visible = false;
+            souceImageSlot->Update();
+
+        }
+        //Assign the new source image        
+        souceImageSlot = image;
         SetDirtyStage(ImageChainStage::SourceImage);
     }
 

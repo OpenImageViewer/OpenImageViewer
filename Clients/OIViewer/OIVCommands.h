@@ -26,7 +26,7 @@ namespace OIV
 
         static ResultCode Refresh()
         {
-                return ExecuteCommand(CommandExecute::CE_Refresh, &NullCommand, &NullCommand);
+            return ExecuteCommand(CommandExecute::CE_Refresh, &NullCommand, &NullCommand);
         }
 
 
