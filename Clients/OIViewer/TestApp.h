@@ -168,6 +168,7 @@ namespace OIV
         //void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
+        LLUtils::PointF64 GetCanvasCenter();
         void UpdateTexelPos();
         void AutoPlaceImage(bool forceCenter = false);
         void UpdateWindowSize();

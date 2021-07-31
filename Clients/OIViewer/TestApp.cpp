@@ -2022,16 +2022,18 @@ namespace OIV
         {
             //Save image selection before view change
             fPreserveImageSpaceSelection.Begin();
-
-
-            PointI32 clientSize = fWindow.GetCanvasSize();
+            
             PointI32 clientZoomPoint = { clientX, clientY };
-            if (clientZoomPoint.x < 0)
-                clientZoomPoint.x = clientSize.x / 2;
 
-            if (clientZoomPoint.y < 0)
-                clientZoomPoint.y = clientSize.y / 2;
+            if (clientZoomPoint.x < 0 || clientZoomPoint.y < 0)
+            {
+                const PointI32 canvasCenter = static_cast<PointI32>(GetCanvasCenter());
+                if (clientZoomPoint.x < 0)
+                    clientZoomPoint.x = canvasCenter.x;
 
+                if (clientZoomPoint.y < 0)
+                    clientZoomPoint.y = canvasCenter.y;
+            }
 
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
             PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) * GetImageSize(ImageSizeType::Original);
@@ -2192,13 +2194,43 @@ namespace OIV
         fVirtualStatusBar.ClientSizeChanged(point);
     }
 
+    LLUtils::PointF64 TestApp::GetCanvasCenter()
+    {
+        using namespace LLUtils;
+        
+        PointF64 canvasCenter;
+        
+        if (fWindow.GetFullScreenState() != FullSceenState::MultiScreen) [[likely]]
+        {
+            canvasCenter = PointF64(fWindow.GetCanvasSize()) / 2.0;
+        }
+        else [[unlikely]]
+        {
+            RECT primaryMonitorCoords = MonitorInfo::GetSingleton().GetPrimaryMonitor(false).monitorInfo.rcMonitor;
+            RECT boundingArea = MonitorInfo::GetSingleton().getBoundingMonitorArea();
+
+            using point_type = PointF64::point_type;
+            auto leftDelta = primaryMonitorCoords.left - boundingArea.left;
+            auto topDelta = primaryMonitorCoords.top - boundingArea.top;
+
+            const LLUtils::PointF64 primaryScreenOffset = LLUtils::PointF64(static_cast<point_type>(leftDelta)
+                , static_cast<point_type>(topDelta));
+
+            const LLUtils::PointF64 primaryScreenSize = LLUtils::PointF64(static_cast<point_type>(primaryMonitorCoords.right - primaryMonitorCoords.left)
+                , static_cast<point_type>(primaryMonitorCoords.bottom - primaryMonitorCoords.top));
+
+            canvasCenter = primaryScreenOffset + primaryScreenSize / 2.0;
+        }
+        return canvasCenter;
+    }
+
     void TestApp::Center()
     {
-		if (IsImageOpen() == true)
-		{
-			fRefreshOperation.Begin();
-			using namespace LLUtils;
-			PointF64 offset = (PointF64(fWindow.GetCanvasSize()) - GetImageSize(ImageSizeType::Visible)) / 2;
+        if (IsImageOpen() == true)
+        {
+            fRefreshOperation.Begin();
+            using namespace LLUtils;
+            PointF64 offset = GetCanvasCenter() - GetImageSize(ImageSizeType::Visible) / 2;
             //Lock offset when centering
             fIsOffsetLocked = true;
             SetOffset(offset, true);
