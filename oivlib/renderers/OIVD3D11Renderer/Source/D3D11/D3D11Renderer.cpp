@@ -410,22 +410,34 @@ namespace OIV
 
     int D3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image)
     {
-        ImageEntry& entry = fImageEntries[id];
-        entry.texture = OIVD3DHelper::CreateTexture(fDevice, image, false);
-        return 0; 
+        auto it = fImageEntries.find(id);
+        if (it != fImageEntries.end())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "same image found");
+
+        it = fImageEntries.emplace(id, ImageEntry()).first;
+
+        it->second.texture = OIVD3DHelper::CreateTexture(fDevice, image, false);
+        return 0;
     }
 
     int D3D11Renderer::SetImageProperties(const OIV_CMD_ImageProperties_Request& properties)
     {
-        ImageEntry& entry = fImageEntries[properties.imageHandle];
-        entry.properties = properties;
+        ImageEntry entry{};
+        auto it = fImageEntries.find(properties.imageHandle);
+        if (it == fImageEntries.end())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "image handle can not be found");
+
+        it->second.properties = properties;
+        
         return 0;
     }
 
 
     int D3D11Renderer::RemoveImage(uint32_t id)
     {
-        fImageEntries.erase(id);
+        if (fImageEntries.erase(id) == 0)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "can not remove image");
+
         return 0;
     }
 }
