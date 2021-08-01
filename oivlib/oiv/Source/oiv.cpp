@@ -405,8 +405,8 @@ namespace OIV
             //Don't remove from renderer when opacity is 0, cache image in the GPU until removed.
             //RemoveImageFromRenderer(imageProperties.imageHandle);
         }
-        
-        fRenderer->SetImageProperties(imageProperties);
+        if (fImagesUploadToRenderer.contains(imageProperties.imageHandle))
+            fRenderer->SetImageProperties(imageProperties);
         
         return RC_Success;
     }

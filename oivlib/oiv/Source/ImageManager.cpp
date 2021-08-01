@@ -106,6 +106,7 @@ namespace OIV
 
     void ImageManager::ReplaceImage(ImageHandle handle, IMCodec::ImageSharedPtr image)
     {
+        RemoveChildren(handle);
         fMapHandleToImage[handle] = image;
     }
 

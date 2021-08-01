@@ -30,7 +30,6 @@ namespace OIV
 		using namespace nlohmann;
 		using namespace LLUtils;
 
-		std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
 		std::string jsonText = File::ReadAllText(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/KeyBindings.json"));
 		auto jsonObject = json::parse(jsonText);
 		auto keyBindings = jsonObject["KeyBindings"];
