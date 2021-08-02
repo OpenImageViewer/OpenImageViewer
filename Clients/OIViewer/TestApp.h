@@ -214,6 +214,9 @@ namespace OIV
         void WatchCurrentFolder();
         void OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
+        void ShowImageInfo();
+        void SetImageInfoVisible(bool visible);
+        bool GetImageInfoVisible() const;
 		
     private: // member fields
 #pragma region FrameLimiter
@@ -249,6 +252,7 @@ namespace OIV
         Win32::Timer fTimerNoActiveZoom;
         Win32::Timer fTimerNavigation;
         bool fIsResamplingEnabled = false;
+        bool fQueueImageInfoLoad = false;
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
         static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
@@ -262,10 +266,12 @@ namespace OIV
         bool fIsLockFitToScreen = false;
         bool fShowBorders = true;
         bool fFileReloadPending = false;
+        bool fImageInfoVisible = false;
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
         LLUtils::Color DefaultTextValueColor = 0x7672ffff;
         std::wstring DefaultTextKeyColorTag;
         std::wstring DefaultTextValueColorTag;
+        LLUtils::StopWatch fFileDisplayTimer;
 
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };

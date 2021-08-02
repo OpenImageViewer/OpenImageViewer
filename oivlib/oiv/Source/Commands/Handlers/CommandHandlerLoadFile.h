@@ -39,6 +39,7 @@ namespace OIV
                     loadResponse->height = static_cast<uint32_t>(image->GetHeight());
                     loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());
                     loadResponse->loadTime = image->GetDescriptor().fMetaData.LoadTime;
+                    loadResponse->pluginUsed = image->GetDescriptor().fMetaData.pluginUsed;
                     loadResponse->sizeInMemory = image->GetSizeInMemory();
                     loadResponse->handle = handle;
                     loadResponse->numSubImages = image->GetNumSubImages();

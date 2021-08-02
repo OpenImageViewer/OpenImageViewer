@@ -28,6 +28,7 @@ namespace OIV
             desc.ImageHandle = loadResponse.handle;
             desc.Source = fImageSource;
             desc.LoadTime = loadResponse.loadTime;;
+            desc.texelFormat = loadParams.texelFormat;
         }
 
         return result;

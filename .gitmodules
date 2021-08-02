@@ -16,3 +16,6 @@
 [submodule "External/json"]
 	path = External/json
 	url = https://github.com/nlohmann/json.git
+[submodule "External/xxHash"]
+	path = External/xxHash
+	url = https://github.com/Cyan4973/xxHash.git

@@ -4,7 +4,6 @@
 #include <thread>
 #include <future>
 #include <cassert>
-
 #include "TestApp.h"
 #include <LLUtils/StringUtility.h>
 #include "win32/Win32Window.h"
@@ -39,6 +38,7 @@
 #include "ContextMenu.h"
 #include "globals.h"
 #include "ConfigurationLoader.h"
+#include "Helpers/MessageHelper.h"
 
 namespace OIV
 {
@@ -224,127 +224,80 @@ namespace OIV
         }
     }
 
+    void TestApp::SetImageInfoVisible(bool visible)
+    {
+        if (visible != fImageInfoVisible)
+        {
+            fImageInfoVisible = visible;
+
+            if (fImageInfoVisible == true)
+            {
+                ShowImageInfo();
+            }
+            else
+            {
+                OIVTextImage* text = fLabelManager.GetTextLabel("imageInfo");
+                const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
+                if (text != nullptr)
+                {
+                    fLabelManager.Remove("imageInfo");
+                    fRefreshOperation.Queue();
+                }
+            }
+        }
+
+    }
+
+    bool TestApp::GetImageInfoVisible() const
+    {
+        return fImageInfoVisible;
+    }
+
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
-        const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
-        if (text != nullptr)
+        auto type = request.args.GetArgValue("type");
+        if (type == "imageinfo") // Toggle image info
         {
-            fLabelManager.Remove("keyBindings");
-            fRefreshOperation.Queue();
-            return;
+            SetImageInfoVisible(!GetImageInfoVisible());
         }
-
-        text = fLabelManager.GetOrCreateTextLabel("keyBindings");
-
-        using namespace std;
-        
-        struct ColumnInfo
+        else // Toggle keybindings
         {
-             size_t maxFirstLength;
-             size_t maxSecondLength;
-        };
-        //TODO: get max lines from window height
-        
-        const int MaxLines = 24;
 
-        auto keybindingsList = ConfigurationLoader::LoadKeyBindings();
-
-        const int totalColumns = static_cast<int>(std::ceil(static_cast<double>(keybindingsList.size()) / MaxLines));
-        std::vector<ColumnInfo> columnInfo(totalColumns);
-        int currentcolumn = 0;
-        int currentLine = 0;
-        
-        for (const auto& binding : keybindingsList)
-        {
-            auto it = commandGroups.find(binding.GroupID);
-            auto commandName = it != commandGroups.end() ? it->second.commandDisplayName : "N/A";
-
-
-            columnInfo[currentcolumn].maxFirstLength = std::max(columnInfo[currentcolumn].maxFirstLength, commandName.length());
-            columnInfo[currentcolumn].maxSecondLength = std::max(columnInfo[currentcolumn].maxSecondLength, binding.KeyCombinationName.length());
-            currentLine++;
-            if (currentLine >= MaxLines)
+            OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
+            const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
+            if (text != nullptr) //
             {
-                currentLine = 0;
-                currentcolumn++;
+                fLabelManager.Remove("keyBindings");
+                fRefreshOperation.Queue();
+                return;
             }
-        }
-        
-        currentcolumn = 0;
-        currentLine = 0;
 
-        vector<std::string> lines(MaxLines);
-
-
-        for (const auto& binding : keybindingsList)
-        {
-            auto it = commandGroups.find(binding.GroupID);
-            auto commandName = it != commandGroups.end() ? it->second.commandDisplayName : "N/A";
-            stringstream ss;
-            ss << "<textcolor=#ff8930>" << commandName;
+            text = fLabelManager.GetOrCreateTextLabel("keyBindings");
+            CreateTextParams& requestText = text->GetTextOptions();
             
+            auto message = MessageHelper::CreateKeyBindingsMessage();
 
-            size_t currentLength = commandName.length();
-            while (currentLength++ < columnInfo[currentcolumn].maxFirstLength)
-                ss << ".";
+            requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(message);
+            requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
+            requestText.fontPath = LabelManager::sFixedFontPath;
+            requestText.fontSize = 12;
+            requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+            requestText.outlineWidth = 2;
 
-            ss << "..." << "<textcolor=#98f733>" << binding.KeyCombinationName ;
-            if (currentcolumn < totalColumns - 1)
-            {
-                size_t currentLength = binding.KeyCombinationName.length();
-                while (currentLength++ < columnInfo[currentcolumn].maxSecondLength)
-                    ss << " ";
-                
-                ss << "      ";
-            }
 
-            lines[currentLine] += ss.str();
+            OIV_CMD_ImageProperties_Request& imageProperties = text->GetImageProperties();
+            imageProperties.position = { 20,60 };
+            imageProperties.filterType = OIV_Filter_type::FT_None;
+            //imageProperties.imageHandle = responseText.imageHandle;
+            imageProperties.imageRenderMode = IRM_Overlay;
+            imageProperties.scale = 1.0;
+            imageProperties.opacity = 1.0;
+            imageProperties.visible = true;
 
-            currentLine++;
-            if (currentLine >= MaxLines)
-            {
-                currentLine = 0;
-                currentcolumn++;
-            }
+            if (text->Update() == RC_Success)
+                fRefreshOperation.Queue();
+
         }
-
-        stringstream ss1;
-        for (const std::string& line : lines)
-            ss1 << line << "\n";
-
-        std::string message = ss1.str();
-        if (message[message.size() - 1] == '\n')
-            message.erase(message.size() - 1);
-
-
-        
-
-        CreateTextParams& requestText = text->GetTextOptions();
-
-        std::wstring wmsg = L"<textcolor=#ff8930>";
-        wmsg += LLUtils::StringUtility::ToWString(message);
-        
-        requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
-        requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
-        requestText.fontPath = LabelManager::sFixedFontPath;
-        requestText.fontSize = 12;
-        requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
-        requestText.outlineWidth = 2;
-
-
-        OIV_CMD_ImageProperties_Request& imageProperties = text->GetImageProperties();
-        imageProperties.position = { 20,60 };
-        imageProperties.filterType = OIV_Filter_type::FT_None;
-        //imageProperties.imageHandle = responseText.imageHandle;
-        imageProperties.imageRenderMode = IRM_Overlay;
-        imageProperties.scale = 1.0;
-        imageProperties.opacity = 1.0;
-        imageProperties.visible = true;
-
-        if ( text->Update() == RC_Success)
-            fRefreshOperation.Queue();
-
     }
 
     void TestApp::CMD_OpenFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
@@ -1025,6 +978,8 @@ namespace OIV
             }
         	
             fRefreshOperation.End();
+            fFileDisplayTimer.Stop();
+            const_cast<ImageDescriptor&>(fImageState.GetOpenedImage()->GetDescriptor()).DisplayTime = fFileDisplayTimer.GetElapsedTimeInteger(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
             fLastImageLoadTimeStamp.Start(); 
         }
@@ -1039,6 +994,13 @@ namespace OIV
             SetResamplingEnabled(true);
             LoadFileInFolder(GetOpenedFileName());
             WatchCurrentFolder();
+        }
+
+
+        if (fQueueImageInfoLoad == true)
+        {
+            SetImageInfoVisible(true);
+            fQueueImageInfoLoad = false;
         }
     }
 
@@ -1219,11 +1181,14 @@ namespace OIV
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
         FileLoadOptions loadOptions;
         loadOptions.onlyRegisteredExtension = onlyRegisteredExtension;
+        fFileDisplayTimer.Start();
         ResultCode result = file->Load(loadOptions);
         using namespace  std::string_literals;
         switch (result)
         {
         case ResultCode::RC_Success:
+            fQueueImageInfoLoad = GetImageInfoVisible();
+            SetImageInfoVisible(false);
             SetResamplingEnabled(false);
             fImageState.SetOpenedImage(file);
             //TODO: Load Sub images after finalizing image for faster experience.
@@ -3022,6 +2987,29 @@ namespace OIV
         }
         return false;
     }
+
+    void TestApp::ShowImageInfo()
+    {
+        if (IsImageOpen())
+        {
+            std::string imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetImage(ImageChainStage::SourceImage));
+            OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
+            CreateTextParams& params = imageInfoText->GetTextOptions();
+            
+            params.text = LLUtils::StringUtility::ConvertString<OIVString>(imageInfoString);
+            params.backgroundColor = LLUtils::Color(0,0,0,127).colorValue;
+            params.fontPath = LabelManager::sFixedFontPath;
+            params.fontSize = 12;
+            params.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+            params.outlineWidth = 2;
+
+            imageInfoText->GetImageProperties().position = { 20,60 };
+
+            if (imageInfoText->Update() == RC_Success)
+                fRefreshOperation.Queue();
+        }
+    }
+
 
     void TestApp::ShowWelcomeMessage()
     {

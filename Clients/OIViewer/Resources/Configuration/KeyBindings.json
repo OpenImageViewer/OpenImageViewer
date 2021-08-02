@@ -1,6 +1,7 @@
 {
   "KeyBindings": [
     { "F1": "ToggleKeyBindings" },
+    { "Grave": "ShowImageInfo" },
     { "Control+O": "OpenFile" },
     { "GreyDelete": "MoveFileToRecycleBin" },
     { "Shift+GreyDelete": "DeleteFile" },
@@ -57,6 +58,5 @@
     { "GREYHOME": "FirstImageInFolder" },
     { "GREYEND": "LastImageInFolder" },
     { "Alt+V": "OpenWithVivaldi" }
-    
   ]
 }

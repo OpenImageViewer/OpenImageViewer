@@ -416,6 +416,7 @@ typedef wchar_t OIVCHAR;
     struct OIV_CMD_LoadFile_Response
     {
         double loadTime;
+        const char* pluginUsed;
         uint32_t width;
         uint32_t height;
         uint8_t bpp;

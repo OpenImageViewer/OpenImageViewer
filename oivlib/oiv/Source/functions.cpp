@@ -11,5 +11,4 @@ ResultCode OIV_Util_GetBPPFromTexelFormat(OIV_TexelFormat in_texelFormat, uint8_
 {
     //Call the c++ implementation
     return OIV::Util::GetBPPFromTexelFormat_impl(in_texelFormat, out_bpp);
-
 }

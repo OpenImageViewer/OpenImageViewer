@@ -7,6 +7,12 @@
       "arguments": ""
     },
     {
+      "GroupID": "ShowImageInfo",
+      "DisplayName": "Show image information",
+      "Name": "cmd_toggle_keybindings",
+      "arguments": "type=imageinfo"
+    },
+    {
       "GroupID": "OpenFile",
       "DisplayName": "Open file",
       "Name": "cmd_open_file",

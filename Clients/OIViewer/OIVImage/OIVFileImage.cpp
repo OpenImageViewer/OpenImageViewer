@@ -38,6 +38,7 @@ namespace OIV
             //desc.Width = loadResponse.width;
             //desc.Height = loadResponse.height;
             desc.LoadTime = loadResponse.loadTime;
+            desc.pluginUsed = loadResponse.pluginUsed;
             /*desc.ImageHandle = loadResponse.handle;
             desc.Bpp = loadResponse.bpp;*/
             SetImageHandle(loadResponse.handle);

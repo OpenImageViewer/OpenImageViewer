@@ -27,6 +27,7 @@ namespace OIV
         uint8_t NumSubImages = 0;
         LLUtils::StopWatch::time_type_real DisplayTime = 0.0;
         double LoadTime = 0.0;
+        const char* pluginUsed = nullptr;
 
     };
   
