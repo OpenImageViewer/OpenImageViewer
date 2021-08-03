@@ -304,15 +304,15 @@ public:
         DWORD ReadDirectoryChanges(FolderData& folderData)
         {
             return
-                ReadDirectoryChangesExW(folderData.directoryHandle
+                ReadDirectoryChangesW(folderData.directoryHandle
                     , &folderData.info
                     , BufferSize
                     , FALSE
                     , FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE
                     , nullptr
                     , &folderData.overlapped
-                    , nullptr
-                    , ReadDirectoryNotifyInformation);
+                    , nullptr);
+                    
         }
 private:
     static constexpr uint32_t BufferSize = 8192;
