@@ -2383,7 +2383,7 @@ namespace OIV
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         ImageHandle croppedHandle = ImageHandleNull;
         ImageHandle clipboardCompatibleHandle = ImageHandleNull;
-        ResultCode result = OIVCommands::CropImage(fImageState.GetVisibleImage()->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
+        ResultCode result = OIVCommands::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetDescriptor().ImageHandle, imageRectInt, croppedHandle);
 
         if (result == RC_Success)
         {
