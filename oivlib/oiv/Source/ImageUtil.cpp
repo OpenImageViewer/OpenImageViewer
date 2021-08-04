@@ -2,7 +2,6 @@
 
 namespace IMUtil
 {
-
     ImageUtil::MapConvertKeyToFunc ImageUtil::sConvertionFunction
     {
         // Convert to RGBA

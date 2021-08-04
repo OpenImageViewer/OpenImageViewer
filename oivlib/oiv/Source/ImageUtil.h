@@ -1,8 +1,10 @@
 #pragma once
 
 #include <unordered_map>
+#include <map>
 #include <Image.h>
 #include "PixelUtil.h"
+#include "TexelConvertor.h"
 #include <LLUtils/Rect.h>
 #include <LLUtils/Color.h>
 #include <ExoticNumbers/half.hpp>
@@ -30,7 +32,7 @@ namespace IMUtil
 
     constexpr uint32_t RGBA_To_GRAYSCALE_LUMA(uint8_t R, uint8_t G, uint8_t B, uint8_t A)
     {
-        return RGBA(static_cast<uint32_t>(R * 0.2126), static_cast<uint32_t>(G * 0.7152), static_cast<uint32_t>(B * 0.0722), 255);
+        return RGBA(static_cast<uint32_t>(R * 0.2126), static_cast<uint32_t>(G * 0.7152), static_cast<uint32_t>(B * 0.0722), A);
     }
 
 
@@ -38,6 +40,7 @@ namespace IMUtil
     {
     private:
 
+        static inline OIV::TexelConvertor texelConvertor;
         enum class NormalizeMode
         {
               Default = 0
@@ -170,23 +173,23 @@ namespace IMUtil
             switch (image->GetImageType())
             {
             case IMCodec::TexelFormat::F_X16:
-                image = Normalize<half_float::half>(image, targetTexelFormat, normalizeMode);
+                image = Normalize<half_float::half>(image, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::F_X24:
-                image = Normalize<Float24>(image, targetTexelFormat, normalizeMode);
+                image = Normalize<Float24>(image, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::F_X32:
-                image = ImageUtil::Normalize<float>(image, targetTexelFormat, normalizeMode);
+                image = ImageUtil::Normalize<float>(image, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::I_X8:
-                image = ImageUtil::Normalize<uint8_t>(image, targetTexelFormat, normalizeMode);
+                image = ImageUtil::Normalize<uint8_t>(image, normalizeMode);
                 break;
 
             case IMCodec::TexelFormat::S_X16:
-                image = ImageUtil::Normalize<int16_t>(image, targetTexelFormat, normalizeMode);
+                image = ImageUtil::Normalize<int16_t>(image, normalizeMode);
                 break;
 
             default:
@@ -235,37 +238,53 @@ namespace IMUtil
         static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
         {
             using namespace IMCodec;
+
             ImageSharedPtr convertedImage;
 
             if (sourceImage->GetImageType() != targetPixelFormat)
             {
+                ImageDescriptor imagedescriptor;
+                imagedescriptor.fProperties = sourceImage->GetDescriptor().fProperties;
 
-                ImageDescriptor properties;
-                properties.fProperties = sourceImage->GetDescriptor().fProperties;
+                uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
+                imagedescriptor.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
 
-                auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
+                std::byte* dest = imagedescriptor.fData.data();
+                //TODO: convert without normalization.
+                ImageSharedPtr normalizedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
+                
+                imagedescriptor.fProperties.TexelFormatDecompressed = targetPixelFormat;
+                imagedescriptor.fProperties.RowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
 
-                if (converter != sConvertionFunction.end())
+
+                bool succcess = false;
+
+                if ((succcess = 
+                    texelConvertor.Convert(targetPixelFormat
+                        , sourceImage->GetDescriptor().fProperties.TexelFormatDecompressed
+                        , dest
+                        , normalizedImage->GetBuffer()
+                        , normalizedImage->GetTotalPixels())) == false)
                 {
-                    uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
-                    properties.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
-                    std::byte* dest = properties.fData.data();
 
-                    //TODO: convert without normalization.
-                    convertedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
+                   auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
+                   
+                   if (converter != sConvertionFunction.end())
+                   {
 
-
-                    PixelUtil::Convert(converter->second
-                        , &dest
-                        , convertedImage->GetBuffer()
-                        , targetPixelSize
-                        , convertedImage->GetTotalPixels());
-
-                    properties.fProperties.TexelFormatDecompressed = targetPixelFormat;
-
-                    properties.fProperties.RowPitchInBytes = convertedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
-                    return ImageSharedPtr(new Image(properties));
+                           PixelUtil::Convert(converter->second
+                               , &dest
+                               , normalizedImage->GetBuffer()
+                               , targetPixelSize
+                               , normalizedImage->GetTotalPixels());
+                           
+                           succcess = true;
+                   }
                 }
+
+                if (succcess == true)
+                    convertedImage = std::make_shared<Image>(imagedescriptor);
+               
             }
             else
             { // No need to convert, return source image.
@@ -357,7 +376,7 @@ namespace IMUtil
         }
 
         template <class SourceSampleType>
-        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat, NormalizeMode normalizeMode)
+        static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, NormalizeMode normalizeMode)
         {
             const SourceSampleType* sampleData = reinterpret_cast<const SourceSampleType*> (sourceImage->GetBuffer());
             const uint32_t totalPixels = sourceImage->GetTotalPixels();
