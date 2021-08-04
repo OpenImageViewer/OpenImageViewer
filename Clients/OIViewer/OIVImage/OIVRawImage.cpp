@@ -25,7 +25,7 @@ namespace OIV
             OIV_Util_GetBPPFromTexelFormat(loadParams.texelFormat, &desc.Bpp);
             desc.Height = loadParams.height;
             desc.Width = loadParams.width;
-            desc.ImageHandle = loadResponse.handle;
+            SetImageHandle(loadResponse.handle);
             desc.Source = fImageSource;
             desc.LoadTime = loadResponse.loadTime;;
             desc.texelFormat = loadParams.texelFormat;
