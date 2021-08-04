@@ -9,7 +9,6 @@
 #include <LLUtils/Utility.h>
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
-#include "UserSettings.h"
 #include <LLUtils/Rect.h>
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
@@ -233,8 +232,12 @@ namespace OIV
         RecrusiveDelayedOp fPreserveImageSpaceSelection;
         int fKeyboardPanSpeed = 1;
         double fKeyboardZoomSpeed = 0.1;
-        static constexpr double MaxPixelSize = 30.0;
-        static constexpr double MinImagePixelsInSmallAxis = 150.0;
+        double fMaxPixelSize = 30.0;
+        double fMinImageSize = 150.0;
+        FileWatcher::FolderID fOpenedFileFolderID = 0;
+        FileWatcher::FolderID fCOnfigurationFolderID = 0;
+
+        
         bool fIsGridEnabled = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;
@@ -259,7 +262,6 @@ namespace OIV
         FileIndexType  fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart { -1,-1 };
-        UserSettings fSettings;
         bool fIsTryToLoadInitialFile = false; // determines whether the current loaded file is the initial file being loaded at startup
         bool fIsFirstFrameDisplayed = false;
         bool fIsOffsetLocked = false;
@@ -267,6 +269,7 @@ namespace OIV
         bool fShowBorders = true;
         bool fFileReloadPending = false;
         bool fImageInfoVisible = false;
+        LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
         LLUtils::Color DefaultTextValueColor = 0x7672ffff;
         std::wstring DefaultTextKeyColorTag;
@@ -297,6 +300,7 @@ namespace OIV
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         Win32::NotificationIconGroup fNotificationIcons;
         Win32::NotificationIconGroup::IconID fNotificationIconID;
+        void LoadSettings();
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const; 
         void QueueResampling();

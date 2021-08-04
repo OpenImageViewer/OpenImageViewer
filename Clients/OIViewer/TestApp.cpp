@@ -17,7 +17,6 @@
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
 #include "win32/UserMessages.h"
-#include "UserSettings.h"
 #include "OIVCommands.h"
 #include <LLUtils/Rect.h>
 #include "Helpers/OIVHelper.h"
@@ -1015,7 +1014,8 @@ namespace OIV
                     fFileWatcher.RemoveFolder(fCurrentFolderWatched);
 
                 fCurrentFolderWatched = absoluteFolderPath;
-                fFileWatcher.AddFolder(absoluteFolderPath);
+
+             fOpenedFileFolderID = fFileWatcher.AddFolder(absoluteFolderPath);
             }
         }
     }
@@ -1513,44 +1513,55 @@ namespace OIV
 
     void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
     {
-        std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
-        std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
-        std::wstring changedFileName = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring();
-        std::wstring changedFileName2 = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).wstring();
-
-        switch (fileChangedEventArgs.fileOp)
+        if (fileChangedEventArgs.folderID == fOpenedFileFolderID)
         {
-        case FileWatcher::FileChangedOp::None:
-            break;
-        case FileWatcher::FileChangedOp::Add:
-            UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
-            break;
-        case FileWatcher::FileChangedOp::Remove:
-            UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
-            break;
-        case FileWatcher::FileChangedOp::Modified:
-            if (absoluteFilePath == changedFileName)
-                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
-            break;
-        case FileWatcher::FileChangedOp::Rename:
-            if (absoluteFilePath == changedFileName2)
-                PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
+            std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
+            std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
+            std::wstring changedFileName = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring();
+            std::wstring changedFileName2 = (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).wstring();
 
-            UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
-            UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
-            break;
+            switch (fileChangedEventArgs.fileOp)
+            {
+            case FileWatcher::FileChangedOp::None:
+                break;
+            case FileWatcher::FileChangedOp::Add:
+                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+                break;
+            case FileWatcher::FileChangedOp::Remove:
+                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+                break;
+            case FileWatcher::FileChangedOp::Modified:
+                if (absoluteFilePath == changedFileName)
+                    PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
+                break;
+            case FileWatcher::FileChangedOp::Rename:
+                if (absoluteFilePath == changedFileName2)
+                    PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
 
-        case FileWatcher::FileChangedOp::WatchedFolderRemoved:
-            fCurrentFolderWatched.clear();
-            break;
+                UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
+                UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
+                break;
+
+            case FileWatcher::FileChangedOp::WatchedFolderRemoved:
+                fCurrentFolderWatched.clear();
+                break;
+            }
+        }
+        else if (fileChangedEventArgs.folderID == fCOnfigurationFolderID)
+        {
+            if (fileChangedEventArgs.fileName == L"Settings.json")
+            {
+                LoadSettings();
+            }
+        }
+        else
+        {
+            LL_EXCEPTION_UNEXPECTED_VALUE;
         }
     }
 
     void TestApp::PostInitOperations()
     {
-        // load settings
-        fSettings.Load();
-        fSettings.Save();
 
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
@@ -1624,6 +1635,41 @@ namespace OIV
 
         fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
         fNotificationContextMenu->AddItem(OIV_TEXT("Quit"), int{});
+
+
+        LoadSettings();
+#if _DEBUG
+        fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
+
+#endif
+         
+    }
+
+    template <typename value_type, typename container_type,typename target_type>
+    bool LoadValue(const container_type& container, std::string name, target_type& value)
+    {
+        auto it = container.find(name);
+        if (it != container.end())
+        {
+            value = static_cast<target_type>(std::get<value_type>(it->second));
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+
+    void TestApp::LoadSettings()
+    {
+
+        auto settings = ConfigurationLoader::LoadSettings();
+
+        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/maxzoom", fMaxPixelSize);
+        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/x", fImageMargins.x);
+        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/y", fImageMargins.y);
+        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/minimagesize", fMinImageSize);
     }
 
 
@@ -1935,7 +1981,7 @@ namespace OIV
     double TestApp::GetMinimumPixelSize()
     {
         using namespace LLUtils;
-        PointF64 minimumZoom = MinImagePixelsInSmallAxis / GetImageSize(ImageSizeType::Transformed);
+        PointF64 minimumZoom = fMinImageSize / GetImageSize(ImageSizeType::Transformed);
         return std::min(std::max(minimumZoom.x, minimumZoom.y), 1.0);
     }
 
@@ -1980,7 +2026,7 @@ namespace OIV
         if (fIsLockFitToScreen == false)
         {
             //We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            zoomValue = std::clamp(zoomValue, GetMinimumPixelSize(), MaxPixelSize);
+            zoomValue = std::clamp(zoomValue, GetMinimumPixelSize(), fMaxPixelSize);
         }
 
         if (zoomValue != fImageState.GetScale().x)
@@ -2237,10 +2283,9 @@ namespace OIV
         PointF64 imageSize = GetImageSize(ImageSizeType::Visible);
         PointF64 clientSize = fWindow.GetCanvasSize();
         PointF64 offset = static_cast<PointF64>(point);
-        const Serialization::UserSettingsData& settings = fSettings.getUserSettings();
         
-        offset.x = CalculateOffset(clientSize.x, imageSize.x, offset.x, settings.zoomScrollState.Margins.x);
-        offset.y = CalculateOffset(clientSize.y, imageSize.y, offset.y, settings.zoomScrollState.Margins.x);
+        offset.x = CalculateOffset(clientSize.x, imageSize.x, offset.x, fImageMargins.x);
+        offset.y = CalculateOffset(clientSize.y, imageSize.y, offset.y, fImageMargins.y);
         return offset;
     }
 
@@ -2876,7 +2921,7 @@ namespace OIV
 
     void TestApp::SetUserMessage(const std::wstring& message,int32_t hideDelay )
     {
-            OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
+        OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
         if (userMessage == nullptr)
         {
             userMessage = fLabelManager.GetOrCreateTextLabel("userMessage");

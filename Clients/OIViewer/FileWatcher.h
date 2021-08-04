@@ -13,13 +13,14 @@ class FileWatcher
 private:
     struct FolderData;
     using FILE_NOTIFY_INFORMATION = FILE_NOTIFY_INFORMATION;
-    using UniqueIDProvider = LLUtils::UniqueIdProvider<uint16_t>;
-    using FolderID = UniqueIDProvider::underlying_type;
 
 public:
+    using UniqueIDProvider = LLUtils::UniqueIdProvider<uint16_t>;
+    using FolderID = UniqueIDProvider::underlying_type;
     enum class FileChangedOp { None, Add, Remove, Modified, Rename, WatchedFolderRemoved };
     struct FileChangedEventArgs
     {
+        FolderID folderID;
         FileChangedOp fileOp;
         std::wstring folder;
         std::wstring fileName;
@@ -35,9 +36,11 @@ public:
         return fMapFolderID.find(folder) != fMapFolderID.end();
     }
 
-    void AddFolder(const std::wstring& folder)
+    FolderID AddFolder(const std::wstring& folder)
     {
         std::lock_guard<std::mutex> Lock(fDataMutex);
+
+        FolderID folderID = 0;
 
         if (std::filesystem::is_directory(folder) == false)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "not a directory");
@@ -58,6 +61,7 @@ public:
             FolderData& folderData = it.first->second;
 
             folderData.uniqueID = uniqueID;
+            folderID = uniqueID;
             folderData.folderPath = folder;
             folderData.directoryHandle = CreateFile(folder.c_str()
                 , GENERIC_READ | FILE_LIST_DIRECTORY
@@ -83,6 +87,8 @@ public:
             if (fFileWatchThread.native_handle() == nullptr)
                 fFileWatchThread = std::thread(std::bind(&FileWatcher::CompletionPortStatusEntryPoint, this));
         }
+
+        return folderID;
     }
 
     void RemoveAll()
@@ -231,7 +237,7 @@ public:
                                 if (it == eventsToRaise.end())
                                     it = eventsToRaise.emplace(folderID, std::vector< FileChangedEventArgs>()).first;
 
-                                it->second.push_back(FileChangedEventArgs{ fileOp,folderData.folderPath,fileName,newName });
+                                it->second.push_back(FileChangedEventArgs{folderID, fileOp,folderData.folderPath,fileName,newName });
 
 
                                 currentOffset += currentPacket->NextEntryOffset;
@@ -277,7 +283,7 @@ public:
                     for (FolderID folderID : foldersToRemove)
                     {
                         auto it = fMapIDData.find(folderID);
-                        folderRemovalEvents.push_back(FileChangedEventArgs{ FileChangedOp::WatchedFolderRemoved ,it->second.folderPath });
+                        folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath });
                         RemoveFolder(folderID); 
                     }
                 }
