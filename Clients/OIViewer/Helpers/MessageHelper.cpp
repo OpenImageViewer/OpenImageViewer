@@ -38,12 +38,23 @@ namespace OIV
         args.spaceBetweenColumns = 3;
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
-        
+
+
 
         auto keybindingsList = ConfigurationLoader::LoadKeyBindings();
+        auto commands = ConfigurationLoader::LoadCommandGroups();
+
         for (const auto& binding : keybindingsList)
-            messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList { binding.GroupID });
-       
+        {
+            auto it = std::find_if(commands.begin(), commands.end(), [&](auto& element)->bool
+                {
+                    return element.commandGroupID == binding.GroupID;
+                });
+
+                if (it != commands.end())
+                    messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList{ it->commandDisplayName });
+        }
+
         return MessageFormatter::FormatMetaText(args);
     }
 
