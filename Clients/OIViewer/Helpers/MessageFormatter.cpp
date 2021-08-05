@@ -25,6 +25,8 @@ namespace OIV
             return std::get<std::string>(valueObject);
             break;
         }
+
+        return std::string();
     }
 
     std::string MessageFormatter::FormatMetaText(FormatArgs args)
@@ -122,6 +124,78 @@ namespace OIV
         return message;
     }
 
+
+    const std::string& MessageFormatter::PickColor(IMCodec::ChannelSemantic semantic)
+    {
+        using namespace IMCodec;
+        const static std::string blue = "<textcolor=#006dff>";
+        const static std::string green = "<textcolor=#00ff00>";
+        const static std::string red = "<textcolor=#ff1c21>";
+        const static std::string white = "<textcolor=#ffffff>";
+        const static std::string other = "<textcolor=#ff8930>";
+
+
+        switch (semantic)
+        {
+        case ChannelSemantic::Red:
+            return red;
+        case ChannelSemantic::Green:
+            return green;
+        case ChannelSemantic::Blue:
+            return blue;
+        case ChannelSemantic::Opacity:
+            return white;
+        case ChannelSemantic::Monochrome:
+        case ChannelSemantic::Float:
+            return other;
+            break;
+        case ChannelSemantic::None:
+            LL_EXCEPTION_UNEXPECTED_VALUE;
+            
+            
+        }
+    }
+
+
+    const char* MessageFormatter::FormatSemantic(IMCodec::ChannelSemantic semantic)
+    {
+        switch (semantic)
+        {
+        case IMCodec::ChannelSemantic::Red:
+            return "R";
+        case IMCodec::ChannelSemantic::Green:
+            return "G";
+        case IMCodec::ChannelSemantic::Blue:
+            return "B";
+        case IMCodec::ChannelSemantic::Opacity:
+            return "A";
+            break;
+        case IMCodec::ChannelSemantic::Monochrome:
+            return "Monochrome";
+        case IMCodec::ChannelSemantic::Float:
+            return "Float";
+        case IMCodec::ChannelSemantic::None:
+            return "Undefined";
+        }
+    }
+
+    const char* MessageFormatter::FormatDataType(IMCodec::ChannelDataType dataType)
+    {
+        switch (dataType)
+        {
+        case IMCodec::ChannelDataType::Float:
+            return "float";
+        case IMCodec::ChannelDataType::SignedInt:
+            return "signed";
+        case IMCodec::ChannelDataType::UnsignedInt:
+            return "unsigned";
+        case IMCodec::ChannelDataType::None:
+            return "undefined";
+        }
+    }
+
+
+
     std::string MessageFormatter::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)
     {
         std::stringstream ss;
@@ -138,42 +212,17 @@ namespace OIV
             }
         }
 
+        
 
         for (size_t i = 0; i < texelInfo.numChannles; i++)
         {
-            switch (texelInfo.channles[i].semantic)
-            {
-            case IMCodec::ChannelSemantic::Red:
-                ss << "R:";
-                break;
-            case IMCodec::ChannelSemantic::Green:
-                ss << "G:";
-                break;
-            case IMCodec::ChannelSemantic::Blue:
-                ss << "B:";
-                break;
-            case IMCodec::ChannelSemantic::Opacity:
-                ss << "A:";
-                break;
-            case IMCodec::ChannelSemantic::Monochrome:
-                ss << "Monochrome:";
-                break;
-            }
-            if (sameDataTypeForAllchannels == false || texelInfo.channles[i].semantic == ChannelSemantic::Monochrome)
-            {
-                switch (texelInfo.channles[i].ChannelDataType)
-                {
-                case ChannelDataType::Float:
-                    ss << "(float)";
-                    break;
-                case ChannelDataType::SignedInt:
-                    ss << "(signed)";
-                    break;
-                case ChannelDataType::UnsignedInt:
-                    ss << "(unsigned)";
-                    break;
-                }
-            }
+            ss << PickColor(texelInfo.channles[i].semantic) << FormatSemantic(texelInfo.channles[i].semantic) << ':';
+            
+            if (sameDataTypeForAllchannels == false 
+                || texelInfo.channles[i].semantic == ChannelSemantic::Monochrome
+                //|| texelInfo.channles[i].semantic == ChannelSemantic::Float
+                )
+                ss << '(' << FormatDataType(texelInfo.channles[i].ChannelDataType) << ')';
 
             ss << static_cast<int>(texelInfo.channles[i].width) << " ";
         }
@@ -188,7 +237,7 @@ namespace OIV
 
 
     template<class T>
-    static std::string MessageFormatter::numberFormatWithCommas(T value) {
+    std::string MessageFormatter::numberFormatWithCommas(T value) {
         struct Numpunct : public std::numpunct<char> {
         protected:
             virtual char do_thousands_sep() const override { return ','; }

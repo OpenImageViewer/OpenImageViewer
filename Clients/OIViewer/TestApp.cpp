@@ -2162,7 +2162,7 @@ namespace OIV
 
                     if (OIVCommands::ExecuteCommand(OIV_CMD_TexelInfo, &texelInfoRequest, &texelInfoResponse) == RC_Success)
                     {
-                        std::wstring message = OIVHelper::ParseTexelValue(texelInfoResponse);
+                        std::wstring message = StringUtility::ConvertString<OIVString>(OIVHelper::ParseTexelValue(texelInfoResponse));
                         OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);
                         OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
 

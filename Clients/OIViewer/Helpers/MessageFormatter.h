@@ -33,6 +33,9 @@ namespace OIV
         static std::string FormatValueObject(const ValueObject& valueObject);
         static std::string FormatMetaText(FormatArgs args);
         static std::string FormatTexelInfo(const IMCodec::TexelInfo& texelInfo);
+        static const char* FormatSemantic(IMCodec::ChannelSemantic semantic);
+        static const std::string& PickColor(IMCodec::ChannelSemantic semantic);
+        static const char* FormatDataType(IMCodec::ChannelDataType dataType);
 
         template<class T>
         static std::string numberFormatWithCommas(T value);

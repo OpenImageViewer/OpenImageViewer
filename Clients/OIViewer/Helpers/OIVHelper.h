@@ -2,82 +2,144 @@
 #include <string>
 #include <defs.h>
 #include <sstream>
+#include <limits>
+#include "../ImageCodec/ImageLoader/Include/TexelFormat.h"
 #include <ExoticNumbers/half.hpp>
 #include <ExoticNumbers/Float24.h>
+#include "MessageFormatter.h"
+#include "ExoticNumbers/Int24.h"
 
 
-class OIVHelper
+
+namespace OIV
 {
-public:
-    static std::wstring ParseTexelValue(const OIV_CMD_TexelInfo_Response& texelInfo)
+    class OIVHelper
     {
-        std::wstringstream ss;
-        const uint8_t* const buffer = texelInfo.buffer;
-        std::wstring defaultColor = L"<textcolor=#ff8930>";
-        
+    public:
 
-        std::wstring blue  = L"<textcolor=#006dff>";
-        std::wstring green = L"<textcolor=#00ff00>";
-        std::wstring red   = L"<textcolor=#ff1c21>";
-        std::wstring white = L"<textcolor=#ffffff>";
-
-        ss << defaultColor;
-
-        switch (texelInfo.type)
+        static const std::string& PickColor(IMCodec::ChannelSemantic semantic)
         {
-        case OIV_TexelFormat::TF_I_B8_G8_R8_A8:
-            ss  << "BGRA:" << std::setfill(L'0')
-                << blue  << " " << std::setw(3) << buffer[0]
-                << green << " " << std::setw(3) << buffer[1]
-                << red   << " " << std::setw(3) << buffer[2]
-                << white << " " << std::setw(3) << buffer[3];
-            break;
-        case OIV_TexelFormat::TF_I_B8_G8_R8:
-            ss << "BGR:" << std::setfill(L'0')
-                << blue << " " << std::setw(3) << buffer[0]
-                << green << " " << std::setw(3) << buffer[1]
-                << red << " " << std::setw(3) << buffer[2];
-            break;
+            using namespace IMCodec;
+            const static std::string blue = "<textcolor=#006dff>";
+            const static std::string green = "<textcolor=#00ff00>";
+            const static std::string red = "<textcolor=#ff1c21>";
+            const static std::string white = "<textcolor=#ffffff>";
+            const static std::string other  = "<textcolor=#ff8930>";
+            
 
-        case OIV_TexelFormat::TF_I_R8_G8_B8_A8:
-            ss  << "RGBA:" << std::setfill(L'0')
-                << red   << " " << std::setw(3) << buffer[0]
-                << green << " " << std::setw(3) << buffer[1]
-                << blue  << " " << std::setw(3) << buffer[2]
-                << white << " " << std::setw(3) << buffer[3];
-            break;
-        case OIV_TexelFormat::TF_I_R8_G8_B8:
-            ss << "RGB:" << std::setfill(L'0')
-                << red << " " << std::setw(3) << buffer[0]
-                << green << " " << std::setw(3) << buffer[1]
-                << blue << " " << std::setw(3) << buffer[2];
-            break;
-        case OIV_TexelFormat::TF_I_R16_G16_B16:
-            ss << "RGB:" << std::setfill(L'0')
-                << red << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[0]
-                << green << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[1]
-                << blue << " " << std::setw(5) << reinterpret_cast<const uint16_t*>(buffer)[2];
-            break;
-        case OIV_TexelFormat::TF_F_X32:
-            ss << "32 bit float: " << std::setw(10) << std::setfill(L'0') << std::fixed << std::setprecision(6) << *reinterpret_cast<const float*>(buffer);
-            break;
-        case OIV_TexelFormat::TF_F_X24:
-            ss << "24 bit float: " << std::setw(10) << std::setfill(L'0') << std::fixed << std::setprecision(6) << static_cast<const float>(*reinterpret_cast<const Float24*>(buffer));
-            break;
-        case OIV_TexelFormat::TF_F_X16:
-            ss << "16 bit float: " << std::setw(10) << std::setfill(L'0') << std::fixed << std::setprecision(6) << static_cast<const float>(*reinterpret_cast<const half_float::half*>(buffer));
-            break;
-        case OIV_TexelFormat::TF_I_X8:
-            ss << "8 bit integer: " << std::setw(3) << std::setfill(L'0') << *reinterpret_cast<const uint8_t*>(buffer);
-            break;
-        case OIV_TexelFormat::TF_S_X16:
-            ss << "16 bit signed integer: " << std::setw(3) << std::setfill(L'0') << *reinterpret_cast<const int16_t*>(buffer);
-            break;
-        default:
-            ss << L"N/A";
-            break;
+            switch (semantic)
+            {
+            case ChannelSemantic::Red:
+                return red;
+            case ChannelSemantic::Green:
+                return green;
+            case ChannelSemantic::Blue:
+                return blue;
+            case ChannelSemantic::Opacity:
+                return white;
+            case ChannelSemantic::Monochrome:
+            case ChannelSemantic::Float:
+                return other;
+            }
         }
-        return ss.str();
-    }
-};
 
+        static std::string ParseTexelValue(const OIV_CMD_TexelInfo_Response& texelInfo)
+        {
+            using namespace IMCodec;
+            std::stringstream ss;
+            const uint8_t* const buffer = texelInfo.buffer;
+            std::string defaultColor = "<textcolor=#ff8930>";
+
+            //TODO: remove static cast after removing usage of C API 
+            const auto& info = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(texelInfo.type));
+
+
+            int currentpos = 0;
+
+            for (size_t i = 0; i < info.numChannles; i++)
+            {
+                const auto& channel = info.channles.at(i);
+
+                switch (channel.ChannelDataType)
+                {
+                case ChannelDataType::UnsignedInt:
+                    ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
+                    break;
+                case ChannelDataType::SignedInt:
+                    ss << PickColor(channel.semantic) << "(signed)" << MessageFormatter::FormatSemantic(channel.semantic);
+                    break;
+                case ChannelDataType::Float:
+                    ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
+                    break;
+                }
+
+                if (channel.width != 8 
+                    || channel.semantic ==  ChannelSemantic::Monochrome 
+                    || channel.semantic == ChannelSemantic::Float)
+                    ss << '(' << static_cast<int>(channel.width) << ')';
+
+                ss << ':';
+
+
+                //TODO: extract to user settings
+                const int precision = 6;
+
+                if (channel.ChannelDataType == ChannelDataType::Float)
+                    ss << std::setprecision(precision) << std::setw(precision + 4) << std::setfill(' ') << std::fixed;
+                
+
+                switch (channel.width)
+                {
+                case 8:
+                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                        ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const uint8_t*> (buffer + (currentpos / CHAR_BIT)));
+                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                        ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const int8_t*>(buffer + (currentpos / CHAR_BIT)));
+                    break;
+                case 16:
+                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                        ss << std::setw(std::numeric_limits<uint16_t>::digits10 + 1) << *reinterpret_cast<const uint16_t*>((buffer + (currentpos / CHAR_BIT)));
+                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                        ss << std::setw(std::numeric_limits<int16_t>::digits10 + 1) << *reinterpret_cast<const int16_t*>((buffer + (currentpos / CHAR_BIT)));
+                    else if (channel.ChannelDataType == ChannelDataType::Float)
+                        ss <<  *reinterpret_cast<const half_float::half*>((buffer + (currentpos / CHAR_BIT)));
+                    break;
+                case 24:
+                    if (channel.ChannelDataType == ChannelDataType::Float)
+                        ss <<  *(reinterpret_cast<const Float24*>(buffer + (currentpos / CHAR_BIT)));
+                    else if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                    {
+                        ss << "N/A";
+                        //TODO: implement.
+                        //ss << std::setw(8) << *((reinterpret_cast<const*>(buffer) + currentpos / CHAR_BIT));
+                    }
+                        
+                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                        ss << std::setw(8) << (int)* (reinterpret_cast<const Int24*>(buffer + currentpos / CHAR_BIT));
+
+                    break;
+                case 32:
+                    if (channel.ChannelDataType == ChannelDataType::Float)
+                        ss << *(reinterpret_cast<const float*>(buffer + currentpos / CHAR_BIT));
+                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                        ss << std::setw(std::numeric_limits<uint32_t>::digits10 + 1) << *(reinterpret_cast<const uint32_t*>(buffer + (currentpos / CHAR_BIT)));
+                    break;
+                case 64:
+                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                        ss << std::setw(std::numeric_limits<uint64_t>::digits10 + 1)  << *(reinterpret_cast<const int64_t*>(buffer + (currentpos / CHAR_BIT)));
+                    break;
+                    
+                }
+                
+                ss << " ";
+                currentpos += channel.width;
+
+            }
+            std::string msg = ss.str();
+            if (msg.empty() == false)
+                msg.erase(msg.length() - 1);
+            return msg;
+        }
+    };
+
+}
