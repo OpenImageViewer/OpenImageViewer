@@ -147,6 +147,8 @@ namespace OIV
 		void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void ToggleSlideShow();
+        void SetSlideShowEnabled(bool enabled);
+        bool GetSlideShowEnabled() const {return fSlideShowEnabled;}
         void SetFilterLevel(OIV_Filter_type filterType);
         OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
@@ -234,6 +236,9 @@ namespace OIV
         double fKeyboardZoomSpeed = 0.1;
         double fMaxPixelSize = 30.0;
         double fMinImageSize = 150.0;
+        uint32_t fSlideShowIntervalms = 3000;
+        bool fSlideShowEnabled = false;
+        bool fAllowDynamicSettings = false;
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
 
@@ -300,7 +305,7 @@ namespace OIV
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         Win32::NotificationIconGroup fNotificationIcons;
         Win32::NotificationIconGroup::IconID fNotificationIconID;
-        void LoadSettings();
+        void LoadSettings(bool startup);
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const; 
         void QueueResampling();

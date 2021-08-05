@@ -28,8 +28,9 @@ namespace OIV
 		using Integral = int64_t;
 		using Float = long double;
 		using String = std::string;
+		using Bool = bool;
 
-		using SettingValue = std::variant<long double, int64_t, std::string>;
+		using SettingValue = std::variant<bool, int64_t, long double, std::string>;
 
 		using MapSettings = std::map<std::string, SettingValue>;
 

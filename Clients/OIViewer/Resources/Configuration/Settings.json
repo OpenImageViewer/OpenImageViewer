@@ -1,8 +1,14 @@
 {
-    "viewsettings":
+    "system":
     {
+        "allowdynamicsettings" : false
+    }
+    ,"viewsettings":
+    {
+          
           "maxzoom": 100.0
         , "minimagesize" : 150
+        , "slideshowinterval" : 2000
         , "imagemargins" : 
         {
               "x" : 0.25
@@ -10,8 +16,7 @@
         }
         ,"windowsettings" :
         {
-            "maxsize" : 80
-            ,"title" : "hello"
+            
         }
    }
 }

@@ -93,7 +93,7 @@ namespace OIV
         }
         else if (type == "slideShow")
         {
-            ToggleSlideShow();
+            SetSlideShowEnabled(!GetSlideShowEnabled());
             result.resValue = L"Slideshow ";
             result.resValue += fTimerSlideShow.GetInterval() > 0 ? L"on" : L"off";
         }
@@ -971,7 +971,7 @@ namespace OIV
         	
             fRefreshOperation.End();
             fFileDisplayTimer.Stop();
-            const_cast<ImageDescriptor&>(fImageState.GetOpenedImage()->GetDescriptor()).DisplayTime = fFileDisplayTimer.GetElapsedTimeInteger(LLUtils::StopWatch::TimeUnit::Milliseconds);
+            const_cast<ImageDescriptor&>(fImageState.GetOpenedImage()->GetDescriptor()).DisplayTime = fFileDisplayTimer.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
 
             fLastImageLoadTimeStamp.Start(); 
         }
@@ -1544,7 +1544,7 @@ namespace OIV
         {
             if (fileChangedEventArgs.fileName == L"Settings.json")
             {
-                LoadSettings();
+                LoadSettings(false);
             }
         }
         else
@@ -1566,11 +1566,14 @@ namespace OIV
 
         fTimerSlideShow.SetTargetWindow(fWindow.GetHandle());
         fTimerSlideShow.SetCallback([this]()
-        {
-            if (JumpFiles(1) == false && fCurrentFileIndex == std::distance(fListFiles.begin(), fListFiles.end()) - 1)
-                JumpFiles(FileIndexStart);
-        }
-        );
+            {
+                SetSlideShowEnabled(false);
+
+                bool foundFile = JumpFiles(1) ||
+                    ((fCurrentFileIndex == std::distance(fListFiles.begin(), fListFiles.end()) - 1) && JumpFiles(FileIndexStart));
+
+                SetSlideShowEnabled(foundFile);
+            });
         
         fDoubleTap.callback = [this]()
         {
@@ -1629,13 +1632,10 @@ namespace OIV
         fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
         fNotificationContextMenu->AddItem(OIV_TEXT("Quit"), int{});
 
+        LoadSettings(true);
 
-        LoadSettings();
-#if _DEBUG
-        fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
-
-#endif
-         
+        if (fAllowDynamicSettings)
+            fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
     }
 
     template <typename value_type, typename container_type,typename target_type>
@@ -1654,15 +1654,24 @@ namespace OIV
 
     }
 
-    void TestApp::LoadSettings()
+    void TestApp::LoadSettings(bool startup)
     {
-
         auto settings = ConfigurationLoader::LoadSettings();
 
         LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/maxzoom", fMaxPixelSize);
         LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/x", fImageMargins.x);
         LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/y", fImageMargins.y);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/minimagesize", fMinImageSize);
+        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/slideshowinterval", fSlideShowIntervalms);
+
+        if (startup)
+        {
+            LoadValue<ConfigurationLoader::Bool>(settings, "/system/allowdynamicsettings", fAllowDynamicSettings);
+        }
+
+#if _DEBUG
+        fAllowDynamicSettings = true;
+#endif
     }
 
 
@@ -1832,13 +1841,23 @@ namespace OIV
         
     }
 
-    void TestApp::ToggleSlideShow()
+
+    void TestApp::SetSlideShowEnabled(bool enabled)
     {
-        if (fTimerSlideShow.GetInterval() > 0)
-            fTimerSlideShow.SetInterval(0);
-        else
-            fTimerSlideShow.SetInterval(3000);
+        if (fSlideShowEnabled != enabled)
+        {
+            fSlideShowEnabled = enabled;
+            if (fSlideShowEnabled == true)
+            {
+                fTimerSlideShow.SetInterval(fSlideShowIntervalms);
+            }
+            else
+            {
+                fTimerSlideShow.SetInterval(0);
+            }
+        }
     }
+    
 
     void TestApp::SetFilterLevel(OIV_Filter_type filterType)
     {

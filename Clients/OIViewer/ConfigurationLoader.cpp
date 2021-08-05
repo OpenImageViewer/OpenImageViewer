@@ -102,12 +102,15 @@ namespace OIV
 
 						//stck.emplace(&child.value(), &currentChild);
 					}
+					else if (child.value().is_boolean())
+						currentChild.value = child.value().get<Bool>();
 					else if (child.value().is_number_integer())
-						currentChild.value = child.value().get<int64_t>();
+						currentChild.value = child.value().get<Integral>();
 					else if (child.value().is_number_float())
-						currentChild.value = child.value().get<long double>();
+						currentChild.value = child.value().get<Float>();
 					else if (child.value().is_string())
-						currentChild.value = child.value().get<std::string>();
+						currentChild.value = child.value().get<String>();
+
 
 					if (child.value().is_object() == false)
 					{
