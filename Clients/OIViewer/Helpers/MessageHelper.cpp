@@ -69,14 +69,15 @@ namespace OIV
         args.maxLines = 24;
         args.minSpaceFromValue = 3;
         args.spacer = '.';
-        args.valueColor = MessageFormatter::DefaultValueColor;
+        args.valueColor = "<textcolor=#ffffff>";
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
 
         if (image->GetDescriptor().Source != ImageSource::File)
             messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
         else
-            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ LLUtils::StringUtility::ToAString(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName()) });
+            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ LLUtils::StringUtility::ToAString(
+                MessageFormatter::FormatFilePath(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName())) });
 
         const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
 

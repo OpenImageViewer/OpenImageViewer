@@ -194,8 +194,12 @@ namespace OIV
         }
     }
 
-
-
+    std::wstring MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
+    {
+        using namespace std::filesystem;
+        return  L"<textcolor=#808080>" + filePath.parent_path().wstring() + path::preferred_separator + L"<textcolor=#7672ff>" + filePath.stem().wstring() + L"<textcolor=#ff00ff>" + filePath.extension().wstring();
+    }
+	
     std::string MessageFormatter::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)
     {
         std::stringstream ss;

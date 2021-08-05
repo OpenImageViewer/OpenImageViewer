@@ -936,14 +936,7 @@ namespace OIV
     void TestApp::DisplayOpenedFileName()
     {
         if (IsOpenedImageIsAFile())
-        {
-            using namespace std::filesystem;
-            std::wstringstream ss;
-            ss << L"File: ";
-            path p = GetOpenedFileName();
-            ss << p.parent_path().wstring() << path::preferred_separator << L"<textcolor=#ff00ff>" << p.stem().wstring() << L"<textcolor=#00ff00>" << p.extension().wstring();
-            SetUserMessage(ss.str());
-        }
+            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()));
     }
 
     void TestApp::FinalizeImageLoad(ResultCode result)

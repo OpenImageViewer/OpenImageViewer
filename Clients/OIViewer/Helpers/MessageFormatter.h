@@ -36,6 +36,7 @@ namespace OIV
         static const char* FormatSemantic(IMCodec::ChannelSemantic semantic);
         static const std::string& PickColor(IMCodec::ChannelSemantic semantic);
         static const char* FormatDataType(IMCodec::ChannelDataType dataType);
+        static std::wstring FormatFilePath(const std::filesystem::path& filePath);
 
         template<class T>
         static std::string numberFormatWithCommas(T value);
