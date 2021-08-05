@@ -87,7 +87,8 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 				    , in    float2 i_imageOffset
 					, in    float2 i_imageScale
 					, in    float4 i_viewportSize
-					, in    float2  i_inputUV
+					, in    float2 i_inputUV
+					, in	float i_originalSampledAlpha
 					, inout float4 o_texel)
 {
 	//Base width of the grid
@@ -126,7 +127,12 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 	{
 		float minImageScale = min(i_imageScale.x, i_imageScale.y);
 		float alpha = (1.0 -  minDD / maxDistance) * min(1, (minImageScale / fullOpacityGridScale));
-		o_texel = lerp(o_texel,float4(1,0,0,1), pow(abs(alpha), blendDecay));
+		float3 inverted = 1.0 - o_texel.rgb;
+		float3 gridBlendColor = float3(1,0,0);
+		float3 gridMaxBlend = 0.0;
+		float3 finalGridColor = lerp(inverted,gridBlendColor,max(1.0 - i_originalSampledAlpha ,gridMaxBlend) );
+		o_texel.rgb = lerp(o_texel.rgb, finalGridColor, pow(abs(alpha), blendDecay));
+		o_texel.a = 1.0;
 	}
 	
 }
@@ -166,10 +172,14 @@ void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4
             texel = GetChecker(BackgroundColor1, BackgroundColor2, screenUV, viewportSize);
 }
 
-void DrawImage(float2 uv, float2 screenUV,float2 scale, float2 viewportSize,in float2 imageSize, inout float4 texel)
+void DrawImage(float2 uv
+			, in 	float2 screenUV
+			, in 	float2 scale
+			, in 	float2 viewportSize
+			, in	float2 imageSize
+			, in	float4 sampledTexel,
+			  inout float4 texel)
 {
- 
-    float4 sampledTexel = SampleTexture(texture_1,uv);
     sampledTexel.xyz = clamp(0, 1.0, pow(abs(sampledTexel.xyz * uExposure  + uOffset), 1.0 / uGamma)) ;
     sampledTexel.xyz = saturate(sampledTexel.xyz, uSaturation);
 
@@ -189,12 +199,13 @@ float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize,
         FillBackGround(uv, i_inputUV, i_viewportSize.xy, texel);
     else
     {
-        DrawImage(uv, i_inputUV,uvScale, i_viewportSize.xy, i_imageSize, texel);
+	float4 sampledTexel = SampleTexture(texture_1,uv);
+        DrawImage(uv, i_inputUV,uvScale, i_viewportSize.xy, i_imageSize, sampledTexel, texel);
         //if (i_showGrid == 1)
           //  DrawPixelGrid(i_imageSize, i_viewportSize.xy, i_inputUV, uvScale, offset, texel);
-			
-		if (i_showGrid == 1)
-			DrawPixelGrid2(i_imageSize,i_ImageOffset,i_imageScale ,i_viewportSize, i_inputUV, texel);
+	
+	if (i_showGrid == 1)
+		DrawPixelGrid2(i_imageSize,i_ImageOffset,i_imageScale ,i_viewportSize, i_inputUV, sampledTexel.a, texel);
 			
     }
 	
