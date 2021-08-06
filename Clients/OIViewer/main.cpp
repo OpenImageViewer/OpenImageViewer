@@ -64,10 +64,10 @@ int mainFunction(int argc, const wchar_t** argv)
 #ifdef WIN32
 
 int WinMain(
-         HINSTANCE hInstance,
-         HINSTANCE hPrevInstance,
-         LPSTR     lpCmdLine,
-         int       nCmdShow
+         [[maybe_unused]] HINSTANCE hInstance,
+         [[maybe_unused]] HINSTANCE hPrevInstance,
+         [[maybe_unused]] LPSTR     lpCmdLine,
+         [[maybe_unused]] int       nCmdShow
 )
 {
     int nArgs;

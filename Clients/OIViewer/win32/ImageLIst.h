@@ -60,10 +60,10 @@ public:
     }
 
 
-    void MouseClick(int xPos, int yPos)
+    void MouseClick([[maybe_unused]] int xPos, int yPos)
     {
-        int selected = yPos / fEntryHeight + fPos;
-        if (selected < fImages.size())
+        int selected =  yPos / fEntryHeight + fPos;
+        if (selected < static_cast<int>(fImages.size()))
             SetSelected(selected);
     }
 
@@ -109,7 +109,7 @@ public:
         
         HBRUSH grayBrush = CreateSolidBrush(RGB(245, 249, 213));
         HBRUSH lightgrayBrush = CreateSolidBrush(RGB(224, 249, 213));
-        HBRUSH greenBrush = CreateSolidBrush(RGB(0, 255, 0));
+        //HBRUSH greenBrush = CreateSolidBrush(RGB(0, 255, 0));
         HBRUSH BlueBrush = CreateSolidBrush(RGB(0, 0, 200));
         const int lineWidth = 2;
         HPEN hPen = CreatePen(PS_DASHDOTDOT, lineWidth, RGB(0, 0, 0));
@@ -126,9 +126,9 @@ public:
 
         // Draw the text directly to compare to the bitmap
         font.lfQuality = PROOF_QUALITY;
-        HFONT hFont = CreateFontIndirect(&font);
+        //HFONT hFont = CreateFontIndirect(&font);
         font.lfQuality = 0;
-        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+        //HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
 
 
         //LOGFONT lf = *plf;

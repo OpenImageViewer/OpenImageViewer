@@ -283,19 +283,14 @@ public:
                     for (FolderID folderID : foldersToRemove)
                     {
                         auto it = fMapIDData.find(folderID);
-                        folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath });
+                        folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath, std::wstring(),std::wstring() });
                         RemoveFolder(folderID); 
                     }
                 }
 
-
                 // Unlock mutex and Raise events 
                 for (const auto& eventArgs : folderRemovalEvents)
-                {
-                    for (const auto& eventArgs : folderRemovalEvents)
-                        FileChangedEvent.Raise(eventArgs);
-                }
-
+                    FileChangedEvent.Raise(eventArgs);
             }
             else if (fQueueShutdownBackgroundThread == false)
             {

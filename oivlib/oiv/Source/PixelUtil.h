@@ -5,6 +5,7 @@
 #include "AxisAlignedTransform.h"
 #include <ExoticNumbers/Int24.h>
 #include <LLUtils/Exception.h>
+#include <LLUtils/Warnings.h>
 
 namespace IMUtil
 {
@@ -24,6 +25,11 @@ namespace IMUtil
         struct alignas(1) BitTexel32 : public BitTexel24 { uint8_t W; };
 
 
+LLUTILS_DISABLE_WARNING_PUSH           
+
+LLUTILS_DISABLE_WARNING_ANONYMOUS_STRUCT
+LLUTILS_DISABLE_WARNING_NESTED_ANNONYMOUS_TYPES
+
         struct alignas(1) BitTexel32Ex
         {
             union
@@ -38,6 +44,7 @@ namespace IMUtil
                 };
             };
         };
+LLUTILS_DISABLE_WARNING_POP
 #pragma pack(pop)
 
         // A function to copy a same format texel from one place to another
@@ -331,6 +338,8 @@ namespace IMUtil
             case OIV_AxisAlignedRotation::Rotate90CW:
                 transformData.flipX ^= 1;
                 transformData.switchDimensions = 1;
+                break;
+            case OIV_AxisAlignedRotation::None:
                 break;
             }
 

@@ -54,13 +54,13 @@ namespace OIV
             return cRef;
         }
 
-        HRESULT DragAndDropTarget::DragEnter(IDataObject* pdto, DWORD grfKeyState, POINTL ptl, DWORD* pdwEffect)
+        HRESULT DragAndDropTarget::DragEnter([[maybe_unused]] IDataObject* pdto, [[maybe_unused]] DWORD grfKeyState, [[maybe_unused]] POINTL ptl, DWORD* pdwEffect)
         {
             *pdwEffect &= DROPEFFECT_COPY;
             return S_OK;
         }
 
-        HRESULT DragAndDropTarget::DragOver(DWORD grfKeyState, POINTL ptl, DWORD* pdwEffect)
+        HRESULT DragAndDropTarget::DragOver([[maybe_unused]] DWORD grfKeyState, [[maybe_unused]] POINTL ptl, DWORD* pdwEffect)
         {
             *pdwEffect &= DROPEFFECT_COPY;
             return S_OK;
@@ -71,7 +71,7 @@ namespace OIV
             return S_OK;
         }
 
-        HRESULT DragAndDropTarget::Drop(IDataObject* pdto, DWORD grfKeyState, POINTL ptl, DWORD* pdwEffect)
+        HRESULT DragAndDropTarget::Drop(IDataObject* pdto, [[maybe_unused]]  DWORD grfKeyState, [[maybe_unused]]  POINTL ptl, DWORD* pdwEffect)
         {
             OpenFilesFromDataObject(pdto);
             *pdwEffect &= DROPEFFECT_COPY;

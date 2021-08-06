@@ -17,7 +17,7 @@ namespace OIV
 	{
 	struct MenuItemData
 	{
-		int id;
+		uint32_t id;
 		MENUITEMINFO info;
 		T userData;
 		LLUtils::native_string_type itemDisplayName;
@@ -55,7 +55,9 @@ namespace OIV
 						break;
 				case AlignmentHorizontal::Right:
 					flags.set(TPM_RIGHTALIGN);
-						break;
+					break;
+				case AlignmentHorizontal::None:
+					break;
 			}
 
 			switch (vertical)
@@ -69,6 +71,8 @@ namespace OIV
 				case AlignmentVertical::Bottom:
 					flags.set(TPM_BOTTOMALIGN);
 						break;
+				case AlignmentVertical::None:
+					break;
 			}
 
 			auto itemId = TrackPopupMenu(fMenu, flags, x, y, 0, fHandle, nullptr);
@@ -143,7 +147,7 @@ private:
 		std::map<std::wstring, MenuItemData> fMapCommandToData;
 		HMENU fMenu = nullptr;
 		HWND fHandle = nullptr;
-		uint16_t fCurrentItemID = 0;
+		uint32_t fCurrentItemID = 0;
 		bool fVisible = false;
 	};
 }

@@ -17,13 +17,13 @@ namespace OIV
             {
                 static_assert(sizeof(KeyCombination) <= sizeof(size_t)
                     , "For the benefit of fast hashing the size of key combination must less or equal to the size of size_t");
-                return static_cast<size_t>(key.keycode);
+                return static_cast<size_t>(key.combinationID);
             }
         };
 
         bool operator ==( const KeyCombination& rhs) const
         {
-            return keyValue == rhs.keyValue;
+            return combinationID == rhs.combinationID;
         }
 
         static ListKeyCombinations  FromString(const std::string& string);
@@ -37,23 +37,29 @@ namespace OIV
         void AssignKey(KeyCode keyCode);
 
 #pragma region memeber fields
+#pragma pack(push,1)
     public:
-        union
+        uint32_t combinationID = 0;
+
+        struct KeyCombinationFlags
         {
-            uint32_t keyValue = 0;
-            struct
-            {
-                KeyCode keycode;
-                unsigned char leftCtrl : 1;
-                unsigned char rightCtrl : 1;
-                unsigned char leftAlt : 1;
-                unsigned char rightAlt : 1;
-                unsigned char leftShift : 1;
-                unsigned char rightShift : 1;
-                unsigned char leftWinKey : 1;
-                unsigned char rightWinKey : 1;
-            };
+            KeyCode keycode;
+            unsigned char leftCtrl : 1;
+            unsigned char rightCtrl : 1;
+            unsigned char leftAlt : 1;
+            unsigned char rightAlt : 1;
+            unsigned char leftShift : 1;
+            unsigned char rightShift : 1;
+            unsigned char leftWinKey : 1;
+            unsigned char rightWinKey : 1;
+            unsigned char reserved : 8;
         };
+#pragma pack(pop)
+        KeyCombinationFlags& keydata()
+        {
+			static_assert(sizeof(uint32_t) == sizeof(KeyCombinationFlags), "Size mismatch");
+            return *reinterpret_cast<KeyCombinationFlags*>(&combinationID);
+        }
 
 #pragma endregion //memeber fields
     };

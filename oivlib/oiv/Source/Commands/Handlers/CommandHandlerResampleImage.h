@@ -2,7 +2,7 @@
 #pragma once
 #include "../CommandHandler.h"
 #include "defs.h"
-#include "../Commands/CommandProcessor.h"
+#include "../../Commands/CommandProcessor.h"
 
 namespace OIV
 {
@@ -19,11 +19,13 @@ namespace OIV
         {
             ImageHandle handle = ImageHandleNull;
             ResultCode result = RC_UknownError;
-
-            const OIV_CMD_Resample_Request* req = reinterpret_cast<const OIV_CMD_Resample_Request*>(request);
-            OIV_CMD_Resample_Response* res = reinterpret_cast<OIV_CMD_Resample_Response*>(response);
-            result = ApiGlobal::sPictureRenderer->ResampleImage(*req, handle);
-            res->imageHandle = handle;
+            if (Verify(requestSize, responseSize) == RC_Success)
+            {
+                const OIV_CMD_Resample_Request* req = reinterpret_cast<const OIV_CMD_Resample_Request*>(request);
+                OIV_CMD_Resample_Response* res = reinterpret_cast<OIV_CMD_Resample_Response*>(response);
+                result = ApiGlobal::sPictureRenderer->ResampleImage(*req, handle);
+                res->imageHandle = handle;
+            }
 
             return result;
         }

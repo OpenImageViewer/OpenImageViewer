@@ -20,6 +20,7 @@ namespace OIV
         const std::wstring& GetsourceFileName() const;
         const LLUtils::Buffer& GetShaderData() const;
         void Use();
+        virtual ~D3D11Shader() {};
 
     protected: // types
         struct ShaderCompileParams

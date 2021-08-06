@@ -71,7 +71,7 @@ namespace OIV
         private:
             static VOID CALLBACK OnTimer(
                 _In_ PVOID   lpParameter,
-                _In_ BOOLEAN TimerOrWaitFired
+                [[maybe_unused]] _In_ BOOLEAN TimerOrWaitFired
             )
             {
                 reinterpret_cast<HighPrecisionTimer*>(lpParameter)->fCallback();

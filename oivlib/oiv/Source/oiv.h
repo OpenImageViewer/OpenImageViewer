@@ -1,7 +1,7 @@
 #pragma once
 #include "IPictureRenderer.h"
 #include <ImageLoader.h>
-#include <interfaces/IRenderer.h>
+#include <Interfaces/IRenderer.h>
 #include "ImageManager.h"
 #include "Resampler.h"
 #include <set>

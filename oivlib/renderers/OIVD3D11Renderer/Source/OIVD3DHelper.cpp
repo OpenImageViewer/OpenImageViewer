@@ -1,4 +1,3 @@
-#pragma once
 #include "D3D11/D3D11Texture.h"
 #include "Image.h"
 #include "OIVD3DHelper.h"

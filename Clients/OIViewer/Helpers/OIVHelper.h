@@ -39,6 +39,8 @@ namespace OIV
                 return white;
             case ChannelSemantic::Monochrome:
             case ChannelSemantic::Float:
+            case ChannelSemantic::None:
+
                 return other;
             }
         }
@@ -71,6 +73,8 @@ namespace OIV
                 case ChannelDataType::Float:
                     ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
                     break;
+                case ChannelDataType::None:
+                    LL_EXCEPTION_UNEXPECTED_VALUE;
                 }
 
                 if (channel.width != 8 

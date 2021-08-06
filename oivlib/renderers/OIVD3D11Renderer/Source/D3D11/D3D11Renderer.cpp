@@ -46,10 +46,14 @@ namespace OIV
         
         ComPtr<ID3D11Texture2D> backbuffer;
         
+LLUTILS_DISABLE_WARNING_PUSH
+LLUTILS_DISABLE_WARNING_LANGUAGE_EXTENSION
+
         D3D11Error::HandleDeviceError(
             d3dSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(backbuffer.GetAddressOf()))
             ,"Can not retrieve back buffer");
 
+LLUTILS_DISABLE_WARNING_POP
         // create a render target pointing to the back buffer
         D3D11Error::HandleDeviceError(d3dDevice->CreateRenderTargetView(backbuffer.Get(), nullptr, fRenderTargetView.GetAddressOf())
         ," Can not create render target view");

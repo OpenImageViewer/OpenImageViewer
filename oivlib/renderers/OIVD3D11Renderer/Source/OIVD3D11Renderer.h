@@ -1,5 +1,5 @@
 #pragma once
-#include <interfaces/IRenderer.h>
+#include <Interfaces/IRenderer.h>
 #include <defs.h>
 #include "D3D11/D3D11Renderer.h"
 

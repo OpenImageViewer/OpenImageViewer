@@ -15,7 +15,7 @@ namespace OIV::Win32
         static constexpr UINT WM_PRIVATE_NOTIFICATION_CALLBACK_MESSAGE_ID = WM_USER + 1;
         using IconID = uint8_t;
     public: 
-        IconID AddIcon(LPWSTR IconName, std::wstring title);
+        IconID AddIcon(LPWSTR IconName, const std::wstring& tooltip);
         ~NotificationIconGroup();
     private: //methods
         LRESULT OnWindowMessage(const Win32::Event* evnt);
@@ -42,7 +42,6 @@ namespace OIV::Win32
         };
         std::map<IconID, NotificationIconData> fMapIconData;
 
-        GUID fGuid;
         Win32Window fWindow;
         LLUtils::UniqueIdProvider<IconID> fIconIdProvider{ 1 };
     };

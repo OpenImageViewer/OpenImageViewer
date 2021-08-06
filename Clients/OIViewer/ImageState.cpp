@@ -300,8 +300,6 @@ namespace OIV
         case ImageChainStage::Resampled:
         {
             //TODO: adjust resampling conditions
-            auto& rasterizedInfo = fCurrentImageChain.Get(ImageChainStage::Rasterized)->GetDescriptor();
-            
             if (GetScale().x > 0.8 || GetScale().y > 0.8)
             {
                 return nullptr;

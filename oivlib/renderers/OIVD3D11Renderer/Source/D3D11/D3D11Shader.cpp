@@ -1,4 +1,4 @@
-#include "d3d11shader.h"
+#include "D3D11Shader.h"
 #include <LLUtils/FileHelper.h>
 #include "D3D11Utility.h"
 
@@ -9,13 +9,14 @@ namespace  OIV
     {
     public:
 
-        D3D11IncludeHandler(D3D11Shader* shader)
+        D3D11IncludeHandler(D3D11Shader* shader) : fShader(shader)
         {
-            fShader = shader;
+            
         }
 
-        HRESULT __stdcall Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
-            LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override
+        
+        COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE Open([[maybe_unused]] D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
+            [[maybe_unused]] LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override
         {
             using namespace std;
             filesystem::path p = fShader->GetsourceFileName();
@@ -32,7 +33,7 @@ namespace  OIV
             
         }
 
-        HRESULT __stdcall Close(LPCVOID pData) override
+        COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE Close(LPCVOID pData) override
         {
             LLUtils::Buffer::Allocator::Deallocate(reinterpret_cast<std::byte*>(const_cast<void*>(pData)));
             return S_OK;

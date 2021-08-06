@@ -14,7 +14,7 @@ namespace OIV
     public:
       void AddBinding(KeyCombination combination,const BindingType& binding)
       {
-          if (static_cast<KeyCode>(combination.keycode) == KeyCode::UNASSIGNED)
+          if (static_cast<KeyCode>(combination.keydata().keycode) == KeyCode::UNASSIGNED)
               LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError , "trying to add an 'Unassigned' key binding");
 
 

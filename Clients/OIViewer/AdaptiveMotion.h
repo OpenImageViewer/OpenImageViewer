@@ -31,7 +31,7 @@ namespace OIV
         }
 
     private:
-        double GetAcceleration(double time) const
+        double GetAcceleration() const
         {
             return fAccelerationFactor;
         }
@@ -39,7 +39,7 @@ namespace OIV
         double GetVelocity(double time) const
         {
             //Velocity = Acceleration * Time^2
-            return  std::abs(GetAcceleration(time) * time * time) * LLUtils::Math::Sign(time);
+            return  std::abs(GetAcceleration() * time * time) * LLUtils::Math::Sign(time);
         }
     };
 }

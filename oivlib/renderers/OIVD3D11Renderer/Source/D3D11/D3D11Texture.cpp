@@ -48,7 +48,7 @@ namespace OIV
     {
         const bool generateMips = fCreateparams.mips == -1;
 
-        D3D11_TEXTURE2D_DESC desc = {0};
+        D3D11_TEXTURE2D_DESC desc {};
         desc.Width = static_cast<UINT>(fCreateparams.width);
         desc.Height = static_cast<UINT>(fCreateparams.height);
         desc.MipLevels = generateMips ? 0 : 1;

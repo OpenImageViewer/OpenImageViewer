@@ -132,7 +132,7 @@ namespace OIV
         return true;
     }
     //---------------------------------------------------------------------
-    const size_t MonitorInfo::getMonitorsCount() const
+    size_t MonitorInfo::getMonitorsCount() const
     {
         return mDisplayDevices.size();
     }
@@ -150,7 +150,7 @@ namespace OIV
     RECT MonitorInfo::getBoundingMonitorAreaInternal()
     {
         using namespace std;
-        RECT rect = { 0 };
+        RECT rect {};
         size_t count = getMonitorsCount();
         for (size_t i = 0; i < count; i++)
         {

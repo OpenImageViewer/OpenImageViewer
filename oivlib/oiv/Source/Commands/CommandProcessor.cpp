@@ -1,3 +1,6 @@
+#include <LLUtils/Warnings.h>
+LLUTILS_DISABLE_WARNING_PUSH
+LLUTILS_DISABLE_WARNING_UNUSED_PARAMETER
 #include "CommandProcessor.h"
 #include "Handlers/CommandHandlerInit.h"
 #include "Handlers/CommandHandlerLoadFile.h"
@@ -21,7 +24,7 @@
 #include "Handlers/CommandHandlerRegisterCallbacks.h"
 #include "Handlers/CommandHandlerGetSubImages.h"
 #include "Handlers/CommandHandlerResampleImage.h"
-
+LLUTILS_DISABLE_WARNING_POP
 
 namespace OIV
 {

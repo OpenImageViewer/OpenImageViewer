@@ -31,9 +31,10 @@ namespace OIV
 
             return rc;
         }
-
+    public:
+        virtual ~CommandHandler() {}
     protected:
-        virtual ResultCode Verify(std::size_t requestSize, std::size_t responseSize) { return RC_Success; }
+        virtual ResultCode Verify([[maybe_unused]] std::size_t requestSize, [[maybe_unused]] std::size_t responseSize) { return RC_Success; }
 
         virtual ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) = 0;
     };

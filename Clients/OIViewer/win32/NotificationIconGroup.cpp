@@ -3,7 +3,7 @@
 #include <windowsx.h>
 namespace OIV::Win32
 {
-    NotificationIconGroup::IconID NotificationIconGroup::AddIcon(LPWSTR IconName, std::wstring title)
+    NotificationIconGroup::IconID NotificationIconGroup::AddIcon(LPWSTR IconName, const std::wstring& tooltip)
     {
         if (fWindow.GetHandle() == nullptr)
         {
@@ -15,14 +15,14 @@ namespace OIV::Win32
         nid.cbSize = sizeof(nid);
         nid.hWnd = fWindow.GetHandle();
         nid.uVersion = NOTIFYICON_VERSION_4;
-        nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+        nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_SHOWTIP;
         IconID iconId = fIconIdProvider.Acquire();
         nid.uID = static_cast<UINT>(iconId);
         nid.uCallbackMessage = WM_PRIVATE_NOTIFICATION_CALLBACK_MESSAGE_ID;
 
-        LLUtils::StringUtility::StrCpy(nid.szTip, LLUtils::array_length(nid.szTip), OIV_TEXT("Open image viewer"));
+        LLUtils::StringUtility::StrCpy(nid.szTip, LLUtils::array_length(nid.szTip), tooltip.c_str());
         
-        nid.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_APP_ICON));
+        nid.hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(IconName));
         
         if (Shell_NotifyIcon(NIM_ADD, &nid) == TRUE && Shell_NotifyIcon(NIM_SETVERSION, &nid) == TRUE)
         {
@@ -68,7 +68,7 @@ namespace OIV::Win32
         auto iconData = fMapIconData.find(iconid);
         if (iconData != fMapIconData.end())
         {
-            NOTIFYICONIDENTIFIER iconIdentifer{ static_cast<DWORD>(sizeof(NOTIFYICONIDENTIFIER)), fWindow.GetHandle(),static_cast<UINT>(iconid) };
+            NOTIFYICONIDENTIFIER iconIdentifer{ static_cast<DWORD>(sizeof(NOTIFYICONIDENTIFIER)), fWindow.GetHandle(),static_cast<UINT>(iconid), GUID{} };
             RECT rect;
 
             if (Shell_NotifyIconGetRect(&iconIdentifer, &rect) == S_OK) [[likely]]
@@ -81,12 +81,14 @@ namespace OIV::Win32
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotFound, "Icon id not found");
             }
         };
+
+        return {};
     }
 
     void NotificationIconGroup::HandleMessage(const WinMessage& message)
     {
         UINT notificationEvent = LOWORD(message.lParam);
-        USHORT iconID = HIWORD(message.lParam);
+        //USHORT iconID = HIWORD(message.lParam);
         short  x = GET_X_LPARAM(message.wParam);
         short y = GET_Y_LPARAM(message.wParam);
 

@@ -162,7 +162,7 @@ namespace OIV
 				}
 				handle = fImageManager.AddImage(mainImage);
 
-				for (int i = 1; i < images.size(); i++)
+				for (size_t i = 1; i < images.size(); i++)
 				{
 
 					if (exifOrientation != 0)

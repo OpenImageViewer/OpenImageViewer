@@ -6,7 +6,7 @@
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
 #include <defs.h>
-#include <interfaces/IrendererDefs.h>
+#include <Interfaces/IRendererDefs.h>
 #include <map>
 
 namespace OIV
@@ -102,7 +102,7 @@ namespace OIV
         LLUtils::Color fBackgroundColor = { 45,45,48,255 };
 
 #pragma region /* Direct3D111 resources*/
-        D3D11_VIEWPORT fViewport = {0};
+        D3D11_VIEWPORT fViewport {};
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> fBufferSelection;
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_COMMON> fBufferImageCommon;
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_MAIN> fBufferImageMain;

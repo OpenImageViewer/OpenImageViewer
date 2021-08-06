@@ -74,7 +74,6 @@ namespace OIV
         OIVBaseImageSharedPtr fOpenedImage;
         bool fUseRainbowNormalization = false;
         ImageChainStage fFinalProcessingStage = ImageChainStage::Rasterized;
-        OIV_Filter_type fFilterType= OIV_Filter_type::FT_None;
         LLUtils::PointF64 fScale = LLUtils::PointF64::One;
         LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
     };

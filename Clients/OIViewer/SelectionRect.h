@@ -41,8 +41,6 @@ namespace OIV
         LLUtils::RectI32 fSelectionRect;
         LLUtils::PointI32 fSelectStartPoint;
         LLUtils::PointI32 fSelectEndPoint;
-        const uint16_t pixelsThreshold = 15;
-        const uint16_t pixelsThresholdSquare = pixelsThreshold * pixelsThreshold;
         LockMode fLockMode = LockMode::NoLock;
         SelectionRectChangedCallback fCallback;
     };

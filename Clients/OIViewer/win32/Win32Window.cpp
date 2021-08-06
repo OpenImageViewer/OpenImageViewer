@@ -135,8 +135,8 @@ namespace OIV
 		{
 			// Destroy, but hide self and children first, for clean visuals. 
 			SetVisible(false);
-			for (auto& child : fChildren)
-				SetVisible(false);
+            for (auto& child : fChildren)
+                child->SetVisible(false);
 
 
             //Create a temporary list of children so fChildren won't get validated.
@@ -281,19 +281,18 @@ namespace OIV
 
             if (enabled != enable)
             {
-
-                switch (enable)
+                if (enable == false)
                 {
-                case false:
                     fDragAndDrop->Detach();
                     fDragAndDrop.Reset();
-                    break;
-                case true:
+                }
+                else
+                {
                     fDragAndDrop = new DragAndDropTarget(*this);
-                    break;
                 }
             }
         }
+        
 
         LRESULT Win32Window::SendMessage(UINT msg, WPARAM wParam, LPARAM lparam)
         {
@@ -345,8 +344,6 @@ namespace OIV
 
         void Win32Window::ToggleFullScreen(bool multiMonitor)
         {
-            HWND hwnd = fHandleWindow;
-
             switch (fFullSceenState)
             {
             case FullSceenState::Windowed:
@@ -361,9 +358,9 @@ namespace OIV
             case FullSceenState::MultiScreen:
                 SetWindowed();
                 break;
+            case FullSceenState::None:
+                break;
             }
-
-
         }
 
         void Win32Window::DestroyResources()
@@ -491,7 +488,7 @@ namespace OIV
                     //Do nothing
                     break;
                 case DoubleClickMode::Default:
-                    if (DefWindowProc(message.hWnd, WM_NCHITTEST, message.wParam, message.lParam) != message.wParam)
+                    if (static_cast<WPARAM>(DefWindowProc(message.hWnd, WM_NCHITTEST, message.wParam, message.lParam)) != message.wParam)
                         defaultProc = false;
                     break;
                 case DoubleClickMode::NonClientArea:

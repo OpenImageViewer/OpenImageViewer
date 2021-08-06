@@ -86,15 +86,16 @@ namespace OIV
     KeyCombination KeyCombination::FromVirtualKey(uint32_t virtualKey, uint32_t params)
     {
         KeyCombination combination;
-        combination.leftAlt = (GetKeyState(VK_LMENU) & static_cast<USHORT>(0x8000)) != 0;
-        combination.rightAlt = (GetKeyState(VK_RMENU) & static_cast<USHORT>(0x8000)) != 0;
-        combination.leftCtrl = (GetKeyState(VK_LCONTROL) & static_cast<USHORT>(0x8000)) != 0;
-        combination.rightCtrl = (GetKeyState(VK_RCONTROL) & static_cast<USHORT>(0x8000)) != 0;
-        combination.leftShift = (GetKeyState(VK_LSHIFT) & static_cast<USHORT>(0x8000)) != 0;
-        combination.rightShift = (GetKeyState(VK_RSHIFT) & static_cast<USHORT>(0x8000)) != 0;
-        combination.leftWinKey = (GetKeyState(VK_LWIN) & static_cast<USHORT>(0x8000)) != 0;
-        combination.rightWinKey = (GetKeyState(VK_RWIN) & static_cast<USHORT>(0x8000)) != 0;
-        combination.keycode = KeyCodeHelper::KeyCodeFromVK(virtualKey, params);
+        auto& flags = combination.keydata();
+        flags.leftAlt = (GetKeyState(VK_LMENU) & static_cast<USHORT>(0x8000)) != 0;
+        flags.rightAlt = (GetKeyState(VK_RMENU) & static_cast<USHORT>(0x8000)) != 0;
+        flags.leftCtrl = (GetKeyState(VK_LCONTROL) & static_cast<USHORT>(0x8000)) != 0;
+        flags.rightCtrl = (GetKeyState(VK_RCONTROL) & static_cast<USHORT>(0x8000)) != 0;
+        flags.leftShift = (GetKeyState(VK_LSHIFT) & static_cast<USHORT>(0x8000)) != 0;
+        flags.rightShift = (GetKeyState(VK_RSHIFT) & static_cast<USHORT>(0x8000)) != 0;
+        flags.leftWinKey = (GetKeyState(VK_LWIN) & static_cast<USHORT>(0x8000)) != 0;
+        flags.rightWinKey = (GetKeyState(VK_RWIN) & static_cast<USHORT>(0x8000)) != 0;
+        flags.keycode = KeyCodeHelper::KeyCodeFromVK(virtualKey, params);
         return combination;
     }
 #endif
@@ -104,32 +105,32 @@ namespace OIV
         switch (key)
         {
         case KeyCode::LALT:
-            leftAlt = 1;
+            keydata().leftAlt = 1;
             break;
         case KeyCode::RALT:
-            rightAlt = 1;
+            keydata().rightAlt = 1;
             break;
         case KeyCode::RCONTROL:
-            rightCtrl = 1;
+            keydata().rightCtrl = 1;
             break;
         case KeyCode::LCONTROL:
-            leftCtrl = 1;
+            keydata().leftCtrl = 1;
             break;
         case KeyCode::RSHIFT:
-            rightShift = 1;
+            keydata().rightShift = 1;
             break;
         case KeyCode::LSHIFT:
-            leftShift = 1;
+            keydata().leftShift = 1;
             break;
         case KeyCode::RWIN:
-            rightWinKey = 1;
+            keydata().rightWinKey = 1;
             break;
         case KeyCode::LWIN:
-            leftWinKey = 1;
+            keydata().leftWinKey = 1;
             break;
         default:
             //Not a modifer - assign key.
-            keycode = key;
+            keydata().keycode = key;
             break;
         }
     }

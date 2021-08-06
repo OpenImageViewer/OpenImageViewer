@@ -72,8 +72,6 @@ namespace OIV
             const void* fAddress;
             uint8_t fSize;
         };
-
-#pragma pack(push,1)
     }
 
     template <typename underlying_type>

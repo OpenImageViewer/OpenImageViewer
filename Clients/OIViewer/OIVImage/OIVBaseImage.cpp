@@ -72,7 +72,7 @@ namespace OIV
 
                 //assert(response.copiedElements == numSubImages)
 
-                for (int i = 0 ; i < fSubImages.size(); i++)
+                for (size_t i = 0 ; i < fSubImages.size(); i++)
                 {
                     fSubImages[i] = std::make_shared<OIVHandleImage>(imageArray[i], false);
                 }
@@ -98,6 +98,8 @@ namespace OIV
         OIV_CMD_QueryImageInfo_Request loadRequest;
         loadRequest.handle = GetDescriptor().ImageHandle;
         ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_QueryImageInfo, &loadRequest, &textImageInfo);
+        if (result != ResultCode::RC_Success)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, " Can not query image information");
         GetDescriptorMutable().Bpp = textImageInfo.bitsPerPixel;
         GetDescriptorMutable().Height = textImageInfo.height;
         GetDescriptorMutable().Width = textImageInfo.width;

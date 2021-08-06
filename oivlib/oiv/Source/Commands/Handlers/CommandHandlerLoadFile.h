@@ -15,7 +15,7 @@ namespace OIV
             return VERIFY(OIV_CMD_LoadFile_Request, requestSize, OIV_CMD_LoadFile_Response, responseSize);
         }
 
-        ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
+        ResultCode ExecuteImpl(const void* request, [[maybe_unused]] const std::size_t requestSize, void* response, const std::size_t responseSize) override
         {
             ImageHandle handle = ImageHandleNull;
             ResultCode result = RC_UknownError;

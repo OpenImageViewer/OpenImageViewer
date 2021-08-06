@@ -159,7 +159,7 @@ namespace OIV
             fMouseState.Update(mouse);
         }
 
-        void MainWindow::HandleRawInputKeyboard(const RAWKEYBOARD& keyboard)
+        void MainWindow::HandleRawInputKeyboard([[maybe_unused]] const RAWKEYBOARD& keyboard)
         {
             //TODO: add support here for keyboard raw input.
         }
@@ -169,7 +169,7 @@ namespace OIV
 
 
 
-        HWND MainWindow::DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts)
+        HWND MainWindow::DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, [[maybe_unused]] uint32_t cParts)
         {
             HWND hwndStatus;
 
@@ -335,7 +335,6 @@ namespace OIV
             const WinMessage & message = evnt->message;
 
             LRESULT retValue = 0;
-            bool defaultProc = true;
             switch (message.message)
             {
             case WM_CREATE:
@@ -373,6 +372,7 @@ namespace OIV
                 break;
             case WM_DESTROY:
                 PostQuitMessage(0);
+                break;
             case WM_ACTIVATE:
                 if (message.wParam != WA_INACTIVE)
                  SetIsTrayWindow(false);

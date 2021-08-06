@@ -103,7 +103,7 @@ namespace OIV
     }
 
 
-    TexelConvertor::SwizzleFuncType TexelConvertor::PopulateSwizzleFunc(IMCodec::TexelFormat sourcePixelFormat, IMCodec::TexelFormat targetPixelFormat)
+    TexelConvertor::SwizzleFuncType TexelConvertor::PopulateSwizzleFunc([[maybe_unused]] IMCodec::TexelFormat sourcePixelFormat, [[maybe_unused]]  IMCodec::TexelFormat targetPixelFormat)
     {
         return nullptr;
         //LL_EXCEPTION_NOT_IMPLEMENT("Auto generation of convertion swizzle function is yet to be implemented");

@@ -6,7 +6,7 @@
 
 namespace OIV
 {
-    ResultCode CommandHandlerInit::ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize)
+    ResultCode CommandHandlerInit::ExecuteImpl(const void* request, [[maybe_unused]] const std::size_t requestSize, [[maybe_unused]] void* response, [[maybe_unused]] const std::size_t responseSize)
     {
 
         ResultCode result = RC_UknownError;

@@ -1,5 +1,5 @@
 #include "functions.h"
-#include "ApiImpl.h"
+#include "APIImpl.h"
 
 ResultCode OIV_Execute(int command, std::size_t requestSize, void* requestData, std::size_t responseSize, void* responseData)
 {

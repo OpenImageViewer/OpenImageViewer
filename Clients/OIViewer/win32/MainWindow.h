@@ -67,7 +67,7 @@ namespace OIV
             static const int cTimerIDRawInputFlush = 2500;
             uint16_t fRawInputInterval = 0;
             LLUtils::StopWatch fRawInputTimer = (true);
-            uint64_t fRawInputLastEventDisptchTime = 0;;
+            uint64_t fRawInputLastEventDisptchTime = 0;
             CursorType fCurrentCursorType = CursorType::SystemDefault;
             std::array<HCURSOR, static_cast<int>(CursorType::Count)> fCursors;
             bool fCursorsInitialized = false;

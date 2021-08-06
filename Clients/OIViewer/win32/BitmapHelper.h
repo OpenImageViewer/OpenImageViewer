@@ -104,6 +104,9 @@ public:
         info.bmiHeader = header;
 
          int returnedLines = GetDIBits(hDC, fBitmap, 0, header.biHeight, pixelsData.data(), &info, DIB_RGB_COLORS);
+
+         if (returnedLines != header.biHeight)
+             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Data size mismatch");
         
         ReleaseDC(nullptr, hDC);
         fileHeader.bfSize = fileHeader.bfOffBits + pixelsSize;
@@ -150,7 +153,11 @@ public:
         char* ppvBits;
 
         HBITMAP hBitmap = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, (void**)&ppvBits, NULL, 0);
+        
         int res = SetDIBits(NULL, hBitmap, 0, height, pPixels, &bi, DIB_RGB_COLORS);
+        if (res != height)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Data size mismatch");
+
         return hBitmap;
     }
 

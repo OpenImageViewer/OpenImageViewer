@@ -60,8 +60,8 @@ namespace OIV
                 fBufferDesc.ByteWidth =  LLUtils::Utility::Align(fBufferDesc.ByteWidth,static_cast<UINT>(16));
 
 
-                D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBuffer(&fBufferDesc, initialData,
-                    fBuffer.ReleaseAndGetAddressOf())
+            D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateBuffer(&fBufferDesc, initialData,
+                        fBuffer.ReleaseAndGetAddressOf())
                     , "Can not create constant buffer");
 
             OIV_D3D_SET_OBJECT_NAME(fBuffer, "Constant buffer");

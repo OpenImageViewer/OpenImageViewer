@@ -3,11 +3,10 @@ namespace OIV
 {
     enum class FullSceenState
     { 
-          Default
+          None
         , Windowed
         , SingleScreen
         , MultiScreen
-
     };
 }
 

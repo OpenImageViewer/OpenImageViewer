@@ -6,6 +6,7 @@
 #include "D3D11Common.h"
 #include "D3D11Error.h"
 #include <cstdlib>
+#include <LLUtils/Warnings.h>
 
 namespace OIV
 {
@@ -77,7 +78,8 @@ namespace OIV
 				ComPtr<IDXGIDevice> dxgiDevice;
 				ComPtr<IDXGIAdapter> dxgiAdapter;
 				ComPtr<IDXGIFactory2>  dxgiFactory;
-
+LLUTILS_DISABLE_WARNING_PUSH
+LLUTILS_DISABLE_WARNING_LANGUAGE_EXTENSION
 				if (SUCCEEDED(fD3dDevice->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void**>(dxgiDevice.GetAddressOf()))))
 					if (SUCCEEDED(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void**>(dxgiAdapter.GetAddressOf()))))
 						if (SUCCEEDED(dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(dxgiFactory.GetAddressOf()))))
@@ -103,7 +105,7 @@ namespace OIV
                     scd.Scaling = DXGI_SCALING_STRETCH;
                 }
 
-                
+LLUTILS_DISABLE_WARNING_POP
 
                 scd.BufferCount = 2;
                 scd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;

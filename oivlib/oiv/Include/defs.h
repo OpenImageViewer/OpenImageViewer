@@ -126,11 +126,11 @@ typedef wchar_t OIVCHAR;
         , TF_COUNT
     };
 
-#pragma pack(16)
 
+#pragma pack(push,16)
     struct CmdNull
     {
-
+        char dummy;
     };
 
     struct OIV_RendererInitializationParams
@@ -526,7 +526,7 @@ typedef wchar_t OIVCHAR;
         OIV_TexelFormat texelFormat;
     };
 
-#pragma pack() 
+#pragma pack(pop) 
 
 #ifdef __cplusplus
 }

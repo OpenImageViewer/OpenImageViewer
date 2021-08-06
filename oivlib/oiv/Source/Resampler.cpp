@@ -20,7 +20,6 @@ namespace OIV
 			fThreads.resize(fNumOfIdealThreadsForResampling);
 			fInitialized = true;
 		}
-
 	}
 
 	void Resampler::Resample(const ResamplerParams& params)
@@ -178,7 +177,7 @@ namespace OIV
 	}
 
 
-	__forceinline uint32_t  Resampler::GetAverageAt(const AverageParams& params)
+	LLUTILS_FORCE_INLINE uint32_t  Resampler::GetAverageAt(const AverageParams& params)
 	{
 #pragma pack(push,1)
 		struct Color
@@ -221,9 +220,7 @@ namespace OIV
 		const size_t sourceXEnd = std::min<size_t>(params.ImageWidth, params.ImageX + params.box.right);
 
 
-		const size_t horSpan = sourceXEnd - sourcexStart;
-		//const int verSpan = sourceYEnd - sourceYStart;
-
+		
 		const size_t totalPixels = (sourceXEnd - sourcexStart) * (sourceYEnd - sourceYStart);
 
 
@@ -352,7 +349,6 @@ namespace OIV
 			//if (task->TaskID < 100)
 			{
 #endif
-				const size_t totalTargetTexels = task->totalTargetTexels;
 				const size_t targetWidth = task->resampleParams.targetWidth;
 				const size_t targetHeight = task->resampleParams.targetHeight;
 				const double ratiox = task->ratioX;

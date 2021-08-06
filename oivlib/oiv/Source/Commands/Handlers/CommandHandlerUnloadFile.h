@@ -16,7 +16,6 @@ namespace OIV
 
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
         {
-            ImageHandle handle = ImageHandleNull;
             ResultCode result = RC_UknownError;
             const OIV_CMD_UnloadFile_Request* req = reinterpret_cast<const OIV_CMD_UnloadFile_Request*>(request);
 

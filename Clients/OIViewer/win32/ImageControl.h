@@ -104,7 +104,7 @@ namespace OIV
                 case WM_SIZE:
                 {
                     const size_t deltaElements = fImageList.GetNumberOfElements() - fImageList.GetNumberOfDisplayedElements();
-                    SCROLLINFO si = { 0 };
+                    SCROLLINFO si {};
                     si.cbSize = sizeof(SCROLLINFO);
                     si.fMask = SIF_ALL;
                     si.nMin = 0;

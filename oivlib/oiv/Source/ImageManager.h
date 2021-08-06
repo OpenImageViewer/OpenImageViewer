@@ -2,7 +2,7 @@
 #include <list>
 #include <map>
 #include <defs.h>
-#include <image.h>
+#include <Image.h>
 
 
 namespace OIV

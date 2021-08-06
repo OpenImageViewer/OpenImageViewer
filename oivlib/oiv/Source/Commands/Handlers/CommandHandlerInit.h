@@ -8,7 +8,7 @@ namespace OIV
     class CommandHandlerInit : public CommandHandler
     {
     protected:
-        ResultCode Verify(std::size_t requestSize, std::size_t responseSize) override
+        ResultCode Verify(std::size_t requestSize, [[maybe_unused]] std::size_t responseSize) override
         {
             return VERIFY_REQUEST(CmdDataInit, requestSize);
         }

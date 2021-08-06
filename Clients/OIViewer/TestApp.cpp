@@ -203,6 +203,9 @@ namespace OIV
             case FullSceenState::Windowed:
                 result.resValue = L"Windowed";
                 break;
+            case FullSceenState::None:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+                break;
             }
         }
 
@@ -218,6 +221,10 @@ namespace OIV
                 break;
             case FT_Lanczos3:
                 result.resValue = L"Lanczos3 filtering";
+                break;
+            case FT_Count:
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
                 break;
             }
         }
@@ -236,7 +243,6 @@ namespace OIV
             else
             {
                 OIVTextImage* text = fLabelManager.GetTextLabel("imageInfo");
-                const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
                 if (text != nullptr)
                 {
                     fLabelManager.Remove("imageInfo");
@@ -252,7 +258,7 @@ namespace OIV
         return fImageInfoVisible;
     }
 
-    void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& result)
     {
         auto type = request.args.GetArgValue("type");
         if (type == "imageinfo") // Toggle image info
@@ -261,9 +267,7 @@ namespace OIV
         }
         else // Toggle keybindings
         {
-
             OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
-            const auto& commandGroups = fCommandManager.GetPredefinedCommandGroup();
             if (text != nullptr) //
             {
                 fLabelManager.Remove("keyBindings");
@@ -299,7 +303,7 @@ namespace OIV
         }
     }
 
-    void TestApp::CMD_OpenFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
+    void TestApp::CMD_OpenFile([[maybe_unused]]  const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& response)
     {
         std::wstring fileName = Win32Helper::OpenFile(fWindow.GetHandle());
         if (fileName.empty() == false)
@@ -342,6 +346,8 @@ namespace OIV
             case AAT_Rotate90CCW:
                 rotation = L"180 degrees counter clockwise";
                 break;
+            case AAT_None:
+                break;
             }
             if (rotation.empty() == false)
                 response.resValue += std::wstring(L"Rotation <textcolor=#7672ff>(") + rotation +  L')';
@@ -356,6 +362,8 @@ namespace OIV
                 break;
             case AAF_Vertical:
                 flip = L"vertical";
+                break;
+            case AAF_None:
                 break;
             }
 
@@ -378,7 +386,7 @@ namespace OIV
     }
 
 
-    void TestApp::CMD_ToggleColorCorrection(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_ToggleColorCorrection([[maybe_unused]] const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -556,7 +564,7 @@ namespace OIV
 
     }
 
-    void TestApp::CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void TestApp::CMD_Navigate(const CommandManager::CommandRequest& request,[[maybe_unused]] CommandManager::CommandResult& result)
     {
         using namespace std;
         const string amountStr = request.args.GetArgValue("amount");
@@ -670,9 +678,9 @@ namespace OIV
     }
 
     TestApp::TestApp()
-        :fRefreshOperation(std::bind(&TestApp::OnRefresh, this))
+        : fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
+        , fRefreshOperation(std::bind(&TestApp::OnRefresh, this))
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
-        , fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
         , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
         , fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this))
     {
@@ -732,7 +740,7 @@ namespace OIV
         for (const auto& keyBindings : keyBindings)
         {
             fKeyBindings.AddBinding(KeyCombination::FromString(keyBindings.KeyCombinationName)
-                , { keyBindings.GroupID, ""});
+                , { keyBindings.GroupID, std::string(),std::string() });
         }
         using namespace std;
         using namespace placeholders;
@@ -922,6 +930,12 @@ namespace OIV
 
         int shResult = SHFileOperation(&file_op);
 
+        if (shResult != 0 )
+        {
+                //handle error
+        }
+        
+
 
     }
 
@@ -1030,7 +1044,10 @@ namespace OIV
 
 
         pixelsRequest.handle = bgraImage->GetDescriptor().ImageHandle;
-        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
+
+        if (OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse) != RC_Success)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Could not retrieve pixels");
+        
 
         OIVBaseImageSharedPtr bgrImage = OIVImageHelper::ConvertImage(bgraImage, TF_I_B8_G8_R8, false);
         OIV_CMD_GetPixels_Request pixelsRequestBGR;
@@ -1078,13 +1095,13 @@ namespace OIV
             uint8_t B;
         };
 #pragma pack(pop)
-        for (int l = 0; l < maskBuffer.height; l++)
+        for (size_t l = 0; l < maskBuffer.height; l++)
         {
             const uint32_t sourceOffset = l * pixelsResponse.rowPitch;
             const uint32_t colorOffset = l * bitmapBuffer.rowPitch;
             const uint32_t maskOffset = l * maskBuffer.rowPitch;
 
-            for (int x = 0; x < maskBuffer.width; x++)
+            for (size_t x = 0; x < maskBuffer.width; x++)
             {
                 Color24& destMask = reinterpret_cast<Color24*>(reinterpret_cast<uint8_t*>(maskPixelsBuffer.data()) + maskOffset)[x];
                 Color24& destImage = reinterpret_cast<Color24*>(reinterpret_cast<uint8_t*>(colorBuffer.data()) + colorOffset)[x];
@@ -1138,7 +1155,7 @@ namespace OIV
 
             AddImageToControl(mainImage, static_cast<uint16_t>(0), static_cast<uint16_t>(totalImages));
 
-            for (int i = 0; i < subImages.size(); i++)
+            for (size_t i = 0; i < subImages.size(); i++)
             {
                 auto& currentSubImage = subImages[i];
                 AddImageToControl(currentSubImage, static_cast<uint16_t>(i + 1), static_cast<uint16_t>(totalImages));
@@ -1501,6 +1518,11 @@ namespace OIV
             }
         }
         break;
+        case FileWatcher::FileChangedOp::Modified:
+        case FileWatcher::FileChangedOp::None:
+        case FileWatcher::FileChangedOp::Rename:
+        case FileWatcher::FileChangedOp::WatchedFolderRemoved:
+            break;
         }
     }
 
@@ -1626,7 +1648,7 @@ namespace OIV
         for (const auto& fileType : fileTypeList)
             fKnownFileTypesSet.insert(fileType);
     	
-        fNotificationIconID =  fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), OIV_TEXT("Open image viewer"));
+        fNotificationIconID =  fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), LLUTILS_TEXT("Open Image Viewer"));
         fNotificationIcons.OnNotificationIconEvent.Add(std::bind(&TestApp::OnNotificationIcon, this, std::placeholders::_1));
 
         fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
@@ -1710,6 +1732,9 @@ namespace OIV
                 }
              }
             break;
+            case NotificationIconGroup::NotificationIconAction::None:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+            break;
         }
     }
 
@@ -1750,7 +1775,6 @@ namespace OIV
     bool TestApp::ToggleColorCorrection()
     {
         bool isDefault = true;
-        OIV_CMD_ColorExposure_Request exposure = fLastColorExposure;
         if (memcmp(&fColorExposure, &DefaultColorCorrection,sizeof(OIV_CMD_ColorExposure_Request)) == 0)
         {
             std::swap(fLastColorExposure, fColorExposure);
@@ -2176,8 +2200,6 @@ namespace OIV
                     {
                         std::wstring message = StringUtility::ConvertString<OIVString>(OIVHelper::ParseTexelValue(texelInfoResponse));
                         OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);
-                        OIVTextImage* texelValue = fLabelManager.GetOrCreateTextLabel("texelValue");
-
                         fVirtualStatusBar.SetText("texelValue", txt);
                         fVirtualStatusBar.SetOpacity("texelValue", 1.0);
                         fRefreshOperation.Queue();
@@ -2501,7 +2523,6 @@ namespace OIV
         const WinMessage & message = evnt->message;
 
         LRESULT retValue = 0;
-        bool defaultProc = true;
         switch (message.message)
         {
         case WM_SIZE:
@@ -2610,7 +2631,7 @@ namespace OIV
             KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
                 static_cast<uint32_t>(evnt->message.lParam));
 
-            bool isAltup = (keyCombination.keycode == KeyCode::LALT || keyCombination.keycode == KeyCode::RIGHTALT || keyCombination.keycode == KeyCode::RALT);
+            bool isAltup = (keyCombination.keydata().keycode == KeyCode::LALT || keyCombination.keydata().keycode == KeyCode::RIGHTALT || keyCombination.keydata().keycode == KeyCode::RALT);
 
             if (isAltup)
                 fDoubleTap.SetState(false);
@@ -2619,7 +2640,7 @@ namespace OIV
         case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
             handled = handleKeyInput(evnt);
-            break;
+            break; 
 
         case WM_MOUSEMOVE:
             UpdateTexelPos();
@@ -2699,12 +2720,12 @@ namespace OIV
         
         const RawInputMouseWindow& mouseState = dynamic_cast<MainWindow*>(evnt->window)->GetMouseState();
 
-        const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
+        //const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
         const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
         const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
         const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Released;
-        const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Released;
+        //const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Released;
         const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Pressed;
         const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Pressed;
         const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::Pressed;
@@ -2720,9 +2741,9 @@ namespace OIV
 
         //Quick browse feature
         const bool isNavigationBackwardDown = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down);
-        const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Up);
+        //const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Up);
         const bool isNavigationForwardDown = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down);
-        const bool isNavigationForwardUp = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Up);
+        //const bool isNavigationForwardUp = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Up);
         const bool isNavigationBackwardReleased = evnt->GetButtonEvent(MouseState::Button::Third) == MouseState::EventType::Released;
         const bool isNavigationForwardReleased = evnt->GetButtonEvent(MouseState::Button::Forth) == MouseState::EventType::Released;
         
