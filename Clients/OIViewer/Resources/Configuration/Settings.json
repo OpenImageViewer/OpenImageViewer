@@ -5,10 +5,11 @@
     }
     ,"viewsettings":
     {
-          
-          "maxzoom": 100.0
-        , "minimagesize" : 150
-        , "slideshowinterval" : 2000
+
+      "maxzoom": 100.0
+      ,"minimagesize": 150
+      ,"slideshowinterval": 2000
+      ,"quickbrowsedelay": 100
         , "imagemargins" : 
         {
               "x" : 0.25

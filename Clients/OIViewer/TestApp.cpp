@@ -1376,7 +1376,7 @@ namespace OIV
                  const int jump = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down) ? 1 : (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down) ? -1 : 0;
 
 
-                 if (jump != 0 && fLastImageLoadTimeStamp.GetElapsedTimeReal(LLUtils::StopWatch::Seconds) > 0.1)
+                 if (jump != 0 && fLastImageLoadTimeStamp.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds) > fQuickBrowseDelay)
                  {
                      
                      fLastImageLoadTimeStamp.Start();
@@ -1685,6 +1685,7 @@ namespace OIV
         LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/y", fImageMargins.y);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/minimagesize", fMinImageSize);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/slideshowinterval", fSlideShowIntervalms);
+        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/quickbrowsedelay", fQuickBrowseDelay);
 
         if (startup)
         {
@@ -2749,7 +2750,7 @@ namespace OIV
         
 
         if (isMouseUnderCursor && (isNavigationForwardDown || isNavigationBackwardDown))
-                fTimerNavigation.SetInterval(100);
+                fTimerNavigation.SetInterval(fQuickBrowseDelay);
 
         if (isMouseUnderCursor == false || isNavigationBackwardReleased || isNavigationForwardReleased)
             fTimerNavigation.SetInterval(0);
