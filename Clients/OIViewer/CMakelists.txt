@@ -53,7 +53,7 @@ target_link_libraries(${TargetName}
 
 #local libraries
 oiv
-win32
+Win32
 #system libraries
 dbghelp.lib
 kernel32.lib
