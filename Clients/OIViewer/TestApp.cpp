@@ -4,40 +4,56 @@
 #include <thread>
 #include <future>
 #include <cassert>
+
 #include "TestApp.h"
-#include <LLUtils/StringUtility.h>
-#include "win32/Win32Window.h"
-#include <windows.h>
-#include "win32/MonitorInfo.h"
-#include <LLUtils/FileSystemHelper.h>
+
+#include <Windows.h>
+#include <Version.h>
 
 #include <functions.h>
+#include <Win32/Win32Window.h>
+#include <Win32/Win32Helper.h>
+#include <Win32/MonitorInfo.h>
+
+#include <LInput/Keys/KeyCombination.h>
+#include <LInput/Keys/KeyBindings.h>
+#include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
+#include <LInput/Mouse/MouseButton.h>
+
 #include <LLUtils/Exception.h>
-#include "win32/Win32Helper.h"
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
+#include <LLUtils/StringUtility.h>
+#include <LLUtils/UniqueIDProvider.h>
+#include <LLUtils/Logging/LogPredefined.h>
+#include <LLUtils/Logging/Logger.h>
+#include <LLUtils/FileSystemHelper.h>
+#include <LLUtils/Rect.h>
+
+
+#include "Helpers/OIVHelper.h"
+#include "Helpers/MessageHelper.h"
+#include "Helpers/PhotoshopFinder.h"
+
+
 #include "win32/UserMessages.h"
 #include "OIVCommands.h"
-#include <LLUtils/Rect.h>
-#include "Helpers/OIVHelper.h"
-#include "Keyboard/KeyCombination.h"
-#include "Keyboard/KeyBindings.h"
-#include "Keyboard/KeyDoubleTap.h"
 #include "SelectionRect.h"
-#include "Helpers\PhotoshopFinder.h"
-#include <Version.h>
+
+
 #include "OIVImage\OIVHandleImage.h"
 #include "OIVImage\OIVFileImage.h"
 #include "OIVImage\OIVRawImage.h"
 #include "Helpers\OIVImageHelper.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
-#include <LLUtils/UniqueIDProvider.h>
-#include <LLUtils/Logging/LogFile.h>
+
 #include "ContextMenu.h"
 #include "globals.h"
 #include "ConfigurationLoader.h"
-#include "Helpers/MessageHelper.h"
+
+
+#include "resource.h"
 
 namespace OIV
 {
@@ -194,16 +210,16 @@ namespace OIV
         {
             switch (fWindow.GetFullScreenState())
             {
-            case FullSceenState::MultiScreen:
+            case ::Win32::FullSceenState::MultiScreen:
                 result.resValue = L"Multi full screen";
                 break;
-            case FullSceenState::SingleScreen:
+            case ::Win32::FullSceenState::SingleScreen:
                 result.resValue = L"Full screen";
                 break;
-            case FullSceenState::Windowed:
+            case ::Win32::FullSceenState::Windowed:
                 result.resValue = L"Windowed";
                 break;
-            case FullSceenState::None:
+            case ::Win32::FullSceenState::None:
                 LL_EXCEPTION_UNEXPECTED_VALUE;
                 break;
             }
@@ -305,7 +321,7 @@ namespace OIV
 
     void TestApp::CMD_OpenFile([[maybe_unused]]  const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& response)
     {
-        std::wstring fileName = Win32Helper::OpenFile(fWindow.GetHandle());
+        std::wstring fileName = ::Win32::Win32Helper::OpenFile(fWindow.GetHandle());
         if (fileName.empty() == false)
         {
             LoadFile(fileName, false);
@@ -609,7 +625,7 @@ namespace OIV
         else if (cmd == "containingFolder")
         {
             if (GetOpenedFileName().empty() == false)
-                Win32Helper::BrowseToFile(GetOpenedFileName());
+                ::Win32::Win32Helper::BrowseToFile(GetOpenedFileName());
         }
         else if (cmd == "openWith")
         {
@@ -644,7 +660,7 @@ namespace OIV
 
         do 
         {
-            nextChild = FindWindowEx(nullptr, nextChild, Win32Window::WindowClassName, nullptr);
+            nextChild = FindWindowEx(nullptr, nextChild, ::Win32::Win32Window::WindowClassName, nullptr);
         } while (nextChild != nullptr && MainWindow::GetIsTrayWindow(nextChild) == false);
 
         return nextChild;
@@ -739,7 +755,7 @@ namespace OIV
 
         for (const auto& keyBindings : keyBindings)
         {
-            fKeyBindings.AddBinding(KeyCombination::FromString(keyBindings.KeyCombinationName)
+            fKeyBindings.AddBinding(LInput::KeyCombination::FromString(keyBindings.KeyCombinationName)
                 , { keyBindings.GroupID, std::string(),std::string() });
         }
         using namespace std;
@@ -790,8 +806,6 @@ namespace OIV
             high_resolution_clock::time_point now = high_resolution_clock::now();
             auto windowTimeInMicroSeconds = 1'000'000'000 / fRefreshRateTimes1000;
             auto microsecSinceLastRefresh = duration_cast<microseconds>(now - fLastRefreshTime).count();
-            
-            fRefreshTimer.Enable(false);
 
             if (microsecSinceLastRefresh > windowTimeInMicroSeconds)
             {
@@ -803,7 +817,7 @@ namespace OIV
             else
             {
                 //Don't refresh now, restrat refresh timer
-                fRefreshTimer.SetDelay(static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
+                fRefreshTimer.SetDueTime(static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
                 fRefreshTimer.Enable(true);
             }
         }
@@ -850,9 +864,11 @@ namespace OIV
     {
         auto GetBuildTimeStamp = []()-> std::wstring
         {
-            auto time = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
-            auto ticks = time.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
+            auto fileTime = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
+
+            auto ticks = fileTime.time_since_epoch().count();
             auto systemClockTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
+            
             auto in_time_t = std::chrono::system_clock::to_time_t(systemClockTime);
             std::wstringstream ss;
             tm tmDest;
@@ -1059,7 +1075,7 @@ namespace OIV
         OIV_Util_GetBPPFromTexelFormat(pixelsResponseBGR.texelFormat, &bpp);
 
 
-        BitmapBuffer bitmapBuffer{};
+        ::Win32::BitmapBuffer bitmapBuffer{};
         bitmapBuffer.bitsPerPixel = bpp;
         bitmapBuffer.rowPitch = LLUtils::Utility::Align<uint32_t>(pixelsResponseBGR.rowPitch, sizeof(DWORD));
 
@@ -1070,7 +1086,7 @@ namespace OIV
 
 
         //Create 24 bit mask image.
-        BitmapBuffer maskBuffer{};
+        ::Win32::BitmapBuffer maskBuffer{};
         maskBuffer.bitsPerPixel = 24;
         maskBuffer.height = pixelsResponse.height;
         maskBuffer.width = pixelsResponse.width;
@@ -1123,14 +1139,14 @@ namespace OIV
         ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
 
         fWindow.GetImageControl().GetImageList().SetImage({ imageSlot, ss.str(),
-                std::make_shared<BitmapSharedPtr::element_type>(bitmapBuffer)
-                , std::make_shared<BitmapSharedPtr::element_type>(maskBuffer) });
+                std::make_shared<::Win32::BitmapSharedPtr::element_type>(bitmapBuffer)
+                , std::make_shared<::Win32::BitmapSharedPtr::element_type>(maskBuffer) });
     }
 
     void TestApp::OnContextMenuTimer()
     {
         fContextMenuTimer.SetInterval(0);
-        auto pos = Win32Helper::GetMouseCursorPosition();
+        auto pos = ::Win32::Win32Helper::GetMouseCursorPosition();
         auto chosenItem = fContextMenu->Show(pos.x - 16  , pos.y +-16, AlignmentHorizontal::Center, AlignmentVertical::Center);
 
         if (chosenItem != nullptr)
@@ -1338,10 +1354,10 @@ namespace OIV
 		fWindow.SetBackgroundColor(LLUtils::Color(45, 45, 48));
 		fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
 
-        fWindow.SetDoubleClickMode(OIV::Win32::DoubleClickMode::Default);
+        fWindow.SetDoubleClickMode(::Win32::DoubleClickMode::Default);
         {
             using namespace OIV::Win32;
-            fWindow.SetWindowStyles(WindowStyle::ResizableBorder | WindowStyle::MaximizeButton | WindowStyle::MinimizeButton, true);
+            fWindow.SetWindowStyles(::Win32::WindowStyle::ResizableBorder | ::Win32::WindowStyle::MaximizeButton | ::Win32::WindowStyle::MinimizeButton, true);
         }
     
         AutoScroll::CreateParams params = { fWindow.GetHandle(),Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL, std::bind(&TestApp::OnScroll, this, std::placeholders::_1) };
@@ -1372,8 +1388,9 @@ namespace OIV
          fTimerNavigation.SetCallback([this]()
             {
                  using namespace Win32;
-                 const auto & mouseState = fWindow.GetMouseState();
-                 const int jump = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down) ? 1 : (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down) ? -1 : 0;
+                 using namespace LInput;
+                 const auto& mouseState = fMouseDevicesState.begin()->second;
+                 const int jump = (mouseState.GetButtonState(static_cast<MouseButtonType>( MouseButton::Forward)) == ButtonState::Down) ? 1 : (mouseState.GetButtonState(static_cast<MouseButtonType>(MouseButton::Back)) == ButtonState::Down) ? -1 : 0;
 
 
                  if (jump != 0 && fLastImageLoadTimeStamp.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds) > fQuickBrowseDelay)
@@ -1575,6 +1592,281 @@ namespace OIV
         }
     }
 
+
+    void TestApp::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
+    {
+        using namespace LInput;
+        if (btnEvent.button == MouseButton::Middle && btnEvent.eventType == EventType::Pressed)
+        {
+            fAutoScroll->ToggleAutoScroll();
+            if (fAutoScroll->IsAutoScrolling() == false)
+            {
+                fWindow.SetCursorType(OIV::Win32::MainWindow::CursorType::SystemDefault);
+                fAutoScrollAnchor.reset();
+            }
+            else
+            {
+                std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
+                std::unique_ptr< OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
+                FileLoadOptions options = {};
+                options.onlyRegisteredExtension = true;
+                if (fileImage->Load(options) == ResultCode::RC_Success)
+                {
+                    fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
+                    fileImage->GetImageProperties().opacity = 0.5;
+
+
+
+                    fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
+                    fileImage->GetImageProperties().scale = { 1,1 };
+                    fileImage->GetImageProperties().opacity = 1.0;
+
+                    fAutoScrollAnchor = std::move(fileImage);
+                    fAutoScrollAnchor->Update();
+                }
+            }
+        }
+
+        if (btnEvent.button == MouseButton::Left && btnEvent.eventType == EventType::Released)
+        {
+            fWindow.SetLockMouseToWindowMode(::Win32::LockMouseToWindowMode::NoLock);
+        }
+
+        using namespace ::Win32;
+        LockMouseToWindowMode lockMode = LockMouseToWindowMode::NoLock;
+        const auto& mouseState = fMouseDevicesState.find(btnEvent.parent->GetID())->second;
+        const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
+        const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
+
+        if (btnEvent.button == MouseButton::Left)
+        {
+            if (IsRightDown == false && IsRightCatured == false)
+            {
+                //Window drag and resize
+                if (Win32Helper::IsKeyPressed(VK_MENU) == false
+                    && fWindow.IsFullScreen() == false
+                    )
+                {
+                    if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
+                        lockMode = LockMouseToWindowMode::LockResize;
+                    else
+                        lockMode = LockMouseToWindowMode::LockMove;
+
+                }
+            }
+            if (btnEvent.eventType == EventType::Released)
+            {
+                lockMode = LockMouseToWindowMode::NoLock;
+            }
+
+            fWindow.SetLockMouseToWindowMode(lockMode);
+        }
+
+        if (btnEvent.button == MouseButton::Left)
+        {
+            if (Win32Helper::IsKeyPressed(VK_MENU))
+            {
+                SelectionRect::Operation op = SelectionRect::Operation::NoOp;
+                if (btnEvent.eventType == EventType::Pressed && fWindow.IsUnderMouseCursor())
+                    op = SelectionRect::Operation::BeginDrag;
+                else if (btnEvent.eventType == EventType::Released && fWindow.IsUnderMouseCursor())
+                    op = SelectionRect::Operation::EndDrag;
+                fSelectionRect.SetSelection(op, fWindow.GetMousePosition());
+                SaveImageSpaceSelection();
+
+            }
+        }
+        if (btnEvent.button == MouseButton::Back || btnEvent.button == MouseButton::Forward)
+        {
+            if (btnEvent.eventType == EventType::Pressed && fWindow.IsUnderMouseCursor())
+            {
+                fTimerNavigation.SetInterval(fQuickBrowseDelay);
+
+            }
+            else
+            {
+                if (fCapturedMouseButtons.at(static_cast<size_t>(MouseButton::Back)) == false
+                    && fCapturedMouseButtons.at(static_cast<size_t>(MouseButton::Forward)) == false)
+                        fTimerNavigation.SetInterval(0);
+            }
+                
+        }
+
+        if (btnEvent.button == MouseButton::Right && btnEvent.eventType == EventType::Pressed)
+        {
+            if (fContextMenuTimer.GetInterval() == 0)
+            {
+                fContextMenuTimer.SetInterval(500);
+                fDownPosition = ::Win32::Win32Helper::GetMouseCursorPosition();
+            }
+        }
+    }
+
+  
+
+
+    void TestApp::OnMouseInput(const LInput::RawInput::RawInputEventMouse& mouseInput)
+    {
+        using namespace  LInput;
+        using namespace ::Win32;
+
+
+        const auto& mouseState = fMouseDevicesState.find(mouseInput.deviceIndex)->second;
+
+        //const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
+        //const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
+        const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
+
+        const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
+        const bool IsLeftCaptured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Left)) == true;
+        //const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
+       // const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Released;
+
+
+        const bool isMouseUnderCursor = fWindow.IsUnderMouseCursor();
+
+
+
+
+        //Quick browse feature
+        //const bool isNavigationBackwardDown = (mouseState.GetButtonState(MouseButtonType::Back) == ButtonState::Down);
+        //const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseButtonType::Back) == ButtonState::Up);
+        //const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Up);
+        //const bool isNavigationForwardDown = mouseState.GetButtonState(MouseButtonType::Forward) == ButtonState::Down;
+        //const bool isNavigationForwardUp = mouseState.GetButtonState(MouseButtonType::Forward) == ButtonState::Up;
+
+
+            //Selection rect
+        if (Win32Helper::IsKeyPressed(VK_MENU))
+        {
+            if (IsLeftCaptured)
+            {
+                fSelectionRect.SetSelection(SelectionRect::Operation::Drag, fWindow.GetMousePosition());
+                SaveImageSpaceSelection();
+            }
+        }
+
+
+        if (IsRightCatured == true && fContextMenu->IsVisible() == false)
+        {
+            if (mouseInput.deltaX != 0 || mouseInput.deltaY != 0)
+                Pan(LLUtils::PointF64(mouseInput.deltaX, mouseInput.deltaY));
+        }
+
+
+        LONG wheelDelta = mouseInput.wheelDelta;
+
+        if (wheelDelta != 0)
+        {
+            //Browse files
+            if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_MENU))
+            {
+                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousSubImage" : "NextSubImage");
+            }
+            else if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_SHIFT))
+            {
+                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousImageInFolder" : "NextImageInFolder");
+            }
+            else if (IsRightCatured || isMouseUnderCursor)
+            {
+                POINT mousePos = fWindow.GetMousePosition();
+                //20% percent zoom in each wheel step
+                if (IsRightCatured)
+                    //  Zoom to center of the client area if currently panning.
+                    Zoom(wheelDelta * 0.2);
+                else
+                    Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
+            }
+        }
+
+
+        if (IsRightDown)
+        {
+
+            LLUtils::PointI32  currentPosition = Win32Helper::GetMouseCursorPosition();
+            if (currentPosition.DistanceSquared(fDownPosition) > 25)
+                fContextMenuTimer.SetInterval(0);
+        }
+        else
+        {
+            fContextMenuTimer.SetInterval(0);
+        }
+
+    }
+    void TestApp::OnRawInput(const LInput::RawInput::RawInputEvent& evnt)
+    {
+        using namespace LInput;
+        if (evnt.deviceType == RawInput::RawInputDeviceType::Mouse)
+        {
+            const auto& mouseEvent = static_cast<const RawInput::RawInputEventMouse&>(evnt);
+
+            // Add button states for multiple mouses. 
+            auto it = fMouseDevicesState.find(evnt.deviceIndex);
+            //if mouse ID not found add new buttonstates entry.
+            if (it == std::end(fMouseDevicesState))
+            {
+                it = fMouseDevicesState.emplace(evnt.deviceIndex, decltype(fMouseDevicesState)::mapped_type()).first;
+                //Add standard extension
+                auto stdExtension = std::make_shared<ButtonStdExtension<MouseButtonType>>(evnt.deviceIndex, 250, 0);
+                stdExtension->OnButtonEvent.Add(std::bind(&TestApp::OnMouseEvent,this, std::placeholders::_1));
+                it->second.AddExtension(std::static_pointer_cast<IButtonStateExtension<MouseButtonType>>(stdExtension));
+
+                
+              
+                
+                //Add multitap extension for click, double click and triple click
+                /*
+                auto multitapextension = std::make_shared<MultitapExtension<MouseButtonType>>(evnt.deviceIndex, 500, 2);
+                multitapextension->OnButtonEvent.Add(std::bind(&TestApp::OnMouseMultiTap, this,std::placeholders::_1));
+                it->second.AddExtension(std::static_pointer_cast<IButtonStateExtension<MouseButtonType>>(multitapextension));
+                */
+            }
+
+            for (size_t i = 0; i < RawInput::MaxMouseButtons; i++)
+            {
+                it->second.SetButtonState(static_cast<decltype(fMouseDevicesState)::mapped_type::underlying_button_type>(i), mouseEvent.buttonState[i]);
+            
+                if (mouseEvent.buttonState[i] == ButtonState::Down && fWindow.IsUnderMouseCursor())
+                    fCapturedMouseButtons[static_cast<size_t>(i)] = true;
+                else if (mouseEvent.buttonState[i] == ButtonState::Up)
+                    fCapturedMouseButtons[static_cast<size_t>(i)] = false;
+
+                fMouseClickEventHandler.SetButtonState(static_cast<MouseButton>(i), mouseEvent.buttonState[i]);
+                
+            }
+
+            fMouseClickEventHandler.SetMouseDelta(mouseEvent.deltaX, mouseEvent.deltaY);
+
+     
+
+            OnMouseInput(mouseEvent);
+
+        }
+    }
+
+    void TestApp::OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args)
+    {
+        using namespace LInput;
+        if (args.clickCount == 2 && fWindow.IsMouseCursorInClientRect() && fWindow.IsUnderMouseCursor())
+        {
+            if (args.button == MouseButton::Left)
+            {
+                if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+                {
+                    CancelSelection();
+                }
+                else
+                {
+                    ToggleFullScreen(::Win32::Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
+                }
+            }
+
+            if (args.button == MouseButton::Right)
+            {
+                ExecutePredefinedCommand("PasteImageFromClipboard");
+            }
+        }
+    }
     void TestApp::PostInitOperations()
     {
 
@@ -1654,6 +1946,14 @@ namespace OIV
         fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
         fNotificationContextMenu->AddItem(OIV_TEXT("Quit"), int{});
 
+        using namespace LInput;
+        fRawInput.AddDevice(RawInput::UsagePage::GenericDesktopControls, RawInput::GenericDesktopControlsUsagePage::Mouse, RawInput::Flags::EnableBackground);
+
+        fRawInput.OnInput.Add(std::bind(&TestApp::OnRawInput, this,std::placeholders::_1));
+        fRawInput.Enable(true);
+
+        fMouseClickEventHandler.OnMouseClickEvent.Add(std::bind(&TestApp::OnMouseMultiClick, this, std::placeholders::_1));
+
         LoadSettings(true);
 
         if (fAllowDynamicSettings)
@@ -1698,9 +1998,9 @@ namespace OIV
     }
 
 
-    void TestApp::OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args)
+    void TestApp::OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args)
     {
-        using namespace Win32;
+        using namespace ::Win32;
         switch (args.action) 
         {
         case NotificationIconGroup::NotificationIconAction::Select:
@@ -1793,7 +2093,7 @@ namespace OIV
 
     void TestApp::Run()
     {
-        Win32Helper::MessageLoop();
+        ::Win32::Win32Helper::MessageLoop();
     }
 
 
@@ -1860,7 +2160,7 @@ namespace OIV
     {
         fShowBorders = !fShowBorders;
         {
-            using namespace OIV::Win32;
+            using namespace ::Win32;
             fWindow.SetWindowStyles(WindowStyle::ResizableBorder | WindowStyle::MaximizeButton | WindowStyle::MinimizeButton, fShowBorders);
         }
         
@@ -1912,9 +2212,9 @@ namespace OIV
 
     }
 
-    bool TestApp::handleKeyInput(const Win32::EventWinMessage* evnt)
+    bool TestApp::handleKeyInput(const ::Win32::EventWinMessage* evnt)
     {
-        KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
+        LInput::KeyCombination keyCombination = LInput::KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
             static_cast<uint32_t>(evnt->message.lParam));
         BindingElement bindings;
         return  fKeyBindings.GetBinding(keyCombination, bindings) && ExecutePredefinedCommand(bindings.commandDescription);
@@ -2246,14 +2546,14 @@ namespace OIV
         
         PointF64 canvasCenter;
         
-        if (fWindow.GetFullScreenState() != FullSceenState::MultiScreen) [[likely]]
+        if (fWindow.GetFullScreenState() != ::Win32::FullSceenState::MultiScreen) [[likely]]
         {
             canvasCenter = PointF64(fWindow.GetCanvasSize()) / 2.0;
         }
         else [[unlikely]]
         {
-            RECT primaryMonitorCoords = MonitorInfo::GetSingleton().GetPrimaryMonitor(false).monitorInfo.rcMonitor;
-            RECT boundingArea = MonitorInfo::GetSingleton().getBoundingMonitorArea();
+            RECT primaryMonitorCoords = ::Win32::MonitorInfo::GetSingleton().GetPrimaryMonitor(false).monitorInfo.rcMonitor;
+            RECT boundingArea = ::Win32::MonitorInfo::GetSingleton().getBoundingMonitorArea();
 
             using point_type = PointF64::point_type;
             auto leftDelta = primaryMonitorCoords.left - boundingArea.left;
@@ -2514,9 +2814,9 @@ namespace OIV
     }
     
 
-    LRESULT TestApp::ClientWindwMessage(const Win32::Event* evnt1)
+    LRESULT TestApp::ClientWindwMessage(const ::Win32::Event* evnt1)
     {
-        using namespace Win32;
+        using namespace ::Win32;
         const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
         if (evnt == nullptr)
             return 0;
@@ -2578,11 +2878,11 @@ namespace OIV
         }
     }
 
-    bool TestApp::HandleWinMessageEvent(const Win32::EventWinMessage* evnt)
+    bool TestApp::HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt)
     {
         bool handled = false;
 
-        const Win32::WinMessage& uMsg = evnt->message;
+        const ::Win32::WinMessage& uMsg = evnt->message;
         switch (uMsg.message)
         {
         case WM_SHOWWINDOW:
@@ -2628,7 +2928,7 @@ namespace OIV
         case WM_SYSKEYUP:
         case WM_KEYUP:
         {
-
+            using namespace LInput;
             KeyCombination keyCombination = KeyCombination::FromVirtualKey(static_cast<uint32_t>(evnt->message.wParam),
                 static_cast<uint32_t>(evnt->message.lParam));
 
@@ -2699,7 +2999,7 @@ namespace OIV
     }
 
 
-    bool TestApp::HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file)
+    bool TestApp::HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
         if (LoadFile(event_ddrag_drop_file->fileName, false))
         {
@@ -2715,198 +3015,12 @@ namespace OIV
         return  commandRequest.commandName.empty() == false && ExecuteCommand(commandRequest);
     }
 
-    void TestApp::HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt)
+   
+ 
+
+    bool TestApp::HandleClientWindowMessages(const ::Win32::Event* evnt1)
     {
-        using namespace Win32;
-        
-        const RawInputMouseWindow& mouseState = dynamic_cast<MainWindow*>(evnt->window)->GetMouseState();
-
-        //const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
-        const bool IsRightCatured = mouseState.IsCaptured(MouseState::Button::Right);
-        const bool IsLeftCaptured = mouseState.IsCaptured(MouseState::Button::Left);
-        const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
-        const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Released;
-        //const bool IsRightReleased = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Released;
-        const bool IsRightPressed = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::Pressed;
-        const bool IsLeftPressed = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Pressed;
-        const bool IsMiddlePressed = evnt->GetButtonEvent(MouseState::Button::Middle) == MouseState::EventType::Pressed;
-        const bool IsLeftDoubleClick = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::DoublePressed;
-        const bool IsRightDoubleClick = evnt->GetButtonEvent(MouseState::Button::Right) == MouseState::EventType::DoublePressed;
-        const bool isMouseUnderCursor = evnt->window->IsUnderMouseCursor();
-
-
-
-        using namespace Win32;
-        LockMouseToWindowMode LockMode = LockMouseToWindowMode::NoLock;
-
-
-        //Quick browse feature
-        const bool isNavigationBackwardDown = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Down);
-        //const bool isNavigationBackwardUp = (mouseState.GetButtonState(MouseState::Button::Third) == MouseState::State::Up);
-        const bool isNavigationForwardDown = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Down);
-        //const bool isNavigationForwardUp = (mouseState.GetButtonState(MouseState::Button::Forth) == MouseState::State::Up);
-        const bool isNavigationBackwardReleased = evnt->GetButtonEvent(MouseState::Button::Third) == MouseState::EventType::Released;
-        const bool isNavigationForwardReleased = evnt->GetButtonEvent(MouseState::Button::Forth) == MouseState::EventType::Released;
-        
-
-        if (isMouseUnderCursor && (isNavigationForwardDown || isNavigationBackwardDown))
-                fTimerNavigation.SetInterval(fQuickBrowseDelay);
-
-        if (isMouseUnderCursor == false || isNavigationBackwardReleased || isNavigationForwardReleased)
-            fTimerNavigation.SetInterval(0);
-        
-        if (IsLeftPressed && IsRightDown == false && IsRightPressed == false && IsRightCatured == false)
-        {
-            //Window drag and resize
-            if (true
-                && Win32Helper::IsKeyPressed(VK_MENU) == false
-                && fWindow.IsFullScreen() == false
-                )
-            {
-                if (Win32Helper::IsKeyPressed(VK_CONTROL) == true)
-                    LockMode = LockMouseToWindowMode::LockResize;
-                else
-                    LockMode = LockMouseToWindowMode::LockMove;
-
-            }
-        }
-        else if (IsLeftReleased)
-        {
-            LockMode = LockMouseToWindowMode::NoLock;
-        }
-
-
-
-        fWindow.SetLockMouseToWindowMode(LockMode);
-
-
-
-        //Selection rect
-        if (Win32Helper::IsKeyPressed(VK_MENU))
-        {
-            SelectionRect::Operation op = SelectionRect::Operation::NoOp;
-            if (IsLeftPressed && isMouseUnderCursor)
-                op = SelectionRect::Operation::BeginDrag;
-            else if (IsLeftReleased)
-                op = SelectionRect::Operation::EndDrag;
-            else if (IsLeftCaptured)
-                op = SelectionRect::Operation::Drag;
-
-            fSelectionRect.SetSelection(op, evnt->window->GetMousePosition());
-            SaveImageSpaceSelection();
-        }
-      
-        
-        /*if (IsLeftCaptured == true && evnt->window->IsFullScreen() == false && Win32Helper::IsKeyPressed(VK_MENU))
-            evnt->window->Move(evnt->DeltaX, evnt->DeltaY);*/
-
-        if (IsRightCatured == true && fContextMenu->IsVisible() == false)
-        {
-            if (evnt->DeltaX != 0 || evnt->DeltaY != 0)
-                Pan(LLUtils::PointF64( evnt->DeltaX, evnt->DeltaY ));
-        }
-
-        LONG wheelDelta = evnt->DeltaWheel;
-
-        if (wheelDelta != 0)
-        {
-            //Browse files
-            if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_MENU))
-            {
-                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousSubImage" : "NextSubImage"); 
-            }
-            else if (isMouseUnderCursor && Win32Helper::IsKeyPressed(VK_SHIFT))
-            {
-                ExecutePredefinedCommand(wheelDelta > 0 ? "PreviousImageInFolder" : "NextImageInFolder");
-            }
-            else if (IsRightCatured || isMouseUnderCursor)
-            {
-                POINT mousePos = fWindow.GetMousePosition();
-                //20% percent zoom in each wheel step
-                if (IsRightCatured)
-                    //  Zoom to center of the client area if currently panning.
-                    Zoom(wheelDelta * 0.2);
-                else
-                    Zoom(wheelDelta * 0.2, mousePos.x, mousePos.y);
-            }
-        }
-        
-        if (isMouseUnderCursor && evnt->window->IsMouseCursorInClientRect())
-        {
-            if (IsMiddlePressed)
-            {
-                fAutoScroll->ToggleAutoScroll();
-                if (fAutoScroll->IsAutoScrolling() == false)
-                {
-                    fWindow.SetCursorType(OIV::Win32::MainWindow::CursorType::SystemDefault);
-                    fAutoScrollAnchor.reset();
-                }
-                else
-                {
-                    std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
-                    std::unique_ptr< OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
-                    FileLoadOptions options = {};
-                    options.onlyRegisteredExtension = true;
-                    if (fileImage->Load(options) == ResultCode::RC_Success)
-                    {
-                        fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
-                        fileImage->GetImageProperties().opacity = 0.5;
-
-
-
-                        fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
-                        fileImage->GetImageProperties().scale = { 1,1 };
-                        fileImage->GetImageProperties().opacity = 1.0;
-
-                        fAutoScrollAnchor = std::move(fileImage);
-                        fAutoScrollAnchor->Update();
-                    }
-                }
-            }
-
-            if (IsLeftDoubleClick)
-            {
-                if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
-                {
-                    CancelSelection();
-                }
-                else
-                {
-                    ToggleFullScreen(Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
-                }
-            }
-
-            if (IsRightDoubleClick)
-            {
-                ExecutePredefinedCommand("PasteImageFromClipboard");
-            }
-
-            if (IsRightDown)
-            {
-                if (IsRightPressed)
-                {
-                    if (fContextMenuTimer.GetInterval() == 0)
-                    {
-                        fContextMenuTimer.SetInterval(500);
-                        fDownPosition = Win32Helper::GetMouseCursorPosition();
-                    }
-                }
-                LLUtils::PointI32  currentPosition = Win32Helper::GetMouseCursorPosition();
-                if (currentPosition.DistanceSquared(fDownPosition) > 25)
-                    fContextMenuTimer.SetInterval(0);
-            }
-            else
-            {
-                fContextMenuTimer.SetInterval(0);
-            }
-        	
-        }
-
-    }
-
-    bool TestApp::HandleClientWindowMessages(const Win32::Event* evnt1)
-    {
-        using namespace Win32;
+        using namespace ::Win32;
         const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
 
         if (evnt != nullptr)
@@ -2916,9 +3030,9 @@ namespace OIV
         return false;
     }
     
-    bool TestApp::HandleMessages(const Win32::Event* evnt1)
+    bool TestApp::HandleMessages(const ::Win32::Event* evnt1)
     {
-        using namespace Win32;
+        using namespace ::Win32;
         const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
 
         if (evnt != nullptr)
@@ -2928,11 +3042,6 @@ namespace OIV
 
         if (dragDropEvent != nullptr)
             return HandleFileDragDropEvent(dragDropEvent);
-
-        const EventRawInputMouseStateChanged* rawInputEvent = dynamic_cast<const EventRawInputMouseStateChanged*>(evnt1);
-
-        if (rawInputEvent != nullptr)
-            HandleRawInputMouse(rawInputEvent);
 
         return false;
     }

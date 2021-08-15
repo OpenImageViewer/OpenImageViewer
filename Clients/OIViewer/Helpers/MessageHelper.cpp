@@ -86,7 +86,7 @@ namespace OIV
         messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetDescriptor().Bpp , " bpp" });
         messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(texelInfo) });
         messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ image->GetDescriptor().NumSubImages });
-        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ image->GetDescriptor().LoadTime , "ms" });
+        messageValues.emplace_back("Load time",  MessageFormatter::ValueObjectList{ static_cast<long double>(image->GetDescriptor().LoadTime) , "ms" });
         messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ image->GetDescriptor().DisplayTime , "ms" });
         messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ image->GetDescriptor().pluginUsed != nullptr ? image->GetDescriptor().pluginUsed : "N/A" });
         

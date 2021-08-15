@@ -1,6 +1,9 @@
 #include "MainWindow.h"
 #include <LLUtils/Buffer.h>
-#include "BitmapHelper.h"
+#include <Win32/BitmapHelper.h>
+#include <Win32/Win32Helper.h>
+#include "../resource.h"
+
 namespace OIV
 {
     namespace Win32
@@ -19,52 +22,22 @@ namespace OIV
 
                 if (fCursorsInitialized == false)
                 {
-                    const std::wstring CursorsPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/";
+                    const LLUtils::native_string_type CursorsPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + LLUTILS_TEXT("./Resources/Cursors/");
 
                     fCursors[0] = nullptr;
-                    fCursors[(size_t)CursorType::SystemDefault] = LoadCursor(nullptr, IDC_ARROW);
-                    fCursors[(size_t)CursorType::East] = LoadCursorFromFile((CursorsPath + L"arrow-E.cur").c_str());
-                    fCursors[(size_t)CursorType::NorthEast] = LoadCursorFromFile((CursorsPath + L"arrow-NE.cur").c_str());
-                    fCursors[(size_t)CursorType::North] = LoadCursorFromFile((CursorsPath + L"arrow-N.cur").c_str());
-                    fCursors[(size_t)CursorType::NorthWest] = LoadCursorFromFile((CursorsPath + L"arrow-NW.cur").c_str());
-                    fCursors[(size_t)CursorType::West] = LoadCursorFromFile((CursorsPath + L"arrow-W.cur").c_str());
-                    fCursors[(size_t)CursorType::SouthWest] = LoadCursorFromFile((CursorsPath + L"arrow-SW.cur").c_str());
-                    fCursors[(size_t)CursorType::South] = LoadCursorFromFile((CursorsPath + L"arrow-S.cur").c_str());
-                    fCursors[(size_t)CursorType::SouthEast] = LoadCursorFromFile((CursorsPath + L"arrow-SE.cur").c_str());
-                    fCursors[(size_t)CursorType::SizeAll] = LoadCursorFromFile((CursorsPath + L"arrow-C.cur").c_str());
+                    fCursors[static_cast<size_t>(CursorType::SystemDefault)] = LoadCursor(nullptr, IDC_ARROW);
+                    fCursors[static_cast<size_t>(CursorType::East)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-E.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::NorthEast)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-NE.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::North)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-N.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::NorthWest)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-NW.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::West)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-W.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::SouthWest)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-SW.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::South)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-S.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::SouthEast)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-SE.cur")).c_str());
+                    fCursors[static_cast<size_t>(CursorType::SizeAll)] = LoadCursorFromFile((CursorsPath + LLUTILS_TEXT("arrow-C.cur")).c_str());
 
 
-                //    BitmapShaderPtr bitmap = Bitmap::FromFileAnyFormat((CursorsPath + L"arrow-C.cur").c_str());
 
-                //struct {
-                //    WORD             xHot;         // x hotspot
-                //    WORD             yHot;         // y hotspot
-                //    BITMAPINFOHEADER bih;
-                //   } CURSOR_RES_HDR;
-
-                //   
-
-                // //Fill out pImage
-
-                //
-                //CURSOR_RES_HDR.xHot = 20;
-                //CURSOR_RES_HDR.yHot = 20;
-                //CURSOR_RES_HDR.bih = bitmap->GetBitmapHeader();
-                //    
-                //    
-
-                //HCURSOR hcur = CreateIconFromResourceEx((BYTE*)&CURSOR_RES_HDR,
-                //    bitmap->GetBitmapHeader().biSizeImage + 32, // size of image data + hotspot (in bytes)
-                //    FALSE,
-                //    0x00030000, // version: value mandated by windows
-                //    0, 0,       // width & height, 0 means use default
-                //    LR_DEFAULTSIZE | LR_DEFAULTCOLOR);
-
-
-                ////LoadCursorFromFile();
-
-
-                //fCursors[(size_t)CursorType::SizeAll] = hcur; 
                     fCursorsInitialized = true;
                 }
                 fCurrentCursorType = type;
@@ -82,90 +55,16 @@ namespace OIV
             fCanvasWindow.SetVisible(true);
             fCanvasWindow.SetTransparent(true);
 
+          
+            SetWindowIcon(::Win32::MakeIntResource(IDI_APP_ICON));
+
+           
+       
+
             //SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
             //SetStatusBarText(L"File: ", 1, 0);
 
-
-            RawInput::ResiterWindow(GetHandle());
         }
-
-
-#pragma region RawInput
-
-
-        void MainWindow::FlushInput(bool calledFromIdleTimer)
-        {
-
-            uint64_t currentTime = static_cast<uint64_t>(fRawInputTimer.GetElapsedTimeInteger(LLUtils::StopWatch::TimeUnit::Milliseconds));
-
-            if (currentTime - fRawInputLastEventDisptchTime >= fRawInputInterval)
-            {
-                // Raise events and flush input
-
-                EventRawInputMouseStateChanged rawInputEvent;
-                rawInputEvent.window = this;
-                rawInputEvent.DeltaX = static_cast<int16_t>(fMouseState.GetX());
-                rawInputEvent.DeltaY = static_cast<int16_t>(fMouseState.GetY());
-                rawInputEvent.DeltaWheel = static_cast<int16_t>(fMouseState.GetWheel());
-                rawInputEvent.ChangedButtons = fMouseState.MoveButtonActions();
-                RaiseEvent(rawInputEvent);
-                fMouseState.Flush();
-
-                fRawInputLastEventDisptchTime = currentTime;
-
-                if (calledFromIdleTimer)
-                    SetInputFlushTimer(false);
-            }
-            else
-            {
-                //skipped update, activate input flush timer
-                SetInputFlushTimer(true);
-            }
-        }
-
-        void MainWindow::HandleRawInput(RAWINPUT* event_raw_input)
-        {
-
-            switch (event_raw_input->header.dwType)
-            {
-            case RIM_TYPEMOUSE:
-                HandleRawInputMouse(event_raw_input->data.mouse);
-                break;
-            case RIM_TYPEKEYBOARD:
-                HandleRawInputKeyboard(event_raw_input->data.keyboard);
-                break;
-            default:
-                LL_EXCEPTION_UNEXPECTED_VALUE;
-
-            }
-            FlushInput(false);
-        }
-
-        void MainWindow::SetInputFlushTimer(bool enable)
-        {
-            if (fInputFlushTimerEnabled != enable)
-            {
-                fInputFlushTimerEnabled = enable;
-
-                if (fInputFlushTimerEnabled)
-                    SetTimer(GetHandle(), cTimerIDRawInputFlush, 5, nullptr);
-                else
-                    KillTimer(GetHandle(), cTimerIDRawInputFlush);
-            }
-        }
-
-        void MainWindow::HandleRawInputMouse(const RAWMOUSE& mouse)
-        {
-            fMouseState.Update(mouse);
-        }
-
-        void MainWindow::HandleRawInputKeyboard([[maybe_unused]] const RAWKEYBOARD& keyboard)
-        {
-            //TODO: add support here for keyboard raw input.
-        }
-
-
-#pragma endregion
 
 
 
@@ -243,6 +142,7 @@ namespace OIV
 
         bool MainWindow::GetShowStatusBar() const
         {
+            using namespace ::Win32;
             // show status bar if explicity not visible and caption is visible
             return fShowStatusBar == true &&
                 ((GetWindowStyles() & (WindowStyle::Caption | WindowStyle::CloseButton | WindowStyle::MinimizeButton | WindowStyle::MaximizeButton)) != WindowStyle::NoStyle);
@@ -259,7 +159,7 @@ namespace OIV
             clientSize.cy = rect.bottom - rect.top;
 
 
-            if (GetShowStatusBar() && GetFullScreenState() == FullSceenState::Windowed)
+            if (GetShowStatusBar() && GetFullScreenState() == ::Win32::FullSceenState::Windowed)
             {
                 RECT statusBarRect;
                 ShowWindow(fHandleStatusBar, SW_SHOW);
@@ -282,7 +182,7 @@ namespace OIV
                     SetWindowPos(fImageControl.GetHandle(), nullptr, clientSize.cx, 0, ImageListWidth, clientSize.cy, SWP_NOACTIVATE | SWP_NOZORDER);
             }
 
-            ShowWindow(fHandleStatusBar, GetFullScreenState() == FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
+            ShowWindow(fHandleStatusBar, GetFullScreenState() == ::Win32::FullSceenState::Windowed ? SW_SHOW : SW_HIDE);
         }
 
         void MainWindow::ShowStatusBar(bool show)
@@ -320,14 +220,14 @@ namespace OIV
         {
             RECT rect;
             GetClientRect(GetCanvasHandle(), &rect);
-            return Win32Helper::GetRectSize(rect);
+            return ::Win32::Win32Helper::GetRectSize(rect);
         }
 
 
 
-        LRESULT MainWindow::HandleWindwMessage(const Win32::Event* evnt1)
+        LRESULT MainWindow::HandleWindwMessage(const ::Win32::Event* evnt1)
         {
-
+            using namespace ::Win32;
             const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
             if (evnt == nullptr)
                 return 0;
@@ -341,32 +241,6 @@ namespace OIV
                 OnCreate();
                 break;
 
-            case WM_TIMER:
-                if (message.wParam == cTimerIDRawInputFlush)
-                    FlushInput(true);
-                break;
-            case WM_INPUT:
-            {
-                UINT dwSize;
-                GetRawInputData((HRAWINPUT)message.lParam, RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
-
-                LLUtils::Buffer lpb(dwSize);
-
-                if (lpb == nullptr)
-                    return 0;
-
-                if (GetRawInputData((HRAWINPUT)message.lParam,
-                    RID_INPUT,
-                    lpb.data(),
-                    &dwSize,
-                    sizeof(RAWINPUTHEADER)) != dwSize)
-                {
-                    LL_EXCEPTION_SYSTEM_ERROR("can not get raw input data");
-                }
-
-                HandleRawInput(reinterpret_cast<RAWINPUT*>(lpb.data()));
-            }
-            break;
             case WM_SIZE:
                 HandleResize();
                 break;

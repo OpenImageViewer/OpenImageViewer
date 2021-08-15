@@ -2,14 +2,14 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <tchar.h>
-#include "Win32Window.h"
+#include <Win32/Win32Window.h>
 #include "ImageLIst.h"
 namespace OIV
 {
     namespace Win32
 
     {
-        class ImageControl : public Win32Window
+        class ImageControl : public ::Win32::Win32Window
         {
         public:
 
@@ -26,15 +26,15 @@ namespace OIV
 
             ImageList& GetImageList() { return fImageList; }
 
-            bool HandleWindwMessage(const Win32::Event* evnt1)
+            bool HandleWindwMessage(const ::Win32::Event* evnt1)
             {
                 bool handled = true;
 
-                const EventWinMessage* evnt = dynamic_cast<const EventWinMessage*>(evnt1);
+                const ::Win32::EventWinMessage* evnt = dynamic_cast<const ::Win32::EventWinMessage*>(evnt1);
                 if (evnt == nullptr)
                     return false;
             
-                const WinMessage& msg = evnt->message;
+                const ::Win32::WinMessage& msg = evnt->message;
                 switch (msg.message)
                 {
                 case WM_LBUTTONDOWN:

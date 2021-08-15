@@ -1,6 +1,6 @@
 #include "AutoScroll.h"
 #include "win32/UserMessages.h"
-#include "win32/Win32Helper.h"
+#include <Win32/Win32Helper.h>
 
 
 namespace OIV
@@ -18,7 +18,7 @@ namespace OIV
 
         using namespace LLUtils;
         fAutoScrollStopWatch.Stop();
-        const long double elapsed = fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds);
+        const double elapsed = static_cast<double>( fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds));
         fAutoScrollStopWatch.Start();
         ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(fAutoScrollPosition - GetMousePosition()) ;
         ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
@@ -32,13 +32,13 @@ namespace OIV
 
     void AutoScroll::OnScroll()
     {
-        ::SendMessage(fCreateParams.windowHandle, fCreateParams.windowMessage, 0, 0);
+        PerformAutoScroll();
     }
 
 
     LLUtils::PointI32 AutoScroll::GetMousePosition()
     {
-        return static_cast<LLUtils::PointI32>(Win32Helper::GetMouseCursorPosition(fCreateParams.windowHandle));
+        return static_cast<LLUtils::PointI32>(::Win32::Win32Helper::GetMouseCursorPosition(fCreateParams.windowHandle));
     }
 
 
@@ -48,7 +48,8 @@ namespace OIV
         if (fAutoScrolling == true)
         {
             // start auto scroll
-            fTimer.SetDelay(fScrollTimeDelay);
+            fTimer.SetDueTime(fScrollTimeDelay);
+            fTimer.SetRepeatInterval(fScrollTimeDelay);
             fAutoScrollPosition = GetMousePosition();
         }
         else

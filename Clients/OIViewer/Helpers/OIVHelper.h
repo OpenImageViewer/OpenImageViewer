@@ -40,6 +40,7 @@ namespace OIV
             case ChannelSemantic::Monochrome:
             case ChannelSemantic::Float:
             case ChannelSemantic::None:
+            default:
 
                 return other;
             }

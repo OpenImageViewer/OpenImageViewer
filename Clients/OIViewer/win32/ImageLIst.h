@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 #include <LLUtils/PlatformUtility.h>
-#include "BitmapHelper.h"
+#include <Win32/BitmapHelper.h>
 
 class ImageList
 {
@@ -20,8 +20,8 @@ public:
     {
         uint32_t index;
         std::wstring title;
-        BitmapSharedPtr bitmap;
-        BitmapSharedPtr mask;
+        ::Win32::BitmapSharedPtr bitmap;
+        ::Win32::BitmapSharedPtr mask;
     };
 
     struct RGBAImageDesc
@@ -158,14 +158,14 @@ public:
 
             LineTo(hdc, entrywidth, y + fEntryHeight - lineWidth);
             {
-                RECT r = { 0, textpos ,0, textpos + 24 };
+                RECT r1 = { 0, textpos ,0, textpos + 24 };
                 std::wstring text = imageDesc.title;
-                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r, DT_CALCRECT);
+                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r1, DT_CALCRECT);
                 SetBkMode(hdc, TRANSPARENT);
-                int offset = (entrywidth - (r.right - r.left)) / 2;
-                r.right += offset;
-                r.left += offset;
-                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r,DT_CENTER);
+                int offset = (entrywidth - (r1.right - r1.left)) / 2;
+                r1.right += offset;
+                r1.left += offset;
+                DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r1,DT_CENTER);
             }
             
             SetStretchBltMode(hdc, STRETCH_HALFTONE);

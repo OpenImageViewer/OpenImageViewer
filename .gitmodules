@@ -19,3 +19,9 @@
 [submodule "External/xxHash"]
 	path = External/xxHash
 	url = https://github.com/Cyan4973/xxHash.git
+[submodule "External/LInput"]
+	path = External/LInput
+	url = https://github.com/TheNicker/LInput.git
+[submodule "External/Win32"]
+	path = External/Win32
+	url = https://github.com/TheNicker/Win32.git

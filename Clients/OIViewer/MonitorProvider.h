@@ -1,5 +1,5 @@
 #pragma once
-#include "win32/MonitorInfo.h"
+#include "Win32/MonitorInfo.h"
 
 namespace OIV
 {
@@ -11,8 +11,8 @@ namespace OIV
             HMONITOR hmonitor = MonitorFromWindow(hwnd, 0);
             if (hmonitor != fMonitorDesc.handle) // update frame rate only if monitor has changed.
             {
-                MonitorInfo::GetSingleton().Refresh(); // refresh in case monitors were added or removed since last refresh.
-                fMonitorDesc = MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
+                ::Win32::MonitorInfo::GetSingleton().Refresh(); // refresh in case monitors were added or removed since last refresh.
+                fMonitorDesc = ::Win32::MonitorInfo::GetSingleton().getMonitorInfo(hmonitor);
                 //fMonitorProvider.SetCurrentMonitor(MonitorInfo::GetSingleton().getMonitorInfo(hmonitor));
 
                 EventManager::MonitorChangeEventParams params = { fMonitorDesc };
@@ -21,6 +21,6 @@ namespace OIV
         }
 
     private:
-        MonitorDesc fMonitorDesc{};
+        ::Win32::MonitorDesc fMonitorDesc{};
     };
 }

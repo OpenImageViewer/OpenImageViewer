@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <LLUtils/Point.h>
 #include <LLUtils/StopWatch.h>
-#include "win32/HighPrecisionTimer.h"
+#include <Win32/HighPrecisionTimer.h>
 
 
 namespace OIV
@@ -47,7 +47,7 @@ namespace OIV
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
-        Win32::HighPrecisionTimer fTimer = Win32::HighPrecisionTimer(std::bind(&AutoScroll::OnScroll, this));
+        ::Win32::HighPrecisionTimer fTimer = ::Win32::HighPrecisionTimer(std::bind(&AutoScroll::OnScroll, this));
         CreateParams fCreateParams = {};
         
 #pragma endregion

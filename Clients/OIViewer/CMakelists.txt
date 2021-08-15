@@ -42,6 +42,8 @@ add_custom_command(TARGET ${TargetName}
 
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/Win32/Win32/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Image/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
@@ -51,6 +53,7 @@ target_link_libraries(${TargetName}
 
 #local libraries
 oiv
+win32
 #system libraries
 dbghelp.lib
 kernel32.lib
@@ -62,6 +65,8 @@ ole32.lib
 MSIMG32.lib
 Comdlg32.lib
 shcore.lib
+hid
+
 )
 
 set_target_properties(${TargetName} PROPERTIES LINK_FLAGS 

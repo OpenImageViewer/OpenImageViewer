@@ -3,8 +3,8 @@
 #include <mutex>
 
 #include "win32/MainWindow.h"
-#include "win32/HighPrecisionTimer.h"
-#include "win32/Timer.h"
+#include "Win32/HighPrecisionTimer.h"
+#include "Win32/Timer.h"
 #include <defs.h>
 #include <LLUtils/Utility.h>
 #include "AutoScroll.h"
@@ -13,20 +13,26 @@
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
-#include "Keyboard/KeyBindings.h"
-#include "Keyboard/KeyDoubleTap.h"
+#include <LInput/Keys/KeyBindings.h>
+#include <LInput/Buttons/ButtonStates.h>
+#include <LInput/Mouse/MouseButton.h>
+#include <LInput/Win32/RawInput/RawInput.h>
+#include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
+
+
 #include "SelectionRect.h"
 #include "OIVImage\OIVBaseImage.h"
 #include "LabelManager.h"
-#include "win32/MonitorInfo.h"
+#include <Win32/MonitorInfo.h>
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
-#include <LLUtils/Logging/LogFile.h>
+#include <LLUtils/Logging/LogPredefined.h>
 #include "ContextMenu.h"
 #include "FileWatcher.h"
-#include "win32/NotificationIconGroup.h"
+#include "Win32/NotificationIconGroup.h"
+#include "MouseMultiClickHandler.h"
 
 namespace OIV
 {
@@ -66,6 +72,32 @@ namespace OIV
 
     
 
+    class KeyDoubleTap
+    {
+        static constexpr int MaxDelayBetweenTaps = 320;
+        std::chrono::high_resolution_clock::time_point fLastTap;
+    public:
+        std::function<void()> callback;
+        void SetState(bool down)
+        {
+            const bool up = !down;
+            using namespace std::chrono;
+
+            if (up)
+            {
+                high_resolution_clock::time_point now = high_resolution_clock::now();
+                if (std::chrono::duration_cast<milliseconds>(now - fLastTap).count() < MaxDelayBetweenTaps)
+                {
+                    //trigger double tap.
+                    callback();
+                    //MessageBox(nullptr, L"12", L"12", MB_OK);
+                    fLastTap = high_resolution_clock::time_point::min();
+                }
+                fLastTap = high_resolution_clock::now();
+            }
+        }
+    };
+
     class TestApp
     {
     public:
@@ -91,17 +123,16 @@ namespace OIV
 		std::wstring GetLogFilePath();
 		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args);
 #pragma region Win32 event handling
-        bool handleKeyInput(const Win32::EventWinMessage* evnt);
+        bool handleKeyInput(const ::Win32::EventWinMessage* evnt);
         void HideUserMessageGradually();
-        LRESULT ClientWindwMessage(const Win32::Event * evnt1);
+        LRESULT ClientWindwMessage(const ::Win32::Event * evnt1);
         void SetTopMostUserMesage();
         void ProcessTopMost();
-        bool HandleWinMessageEvent(const Win32::EventWinMessage* evnt);
+        bool HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt);
 		void CloseApplication(bool closeToTray);
-        bool HandleFileDragDropEvent(const Win32::EventDdragDropFile* event_ddrag_drop_file);
-        void HandleRawInputMouse(const Win32::EventRawInputMouseStateChanged* evnt);
-        bool HandleMessages(const Win32::Event* evnt);
-        bool HandleClientWindowMessages(const Win32::Event* evnt);
+        bool HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file);
+        bool HandleMessages(const ::Win32::Event* evnt);
+        bool HandleClientWindowMessages(const ::Win32::Event* evnt);
         double GetMinimumPixelSize();
         
 #pragma endregion Win32 event handling
@@ -213,7 +244,7 @@ namespace OIV
         void ProcessCurrentFileChanged();
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
-        void OnNotificationIcon(Win32::NotificationIconGroup::NotificationIconEventArgs args);
+        void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
         void ShowImageInfo();
         void SetImageInfoVisible(bool visible);
@@ -224,7 +255,7 @@ namespace OIV
         static inline CmdNull NullCommand;
         const bool EnableFrameLimiter = true;
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
-        Win32::HighPrecisionTimer fRefreshTimer;
+        ::Win32::HighPrecisionTimer fRefreshTimer;
         uint32_t fRefreshRateTimes1000 = 60'000;
         MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
@@ -242,7 +273,23 @@ namespace OIV
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
 
+
+        using MouseButtonType = LInput::MouseButton ;
+        template <typename T>
+        using DeviceGroup = std::map < uint8_t, T>;
+
+       
+        using MouseButtonstate = LInput::ButtonsState<MouseButtonType, 8>;
+        using MouseGroup = DeviceGroup<MouseButtonstate>;
         
+        MouseGroup fMouseDevicesState;
+        LInput::RawInput fRawInput;
+        void OnRawInput(const LInput::RawInput::RawInputEvent& evnt);
+        void OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent);
+        void OnMouseInput(const LInput::RawInput::RawInputEventMouse& mouseInput);
+
+        std::array<bool, LInput::RawInput::MaxMouseButtons> fCapturedMouseButtons{};
+
         bool fIsGridEnabled = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;
@@ -253,12 +300,12 @@ namespace OIV
         uint32_t fDelayPerCharacter = 40;
         uint32_t fQueueResamplingDelay = 50;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
-        Win32::Timer fTimerHideUserMessage;
-        Win32::Timer fTimerTopMostRetention;
-        Win32::Timer fTimerSlideShow;
+        ::Win32::Timer fTimerHideUserMessage;
+        ::Win32::Timer fTimerTopMostRetention;
+        ::Win32::Timer fTimerSlideShow;
         int fTopMostCounter = 0;
-        Win32::Timer fTimerNoActiveZoom;
-        Win32::Timer fTimerNavigation;
+        ::Win32::Timer fTimerNoActiveZoom;
+        ::Win32::Timer fTimerNavigation;
         bool fIsResamplingEnabled = false;
         bool fQueueImageInfoLoad = false;
         uint16_t fQuickBrowseDelay = 100;
@@ -281,7 +328,9 @@ namespace OIV
         std::wstring DefaultTextKeyColorTag;
         std::wstring DefaultTextValueColorTag;
         LLUtils::StopWatch fFileDisplayTimer;
-
+        MouseMultiClickHandler fMouseClickEventHandler{ 500,2 };
+        void OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args);
+        
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
@@ -304,8 +353,8 @@ namespace OIV
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
-        Win32::NotificationIconGroup fNotificationIcons;
-        Win32::NotificationIconGroup::IconID fNotificationIconID;
+        ::Win32::NotificationIconGroup fNotificationIcons;
+        ::Win32::NotificationIconGroup::IconID fNotificationIconID;
         void LoadSettings(bool startup);
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const; 
@@ -322,7 +371,7 @@ namespace OIV
             std::string command;
             std::string arguments;
         };
-        KeyBindings<BindingElement> fKeyBindings;
+        LInput::KeyBindings<BindingElement> fKeyBindings;
 
         struct CommandDesc
         {
@@ -342,7 +391,7 @@ namespace OIV
         LLUtils::PointI32 fDownPosition;
         
     	
-        Win32::Timer fContextMenuTimer;
+        ::Win32::Timer fContextMenuTimer;
 
         struct 
         {
