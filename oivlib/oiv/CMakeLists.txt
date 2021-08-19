@@ -21,7 +21,7 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapp
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
 
 add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
-add_subdirectory(${ExternalFolder}/FreeTypeWrapper ./external/FreeTypeWrapper)
+add_subdirectory(${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper ./external/FreeTypeWrapper)
 add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 
 target_link_libraries(${TargetName} 

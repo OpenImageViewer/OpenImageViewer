@@ -76,7 +76,7 @@ namespace  OIV
                 if (fSourceFileName.empty() == true)
                     D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
 
-                fSourceCode = LLUtils::File::ReadAllText(GetsourceFileName());
+                fSourceCode = LLUtils::File::ReadAllText<std::string>(GetsourceFileName());
             }
             
             if (fSourceCode.empty() == true)

@@ -10,8 +10,8 @@
 #include <functions.h>
 #include <Version.h>
 
-#include <FreeTypeConnector.h>
-#include <FreeTypeHelper.h>
+#include <FreeTypeWrapper/FreeTypeConnector.h>
+#include <FreeTypeWrapper/FreeTypeHelper.h>
 #include "Interfaces/IRendererDefs.h"
 
 
@@ -251,20 +251,22 @@ namespace OIV
 
         //std::string u8Text = LLUtils::StringUtility::ToUTF8<OIVCHAR>(text);
         //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
-
+        using namespace FreeType;
         FreeTypeConnector::TextCreateParams createParams = {};
         createParams.backgroundColor = request.backgroundColor;
-        createParams.fontPath = LLUtils::StringUtility::ConvertString<std::string>(fontPath);
+        createParams.fontPath = fontPath;
         createParams.fontSize = request.fontSize;
-        createParams.outlineColor = request.outlineColor;
+        createParams.outlineColor = { 0,0,0,255 };// request.outlineColor;
         createParams.outlineWidth = request.outlineWidth;
-        createParams.text = LLUtils::StringUtility::ConvertString<std::string>(text);
+        createParams.text = text;
         createParams.renderMode = static_cast<FreeTypeConnector::RenderMode>(request.renderMode);
         createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
         createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
 
         IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
             
+        if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
+            imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
 
         if (imageText != nullptr)
         {

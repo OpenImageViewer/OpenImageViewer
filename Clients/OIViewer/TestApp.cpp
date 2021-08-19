@@ -1596,7 +1596,9 @@ namespace OIV
     void TestApp::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
     {
         using namespace LInput;
-        if (btnEvent.button == MouseButton::Middle && btnEvent.eventType == EventType::Pressed)
+        bool isMouseCursorOnTopOfWindowAndInsideClientRect = fWindow.IsUnderMouseCursor() && fWindow.IsMouseCursorInClientRect();
+        if (btnEvent.button == MouseButton::Middle && btnEvent.eventType == EventType::Pressed
+            && isMouseCursorOnTopOfWindowAndInsideClientRect)
         {
             fAutoScroll->ToggleAutoScroll();
             if (fAutoScroll->IsAutoScrolling() == false)
@@ -1692,7 +1694,7 @@ namespace OIV
                 
         }
 
-        if (btnEvent.button == MouseButton::Right && btnEvent.eventType == EventType::Pressed)
+        if (btnEvent.button == MouseButton::Right && btnEvent.eventType == EventType::Pressed && isMouseCursorOnTopOfWindowAndInsideClientRect)
         {
             if (fContextMenuTimer.GetInterval() == 0)
             {
@@ -1986,6 +1988,7 @@ namespace OIV
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/minimagesize", fMinImageSize);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/slideshowinterval", fSlideShowIntervalms);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/quickbrowsedelay", fQuickBrowseDelay);
+        LoadValue<ConfigurationLoader::Bool>(settings, "/viewsettings/autoloadchangedfile", fAutoLoadChangedFile);
 
         if (startup)
         {
@@ -2860,20 +2863,27 @@ namespace OIV
 
     void TestApp::ProcessCurrentFileChanged()
     {
-
         using namespace std::string_literals;
-        if (fFileReloadPending == false)
-        {
-            fFileReloadPending = true;
-            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
-            fFileReloadPending = false;
-            if (mbResult == IDYES)
-            {
-                LoadFile(GetOpenedFileName(), false);
-            }
-            else if (mbResult == IDNO)
-            {
 
+        if (fAutoLoadChangedFile == true)
+        {
+            LoadFile(GetOpenedFileName(), false);
+        }
+        else
+        {
+            if (fFileReloadPending == false)
+            {
+                fFileReloadPending = true;
+                int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
+                fFileReloadPending = false;
+                if (mbResult == IDYES)
+                {
+                    LoadFile(GetOpenedFileName(), false);
+                }
+                else if (mbResult == IDNO)
+                {
+
+                }
             }
         }
     }

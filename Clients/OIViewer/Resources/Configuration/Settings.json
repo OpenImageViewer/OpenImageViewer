@@ -1,23 +1,19 @@
 {
-    "system":
-    {
-        "allowdynamicsettings" : false
-    }
-    ,"viewsettings":
-    {
+  "system": {
+    "allowdynamicsettings": false
+  },
+  "viewsettings": {
+    "autoloadchangedfile": true,
+    "maxzoom": 100.0,
+    "minimagesize": 150,
+    "slideshowinterval": 2000,
+    "quickbrowsedelay": 100,
+    "imagemargins": {
+      "x": 0.25,
+      "y": 0.25
+    },
+    "windowsettings": {
 
-      "maxzoom": 100.0
-      ,"minimagesize": 150
-      ,"slideshowinterval": 2000
-      ,"quickbrowsedelay": 100
-        , "imagemargins" : 
-        {
-              "x" : 0.25
-            , "y" :0.25
-        }
-        ,"windowsettings" :
-        {
-            
-        }
-   }
+    }
+  }
 }

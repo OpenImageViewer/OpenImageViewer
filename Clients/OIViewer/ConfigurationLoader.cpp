@@ -12,7 +12,7 @@ namespace OIV
 		using namespace nlohmann;
 		using namespace LLUtils;
 
-		std::string jsonText = File::ReadAllText(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/Commands.json"));
+		std::string jsonText = File::ReadAllText<std::string>(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/Commands.json"));
 		auto jsonObject = json::parse(jsonText);
 		auto commands = jsonObject["commands"];
 
@@ -31,7 +31,7 @@ namespace OIV
 		using namespace nlohmann;
 		using namespace LLUtils;
 
-		std::string jsonText = File::ReadAllText(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/KeyBindings.json"));
+		std::string jsonText = File::ReadAllText<std::string>(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/KeyBindings.json"));
 		auto jsonObject = json::parse(jsonText);
 		auto keyBindings = jsonObject["KeyBindings"];
 
@@ -58,7 +58,7 @@ namespace OIV
 
 		try
 		{
-			std::string jsonText = File::ReadAllText(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/Settings.json"));
+			std::string jsonText = File::ReadAllText<std::string>(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/Settings.json"));
 			auto jsonObject = json::parse(jsonText);
 
 			SettingEntryForParsing root;
