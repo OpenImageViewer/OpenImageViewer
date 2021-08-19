@@ -865,11 +865,22 @@ namespace OIV
         auto GetBuildTimeStamp = []()-> std::wstring
         {
             auto fileTime = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
-
-            auto ticks = fileTime.time_since_epoch().count();
-            auto systemClockTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
+            std::chrono::system_clock::time_point systemTime;
+            auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
+            if (osVersion.major >= 10 && osVersion.major > 15063 /*Version 1703*/)
+            {
+                // Not sure if it's a MS STL bug, but using clock_cast invokes initialization of timezones information
+				// which in turn invokes icu.dll, supported only since windows 10 1703.
+                // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
+                systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
+            }
+            else
+            {
+                auto ticks = fileTime.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
+                systemTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
+            }
             
-            auto in_time_t = std::chrono::system_clock::to_time_t(systemClockTime);
+            auto in_time_t = std::chrono::system_clock::to_time_t(systemTime);
             std::wstringstream ss;
             tm tmDest;
             errno_t errorCode = localtime_s(&tmDest, &in_time_t) != 0;
