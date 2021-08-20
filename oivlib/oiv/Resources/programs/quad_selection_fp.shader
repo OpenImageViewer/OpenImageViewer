@@ -29,8 +29,8 @@ float4 GetFinalTexel(float2 i_inputUV)
 	static const float MaxSegmentLength = 100;
 	static const float MinSegmentLength = 15;
 	static const float BorderPrecentage = 0.01;
-	static const float MaxBorderWidth = 7;
-	static const float MinBorderWidth = 2;
+	static const float MaxBorderWidth = 1;
+	static const float MinBorderWidth = 1;
 
 
 	float2 viewportSize = float2(uViewportSize.xy);
