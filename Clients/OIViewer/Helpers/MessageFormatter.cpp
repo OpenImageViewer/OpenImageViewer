@@ -258,20 +258,23 @@ namespace OIV
         return ss.str();
     }
 
-
     template<typename string_type, typename number_type>
     string_type MessageFormatter::numberFormatWithCommas(number_type value)
     {
-        struct Numpunct : public std::numpunct<char> {
+        using char_type = typename string_type::value_type;
+        struct Numpunct : public std::numpunct<char_type>
+        {
         protected:
-            virtual char do_thousands_sep() const override { return ','; }
+            virtual char_type do_thousands_sep() const override { return  char_type(44); /*char 44 = comma seperator */ }
             virtual std::string do_grouping() const override { return "\03"; }
         };
 
         struct StringStreamWrapper
         {
-            std::basic_stringstream<typename string_type::value_type> ss;
-            StringStreamWrapper() { ss.imbue({ std::locale(), new Numpunct }); }
+            std::basic_stringstream<char_type> ss;
+            StringStreamWrapper() { ss.imbue({ std::locale(), new Numpunct() }); } 
+    		// The new local takes ownership on the "new Numpunct()" and responsible to destroy it, see  http://eel.is/c++draft/locale.facet#3
+
         } thread_local ssWrapper;
         auto& ss = ssWrapper.ss;
 
