@@ -4,8 +4,8 @@ namespace OIV
 	class MessageHelper
 	{
 	public:
-		static std::string CreateImageInfoMessage(const OIVBaseImageSharedPtr& image);
-		static std::string CreateKeyBindingsMessage();
-		static std::string ParseImageSource(const OIVBaseImageSharedPtr& image);
+		static std::wstring CreateImageInfoMessage(const OIVBaseImageSharedPtr& image);
+		static std::wstring CreateKeyBindingsMessage();
+		static std::wstring ParseImageSource(const OIVBaseImageSharedPtr& image);
 	};
 }

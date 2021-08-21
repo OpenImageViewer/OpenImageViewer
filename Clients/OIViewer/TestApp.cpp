@@ -300,7 +300,7 @@ namespace OIV
             requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
             requestText.fontPath = LabelManager::sFixedFontPath;
             requestText.fontSize = 12;
-            requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+            requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
             requestText.outlineWidth = 2;
 
 
@@ -3108,7 +3108,7 @@ namespace OIV
             textOptions.fontPath = LabelManager::sFontPath;
             textOptions.fontSize = 12;
             textOptions.outlineWidth = 2;
-            textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+            textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
 
             OIV_CMD_ImageProperties_Request& properties = userMessage->GetImageProperties();
             properties.position = { 20,20 };
@@ -3215,15 +3215,15 @@ namespace OIV
     {
         if (IsImageOpen())
         {
-            std::string imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetImage(ImageChainStage::SourceImage));
+            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetImage(ImageChainStage::SourceImage));
             OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
             CreateTextParams& params = imageInfoText->GetTextOptions();
             
-            params.text = LLUtils::StringUtility::ConvertString<OIVString>(imageInfoString);
+            params.text = imageInfoString;
             params.backgroundColor = LLUtils::Color(0,0,0,127).colorValue;
             params.fontPath = LabelManager::sFixedFontPath;
             params.fontSize = 12;
-            params.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+            params.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
             params.outlineWidth = 2;
 
             imageInfoText->GetImageProperties().position = { 20,60 };
@@ -3254,7 +3254,7 @@ namespace OIV
         params.backgroundColor = LLUtils::Color(0).colorValue;
         params.fontPath = LabelManager::sFontPath;
         params.fontSize = 44;
-        params.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        params.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
         params.outlineWidth = 3;
 
 

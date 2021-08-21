@@ -5,26 +5,26 @@
 #include "../ConfigurationLoader.h"
 namespace OIV
 {
-    std::string  MessageHelper::ParseImageSource(const OIVBaseImageSharedPtr& image)
+    std::wstring  MessageHelper::ParseImageSource(const OIVBaseImageSharedPtr& image)
     {
         switch (image->GetDescriptor().Source)
         {
         case ImageSource::None:
-            return "none";
+            return L"none";
         case ImageSource::File:
-            return "file";
+            return L"file";
         case ImageSource::Clipboard:
-            return "clipboard";
+            return L"clipboard";
         case ImageSource::InternalText:
-            return "internal text";
+            return L"internal text";
         case ImageSource::GeneratedByLib:
-            return "auto generated";
+            return L"auto generated";
         default:
-            return "unknown";
+            return L"unknown";
         }
     }
     
-    std::string MessageHelper::CreateKeyBindingsMessage()
+    std::wstring MessageHelper::CreateKeyBindingsMessage()
     {
         using namespace std;
         //string message = DefaultHeaderColor + "Image information\n";
@@ -59,25 +59,25 @@ namespace OIV
     }
 
 
-    std::string  MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& image)
+    std::wstring  MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& image)
     {
         using namespace std;
-        string message = MessageFormatter::DefaultHeaderColor + "Image information\n";
+        wstring message = MessageFormatter::DefaultHeaderColor + L"Image information\n";
 
         MessageFormatter::FormatArgs args;
         args.keyColor = MessageFormatter::DefaultKeyColor;
         args.maxLines = 24;
         args.minSpaceFromValue = 3;
         args.spacer = '.';
-        args.valueColor = "<textcolor=#ffffff>";
+        args.valueColor = L"<textcolor=#ffffff>";
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
 
         if (image->GetDescriptor().Source != ImageSource::File)
             messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
         else
-            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ LLUtils::StringUtility::ToAString(
-                MessageFormatter::FormatFilePath(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName())) });
+            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ 
+                MessageFormatter::FormatFilePath(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName()) });
 
         const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
 
@@ -94,7 +94,7 @@ namespace OIV
         if (uniqueValues > -1)
             messageValues.emplace_back("Unique values", MessageFormatter::ValueObjectList{ uniqueValues });
 
-        message += "\n" + MessageFormatter::FormatMetaText(args);
+        message += L'\n' + MessageFormatter::FormatMetaText(args);
         return message;
     }
 }

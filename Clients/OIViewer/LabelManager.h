@@ -9,9 +9,8 @@ namespace OIV
     class LabelManager
     {
     public:
-        inline static const OIVString sFontPath = OIV_TEXT("C:\\Windows\\Fonts\\segoeuib.ttf");
-        inline static const OIVString sFixedFontPath = OIV_TEXT("C:\\Windows\\Fonts\\consola.ttf");
-     
+        inline static const OIVString sFontPath = OIV_TEXT("C:/Windows/Fonts/segoeuib.ttf");
+        inline static const OIVString sFixedFontPath = OIV_TEXT("C:/Windows/Fonts/consola.ttf");
         
     public:
         LabelManager();

@@ -1,9 +1,9 @@
 #include "MessageFormatter.h"
 namespace OIV
 {
-    std::string MessageFormatter::FormatValueObject(const ValueObjectList& objects)
+    std::wstring MessageFormatter::FormatValueObject(const ValueObjectList& objects)
     {
-        std::string result;
+        std::wstring result;
 
         for (const auto& e : objects)
             result += FormatValueObject(e);
@@ -11,25 +11,29 @@ namespace OIV
         return result;
     }
 
-    std::string MessageFormatter::FormatValueObject(const ValueObject& valueObject)
+    std::wstring MessageFormatter::FormatValueObject(const ValueObject& valueObject)
     {
         switch (valueObject.index())
         {
         case 0:
-            return numberFormatWithCommas(std::get<int64_t>(valueObject));
+            return numberFormatWithCommas<std::wstring>(std::get<int64_t>(valueObject));
             break;
         case 1:
-            return numberFormatWithCommas(std::get<long double>(valueObject));
+            return numberFormatWithCommas<std::wstring>(std::get<long double>(valueObject));
             break;
         case 2:
-            return std::get<std::string>(valueObject);
+            return LLUtils::StringUtility::ToWString(std::get<std::string>(valueObject));
+            break;
+        case 3:
+            return std::get<std::wstring>(valueObject);
+			break;
             break;
         }
 
-        return std::string();
+        return {};
     }
 
-    std::string MessageFormatter::FormatMetaText(FormatArgs args)
+    std::wstring MessageFormatter::FormatMetaText(FormatArgs args)
     {
         using namespace std;
 
@@ -64,18 +68,18 @@ namespace OIV
 
 
 
-        vector<std::string> lines(std::min<int>(args.messageValues.size(), args.maxLines));
+        vector<std::wstring> lines(std::min<size_t>(args.messageValues.size(), args.maxLines));
 
 
         for (const auto& [key, value] : args.messageValues)
         {
-            stringstream ss;
-            ss << args.keyColor << key;
+            wstringstream ss;
+            ss << args.keyColor << LLUtils::StringUtility::ToWString(key);
 
             auto formattedValue = FormatValueObject(value);
 
-            size_t currentLength = key.length();
-            while (currentLength++ < columnInfo[currentcolumn].maxFirstLength)
+            size_t currentLengthKeyLength = key.length();
+            while (currentLengthKeyLength++ < columnInfo[currentcolumn].maxFirstLength)
                 ss << args.spacer;
 
             for (int i = 0; i < args.minSpaceFromValue - 1; i++)
@@ -87,8 +91,8 @@ namespace OIV
 
             if (currentcolumn < totalColumns - 1)
             {
-                size_t currentLength = formattedValue.length();
-                while (currentLength++ < columnInfo[currentcolumn].maxSecondLength)
+                size_t currentValueLength = formattedValue.length();
+                while (currentValueLength++ < columnInfo[currentcolumn].maxSecondLength)
                     ss << " ";
 
 
@@ -112,11 +116,11 @@ namespace OIV
             }
         }
 
-        stringstream ss1;
-        for (const std::string& line : lines)
+        wstringstream ss1;
+        for (const std::wstring& line : lines)
             ss1 << line << "\n";
 
-        std::string message = ss1.str();
+        std::wstring message = ss1.str();
         if (message[message.size() - 1] == '\n')
             message.erase(message.size() - 1);
 
@@ -150,6 +154,7 @@ namespace OIV
             return other;
             break;
         case ChannelSemantic::None:
+        default:
             LL_EXCEPTION_UNEXPECTED_VALUE;
             
             
@@ -175,6 +180,7 @@ namespace OIV
         case IMCodec::ChannelSemantic::Float:
             return "Float";
         case IMCodec::ChannelSemantic::None:
+        default:
             return "Undefined";
         }
     }
@@ -190,6 +196,7 @@ namespace OIV
         case IMCodec::ChannelDataType::UnsignedInt:
             return "unsigned";
         case IMCodec::ChannelDataType::None:
+        default:
             return "undefined";
         }
     }
@@ -197,7 +204,19 @@ namespace OIV
     std::wstring MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
     {
         using namespace std::filesystem;
-        return  L"<textcolor=#808080>" + filePath.parent_path().wstring() + path::preferred_separator + L"<textcolor=#7672ff>" + filePath.stem().wstring() + L"<textcolor=#ff00ff>" + filePath.extension().wstring();
+        auto parentPath = filePath.parent_path();
+
+        std::wstring formattedPath = L"<textcolor=#808080>" + parentPath.root_name().wstring() + path::preferred_separator;
+        
+        if (parentPath.relative_path().empty() == false)
+        {
+            // in case the file located at the root directory, don't add empty relatve path and extra seperator.
+            formattedPath += parentPath.relative_path().wstring() + path::preferred_separator;
+        }
+
+        formattedPath += L"<textcolor=#7672ff>" + filePath.stem().wstring() + L"<textcolor=#ff00ff>" + filePath.extension().wstring();
+        
+        return formattedPath;
     }
 	
     std::string MessageFormatter::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)
@@ -240,8 +259,9 @@ namespace OIV
     }
 
 
-    template<class T>
-    std::string MessageFormatter::numberFormatWithCommas(T value) {
+    template<typename string_type, typename number_type>
+    string_type MessageFormatter::numberFormatWithCommas(number_type value)
+    {
         struct Numpunct : public std::numpunct<char> {
         protected:
             virtual char do_thousands_sep() const override { return ','; }
@@ -250,12 +270,12 @@ namespace OIV
 
         struct StringStreamWrapper
         {
-            std::stringstream ss;
+            std::basic_stringstream<typename string_type::value_type> ss;
             StringStreamWrapper() { ss.imbue({ std::locale(), new Numpunct }); }
         } thread_local ssWrapper;
         auto& ss = ssWrapper.ss;
 
-        ss.str(std::string());
+        ss.str(string_type());
         ss << std::setprecision(2) << std::fixed << value;
         return ss.str();
     }
