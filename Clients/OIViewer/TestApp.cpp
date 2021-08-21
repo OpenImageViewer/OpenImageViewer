@@ -2938,9 +2938,6 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
             fAutoScroll->PerformAutoScroll();
             break;
-        case Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER:
-            PerformRefresh();
-            break;
         case Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE:
             SetUserMessage(fLastMessageForMainThread, static_cast<int32_t>(uMsg.wParam));
             break;
