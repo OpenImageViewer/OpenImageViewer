@@ -11,24 +11,37 @@ namespace OIV
     
     void AutoScroll::PerformAutoScroll()
     {
-        ////There may be pending message 
-        //TODO: wait  for processing all messages after  kill timer
-        if (fAutoScrolling == false)
-            return;
-
         using namespace LLUtils;
         fAutoScrollStopWatch.Stop();
         const double elapsed = static_cast<double>( fAutoScrollStopWatch.GetElapsedTimeReal(StopWatch::TimeUnit::Milliseconds));
         fAutoScrollStopWatch.Start();
         ScrollPointType deltaFromScrollPosition = static_cast<ScrollPointType>(fAutoScrollPosition - GetMousePosition()) ;
         ScrollPointType deltaAbs = deltaFromScrollPosition.Abs();
-        deltaAbs.x = deltaAbs.x < fAutoScrollDeadZone ? 0 : (deltaAbs.x - (fAutoScrollDeadZone - 1));
-        deltaAbs.y = deltaAbs.y < fAutoScrollDeadZone ? 0 : (deltaAbs.y - (fAutoScrollDeadZone - 1));
-        PointF64 autoScrollAmount = deltaAbs * (elapsed * fScrollSpeed * 0.001) * deltaFromScrollPosition.Sign();
+        deltaAbs.x = deltaAbs.x <= fScrollMetrics.deadZoneRadius ? 0 : (deltaAbs.x - fScrollMetrics.deadZoneRadius);
+        deltaAbs.y = deltaAbs.y <= fScrollMetrics.deadZoneRadius ? 0 : (deltaAbs.y - fScrollMetrics.deadZoneRadius);
+
+        auto factorOut = fScrollMetrics.speedFactorOut;
+        auto factorIn = fScrollMetrics.speedInFactorIn;
         
-        fCreateParams.scrollFunc(autoScrollAmount);
+        auto powerX = std::min<double>(factorOut, (factorOut - factorIn) / fScrollMetrics.speedFactorRange * deltaAbs.x + factorIn);
+        auto powerY = std::min<double>(factorOut, (factorOut - factorIn) / fScrollMetrics.speedFactorRange * deltaAbs.y + factorIn);
+
+        auto movementSpeedX = std::min<double>(fScrollMetrics.maxSpeed, deltaAbs.x == 0 ? 0 : std::pow(deltaAbs.x, powerX));
+        auto movementSpeedY = std::min<double>(fScrollMetrics.maxSpeed, deltaAbs.y == 0 ? 0 : std::pow(deltaAbs.y, powerY));
+
+        LLUtils::PointF64 movement{ movementSpeedX  , movementSpeedY };
+
+
+        PointF64 scrollAmount = movement * (elapsed * 0.001) * deltaFromScrollPosition.Sign();
+        
+        fCreateParams.scrollFunc(static_cast<PointF64>(scrollAmount));
     }
 
+
+    void AutoScroll::SetScrollMetrics(const ScrollMetrics& scrollMetrics)
+    {
+        fScrollMetrics = scrollMetrics;
+    }
 
     void AutoScroll::OnScroll()
     {

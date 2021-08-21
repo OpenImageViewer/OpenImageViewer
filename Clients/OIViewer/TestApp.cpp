@@ -809,6 +809,7 @@ namespace OIV
 
             if (microsecSinceLastRefresh > windowTimeInMicroSeconds)
             {
+                fRefreshTimer.Enable(false);
                 //Refresh immediately
                 OIVCommands::Refresh();
                 fLastRefreshTime = now;
@@ -817,8 +818,11 @@ namespace OIV
             else
             {
                 //Don't refresh now, restrat refresh timer
-                fRefreshTimer.SetDueTime(static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
-                fRefreshTimer.Enable(true);
+                if (fRefreshTimer.GetEnabled() == false)
+                {
+                    fRefreshTimer.SetDueTime(static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
+                    fRefreshTimer.Enable(true);
+                }
             }
         }
         else
@@ -846,8 +850,9 @@ namespace OIV
     // callback from a too early refresh operation 
     void TestApp::OnRefreshTimer()
     {
-        //Perform refresh in the main thread.
-        PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_REFRESH_TIMER, 0, 0);
+        using namespace std::chrono;
+        OIVCommands::Refresh();
+        fLastRefreshTime = high_resolution_clock::now();
     }
     
     void TestApp::OnPreserveSelectionRect()
@@ -1625,14 +1630,11 @@ namespace OIV
                 options.onlyRegisteredExtension = true;
                 if (fileImage->Load(options) == ResultCode::RC_Success)
                 {
+
                     fileImage->GetImageProperties().imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
-                    fileImage->GetImageProperties().opacity = 0.5;
-
-
-
                     fileImage->GetImageProperties().position = static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - LLUtils::PointI32(fileImage->GetDescriptor().Width, fileImage->GetDescriptor().Height) / 2);
                     fileImage->GetImageProperties().scale = { 1,1 };
-                    fileImage->GetImageProperties().opacity = 1.0;
+                    fileImage->GetImageProperties().opacity = 0.5;
 
                     fAutoScrollAnchor = std::move(fileImage);
                     fAutoScrollAnchor->Update();
@@ -2000,6 +2002,18 @@ namespace OIV
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/slideshowinterval", fSlideShowIntervalms);
         LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/quickbrowsedelay", fQuickBrowseDelay);
         LoadValue<ConfigurationLoader::Bool>(settings, "/viewsettings/autoloadchangedfile", fAutoLoadChangedFile);
+
+        //Auto scroll metrics
+
+        AutoScroll::ScrollMetrics metrics{};
+
+        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/deadzoneradius", metrics.deadZoneRadius);
+        LoadValue<ConfigurationLoader::Float>   (settings, "/autoscroll/speedfactorin", metrics.speedInFactorIn);
+        LoadValue<ConfigurationLoader::Float>   (settings, "/autoscroll/speedfactorout", metrics.speedFactorOut);
+        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/speedfactorrange", metrics.speedFactorRange);
+        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/maxspeed", metrics.maxSpeed);
+
+        fAutoScroll->SetScrollMetrics(metrics);
 
         if (startup)
         {

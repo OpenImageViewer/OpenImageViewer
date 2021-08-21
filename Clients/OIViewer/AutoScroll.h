@@ -13,6 +13,15 @@ namespace OIV
     public:
 
         using OnScrollFunction = std::function< void(const LLUtils::PointF64&)>;
+
+        struct ScrollMetrics
+        {
+            uint16_t deadZoneRadius = 10; // in pixels
+            double speedInFactorIn = 0.9;
+            double speedFactorOut = 1.7;
+            uint16_t speedFactorRange = 40; // in pixels
+            uint16_t maxSpeed = 5000; // in pixels per second.
+        };
         
         struct CreateParams
         {
@@ -20,12 +29,10 @@ namespace OIV
             DWORD windowMessage;
             OnScrollFunction scrollFunc;
         };
-
-
         
         AutoScroll(const CreateParams& createParams);
-        bool IsAutoScrolling()const { return fAutoScrolling; }
-
+        bool IsAutoScrolling() const { return fAutoScrolling; }
+        void SetScrollMetrics(const ScrollMetrics& scrollMetrics);
         LLUtils::PointI32 GetMousePosition();
         void ToggleAutoScroll();
         void PerformAutoScroll();
@@ -39,16 +46,18 @@ namespace OIV
    
 #pragma region Private member fields
     private:
+     
+
         //Scroll paramaters
         uint16_t fScrollTimeDelay = 1; // in milliseconds
-        uint8_t fAutoScrollDeadZone = 20; // in pixels
-        uint16_t fScrollSpeed = 5; // pixels per second per step
+        
+        ScrollMetrics fScrollMetrics{};
 
         bool fAutoScrolling = false;
         LLUtils::PointI32 fAutoScrollPosition = 0;
         LLUtils::StopWatch fAutoScrollStopWatch;
         ::Win32::HighPrecisionTimer fTimer = ::Win32::HighPrecisionTimer(std::bind(&AutoScroll::OnScroll, this));
-        CreateParams fCreateParams = {};
+        CreateParams fCreateParams {};
         
 #pragma endregion
     };
