@@ -872,7 +872,7 @@ namespace OIV
             auto fileTime = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
             std::chrono::system_clock::time_point systemTime;
             auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
-            if (osVersion.major >= 10 && osVersion.major > 15063 /*Version 1703*/)
+            if (osVersion.major > 10 || (osVersion.major == 10 && osVersion.build >= 15063 /*Version 1703*/ ))
             {
                 // Not sure if it's a MS STL bug, but using clock_cast invokes initialization of timezones information
 				// which in turn invokes icu.dll, supported only since windows 10 1703.
