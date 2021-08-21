@@ -59,7 +59,7 @@ namespace OIV
         textOptions.fontPath = sFontPath;
         textOptions.fontSize = 12;
         textOptions.outlineWidth = 2;
-        textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_SubpixelAntiAliased;
+        textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
         textOptions.DPIx = std::get<0>(fDPI);
         textOptions.DPIy = std::get<1>(fDPI);
 
