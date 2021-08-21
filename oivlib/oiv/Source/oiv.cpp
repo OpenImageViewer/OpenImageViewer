@@ -264,12 +264,12 @@ namespace OIV
         createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
 
         IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
-            
-        if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
-            imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
 
         if (imageText != nullptr)
         {
+            if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
+                imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
+
             ImageHandle handle = fImageManager.AddImage(imageText);
             response.imageHandle = handle;
             UploadImageToRenderer(handle);
