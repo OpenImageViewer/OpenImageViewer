@@ -1,19 +1,28 @@
 {
-  "system": {
+  "system": 
+  {
     "allowdynamicsettings": false
   },
-  "viewsettings": {
+  "viewsettings": 
+  {
     "autoloadchangedfile": true,
     "maxzoom": 100.0,
     "minimagesize": 150,
     "slideshowinterval": 2000,
     "quickbrowsedelay": 100,
-    "imagemargins": {
+    "imagemargins": 
+    {
       "x": 0.25,
       "y": 0.25
     },
-    "windowsettings": {
-
+    }
+      ,
+       "autoscroll" :
+    {
+        "deadzoneradius" : 10
+      , "speedfactorin" : 0.4
+      , "speedfactorout" : 1.4
+      , "speedfactorrange" : 30
+      , "maxspeed" : 8000
     }
   }
-}
