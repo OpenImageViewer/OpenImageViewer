@@ -106,7 +106,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_compile_definitions(UNICODE _UNICODE NOMINMAX)
 add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
 
-
+option(WIN32_LIB_BUILD_SAMPLES "build win32 samples" OFF)
 add_subdirectory(./External/Win32)
 add_subdirectory(oivlib)
 add_subdirectory(Clients/OIViewer)
