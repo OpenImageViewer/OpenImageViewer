@@ -1030,8 +1030,7 @@ namespace OIV
         else
         {
             SetResamplingEnabled(true);
-            LoadFileInFolder(GetOpenedFileName());
-            WatchCurrentFolder();
+            ProcessLoadedDirectory();
         }
 
 
@@ -1889,6 +1888,15 @@ namespace OIV
             }
         }
     }
+
+    void TestApp::ProcessLoadedDirectory()
+    {
+        if (IsOpenedImageIsAFile())
+        {
+            LoadFileInFolder(GetOpenedFileName());
+            WatchCurrentFolder();
+        }
+    }
     void TestApp::PostInitOperations()
     {
 
@@ -1922,12 +1930,9 @@ namespace OIV
         fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
 
         //If a file has been succesfuly loaded, index all the file in the folder
-		if (IsOpenedImageIsAFile())
-		{
-			LoadFileInFolder(GetOpenedFileName());
-            WatchCurrentFolder();
-		}
-		else
+        ProcessLoadedDirectory();
+		
+		if (IsImageOpen() == false)
 		{
 			ShowWelcomeMessage();
 			UpdateTitle();

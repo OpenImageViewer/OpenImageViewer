@@ -250,6 +250,7 @@ namespace OIV
         void ShowImageInfo();
         void SetImageInfoVisible(bool visible);
         bool GetImageInfoVisible() const;
+        void ProcessLoadedDirectory();
 		
     private: // member fields
 #pragma region FrameLimiter

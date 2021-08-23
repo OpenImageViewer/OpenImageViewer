@@ -181,8 +181,6 @@ namespace OIV
         }
     }
 
-
-
     void ImageState::UpdateImageParameters(OIVBaseImageSharedPtr visibleImage, bool visible)
     {
         visibleImage->GetImageProperties().position = GetOffset();
