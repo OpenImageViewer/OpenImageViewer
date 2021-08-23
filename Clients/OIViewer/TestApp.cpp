@@ -1286,13 +1286,14 @@ namespace OIV
 
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
-        if (absoluteFilePath.empty() == false)
+        using namespace std::filesystem;
+        
+        const std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
+
+        if (absoluteFolderPath != fListedFolder)
         {
-            using namespace std::filesystem;
             fListFiles.clear();
             fCurrentFileIndex = FileIndexStart;
-
-            std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
 
             std::string fileTypesAnsi;
             OIVCommands::GetKnownFileTypes(fileTypesAnsi);
@@ -1305,6 +1306,7 @@ namespace OIV
 
             UpdateOpenedFileIndex();
             UpdateTitle();
+            fListedFolder = absoluteFolderPath;
         }
     }
 
@@ -1559,8 +1561,10 @@ namespace OIV
         }
     }
 
-    void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
+    void TestApp::OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
+        auto fileChangedEventArgs = *fileChangedEventArgsPtr;
+		
         if (fileChangedEventArgs.folderID == fOpenedFileFolderID)
         {
             std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
@@ -1580,14 +1584,13 @@ namespace OIV
                 break;
             case FileWatcher::FileChangedOp::Modified:
                 if (absoluteFilePath == changedFileName)
-                    PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
+                    ProcessCurrentFileChanged();
                 break;
             case FileWatcher::FileChangedOp::Rename:
-                if (absoluteFilePath == changedFileName2)
-                    PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, 0, 0);
-
                 UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
                 UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
+                if (absoluteFilePath == changedFileName2)
+                    ProcessCurrentFileChanged();
                 break;
 
             case FileWatcher::FileChangedOp::WatchedFolderRemoved:
@@ -1608,6 +1611,10 @@ namespace OIV
         }
     }
 
+    void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
+    {
+        SendMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED, reinterpret_cast<WPARAM>(&fileChangedEventArgs),0);
+    }
 
     void TestApp::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
     {
@@ -2942,7 +2949,7 @@ namespace OIV
             SetUserMessage(fLastMessageForMainThread, static_cast<int32_t>(uMsg.wParam));
             break;
         case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
-            ProcessCurrentFileChanged();
+            OnFileChangedImpl(reinterpret_cast<FileWatcher::FileChangedEventArgs*>(uMsg.wParam));
             break;
 
             case WM_COPYDATA:

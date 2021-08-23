@@ -240,7 +240,8 @@ namespace OIV
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
         bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
-        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);
+        void OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgs);// file change handler, runs in the main thread.
+        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs); // callback from file watcher
         void ProcessCurrentFileChanged();
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
@@ -272,6 +273,7 @@ namespace OIV
         bool fAllowDynamicSettings = false;
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
+        std::wstring fListedFolder; // the current folder the the file list is taken from
 
 
         using MouseButtonType = LInput::MouseButton ;
