@@ -176,7 +176,7 @@ namespace OIV
         {
             fOffset = offset;
             auto visibleImage = GetVisibleImage();
-            visibleImage->GetImageProperties().position = fOffset;
+            visibleImage->GetImageProperties().position = fOffset.Round();
             visibleImage->Update();
         }
     }
