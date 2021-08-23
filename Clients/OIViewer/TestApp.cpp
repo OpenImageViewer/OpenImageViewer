@@ -1280,6 +1280,8 @@ namespace OIV
 
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
+
+            UpdateTitle();
         }
     }
 
@@ -1291,6 +1293,7 @@ namespace OIV
 
         if (absoluteFolderPath != fListedFolder)
         {
+            //File is loaded from a different folder then the active one.
             fListFiles.clear();
             fCurrentFileIndex = FileIndexStart;
 
@@ -1298,15 +1301,12 @@ namespace OIV
             OIVCommands::GetKnownFileTypes(fileTypesAnsi);
 
             std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
-
             LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
-
             std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
-
-            UpdateOpenedFileIndex();
-            UpdateTitle();
             fListedFolder = absoluteFolderPath;
         }
+        
+        UpdateOpenedFileIndex();
     }
 
     void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
