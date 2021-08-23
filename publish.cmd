@@ -30,7 +30,7 @@ rem Change to 1 to make an official build
 set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
 set OIV_VERSION_REVISION=0
-set OIV_VERSION_BUILD=5
+set OIV_VERSION_BUILD=6
 
 set VersionPath=.\oivlib\oiv\Include\Version.h
 set BuildPath=.\Build\Release
