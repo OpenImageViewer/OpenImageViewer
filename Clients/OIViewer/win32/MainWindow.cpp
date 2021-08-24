@@ -249,7 +249,8 @@ namespace OIV
                 break;
             case WM_ACTIVATE:
                 if (message.wParam != WA_INACTIVE)
-                 SetIsTrayWindow(false);
+                    SetIsTrayWindow(false);
+
                 break;
             }
             return retValue;

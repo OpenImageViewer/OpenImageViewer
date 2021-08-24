@@ -917,14 +917,21 @@ namespace OIV
 		std::wstring title;
         if (GetOpenedFileName().empty() == false)
         {
+            auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
             std::wstringstream ss;
-            ss << L"File " << (fCurrentFileIndex == FileIndexStart ?
-                0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size() << " | ";
-            
-            title = ss.str() + GetOpenedFileName() + L" - ";
+            if (fIsActive == true)
+            {
+                ss << (fCurrentFileIndex == FileIndexStart ?
+                    0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size()
+                    << L" | ";
+            }
+
+            ss << decomposedPath.fileName << decomposedPath.extension
+                << " @ " << std::wstring_view(decomposedPath.parentPath.data(), decomposedPath.parentPath.length() - 1);
+
+            title = ss.str() + L" - ";
         }
 		title += cachedVersionString;
-
 
 		fWindow.SetTitle(title);
     }
@@ -2880,6 +2887,15 @@ namespace OIV
         SetUserMessage(message, -1);
     }
 
+    void TestApp::SetAppActive(bool active)
+    {
+        if (active != fIsActive)
+        {
+            fIsActive = active;
+            UpdateTitle();
+        }
+    }
+
     void TestApp::ProcessTopMost()
     {
         if (fTopMostCounter > 0)
@@ -2993,12 +3009,13 @@ namespace OIV
 		case WM_CLOSE:
 			CloseApplication(false);
         break;
-
+        case WM_ACTIVATE:
+            SetAppActive(uMsg.wParam != WA_INACTIVE);
+            break;
         }
 
         return handled;
     }
-    
 
     void TestApp::CloseApplication(bool closeToTray)
     {
