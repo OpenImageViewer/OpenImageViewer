@@ -33,6 +33,7 @@
 #include "FileWatcher.h"
 #include "Win32/NotificationIconGroup.h"
 #include "MouseMultiClickHandler.h"
+#include "LLUtils/EnumClassBitwise.h"
 
 namespace OIV
 {
@@ -144,7 +145,6 @@ namespace OIV
         void SetUserMessage(const std::wstring& message, int32_t hideDelay = 0);
         void SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay = 0);
         void SetDebugMessage(const std::string& message);
-        void HideUserMessage();
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
         bool ExecutePredefinedCommand(std::string command);
@@ -244,6 +244,7 @@ namespace OIV
         void OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgs);// file change handler, runs in the main thread.
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs); // callback from file watcher
         void ProcessCurrentFileChanged();
+        void ProcessRemovalOfOpenedFile(const std::wstring fileName);
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
@@ -325,9 +326,19 @@ namespace OIV
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
         bool fShowBorders = true;
-        bool fFileReloadPending = false;
         bool fImageInfoVisible = false;
         bool fIsActive = false;
+        enum class DeletedFileRemovalMode
+        {
+              None              = 0 << 0// Dont remove opened file if delted.
+            , DeletedInternally = 1 << 0// remove opened file only if deleted internally from OIV (default)
+            , DeletedExternally = 1 << 1// remove opened file only if deleted externally 
+            , Always            // always unload file if deleted.
+        };
+        LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DeletedFileRemovalMode);
+
+        DeletedFileRemovalMode fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
+        std::wstring fRequestedFileForRemoval;
         LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
         LLUtils::Color DefaultTextValueColor = 0x7672ffff;

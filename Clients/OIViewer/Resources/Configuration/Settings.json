@@ -3,6 +3,10 @@
   {
     "allowdynamicsettings": false
   },
+  "filesystem":
+  {
+    "deletedfileremovalmode" : "internally"
+  },
   "viewsettings": 
   {
     "autoloadchangedfile": true,
@@ -14,7 +18,7 @@
     {
       "x": 0.25,
       "y": 0.25
-    },
+    }
     }
       ,
        "autoscroll" :
