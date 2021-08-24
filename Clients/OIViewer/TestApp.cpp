@@ -967,15 +967,19 @@ namespace OIV
             , nullptr
         };
 
+        auto fileNameToRemove = GetOpenedFileName();
+        fRequestedFileForRemoval = fileNameToRemove;
+
         int shResult = SHFileOperation(&file_op);
 
         if (shResult != 0 )
         {
                 //handle error
         }
-        
-
-
+        else
+        {
+            ProcessRemovalOfOpenedFile(fileNameToRemove);
+        }
     }
 
     void TestApp::RefreshImage()
@@ -1475,6 +1479,62 @@ namespace OIV
         }
     }
 
+    void TestApp::ProcessRemovalOfOpenedFile(const std::wstring fileName)
+    {
+        if (fileName == GetOpenedFileName())
+        {
+            const bool internally = fRequestedFileForRemoval == GetOpenedFileName();
+
+            bool shouldRemoveFile = (internally == true &&  (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedInternally) == DeletedFileRemovalMode::DeletedInternally)
+                || (internally == false && (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) == DeletedFileRemovalMode::DeletedExternally);
+
+            // Don't remove file, just update index
+            if (shouldRemoveFile == false)
+            {
+                if (fCurrentFileIndex > 0)
+                    fCurrentFileIndex--;
+                else if (fCurrentFileIndex == 0 && fListFiles.size() > 1)
+                    fCurrentFileIndex++;
+            }
+            else
+            {
+                // Remove and unload the file
+                bool isFileLoaded = false;
+                if (fListFiles.size() == 1)
+                {
+                    fCurrentFileIndex = FileIndexStart;
+                    isFileLoaded = JumpFiles(FileIndexStart);
+                }
+                else
+                {
+                    fCurrentFileIndex -= 1;
+                    isFileLoaded = JumpFiles(1);
+                    if (isFileLoaded == false)
+                    {
+                        fCurrentFileIndex += 1;
+                        isFileLoaded = JumpFiles(-1);
+                    }
+                }
+
+                if (isFileLoaded == false)
+                {
+                    // Could find a suitable file to load, unload current file and reset index
+                    UnloadOpenedImaged();
+                    ShowWelcomeMessage();
+                    fCurrentFileIndex = FileIndexStart;
+                }
+            }
+
+            fRequestedFileForRemoval = {};
+        }
+        else
+        {
+            // File has been added to the current folder, indices have changed - update current file index
+            auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+            fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
+        }
+        UpdateTitle();
+    }
 
     void TestApp::UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& filePath)
     {
@@ -1491,18 +1551,17 @@ namespace OIV
             if (fKnownFileTypesSet.contains(sv.data()))
             {
                 //TODO: add file sorted 
-                auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileListSorter);
+                auto itAddedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileListSorter);
 
-                if (it != fListFiles.end() && *it == filePath)
+                if (itAddedFile != fListFiles.end() && *itAddedFile == filePath)
                         LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
 
-                fListFiles.insert(it, filePath);
-
-                if (IsImageOpen()  == false)
-                {
-                    auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
-                    fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-                }
+                fListFiles.insert(itAddedFile, filePath);
+                
+                // File has been added to the current folder, indices have changed - update current file index
+                auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+                fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
+ 
                 UpdateTitle();
             }
         }
@@ -1513,49 +1572,9 @@ namespace OIV
             auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
             if (it != fListFiles.end())
             {
-                const bool isOpenedFileDeleted = *it == GetOpenedFileName();
+                auto fileNameToRemove = *it;
                 fListFiles.erase(it);
-
-                bool isFileLoaded = false;
-                //If the current open file is removed, try load another one in the folder if not unload it
-                if (isOpenedFileDeleted)
-                {
-
-                    if (fListFiles.size() == 1)
-                    {
-                        fCurrentFileIndex = FileIndexStart;
-                       isFileLoaded = JumpFiles(FileIndexStart);
-                    }
-                    else
-                    {
-                        fCurrentFileIndex -= 1;
-                        isFileLoaded = JumpFiles(1);
-                        if (isFileLoaded == false)
-                        {
-                            fCurrentFileIndex += 1;
-                            isFileLoaded = JumpFiles(-1);
-                        }
-                    }
-                }
-
-                if (isFileLoaded == false)
-                {
-                    
-                    if (isOpenedFileDeleted)
-                    {
-                        //current open file has been deleted and no other file has been loaded instead - so remove it
-                        UnloadOpenedImaged();
-                        fCurrentFileIndex = FileIndexStart;
-                    }
-                    else
-                    {
-                        //other file deleted but no file has been loaded, just update title and fileindex
-                        auto it = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
-                        fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-                    }
-                    
-                    UpdateTitle();
-                }
+                ProcessRemovalOfOpenedFile(fileNameToRemove);
             }
         }
         break;
@@ -1906,6 +1925,7 @@ namespace OIV
     }
     void TestApp::PostInitOperations()
     {
+        LLUtils::Logger::GetSingleton().AddLogTarget(&mLogFile);
 
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
@@ -2031,8 +2051,18 @@ namespace OIV
         LoadValue<ConfigurationLoader::Float>   (settings, "/autoscroll/speedfactorout", metrics.speedFactorOut);
         LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/speedfactorrange", metrics.speedFactorRange);
         LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/maxspeed", metrics.maxSpeed);
-
         fAutoScroll->SetScrollMetrics(metrics);
+
+        std::string fileRemovalModeStr;
+        LoadValue<ConfigurationLoader::String>(settings, "/filesystem/deletedfileremovalmode", fileRemovalModeStr);
+        if (fileRemovalModeStr == "always")
+            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally | DeletedFileRemovalMode::DeletedInternally;
+        if (fileRemovalModeStr == "externally")
+            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally;
+        if (fileRemovalModeStr == "internally")
+            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
+        if (fileRemovalModeStr == "none")
+            fDeletedFileRemovalMode = DeletedFileRemovalMode::None;
 
         if (startup)
         {
@@ -2924,19 +2954,15 @@ namespace OIV
         }
         else
         {
-            if (fFileReloadPending == false)
-            {
-                fFileReloadPending = true;
-                int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
-                fFileReloadPending = false;
-                if (mbResult == IDYES)
-                {
-                    LoadFile(GetOpenedFileName(), false);
-                }
-                else if (mbResult == IDNO)
-                {
+            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
 
-                }
+            switch (mbResult)
+            {
+            case IDYES:
+                LoadFile(GetOpenedFileName(), false);
+                break;
+            case IDNO:
+                break;
             }
         }
     }

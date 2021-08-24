@@ -2,6 +2,7 @@
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
 #include <LLUtils/Exception.h>
+#include <LLUtils/Logging/Logger.h>
 #include <nlohmann/json.hpp>
 #include <stack>
 
@@ -134,9 +135,13 @@ namespace OIV
 				//settingEntry ->children = 
 			}
 		}
+		catch (nlohmann::detail::exception& exception)
+		{
+			LLUtils::Logger::GetSingleton().Log(exception.what());
+		}
 		catch (...)
 		{
-
+			
 		}
 
 
