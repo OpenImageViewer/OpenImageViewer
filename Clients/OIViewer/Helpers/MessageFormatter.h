@@ -29,6 +29,13 @@ namespace OIV
             char spacer = '.';
         };
 
+        struct DecomposedPath
+        {
+            std::wstring parentPath;
+            std::wstring fileName;
+            std::wstring extension;
+        };
+
         static std::wstring FormatValueObject(const ValueObjectList& objects);
         static std::wstring FormatValueObject(const ValueObject& valueObject);
         static std::wstring FormatMetaText(FormatArgs args);
@@ -37,6 +44,7 @@ namespace OIV
         static const std::string& PickColor(IMCodec::ChannelSemantic semantic);
         static const char* FormatDataType(IMCodec::ChannelDataType dataType);
         static std::wstring FormatFilePath(const std::filesystem::path& filePath);
+        static DecomposedPath DecomposePath(const std::filesystem::path& filePath);
 
         template<typename string_type, typename number_type>
         static string_type numberFormatWithCommas(number_type value);

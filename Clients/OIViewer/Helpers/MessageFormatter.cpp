@@ -200,23 +200,32 @@ namespace OIV
             return "undefined";
         }
     }
+    
 
-    std::wstring MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
+    MessageFormatter::DecomposedPath MessageFormatter::DecomposePath(const std::filesystem::path& filePath)
     {
         using namespace std::filesystem;
         auto parentPath = filePath.parent_path();
+        DecomposedPath decomposedPath{};
 
-        std::wstring formattedPath = L"<textcolor=#808080>" + parentPath.root_name().wstring() + path::preferred_separator;
-        
+        decomposedPath.parentPath = parentPath.root_name().wstring() + path::preferred_separator;
         if (parentPath.relative_path().empty() == false)
         {
             // in case the file located at the root directory, don't add empty relatve path and extra seperator.
-            formattedPath += parentPath.relative_path().wstring() + path::preferred_separator;
+            decomposedPath.parentPath += parentPath.relative_path().wstring() + path::preferred_separator;
         }
 
-        formattedPath += L"<textcolor=#7672ff>" + filePath.stem().wstring() + L"<textcolor=#ff00ff>" + filePath.extension().wstring();
-        
-        return formattedPath;
+        decomposedPath.fileName = filePath.stem().wstring();
+        decomposedPath.extension = filePath.extension().wstring();
+
+        return decomposedPath;
+    }
+
+    std::wstring MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
+    {
+        DecomposedPath decomposedPath = DecomposePath(filePath);
+        using namespace std::string_literals;
+        return L"<textcolor=#808080>"s + decomposedPath.parentPath + L"<textcolor=#7672ff>" + decomposedPath.fileName + L"<textcolor=#ff00ff>" + decomposedPath.extension;
     }
 	
     std::string MessageFormatter::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)

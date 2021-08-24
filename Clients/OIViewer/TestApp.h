@@ -128,6 +128,7 @@ namespace OIV
         LRESULT ClientWindwMessage(const ::Win32::Event * evnt1);
         void SetTopMostUserMesage();
         void ProcessTopMost();
+        void SetAppActive(bool active);
         bool HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt);
 		void CloseApplication(bool closeToTray);
         bool HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file);
@@ -326,6 +327,7 @@ namespace OIV
         bool fShowBorders = true;
         bool fFileReloadPending = false;
         bool fImageInfoVisible = false;
+        bool fIsActive = false;
         LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
         LLUtils::Color DefaultTextValueColor = 0x7672ffff;
