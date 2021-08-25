@@ -130,6 +130,8 @@ namespace OIV
         void SetTopMostUserMesage();
         void ProcessTopMost();
         void SetAppActive(bool active);
+        bool GetAppActive() const;
+
         bool HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt);
 		void CloseApplication(bool closeToTray);
         bool HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file);
@@ -253,6 +255,8 @@ namespace OIV
         void SetImageInfoVisible(bool visible);
         bool GetImageInfoVisible() const;
         void ProcessLoadedDirectory();
+        void PerformReloadFile(const std::wstring& requestedFile);
+        
 		
     private: // member fields
 #pragma region FrameLimiter
@@ -338,6 +342,17 @@ namespace OIV
         LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DeletedFileRemovalMode);
 
         DeletedFileRemovalMode fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
+
+        enum class MofifiedFileReloadMode
+        {
+               None // Don't suggest auto reload of modified file.
+             , Confirmation // Display a message to confirm reload of modified file (default)
+             , AutoForeground  // Auto reload file only when application is active
+            ,  AutoBackground // Auto reload file always
+        };
+
+        MofifiedFileReloadMode fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
+
         std::wstring fRequestedFileForRemoval;
         LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
         LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
@@ -367,6 +382,7 @@ namespace OIV
         std::wstring fLastMessageForMainThread;
         FileWatcher fFileWatcher;
         std::wstring fCurrentFolderWatched;
+        std::wstring fPendingReloadFileName;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
         LLUtils::StopWatch fLastImageLoadTimeStamp;

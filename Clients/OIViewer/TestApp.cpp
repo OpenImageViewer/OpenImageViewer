@@ -919,7 +919,7 @@ namespace OIV
         {
             auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
             std::wstringstream ss;
-            if (fIsActive == true)
+            if (GetAppActive() == true)
             {
                 ss << (fCurrentFileIndex == FileIndexStart ?
                     0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size()
@@ -2057,12 +2057,24 @@ namespace OIV
         LoadValue<ConfigurationLoader::String>(settings, "/filesystem/deletedfileremovalmode", fileRemovalModeStr);
         if (fileRemovalModeStr == "always")
             fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally | DeletedFileRemovalMode::DeletedInternally;
-        if (fileRemovalModeStr == "externally")
+        else if (fileRemovalModeStr == "externally")
             fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally;
-        if (fileRemovalModeStr == "internally")
+        else if (fileRemovalModeStr == "internally")
             fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
-        if (fileRemovalModeStr == "none")
+        else if (fileRemovalModeStr == "none")
             fDeletedFileRemovalMode = DeletedFileRemovalMode::None;
+
+        std::string modifiedFileReloadModeStr;
+        LoadValue<ConfigurationLoader::String>(settings, "/filesystem/modifiedfilereloadmode", modifiedFileReloadModeStr);
+        if (modifiedFileReloadModeStr == "none")
+            fMofifiedFileReloadMode = MofifiedFileReloadMode::None;
+        else if (modifiedFileReloadModeStr == "confirmation")
+            fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
+        else if (modifiedFileReloadModeStr == "autoforeground")
+            fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoForeground;
+        else if (modifiedFileReloadModeStr == "autobackground")
+            fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoBackground;
+
 
         if (startup)
         {
@@ -2917,12 +2929,25 @@ namespace OIV
         SetUserMessage(message, -1);
     }
 
+    bool TestApp::GetAppActive() const
+    {
+        return fIsActive;
+    }
+
     void TestApp::SetAppActive(bool active)
     {
         if (active != fIsActive)
         {
             fIsActive = active;
-            UpdateTitle();
+            if (fIsActive == true && fPendingReloadFileName.empty() == false && fPendingReloadFileName == GetOpenedFileName())
+            {
+                PerformReloadFile(fPendingReloadFileName);
+                fPendingReloadFileName = {};
+            }
+            else
+            {
+                UpdateTitle();
+            }
         }
     }
 
@@ -2944,26 +2969,50 @@ namespace OIV
 
     }
 
+
+    void TestApp::PerformReloadFile(const std::wstring& requestedFile)
+    {
+        if (fPendingReloadFileName == requestedFile)
+        {
+            if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
+            {
+                LoadFile(requestedFile, false);
+            }
+            else
+            {
+                using namespace std::string_literals;
+                int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + requestedFile).c_str(), L"File is changed outside of OIV", MB_YESNO);
+                switch (mbResult)
+                {
+                case IDYES:
+                    LoadFile(GetOpenedFileName(), false);
+                    break;
+                case IDNO:
+                    break;
+                }
+            }
+        }
+    }
+    
+
     void TestApp::ProcessCurrentFileChanged()
     {
-        using namespace std::string_literals;
-
-        if (fAutoLoadChangedFile == true)
+        switch (fMofifiedFileReloadMode)
         {
-            LoadFile(GetOpenedFileName(), false);
-        }
-        else
-        {
-            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + GetOpenedFileName()).c_str(), L"File is changed outside of OIV", MB_YESNO);
+        case MofifiedFileReloadMode::AutoBackground:
+            LoadFile(GetOpenedFileName(), false); // Load file immediatly
+            break;
+        case MofifiedFileReloadMode::AutoForeground:
+        case MofifiedFileReloadMode::Confirmation: // implicitly foreground
+            if (GetAppActive())
+                PerformReloadFile(GetOpenedFileName());
+            else 
+                fPendingReloadFileName = GetOpenedFileName();
+            break;
+            break;
+        case MofifiedFileReloadMode::None: // do nothing
+            break;
 
-            switch (mbResult)
-            {
-            case IDYES:
-                LoadFile(GetOpenedFileName(), false);
-                break;
-            case IDNO:
-                break;
-            }
         }
     }
 
