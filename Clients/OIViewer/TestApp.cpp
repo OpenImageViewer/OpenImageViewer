@@ -1479,7 +1479,7 @@ namespace OIV
         }
     }
 
-    void TestApp::ProcessRemovalOfOpenedFile(const std::wstring fileName)
+    void TestApp::ProcessRemovalOfOpenedFile(const std::wstring& fileName)
     {
         if (fileName == GetOpenedFileName())
         {
@@ -3008,7 +3008,6 @@ namespace OIV
                 PerformReloadFile(GetOpenedFileName());
             else 
                 fPendingReloadFileName = GetOpenedFileName();
-            break;
             break;
         case MofifiedFileReloadMode::None: // do nothing
             break;

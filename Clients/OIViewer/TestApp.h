@@ -246,7 +246,7 @@ namespace OIV
         void OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgs);// file change handler, runs in the main thread.
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs); // callback from file watcher
         void ProcessCurrentFileChanged();
-        void ProcessRemovalOfOpenedFile(const std::wstring fileName);
+        void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
         void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
         void WatchCurrentFolder();
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
