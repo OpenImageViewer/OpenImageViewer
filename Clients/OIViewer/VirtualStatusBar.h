@@ -64,7 +64,8 @@ namespace OIV
         void ClientSizeChanged(LLUtils::PointI32& size)
         {
             fClientSize = size;
-            RepositionLabels();
+            if (GetVisible())
+                RepositionLabels();
         }
 
         void SetText(std::string elementName, const OIVString& text)
@@ -93,6 +94,8 @@ namespace OIV
                     text->GetImageProperties().visible = fVisible;
                     text->Update();
                 }
+
+                RepositionLabels();
             }
         }
         /// <summary>
