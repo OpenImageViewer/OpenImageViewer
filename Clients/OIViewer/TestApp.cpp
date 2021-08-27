@@ -778,6 +778,14 @@ namespace OIV
     {
         //update the refresh rate.
         fRefreshRateTimes1000 = params.monitorDesc.DisplaySettings.dmDisplayFrequency == 59 ? 59940 : params.monitorDesc.DisplaySettings.dmDisplayFrequency * 1000;
+
+        const LLUtils::PointF64 BaseDPI{ 96.0, 96.0 };
+
+        // DPI adjustment. The mouse generates movement events as district units. 
+        // To keep movement speed constant across several monitors in terms of distance,
+        // DPI must be taken care into consideration.
+        fDPIadjustmentFactor = LLUtils::PointF64{ static_cast<LLUtils::PointF64::point_type>(params.monitorDesc.DPIx),
+            static_cast<LLUtils::PointF64::point_type>(params.monitorDesc.DPIy) } / BaseDPI;
     }
 
     void TestApp::ProbeForMonitorChange()
@@ -1916,6 +1924,8 @@ namespace OIV
     {
         LLUtils::Logger::GetSingleton().AddLogTarget(&mLogFile);
 
+      
+
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
         {
@@ -2317,7 +2327,7 @@ namespace OIV
     void TestApp::Pan(const LLUtils::PointF64& panAmount )
     {
         if (fImageState.GetOpenedImage() != nullptr)
-            SetOffset(panAmount + fImageState.GetOffset()) ;
+            SetOffset(panAmount * fDPIadjustmentFactor + fImageState.GetOffset());
     }
 
     void TestApp::Zoom(double amount, int zoomX , int zoomY )

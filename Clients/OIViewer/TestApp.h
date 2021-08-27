@@ -332,6 +332,7 @@ namespace OIV
         bool fShowBorders = true;
         bool fImageInfoVisible = false;
         bool fIsActive = false;
+        LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
         enum class DeletedFileRemovalMode
         {
               None              = 0 << 0// Dont remove opened file if delted.
