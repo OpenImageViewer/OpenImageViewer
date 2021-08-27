@@ -1,5 +1,3 @@
-#pragma warning(disable : 4275 ) // disables warning 4275, pop and push from exceptions
-#pragma warning(disable : 4251 ) // disables warning 4251, the annoying warning which isn't needed here...
 #include "oiv.h"
 #include <exif.h>
 #include "Interfaces/IRenderer.h"
@@ -7,11 +5,9 @@
 #include <ImageLoader.h>
 #include "ImageUtil.h"
 #include "Configuration.h"
+#include "FreeTypeHelper.h"
 #include <functions.h>
 #include <Version.h>
-
-#include <FreeTypeWrapper/FreeTypeConnector.h>
-#include <FreeTypeWrapper/FreeTypeHelper.h>
 #include "Interfaces/IRendererDefs.h"
 
 
@@ -253,7 +249,7 @@ namespace OIV
         //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
         using namespace FreeType;
         FreeTypeConnector::TextCreateParams createParams = {};
-        createParams.backgroundColor = request.backgroundColor;
+        *reinterpret_cast<LLUtils::Color*>(&createParams.backgroundColor) = *reinterpret_cast<const LLUtils::Color*>(&request.backgroundColor);
         createParams.fontPath = fontPath;
         createParams.fontSize = request.fontSize;
         createParams.outlineColor = { 0,0,0,255 };// request.outlineColor;

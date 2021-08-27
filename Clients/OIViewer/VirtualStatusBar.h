@@ -23,7 +23,7 @@ namespace OIV
 			{
 				OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
                 texelValue->GetImageProperties().visible = fVisible;
-				texelValue->GetTextOptions().backgroundColor = LLUtils::Color(0, 0, 0, 192).colorValue;
+		        reinterpret_cast<LLUtils::Color&>(texelValue->GetTextOptions().backgroundColor) = LLUtils::Color(0, 0, 0, 192);
 				texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
 				texelValue->GetTextOptions().fontSize = 11;
 				texelValue->GetTextOptions().renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;

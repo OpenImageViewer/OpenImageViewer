@@ -13,7 +13,7 @@ namespace OIV
                     || text != rhs.text
                     || fontPath != rhs.fontPath
                     || fontSize != rhs.fontSize
-                    || backgroundColor != rhs.backgroundColor
+                    || memcmp(&backgroundColor, rhs.backgroundColor, 4) != 0
                     || outlineWidth != rhs.outlineWidth
                     || outlineColor != rhs.outlineColor
                     || DPIx != rhs.DPIx
@@ -30,7 +30,7 @@ namespace OIV
         OIVString text;
         OIVString fontPath;
         uint16_t fontSize;
-        uint32_t backgroundColor;
+        uint8_t backgroundColor[4];
         uint8_t outlineWidth;
         uint8_t outlineColor;
         uint16_t DPIx;

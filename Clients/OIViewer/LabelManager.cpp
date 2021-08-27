@@ -55,7 +55,7 @@ namespace OIV
     {
         OIVTextImageUniquePtr text = std::make_unique<OIVTextImage>();
         CreateTextParams& textOptions = text->GetTextOptions();
-        textOptions.backgroundColor = 0; // LLUtils::Color(0, 0, 0, 180).colorValue;
+        reinterpret_cast<LLUtils::Color&>(textOptions.backgroundColor) = LLUtils::Color(0, 0, 0, 180);
         textOptions.fontPath = sFontPath;
         textOptions.fontSize = 12;
         textOptions.outlineWidth = 2;

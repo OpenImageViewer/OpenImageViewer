@@ -14,27 +14,8 @@
 #include <execution>
 #include <span>
 
-
 namespace IMUtil
 {
-
-
-
-    constexpr uint32_t RGBA(uint8_t R, uint8_t G, uint8_t B, uint8_t A)
-    {
-        return (static_cast<uint32_t>(A) << 24) | (static_cast<uint32_t>(B) << 16) | (static_cast<uint32_t>(G) << 8) | static_cast<uint32_t>(R);
-    }
-
-    constexpr uint32_t RGBA_GRAYSCALE(uint8_t Gray)
-    {
-        return RGBA(Gray, Gray, Gray, 255);
-    }
-
-    constexpr uint32_t RGBA_To_GRAYSCALE_LUMA(uint8_t R, uint8_t G, uint8_t B, uint8_t A)
-    {
-        return RGBA(static_cast<uint32_t>(R * 0.2126), static_cast<uint32_t>(G * 0.7152), static_cast<uint32_t>(B * 0.0722), A);
-    }
-
 
     class ImageUtil
     {
@@ -339,15 +320,19 @@ namespace IMUtil
 
 
         template <typename _FwdItDst, typename _FwdItSrc >
-        static void NormalizeAnyToBGRA(_FwdItDst _DstFirst, _FwdItDst _DstLast, _FwdItSrc _SrcFirst, _FwdItSrc _SrcLast, NormalizeMode mode)
+        static void NormalizeAnyToRGBA(_FwdItDst _DstFirst, _FwdItDst _DstLast, _FwdItSrc _SrcFirst, _FwdItSrc _SrcLast, NormalizeMode mode)
         {
             auto minMax = std::minmax_element(std::execution::parallel_unsequenced_policy(), _SrcFirst, _SrcLast);
             const auto range = *minMax.second - *minMax.first;
+            using value_type = typename _FwdItDst::value_type;
+
+            //destination is assumed to be 8 bit RGBA.
+            static_assert(sizeof(value_type) == sizeof(LLUtils::Color), "Currently normalization support output for 32 bit color only");
 
             while (_SrcFirst != _SrcLast)
             {
                 const auto& sourceSample = *_SrcFirst;
-                auto& destSample = _DstFirst->value;
+                LLUtils::Color& destSample = reinterpret_cast<LLUtils::Color&>(_DstFirst->value);
 
                 switch (mode)
                 {
@@ -355,16 +340,15 @@ namespace IMUtil
                 case NormalizeMode::GrayScale:
                 {
                     uint8_t grayValue = std::min(static_cast<uint8_t>(static_cast<double>(sourceSample - *minMax.first) / range * 255.0 + 0.5), static_cast<uint8_t>(255));
-                    destSample = RGBA_GRAYSCALE(grayValue);
+                    destSample = LLUtils::Color(grayValue, grayValue, grayValue);
                 }
                 break;
 
                 case NormalizeMode::RainBow:
                 {
-
                     //Red (0) is the minimum , Magenta is the maximum (300)
                     const uint16_t hue = static_cast<uint16_t>(static_cast<double>(sourceSample - *minMax.first) / range * 300.0);
-                    destSample = LLUtils::Color::FromHSL(hue, 0.5, 0.5).colorValue;
+                    destSample = LLUtils::Color::FromHSL(hue, 0.5, 0.5);
                 }
                 break;
                 }
@@ -372,7 +356,6 @@ namespace IMUtil
                 _SrcFirst++;
                 _DstFirst++;
             }
-            
         }
 
         template <class SourceSampleType>
@@ -383,14 +366,14 @@ namespace IMUtil
 
             IMCodec::ImageDescriptor props;
             props.fProperties = sourceImage->GetDescriptor().fProperties;
-            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_B8_G8_R8_A8;
+            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
             props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(props.fProperties.TexelFormatDecompressed) / CHAR_BIT * props.fProperties.Width;
             props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
 
             std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
             std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data()), totalPixels);
 
-            NormalizeAnyToBGRA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+            NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
 
             return IMCodec::ImageSharedPtr(new IMCodec::Image(props));
         }

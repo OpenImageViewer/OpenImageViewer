@@ -355,10 +355,8 @@ namespace OIV
 
         std::wstring fRequestedFileForRemoval;
         LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
-        LLUtils::Color DefaultTextKeyColor = 0xff8930ff;
-        LLUtils::Color DefaultTextValueColor = 0x7672ffff;
-        std::wstring DefaultTextKeyColorTag;
-        std::wstring DefaultTextValueColorTag;
+        std::wstring DefaultTextKeyColorTag = L"<textcolor=#ff8930ff>";
+        std::wstring DefaultTextValueColorTag = L"<textcolor=#7672ffff>";
         LLUtils::StopWatch fFileDisplayTimer;
         MouseMultiClickHandler fMouseClickEventHandler{ 500,2 };
         void OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args);

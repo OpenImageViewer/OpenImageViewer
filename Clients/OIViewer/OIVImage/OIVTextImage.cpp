@@ -28,7 +28,7 @@ namespace OIV
         textRequest.text = fTextOptionsCurrent.text.c_str();
         textRequest.fontPath = fTextOptionsCurrent.fontPath.c_str();
         textRequest.fontSize = fTextOptionsCurrent.fontSize;
-        textRequest.backgroundColor = fTextOptionsCurrent.backgroundColor;
+        reinterpret_cast<LLUtils::Color&>(textRequest.backgroundColor) = reinterpret_cast<LLUtils::Color&>(fTextOptionsCurrent.backgroundColor);
         textRequest.outlineWidth = fTextOptionsCurrent.outlineWidth;
         textRequest.outlineColor = fTextOptionsCurrent.outlineColor;
         textRequest.DPIx = fTextOptionsCurrent.DPIx;
