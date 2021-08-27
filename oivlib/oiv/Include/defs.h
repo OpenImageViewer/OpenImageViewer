@@ -267,7 +267,7 @@ typedef wchar_t OIVCHAR;
         const OIVCHAR* text;
         const OIVCHAR* fontPath;
         uint16_t fontSize;
-        uint32_t backgroundColor;
+        uint8_t backgroundColor[4];
         uint8_t outlineWidth;
         uint8_t outlineColor;
         uint16_t DPIx;

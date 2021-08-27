@@ -297,7 +297,7 @@ namespace OIV
             auto message = MessageHelper::CreateKeyBindingsMessage();
 
             requestText.text = LLUtils::StringUtility::ConvertString<OIVString>(message);
-            requestText.backgroundColor = LLUtils::Color(0, 0, 0, 216).colorValue;
+            reinterpret_cast<LLUtils::Color&>(requestText.backgroundColor) = LLUtils::Color(0, 0, 0, 216);
             requestText.fontPath = LabelManager::sFixedFontPath;
             requestText.fontSize = 12;
             requestText.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
@@ -702,17 +702,7 @@ namespace OIV
     {
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
-
-
-        DefaultTextKeyColorTag = std::wstring(L"<textcolor=#")
-            + IntToHex(DefaultTextKeyColor.colorValue) + L">";
-
-        DefaultTextValueColorTag = std::wstring(L"<textcolor=#")
-            + IntToHex(DefaultTextValueColor.colorValue) + L">"; 
-                
-
         OIV_CMD_RegisterCallbacks_Request request;
-		
 
         request.OnException = [](OIV_Exception_Args args, void* userPointer)
         {
@@ -946,7 +936,6 @@ namespace OIV
 
     void TestApp::DeleteOpenedFile(bool permanently)
     {
-
         size_t stringLength = GetOpenedFileName().length();
         std::unique_ptr<wchar_t> buffer = std::unique_ptr<wchar_t>(new wchar_t[stringLength + 2]);
 
@@ -3204,7 +3193,7 @@ namespace OIV
         {
             userMessage = fLabelManager.GetOrCreateTextLabel("userMessage");
             CreateTextParams& textOptions = userMessage->GetTextOptions();
-            textOptions.backgroundColor = 0;
+            reinterpret_cast<LLUtils::Color&>(textOptions.backgroundColor) = LLUtils::Color(0);
             textOptions.fontPath = LabelManager::sFontPath;
             textOptions.fontSize = 12;
             textOptions.outlineWidth = 2;
@@ -3260,7 +3249,7 @@ namespace OIV
         OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(wmsg);
         CreateTextParams& textOptions = debugMessage->GetTextOptions();
         textOptions.text = txt;
-        textOptions.backgroundColor = LLUtils::Color(0, 0, 0, 180).colorValue;
+        reinterpret_cast<LLUtils::Color&>(textOptions.backgroundColor) = LLUtils::Color(0, 0, 0, 180);
         textOptions.fontPath = LabelManager::sFontPath;
 
         if (debugMessage->Update() == RC_Success)
@@ -3320,7 +3309,7 @@ namespace OIV
             CreateTextParams& params = imageInfoText->GetTextOptions();
             
             params.text = imageInfoString;
-            params.backgroundColor = LLUtils::Color(0,0,0,127).colorValue;
+            reinterpret_cast<LLUtils::Color&>(params.backgroundColor) = LLUtils::Color(0, 0, 0, 127);
             params.fontPath = LabelManager::sFixedFontPath;
             params.fontSize = 12;
             params.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
@@ -3351,7 +3340,7 @@ namespace OIV
         CreateTextParams& params = welcomeMessage->GetTextOptions();
         
         params.text = txt;
-        params.backgroundColor = LLUtils::Color(0).colorValue;
+        reinterpret_cast<LLUtils::Color&>(params.backgroundColor) = LLUtils::Color(0);
         params.fontPath = LabelManager::sFontPath;
         params.fontSize = 44;
         params.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
