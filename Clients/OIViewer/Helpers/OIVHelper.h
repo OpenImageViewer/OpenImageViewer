@@ -63,82 +63,101 @@ namespace OIV
             {
                 const auto& channel = info.channles.at(i);
 
-                switch (channel.ChannelDataType)
+                if (channel.semantic != ChannelSemantic::None)
                 {
-                case ChannelDataType::UnsignedInt:
-                    ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
-                    break;
-                case ChannelDataType::SignedInt:
-                    ss << PickColor(channel.semantic) << "(signed)" << MessageFormatter::FormatSemantic(channel.semantic);
-                    break;
-                case ChannelDataType::Float:
-                    ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
-                    break;
-                case ChannelDataType::None:
-                    LL_EXCEPTION_UNEXPECTED_VALUE;
-                }
 
-                if (channel.width != 8 
-                    || channel.semantic ==  ChannelSemantic::Monochrome 
-                    || channel.semantic == ChannelSemantic::Float)
-                    ss << '(' << static_cast<int>(channel.width) << ')';
-
-                ss << ':';
-
-
-                //TODO: extract to user settings
-                const int precision = 6;
-
-                if (channel.ChannelDataType == ChannelDataType::Float)
-                    ss << std::setprecision(precision) << std::setw(precision + 4) << std::setfill(' ') << std::fixed;
-                
-
-                switch (channel.width)
-                {
-                case 8:
-                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
-                        ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const uint8_t*> (buffer + (currentpos / CHAR_BIT)));
-                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
-                        ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const int8_t*>(buffer + (currentpos / CHAR_BIT)));
-                    break;
-                case 16:
-                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
-                        ss << std::setw(std::numeric_limits<uint16_t>::digits10 + 1) << *reinterpret_cast<const uint16_t*>((buffer + (currentpos / CHAR_BIT)));
-                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
-                        ss << std::setw(std::numeric_limits<int16_t>::digits10 + 1) << *reinterpret_cast<const int16_t*>((buffer + (currentpos / CHAR_BIT)));
-                    else if (channel.ChannelDataType == ChannelDataType::Float)
-                        ss <<  *reinterpret_cast<const half_float::half*>((buffer + (currentpos / CHAR_BIT)));
-                    break;
-                case 24:
-                    if (channel.ChannelDataType == ChannelDataType::Float)
-                        ss <<  *(reinterpret_cast<const Float24*>(buffer + (currentpos / CHAR_BIT)));
-                    else if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                    switch (channel.ChannelDataType)
                     {
-                        ss << "N/A";
-                        //TODO: implement.
-                        //ss << std::setw(8) << *((reinterpret_cast<const*>(buffer) + currentpos / CHAR_BIT));
+                    case ChannelDataType::UnsignedInt:
+                        ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
+                        break;
+                    case ChannelDataType::SignedInt:
+                        ss << PickColor(channel.semantic) << "(signed)" << MessageFormatter::FormatSemantic(channel.semantic);
+                        break;
+                    case ChannelDataType::Float:
+                        ss << PickColor(channel.semantic) << MessageFormatter::FormatSemantic(channel.semantic);
+                        break;
+                    case ChannelDataType::None:
+                        LL_EXCEPTION_UNEXPECTED_VALUE;
                     }
-                        
-                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
-                        ss << std::setw(8) << (int)* (reinterpret_cast<const Int24*>(buffer + currentpos / CHAR_BIT));
 
-                    break;
-                case 32:
+                    if (channel.width != 8
+                        || channel.semantic == ChannelSemantic::Monochrome
+                        || channel.semantic == ChannelSemantic::Float)
+                        ss << '(' << static_cast<int>(channel.width) << ')';
+
+                    ss << ':';
+
+
+                    //TODO: extract to user settings
+                    const int precision = 6;
+
                     if (channel.ChannelDataType == ChannelDataType::Float)
-                        ss << *(reinterpret_cast<const float*>(buffer + currentpos / CHAR_BIT));
-                    else if (channel.ChannelDataType == ChannelDataType::SignedInt)
-                        ss << std::setw(std::numeric_limits<uint32_t>::digits10 + 1) << *(reinterpret_cast<const uint32_t*>(buffer + (currentpos / CHAR_BIT)));
-                    break;
-                case 64:
-                    if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
-                        ss << std::setw(std::numeric_limits<uint64_t>::digits10 + 1)  << *(reinterpret_cast<const int64_t*>(buffer + (currentpos / CHAR_BIT)));
-                    break;
-                    
-                }
-                
-                ss << " ";
-                currentpos += channel.width;
+                        ss << std::setprecision(precision) << std::setw(precision + 4) << std::setfill(' ') << std::fixed;
 
+
+                    switch (channel.width)
+                    {
+                    case 5:
+                    case 6:
+                        if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                        {
+                            // Check for 16 bit texel size so it'll be legal to address the texel as uint16_t.
+                            // TODO: generalize this code for any data size.
+                            if (info.texelSize == 16) 
+                            {
+                                uint16_t channelMask = ((1 << channel.width) - 1) << currentpos;
+                                uint16_t wholeTexelValue = *reinterpret_cast<const uint16_t*>(buffer);
+                                uint8_t channelValue = (wholeTexelValue & channelMask) >> currentpos;
+                                ss << std::setw(2) << static_cast<int>(channelValue);
+                            }
+
+                        }
+                        break;
+                    case 8:
+                        if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                            ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const uint8_t*> (buffer + (currentpos / CHAR_BIT)));
+                        else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                            ss << std::setw(std::numeric_limits<uint8_t>::digits10 + 1) << (int)*(reinterpret_cast<const int8_t*>(buffer + (currentpos / CHAR_BIT)));
+                        break;
+                    case 16:
+                        if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                            ss << std::setw(std::numeric_limits<uint16_t>::digits10 + 1) << *reinterpret_cast<const uint16_t*>((buffer + (currentpos / CHAR_BIT)));
+                        else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                            ss << std::setw(std::numeric_limits<int16_t>::digits10 + 1) << *reinterpret_cast<const int16_t*>((buffer + (currentpos / CHAR_BIT)));
+                        else if (channel.ChannelDataType == ChannelDataType::Float)
+                            ss << *reinterpret_cast<const half_float::half*>((buffer + (currentpos / CHAR_BIT)));
+                        break;
+                    case 24:
+                        if (channel.ChannelDataType == ChannelDataType::Float)
+                            ss << *(reinterpret_cast<const Float24*>(buffer + (currentpos / CHAR_BIT)));
+                        else if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                        {
+                            ss << "N/A";
+                            //TODO: implement.
+                            //ss << std::setw(8) << *((reinterpret_cast<const*>(buffer) + currentpos / CHAR_BIT));
+                        }
+
+                        else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                            ss << std::setw(8) << (int)*(reinterpret_cast<const Int24*>(buffer + currentpos / CHAR_BIT));
+
+                        break;
+                    case 32:
+                        if (channel.ChannelDataType == ChannelDataType::Float)
+                            ss << *(reinterpret_cast<const float*>(buffer + currentpos / CHAR_BIT));
+                        else if (channel.ChannelDataType == ChannelDataType::SignedInt)
+                            ss << std::setw(std::numeric_limits<uint32_t>::digits10 + 1) << *(reinterpret_cast<const uint32_t*>(buffer + (currentpos / CHAR_BIT)));
+                        break;
+                    case 64:
+                        if (channel.ChannelDataType == ChannelDataType::UnsignedInt)
+                            ss << std::setw(std::numeric_limits<uint64_t>::digits10 + 1) << *(reinterpret_cast<const int64_t*>(buffer + (currentpos / CHAR_BIT)));
+                        break;
+
+                    }
+
+                    ss << " ";
+                }
+                currentpos += channel.width;
             }
             std::string msg = ss.str();
             if (msg.empty() == false)

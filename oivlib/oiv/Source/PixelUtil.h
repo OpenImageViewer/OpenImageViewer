@@ -275,6 +275,62 @@ LLUTILS_DISABLE_WARNING_POP
             }
         }
 
+        static void BGR16ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+#pragma pack(push,1)
+            struct RGB5551
+            {
+                unsigned short B : 5;
+                unsigned short G : 5;
+                unsigned short R : 5;
+                unsigned short X : 1;
+            };
+
+       
+#pragma pack(pop)
+
+            static_assert(sizeof(RGB5551) == 2, " 16 bit struct size mismatch");
+
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            uint16_t* src = (uint16_t*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                RGB5551& rgb16 = reinterpret_cast<RGB5551&>(src[i]);
+
+                dst[i].X = (rgb16.R << 3) | 0x7;
+                dst[i].Y = (rgb16.G << 3) | 0x7;
+                dst[i].Z = (rgb16.B << 3) | 0x7;
+                dst[i].W = 255;
+            }
+        }
+
+
+        static void BGR565ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+#pragma pack(push,1)
+            struct RGB565
+            {
+                unsigned short B : 5;
+                unsigned short G : 6;
+                unsigned short R : 5;
+            };
+#pragma pack(pop)
+
+            static_assert(sizeof(RGB565) == 2, " 16 bit struct size mismatch");
+
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            uint16_t* src = (uint16_t*)i_src;
+
+            for (size_t i = start; i < end; i++)
+            {
+                RGB565& rgb16 = reinterpret_cast<RGB565&>(src[i]);
+                dst[i].X = (rgb16.R << 3) | 0x7;
+                dst[i].Y = (rgb16.G << 2) | 0x3;
+                dst[i].Z = (rgb16.B << 3) | 0x7;
+                dst[i].W = 255;
+            }
+        }
 
 
         static void BGRA32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)

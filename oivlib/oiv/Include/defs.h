@@ -106,6 +106,8 @@ typedef wchar_t OIVCHAR;
         , TF_I_R8_G8_B8_A8
         , TF_I_R16_G16_B16_A16
         , TF_I_B8_G8_R8
+        , TF_I_B5_G5_R5_X1
+        , TF_I_B5_G6_R5
         , TF_I_B16_G16_R16
         , TF_I_B8_G8_R8_A8
         , TF_I_B16_G16_R16_A16
@@ -115,6 +117,7 @@ typedef wchar_t OIVCHAR;
         , TF_I_A16_B16_G16_R16
         , TF_I_A8
         , TF_I_X1
+        , TF_I_X4
         , TF_I_X8
         , TF_I_X16
         , TF_S_X8
