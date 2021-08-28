@@ -92,7 +92,7 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 					, inout float4 o_texel)
 {
 	//Base width of the grid
-	const float constantFactor = 2.2;
+	const float constantFactor = 1.0;
 	//The rate of change in grid width relative to scale - higher value means thinner line sooner.
 	const float decayFactor = 0.6;
 	//The rate of change in opacity relative to scale - higher value means less opacity sooner.
@@ -127,10 +127,20 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 	{
 		float minImageScale = min(i_imageScale.x, i_imageScale.y);
 		float alpha = (1.0 -  minDD / maxDistance) * min(1, (minImageScale / fullOpacityGridScale));
-		float3 inverted = 1.0 - o_texel.rgb;
-		float3 gridBlendColor = float3(1,0,0);
-		float3 gridMaxBlend = 0.0;
-		float3 finalGridColor = lerp(inverted,gridBlendColor,max(1.0 - i_originalSampledAlpha ,gridMaxBlend) );
+		float3 gridBlendColor1 = float3(1.0, 0.0, 0.0);
+		float3 gridBlendColor2 = float3(1, 0.6, 0.6);
+
+		const float gridDivisions = 21;
+		float2 ddmod = fmod(dd / pixelSizeNorm * gridDivisions, 2); //0 - gridDivisions
+
+		float3 finalGridColor;
+		if (uint(ddmod.x) == 0 && uint(ddmod.y) == 0)
+ 			finalGridColor = gridBlendColor1; 
+ 		else
+ 			finalGridColor = gridBlendColor2;
+
+		finalGridColor = lerp(finalGridColor,gridBlendColor1,1.0 - i_originalSampledAlpha );
+			 
 		o_texel.rgb = lerp(o_texel.rgb, finalGridColor, pow(abs(alpha), blendDecay));
 		o_texel.a = 1.0;
 	}
