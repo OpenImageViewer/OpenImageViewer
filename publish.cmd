@@ -29,6 +29,7 @@ set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%;%CMakePath%
 rem Change to 1 to make an official build
 set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
+set OIV_RELEASE_SUFFIX=
 set OIV_VERSION_REVISION=0
 set OIV_VERSION_BUILD=6
 
@@ -48,13 +49,14 @@ for /F "tokens=*" %%A in (%VersionPath%) do (
     set /a counter=!counter! + 1
 )
 
-set versionString=%a[1]%.%a[2]%
+set versionString=%a[1]%.%a[2]%!OIV_RELEASE_SUFFIX!.%OIV_VERSION_BUILD%
+set versionStringShort=!versionString!
 if [%OIV_OFFICIAL_RELEASE%] == [0] (
     for /f %%i in ('git rev-parse head') do set OIV_VERSION_REVISION=%%i
     set OIV_VERSION_REVISION=!OIV_VERSION_REVISION:~0,7!
-    set versionStringShort=!versionString!.%OIV_VERSION_BUILD%
     set versionString=!versionStringShort!-!OIV_VERSION_REVISION!-Nightly
 )
+
 
 for /f "tokens=*" %%i in ('timestamp') do set TIMESTAMP=%%i
 
@@ -70,7 +72,7 @@ echo ==============================================
 rem=====================================================================================================
 rem Run Cmake
 if !OpRunCmake! equ 1 (
-cmake -DCMAKE_GENERATOR="Visual Studio 16 2019"  -A x64 -DIMCODEC_BUILD_CODEC_PSD=ON -DIMCODEC_BUILD_CODEC_JPG=ON -DIMCODEC_BUILD_CODEC_PNG=ON -DIMCODEC_BUILD_CODEC_DDS=ON -DIMCODEC_BUILD_CODEC_GIF=ON -DIMCODEC_BUILD_CODEC_TIFF=ON -DIMCODEC_BUILD_CODEC_WEBP=ON -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -S . -B ./build
+cmake -DCMAKE_GENERATOR="Visual Studio 16 2019"  -A x64 -DIMCODEC_BUILD_CODEC_PSD=ON -DIMCODEC_BUILD_CODEC_JPG=ON -DIMCODEC_BUILD_CODEC_PNG=ON -DIMCODEC_BUILD_CODEC_DDS=ON -DIMCODEC_BUILD_CODEC_GIF=ON -DIMCODEC_BUILD_CODEC_TIFF=ON -DIMCODEC_BUILD_CODEC_WEBP=ON -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -DOIV_RELEASE_SUFFIX=L\"%OIV_RELEASE_SUFFIX%\" -S . -B ./build
 if  !errorlevel! neq 0 (
     echo.
     echo Error: Failed to generate cmake configuration, please make sure cmake is installed correctly: https://cmake.org

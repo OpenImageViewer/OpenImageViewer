@@ -47,8 +47,9 @@ if (OIV_VERSION_BUILD)
     add_compile_definitions(OIV_VERSION_BUILD=${OIV_VERSION_BUILD})
 endif()
 
-
-
+if (OIV_RELEASE_SUFFIX)
+  add_compile_definitions(OIV_RELEASE_SUFFIX=${OIV_RELEASE_SUFFIX})
+endif()
 
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
