@@ -1,4 +1,36 @@
 ==============================================================
+Open image viewer 0.17RC1 - August 29, 2021
+==============================================================
+Added: dynamic and more helpful window title for better integration with windows desktop
+Improved: text rendering native format is now RGBA, no format conversions needed
+Fixed: mouse movement speed for high DPI monitors
+Added: Show The original (storage) texel value of any image type
+Added: option to reload file if changed outside using four different reloading modes
+Fixed: window focus after a successful drag and drop operation
+Added: option to navigate subimages / mipmaps of the current opened image  using Alt+MouseWheel
+Added: option to navigate files in the current folder using Shift+MouseWheel
+Added: configurable keybindings via a  json file found inside the resources folder
+Improved: Multi full screen - center the image around the primary monitor when entering this mode.
+Fixed: Copy to clipboard now use the rasterized image.
+Changed: Pixel grid now has two colors for clear visualization in any scenario.
+Refactored out: Win32 windowing system and Win32 input system to external submodules
+Changed: selection rectangle border width to fixed size of 1 pixel
+Improved: Auto scrolling, use logarithmic velocity function, Auto scroll settings are now configurable and more intuitive 
+Added: show image information, by using the default key 'Grave'
+Improved: text rendering, noticeable on low DPI monitors
+Added feature: close to tray and tray notification icon
+Added Icon and cur support for 1 4 8 , 16 , 24 ,32 bit uncompressed bitmap and png
+Added: Quick browse feature, hold the mouse navigation keys to quickly browse through the images in the folder
+Added: 1 bit image native support.
+Added: File watcher feature, the working directory will be updated according to the file system.
+Changed: Slideshow repeats images Indefinitely.
+Regression: fixed support for Windows7 SP1
+Fixed performance bug: redundant redraw on initial image load
+Changed: virtual status bar is now hidden by default
+Added: support for 16 bit per channel image e.g RGB 48 bit ( currently used by 16 bit per channel PNG files)
+Added proper user message when failing to load a file.
+Improved: Startup time.
+
 ==============================================================
 Open image viewer 0.16RC2 - July 07, 2020
 ==============================================================
