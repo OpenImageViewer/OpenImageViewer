@@ -413,6 +413,44 @@ namespace OIV
             result.resValue = L"Reset color correction to default";
     }
 
+    void TestApp::CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace LLUtils;
+        using namespace std;
+        string sort_type = request.args.GetArgValue("type");
+
+        bool reverseDirection = false;
+        if (sort_type == "name")
+        {
+            if (fFileSorter.GetSortType() == FileSorter::SortType::Name)
+                reverseDirection = true;
+
+            fFileSorter.SetSortType(FileSorter::SortType::Name);
+        }
+            
+        else if (sort_type == "date")
+        {
+            if (fFileSorter.GetSortType() == FileSorter::SortType::Date)
+                reverseDirection = true;
+            fFileSorter.SetSortType(FileSorter::SortType::Date);
+        }
+
+        if (reverseDirection)
+        {
+            fFileSorter.SetSortDirection(fFileSorter.GetSortDirection() == FileSorter::SortDirection::Ascending ?
+                FileSorter::SortDirection::Descending : FileSorter::SortDirection::Ascending);
+        }
+
+        SortFileList();
+        UpdateOpenedFileIndex();
+
+        auto userMessage = LLUtils::StringUtility::ToWString(request.displayName);
+        
+        userMessage += std::wstring(L" [") + (fFileSorter.GetSortDirection() == FileSorter::SortDirection::Ascending ? L"Ascending" : L"Descending")
+            + L"]";
+
+        result.resValue = userMessage;
+    }
     void TestApp::CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
@@ -766,6 +804,7 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_sort_files", std::bind(&TestApp::CMD_SortFiles, this, _1, _2)));
 
     }
 
@@ -1296,6 +1335,13 @@ namespace OIV
         }
     }
 
+
+
+    void TestApp::SortFileList()
+    {
+        std::sort(fListFiles.begin(), fListFiles.end(), fFileSorter);
+    }
+
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
         using namespace std::filesystem;
@@ -1313,7 +1359,9 @@ namespace OIV
 
             std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
             LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
-            std::sort(fListFiles.begin(), fListFiles.end(), fFileListSorter);
+
+            SortFileList();
+
             fListedFolder = absoluteFolderPath;
         }
         
@@ -1530,7 +1578,7 @@ namespace OIV
         else
         {
             // File has been added to the current folder, indices have changed - update current file index
-            auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+            auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
             fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
         }
         UpdateTitle();
@@ -1551,7 +1599,7 @@ namespace OIV
             if (fKnownFileTypesSet.contains(sv.data()))
             {
                 //TODO: add file sorted 
-                auto itAddedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileListSorter);
+                auto itAddedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileSorter);
 
                 if (itAddedFile != fListFiles.end() && *itAddedFile == filePath)
                         LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
@@ -1559,7 +1607,7 @@ namespace OIV
                 fListFiles.insert(itAddedFile, filePath);
                 
                 // File has been added to the current folder, indices have changed - update current file index
-                auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileListSorter);
+                auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
                 fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
  
                 UpdateTitle();

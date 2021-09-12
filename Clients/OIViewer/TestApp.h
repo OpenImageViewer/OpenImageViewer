@@ -13,6 +13,7 @@
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
+#include "FileSorter.h"
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Buttons/ButtonStates.h>
 #include <LInput/Mouse/MouseButton.h>
@@ -168,6 +169,7 @@ namespace OIV
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         
 #pragma endregion //Commands
         void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
@@ -391,6 +393,7 @@ namespace OIV
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const; 
         void QueueResampling();
+        void SortFileList();
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 
@@ -421,27 +424,8 @@ namespace OIV
 
         std::unique_ptr<ContextMenu<MenuItemData>> fContextMenu;
         LLUtils::PointI32 fDownPosition;
-        
-    	
         ::Win32::Timer fContextMenuTimer;
-
-        struct 
-        {
-            bool operator() (const std::wstring& A, const std::wstring& B) const
-            {
-                using namespace LLUtils;
-                using path = std::filesystem::path;
-                path aPath(StringUtility::ToLower(A));
-                std::wstring aName = aPath.stem();
-                std::wstring aExt = aPath.extension();
-                
-                path bPath(StringUtility::ToLower(B));
-                std::wstring bName = bPath.stem();
-                std::wstring bExt = bPath.extension();
-
-                return aName < bName || ((aName == bName) && aExt < bExt);
-            }
-        } const fFileListSorter;
+        FileSorter fFileSorter;
 
     };
 }

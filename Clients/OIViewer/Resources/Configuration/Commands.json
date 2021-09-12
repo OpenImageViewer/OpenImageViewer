@@ -329,6 +329,18 @@
       "DisplayName": "Goto last image in folder",
       "Name": "cmd_navigate",
       "arguments": "amount=end"
+    },
+    {
+      "GroupID": "SortByName",
+      "DisplayName": "Sort by Name",
+      "Name": "cmd_sort_files",
+      "arguments": "type=name"
+    },
+    {
+      "GroupID": "SortByDate",
+      "DisplayName": "Sort by Date",
+      "Name": "cmd_sort_files",
+      "arguments": "type=date"
     }
   ]
 }
