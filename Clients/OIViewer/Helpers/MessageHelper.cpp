@@ -3,6 +3,7 @@
 #include "PixelHelper.h"
 #include "../OIVImage/OIVFileImage.h"
 #include "../ConfigurationLoader.h"
+#include "UnitsHelper.h"
 namespace OIV
 {
     std::wstring  MessageHelper::ParseImageSource(const OIVBaseImageSharedPtr& image)
@@ -79,8 +80,16 @@ namespace OIV
             messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ 
                 MessageFormatter::FormatFilePath(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName()) });
 
-        const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
+        auto fileSize = std::filesystem::file_size(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName());
 
+        messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
+        
+        auto bitmapSize = image->GetDescriptor().Width * image->GetDescriptor().Height * image->GetDescriptor().Bpp / CHAR_BIT;
+        auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
+        messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{L"1:" ,compressionRatio});
+
+        const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
+        
         messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ image->GetDescriptor().Width , "px" });
         messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ image->GetDescriptor().Height , "px" });
         messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetDescriptor().Bpp , " bpp" });
