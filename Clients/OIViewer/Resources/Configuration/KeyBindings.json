@@ -1,6 +1,11 @@
 {
   "KeyBindings": [
     { "F1": "ToggleKeyBindings" },
+    { "1": "WindowSizeX1/4"},
+    { "2": "WindowSizeX1/2"},
+    { "3": "WindowSizeX1"},
+    { "4": "WindowSizeFullScreen"},
+    { "5": "WindowSizeMultiFullScreen"},
     { "Grave": "ShowImageInfo" },
     { "Control+O": "OpenFile" },
     { "GreyDelete": "MoveFileToRecycleBin" },

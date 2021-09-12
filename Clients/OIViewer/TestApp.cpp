@@ -413,6 +413,77 @@ namespace OIV
             result.resValue = L"Reset color correction to default";
     }
 
+    void TestApp::CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    {
+        using namespace LLUtils;
+        using namespace std;
+        string size_type = request.args.GetArgValue("size_type");
+
+        if (size_type == "fullscreen")
+        {
+            fWindow.SetFullScreenState(::Win32::FullSceenState::SingleScreen);
+        }
+        else if (size_type == "multifullscreen")
+        {
+            fWindow.SetFullScreenState(::Win32::FullSceenState::MultiScreen);
+        }
+        else
+        {
+            if (fWindow.GetFullScreenState() != ::Win32::FullSceenState::Windowed)
+                fWindow.SetFullScreenState(::Win32::FullSceenState::Windowed);
+            string widthStr = request.args.GetArgValue("width");
+            string heightStr = request.args.GetArgValue("height");
+
+            double width = std::stod(widthStr);
+            double height = std::stod(heightStr);
+
+
+            const int workingAreaWidth = fCurrentMonitorProperties.monitorInfo.rcWork.right - fCurrentMonitorProperties.monitorInfo.rcWork.left;
+            const int workingAreaHeight = fCurrentMonitorProperties.monitorInfo.rcWork.bottom - fCurrentMonitorProperties.monitorInfo.rcWork.top;
+
+            int finalWidth;
+            int finalHeight;
+
+            if (size_type == "absolute")
+            {
+                finalWidth = static_cast<int>(std::round(width));
+                finalHeight = static_cast<int>(std::round(height));
+            }
+
+            else if (size_type == "relative")
+            {
+                int workingAreaWidth = fCurrentMonitorProperties.monitorInfo.rcWork.right - fCurrentMonitorProperties.monitorInfo.rcWork.left;
+                int workingAreaHeight = fCurrentMonitorProperties.monitorInfo.rcWork.bottom - fCurrentMonitorProperties.monitorInfo.rcWork.top;
+                double realtiveWidth = width * workingAreaWidth / 100.0;
+                double realtiveHeight = height * workingAreaHeight / 100.0;
+
+                finalWidth = static_cast<int>(std::round(realtiveWidth));
+                finalHeight = static_cast<int>(std::round(realtiveHeight));
+            }
+
+            finalWidth = std::min(workingAreaWidth, finalWidth);
+            finalHeight = std::min(workingAreaHeight, finalHeight);
+
+
+            auto windowNewSize = PointI32{ finalWidth, finalHeight };
+            auto windowCurrentSize = fWindow.GetWindowSize();
+            auto currentPos = fWindow.GetPosition();
+            auto displacedPos = currentPos - (windowNewSize - windowCurrentSize) / 2;
+
+            displacedPos.x = std::clamp<int32_t>(displacedPos.x,
+                fCurrentMonitorProperties.monitorInfo.rcWork.left, fCurrentMonitorProperties.monitorInfo.rcWork.right - windowNewSize.x);
+
+            displacedPos.y = std::clamp<int32_t>(displacedPos.y,
+                fCurrentMonitorProperties.monitorInfo.rcWork.top, fCurrentMonitorProperties.monitorInfo.rcWork. bottom - windowNewSize.y);
+            
+            if (displacedPos != currentPos)
+                fWindow.SetPosition(displacedPos.x, displacedPos.y);
+
+            fWindow.SetSize(finalWidth, finalHeight);
+        }
+        result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
+    }
+
     void TestApp::CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
@@ -804,6 +875,7 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)));
+        fCommandManager.AddCommand(CommandManager::Command("cmd_set_window_size", std::bind(&TestApp::CMD_SetWindowSize, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_sort_files", std::bind(&TestApp::CMD_SortFiles, this, _1, _2)));
 
     }
@@ -815,6 +887,8 @@ namespace OIV
 
     void TestApp::OnMonitorChanged(const EventManager::MonitorChangeEventParams& params)
     {
+        fCurrentMonitorProperties = params.monitorDesc;
+
         //update the refresh rate.
         fRefreshRateTimes1000 = params.monitorDesc.DisplaySettings.dmDisplayFrequency == 59 ? 59940 : params.monitorDesc.DisplaySettings.dmDisplayFrequency * 1000;
 

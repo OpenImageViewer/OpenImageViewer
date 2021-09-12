@@ -342,5 +342,36 @@
       "Name": "cmd_sort_files",
       "arguments": "type=date"
     }
+    ,
+    {
+      "GroupID": "WindowSizeX1/4",
+      "DisplayName": "Window size 1/4 screen",
+      "Name": "cmd_set_window_size",
+      "arguments": "size_type=relative;width=25;height=25"
+    },
+    {
+      "GroupID": "WindowSizeX1/2",
+      "DisplayName": "Window size 1/2 screen",
+      "Name": "cmd_set_window_size",
+      "arguments": "size_type=relative;width=50;height=50"
+    },
+    {
+      "GroupID": "WindowSizeX1",
+      "DisplayName": "Window size entire screen",
+      "Name": "cmd_set_window_size",
+      "arguments": "size_type=relative;width=100;height=100"
+    },
+    {
+      "GroupID": "WindowSizeFullScreen",
+      "DisplayName": "Window size Full screen",
+      "Name": "cmd_set_window_size",
+      "arguments": "size_type=fullscreen"
+    },
+    {
+      "GroupID": "WindowSizeMultiFullScreen",
+      "DisplayName": "Window size multi full screen",
+      "Name": "cmd_set_window_size",
+      "arguments": "size_type=multifullscreen"
+    }
   ]
 }

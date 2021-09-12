@@ -169,6 +169,7 @@ namespace OIV
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         
 #pragma endregion //Commands
@@ -267,6 +268,7 @@ namespace OIV
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
         ::Win32::HighPrecisionTimer fRefreshTimer;
         uint32_t fRefreshRateTimes1000 = 60'000;
+        ::Win32::MonitorDesc fCurrentMonitorProperties{};
         MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
         Win32::MainWindow fWindow;
