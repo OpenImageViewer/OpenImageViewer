@@ -4,7 +4,7 @@
       "GroupID": "ToggleKeyBindings",
       "DisplayName": "Toggle Key bindings",
       "Name": "cmd_toggle_keybindings",
-      "arguments": ""
+      "arguments": "type=keybindings"
     },
     {
       "GroupID": "ShowImageInfo",
@@ -12,6 +12,13 @@
       "Name": "cmd_toggle_keybindings",
       "arguments": "type=imageinfo"
     },
+    {
+      "GroupID": "ShowSettings",
+      "DisplayName": "Show Settings",
+      "Name": "cmd_toggle_keybindings",
+      "arguments": "type=settings"
+    },
+    
     {
       "GroupID": "OpenFile",
       "DisplayName": "Open file",

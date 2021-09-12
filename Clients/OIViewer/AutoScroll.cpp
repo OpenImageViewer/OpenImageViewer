@@ -37,17 +37,10 @@ namespace OIV
         fCreateParams.scrollFunc(static_cast<PointF64>(scrollAmount));
     }
 
-
-    void AutoScroll::SetScrollMetrics(const ScrollMetrics& scrollMetrics)
-    {
-        fScrollMetrics = scrollMetrics;
-    }
-
     void AutoScroll::OnScroll()
     {
         PerformAutoScroll();
     }
-
 
     LLUtils::PointI32 AutoScroll::GetMousePosition()
     {

@@ -1,6 +1,7 @@
 {
   "KeyBindings": [
     { "F1": "ToggleKeyBindings" },
+    { "F2": "ShowSettings" },
     { "1": "WindowSizeX1/4"},
     { "2": "WindowSizeX1/2"},
     { "3": "WindowSizeX1"},

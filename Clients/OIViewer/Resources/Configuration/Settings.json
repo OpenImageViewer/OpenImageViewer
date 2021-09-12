@@ -1,32 +1,26 @@
 {
-  "system": 
-  {
-    "allowdynamicsettings": false
+  "system": {
+    "allowdynamicsettings": true
   },
-  "filesystem":
-  {
-    "deletedfileremovalmode" : "internally"
-    ,"modifiedfilereloadmode": "confirmation"
+  "filesystem": {
+    "deletedfileremovalmode": "externally",
+    "modifiedfilereloadmode": "confirmation"
   },
-  "viewsettings": 
-  {
+  "viewsettings": {
     "maxzoom": 100.0,
-    "minimagesize": 150,
-    "slideshowinterval": 2000,
-    "quickbrowsedelay": 100,
-    "imagemargins": 
-    {
-      "x": 0.25,
+    "minimagesize": 150.0,
+    "slideshowinterval": 2000.0,
+    "quickbrowsedelay": 100.0,
+    "imagemargins": {
+      "x": 0.0,
       "y": 0.25
     }
-    }
-      ,
-       "autoscroll" :
-    {
-        "deadzoneradius" : 10
-      , "speedfactorin" : 0.4
-      , "speedfactorout" : 1.4
-      , "speedfactorrange" : 30
-      , "maxspeed" : 8000
-    }
+  },
+  "autoscroll": {
+    "deadzoneradius": 10.0,
+    "speedfactorin": 0.4,
+    "speedfactorout": 1.4,
+    "speedfactorrange": 30.0,
+    "maxspeed": 8000.0
   }
+}

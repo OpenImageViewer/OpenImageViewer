@@ -32,10 +32,14 @@ namespace OIV
         
         AutoScroll(const CreateParams& createParams);
         bool IsAutoScrolling() const { return fAutoScrolling; }
-        void SetScrollMetrics(const ScrollMetrics& scrollMetrics);
         LLUtils::PointI32 GetMousePosition();
         void ToggleAutoScroll();
         void PerformAutoScroll();
+        void SetDeadZoneRadius(int32_t val) { fScrollMetrics.deadZoneRadius = val; }
+        void SetSpeedFactorIn(double val) { fScrollMetrics.speedInFactorIn = val; }
+        void SetSpeedFactorOut(double val) { fScrollMetrics.speedFactorOut = val; }
+        void SetSpeedFactorRange(int32_t val) { fScrollMetrics.speedFactorRange = val; }
+        void SetMaxSpeed(int32_t val) { fScrollMetrics.maxSpeed = val; }
 
 #pragma region Private member methods
         private:

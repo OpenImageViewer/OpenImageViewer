@@ -100,22 +100,30 @@ namespace OIV
 						currentTmp.child = &child.value();
 						currentTmp.name = child.key();
 
-
-						//stck.emplace(&child.value(), &currentChild);
 					}
-					else if (child.value().is_boolean())
+					else
+						currentChild.value = child.value().dump(0);
+
+					//strongly typed 
+					/*else if (child.value().is_boolean())
 						currentChild.value = child.value().get<Bool>();
 					else if (child.value().is_number_integer())
 						currentChild.value = child.value().get<Integral>();
 					else if (child.value().is_number_float())
 						currentChild.value = child.value().get<Float>();
 					else if (child.value().is_string())
-						currentChild.value = child.value().get<String>();
+						currentChild.value = child.value().get<String>();*/
 
 
 					if (child.value().is_object() == false)
 					{
-						mapSettings.emplace(currentNamespace + '/' + currentChild.name, currentChild.value);
+						std::string qualifiedName;
+						if (currentNamespace.empty())
+							qualifiedName = currentChild.name;
+						else
+							qualifiedName = currentNamespace + seperator + currentChild.name;
+						
+						mapSettings.emplace(qualifiedName, currentChild.value);
 					}
 				}
 
@@ -128,11 +136,16 @@ namespace OIV
 					settingEntry->children.at(i) = it->entry;
 					if (it->isObject)
 					{
-						stck.emplace(it->child, &settingEntry->children.at(i), currentNamespace + '/' + it->name);
+						std::string qualifiedName;
+						if (currentNamespace.empty())
+
+							qualifiedName = it->name;
+						else
+							qualifiedName = currentNamespace + seperator + it->name;
+
+						stck.emplace(it->child, &settingEntry->children.at(i), qualifiedName);
 					}
 				}
-
-				//settingEntry ->children = 
 			}
 		}
 		catch (nlohmann::detail::exception& exception)

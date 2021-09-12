@@ -274,6 +274,78 @@ namespace OIV
         return fImageInfoVisible;
     }
 
+    void TestApp::NetSettingsCallback_(ItemChangedArgs* args)
+    {
+        reinterpret_cast<TestApp*>(args->userData)->NetSettingsCallback(args);
+    }
+   
+    using netsettings_Create_func = void (*)(GuiCreateParams*);
+    using netsettings_SetVisible_func = void (*)(bool);
+    using netsettings_SaveSettings_func = void (*)();
+
+    struct SettingsContext
+    {
+        bool created;
+        netsettings_Create_func Create; 
+        netsettings_SetVisible_func SetVisible;
+        netsettings_SaveSettings_func  SaveSettings;
+    };
+    SettingsContext settingsContext{};
+
+
+    void TestApp::NetSettingsCallback(ItemChangedArgs* args)
+    {
+        OnSettingChange(args->key, args->val);
+    }
+
+    void TestApp::ShowSettings()
+    {
+        if (settingsContext.created == false)
+        {
+            using namespace std::filesystem;
+            const path programPath = path(LLUtils::PlatformUtility::GetExeFolder());
+            const path netsettingsPath = programPath / "Extensions" / "NetSettings";
+            const path cliAdapterPath = netsettingsPath / "CliAdapter.dll";
+
+            if (exists(cliAdapterPath))
+            {
+                SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+                [[maybe_unused]] auto directory = AddDllDirectory((netsettingsPath.lexically_normal().wstring() + L"\\"). c_str());
+                HMODULE dllModule = LoadLibrary(cliAdapterPath.c_str());
+                if (dllModule != nullptr)
+                {
+                    settingsContext.Create = reinterpret_cast<netsettings_Create_func>(GetProcAddress(dllModule, "netsettings_Create"));
+                    settingsContext.SetVisible = reinterpret_cast<netsettings_SetVisible_func>(GetProcAddress(dllModule, "netsettings_SetVisible"));
+                    settingsContext.SaveSettings = reinterpret_cast<netsettings_SaveSettings_func>(GetProcAddress(dllModule, "netsettings_SaveUserSettings"));
+
+                    GuiCreateParams params{};
+                    params.userData = this;
+                    params.callback = &::OIV::TestApp::NetSettingsCallback_;
+                    auto templateFile = (netsettingsPath / "Resources/GuiTemplate.json");
+                    params.templateFilePath = templateFile.c_str();
+                    auto userSettingsFile = (programPath / "Resources/Configuration/Settings.json");
+                    params.userSettingsFilePath = userSettingsFile.c_str();
+
+                    settingsContext.Create(&params);
+                    settingsContext.SetVisible(true);
+                    settingsContext.created = true;
+                }
+                else
+                {
+                    LLUtils::Logger::GetSingleton().Log(std::wstring(L"Cannot load Netsettings extension, error: ") + LLUtils::PlatformUtility::GetLastErrorAsString<wchar_t>());
+                }
+            }
+            else
+            {
+                LLUtils::Logger::GetSingleton().Log(std::wstring(L"Cannot load Netsettings extension, not found"));
+            }
+        }
+        else
+        {
+            settingsContext.SetVisible(true);
+        }
+    }
+
     void TestApp::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& result)
     {
         auto type = request.args.GetArgValue("type");
@@ -281,7 +353,7 @@ namespace OIV
         {
             SetImageInfoVisible(!GetImageInfoVisible());
         }
-        else // Toggle keybindings
+        else if (type == "keybindings")// Toggle keybindings
         {
             OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
             if (text != nullptr) //
@@ -316,6 +388,10 @@ namespace OIV
             if (text->Update() == RC_Success)
                 fRefreshOperation.Queue();
 
+        }
+        else if (type == "settings") // Show settings
+        {
+            ShowSettings();
         }
     }
 
@@ -777,7 +853,16 @@ namespace OIV
 	
     std::wstring TestApp::GetLogFilePath()
 	{
-		return GetAppDataFolder() + L"oiv.log";
+        auto GetVersionAsString = []
+        {
+            constexpr auto dot = OIV_TEXT(".");
+            OIVStringStream ss;
+            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_BUILD << dot << OIV_VERSION_REVISION;
+            return ss.str();
+
+        };
+
+		return GetAppDataFolder() + GetVersionAsString() +  L"/oiv.log";
 	}
 
 
@@ -1749,7 +1834,7 @@ namespace OIV
         {
             if (fileChangedEventArgs.fileName == L"Settings.json")
             {
-                LoadSettings(false);
+                LoadSettings();
             }
         }
         else
@@ -2132,9 +2217,9 @@ namespace OIV
 
         fMouseClickEventHandler.OnMouseClickEvent.Add(std::bind(&TestApp::OnMouseMultiClick, this, std::placeholders::_1));
 
-        LoadSettings(true);
+        LoadSettings();
 
-        if (fAllowDynamicSettings)
+        if (fReloadSettingsFileIfChanged)
             fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
     }
 
@@ -2153,63 +2238,98 @@ namespace OIV
         }
 
     }
-
-    void TestApp::LoadSettings(bool startup)
+    template <typename value_type>
+    value_type ParseValue(const std::wstring& value)
     {
-        auto settings = ConfigurationLoader::LoadSettings();
+        using Integral = ConfigurationLoader::Integral;
+        using Float = ConfigurationLoader::Float;
+        using Bool = ConfigurationLoader::Bool;
 
-        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/maxzoom", fMaxPixelSize);
-        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/x", fImageMargins.x);
-        LoadValue<ConfigurationLoader::Float>(settings, "/viewsettings/imagemargins/y", fImageMargins.y);
-        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/minimagesize", fMinImageSize);
-        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/slideshowinterval", fSlideShowIntervalms);
-        LoadValue<ConfigurationLoader::Integral>(settings, "/viewsettings/quickbrowsedelay", fQuickBrowseDelay);
-        LoadValue<ConfigurationLoader::Bool>(settings, "/viewsettings/autoloadchangedfile", fAutoLoadChangedFile);
-
-        //Auto scroll metrics
-
-        AutoScroll::ScrollMetrics metrics{};
-
-        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/deadzoneradius", metrics.deadZoneRadius);
-        LoadValue<ConfigurationLoader::Float>   (settings, "/autoscroll/speedfactorin", metrics.speedInFactorIn);
-        LoadValue<ConfigurationLoader::Float>   (settings, "/autoscroll/speedfactorout", metrics.speedFactorOut);
-        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/speedfactorrange", metrics.speedFactorRange);
-        LoadValue<ConfigurationLoader::Integral>(settings, "/autoscroll/maxspeed", metrics.maxSpeed);
-        fAutoScroll->SetScrollMetrics(metrics);
-
-        std::string fileRemovalModeStr;
-        LoadValue<ConfigurationLoader::String>(settings, "/filesystem/deletedfileremovalmode", fileRemovalModeStr);
-        if (fileRemovalModeStr == "always")
-            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally | DeletedFileRemovalMode::DeletedInternally;
-        else if (fileRemovalModeStr == "externally")
-            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally;
-        else if (fileRemovalModeStr == "internally")
-            fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
-        else if (fileRemovalModeStr == "none")
-            fDeletedFileRemovalMode = DeletedFileRemovalMode::None;
-
-        std::string modifiedFileReloadModeStr;
-        LoadValue<ConfigurationLoader::String>(settings, "/filesystem/modifiedfilereloadmode", modifiedFileReloadModeStr);
-        if (modifiedFileReloadModeStr == "none")
-            fMofifiedFileReloadMode = MofifiedFileReloadMode::None;
-        else if (modifiedFileReloadModeStr == "confirmation")
-            fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
-        else if (modifiedFileReloadModeStr == "autoforeground")
-            fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoForeground;
-        else if (modifiedFileReloadModeStr == "autobackground")
-            fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoBackground;
-
-
-        if (startup)
+        if constexpr (std::is_same_v< value_type, Integral>)
+            return std::stoll(value);
+        else if constexpr (std::is_same_v< value_type, Float>)
+            return std::stod(value);
+        else if constexpr (std::is_same_v< value_type, Bool >)
+            return value == L"true" ? true : false;
+        else
+            static_assert("not implemented");
+    }
+    
+    void TestApp::OnSettingChange(const std::wstring& key, const std::wstring& value)
+    {
+        using Integral = ConfigurationLoader::Integral;
+        using Float = ConfigurationLoader::Float;
+        using Bool = ConfigurationLoader::Bool;
+        
+        if (key == L"viewsettings/maxzoom")
         {
-            LoadValue<ConfigurationLoader::Bool>(settings, "/system/allowdynamicsettings", fAllowDynamicSettings);
+            auto val = ParseValue<Integral>(value);
+            fMaxPixelSize = val;
         }
+        else if (key == L"viewsettings/imagemargins/x")
+            fImageMargins.x = ParseValue<Float>(value);
+        else if (key == L"viewsettings/imagemargins/y")
+            fImageMargins.y = ParseValue<Float>(value);
+        else if (key == L"viewsettings/minimagesize")
+            fMinImageSize = ParseValue<Integral>(value);
+        else if (key == L"viewsettings/slideshowinterval")
+            fSlideShowIntervalms = ParseValue<Integral>(value);
+        else if (key == L"viewsettings/quickbrowsedelay")
+            fQuickBrowseDelay = ParseValue<Integral>(value);
 
-#if _DEBUG
-        fAllowDynamicSettings = true;
-#endif
+        //Auto scroll
+
+        else if (key == L"autoscroll/deadzoneradius")
+            fAutoScroll->SetDeadZoneRadius(ParseValue<Integral>(value));
+        else if (key == L"autoscroll/speedfactorin")
+            fAutoScroll->SetSpeedFactorIn(ParseValue<Float>(value));
+        else if (key == L"autoscroll/speedfactorout")
+            fAutoScroll->SetSpeedFactorOut(ParseValue<Float>(value));
+        else if (key == L"autoscroll/speedfactorrange")
+            fAutoScroll->SetSpeedFactorRange(ParseValue<Integral>(value));
+        else if (key == L"autoscroll/maxspeed")
+            fAutoScroll->SetMaxSpeed(ParseValue<Integral>(value));
+
+        //deleted file removal mode
+
+        else if (key == L"filesystem/deletedfileremovalmode")
+        {
+            std::wstring fileRemovalModeStr = value;
+            
+            if (fileRemovalModeStr == L"always")
+                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally | DeletedFileRemovalMode::DeletedInternally;
+            else if (fileRemovalModeStr == L"externally")
+                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally;
+            else if (fileRemovalModeStr == L"internally")
+                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
+            else if (fileRemovalModeStr == L"none")
+                fDeletedFileRemovalMode = DeletedFileRemovalMode::None;
+        }
+        // modified file reload mode
+        else if (key == L"filesystem/modifiedfilereloadmode")
+        {
+            std::wstring modifiedFileReloadModeStr = value;
+            if (modifiedFileReloadModeStr == L"none")
+                fMofifiedFileReloadMode = MofifiedFileReloadMode::None;
+            else if (modifiedFileReloadModeStr == L"confirmation")
+                fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
+            else if (modifiedFileReloadModeStr == L"autoforeground")
+                fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoForeground;
+            else if (modifiedFileReloadModeStr == L"autobackground")
+                fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoBackground;
+        }
+        else if (key == L"system/reloadsettingsfileifchanged")
+        {
+            fReloadSettingsFileIfChanged = ParseValue<Bool>(value);
+        }
     }
 
+    void TestApp::LoadSettings()
+    {
+        auto settings = ConfigurationLoader::LoadSettings();
+        for (const auto& pair : settings)
+            OnSettingChange(LLUtils::StringUtility::ToWString(pair.first), LLUtils::StringUtility::ToWString(pair.second));
+    }
 
     void TestApp::OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args)
     {

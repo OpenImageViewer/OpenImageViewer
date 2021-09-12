@@ -10,6 +10,8 @@ namespace OIV
 	class ConfigurationLoader
 	{
 	public:
+
+		static constexpr char seperator = '/';
 		struct CommandGroup
 		{
 			std::string commandGroupID;
@@ -24,7 +26,14 @@ namespace OIV
 			std::string GroupID;
 		};
 
-		
+		enum class ValueType
+		{
+			 Integral 
+			,Float 
+			,String 
+			,Bool
+		};
+
 		using Integral = int64_t;
 		using Float = long double;
 		using String = std::string;
@@ -32,12 +41,12 @@ namespace OIV
 
 		using SettingValue = std::variant<bool, int64_t, long double, std::string>;
 
-		using MapSettings = std::map<std::string, SettingValue>;
+		using MapSettings = std::map<std::string, std::string>;
 
 		struct SettingEntryForParsing
 		{
 			std::string name;
-			SettingValue value;
+			std::string value;
 			std::vector<SettingEntryForParsing> children;
 		};
 

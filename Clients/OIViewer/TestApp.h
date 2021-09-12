@@ -17,12 +17,13 @@
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Buttons/ButtonStates.h>
 #include <LInput/Mouse/MouseButton.h>
+
 #include <LInput/Win32/RawInput/RawInput.h>
 #include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
 
 
 #include "SelectionRect.h"
-#include "OIVImage\OIVBaseImage.h"
+#include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
 #include <Win32/MonitorInfo.h>
 #include "VirtualStatusBar.h"
@@ -35,6 +36,7 @@
 #include "Win32/NotificationIconGroup.h"
 #include "MouseMultiClickHandler.h"
 #include "LLUtils/EnumClassBitwise.h"
+#include "Extensions/NetSettings/GuiProvider.h"
 
 namespace OIV
 {
@@ -259,6 +261,21 @@ namespace OIV
         bool GetImageInfoVisible() const;
         void ProcessLoadedDirectory();
         void PerformReloadFile(const std::wstring& requestedFile);
+        void ShowSettings();
+        static void NetSettingsCallback_(ItemChangedArgs* callback);
+        void NetSettingsCallback(ItemChangedArgs* callback);
+
+        using netsettings_Create_func = void (*)(GuiCreateParams*);
+        using netsettings_SetVisible_func = void (*)(bool);
+        using netsettings_SaveSettings_func = void (*)();
+
+        struct SettingsContext
+        {
+            bool created;
+            netsettings_Create_func Create;
+            netsettings_SetVisible_func SetVisible;
+            netsettings_SaveSettings_func  SaveSettings;
+        } settingsContext{};
         
 		
     private: // member fields
@@ -281,7 +298,7 @@ namespace OIV
         double fMinImageSize = 150.0;
         uint32_t fSlideShowIntervalms = 3000;
         bool fSlideShowEnabled = false;
-        bool fAllowDynamicSettings = false;
+        bool fReloadSettingsFileIfChanged = false;
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
         std::wstring fListedFolder; // the current folder the the file list is taken from
@@ -390,7 +407,8 @@ namespace OIV
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;
         ::Win32::NotificationIconGroup::IconID fNotificationIconID;
-        void LoadSettings(bool startup);
+        void OnSettingChange(const std::wstring& key, const std::wstring& value);
+        void LoadSettings();
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const; 
         void QueueResampling();
