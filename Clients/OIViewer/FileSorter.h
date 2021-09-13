@@ -81,7 +81,7 @@ namespace OIV
         }
 
     private:
-        SortType fSortType = SortType::Date;
+        SortType fSortType = SortType::Name;
         SortDirection fSortDirection = SortDirection::Ascending;
     };
 }
