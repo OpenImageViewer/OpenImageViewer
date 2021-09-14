@@ -1,17 +1,5 @@
-
 #OIV library
 cmake_minimum_required(VERSION 3.8)
-
-execute_process(COMMAND gitHead.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE GIT_HASH_ID)
-#execute_process(COMMAND gitCommitDate.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE  GIT_COMMIT_DATE)
-#execute_process(COMMAND gitBranch.cmd WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE GIT_BRANCH)
-string(REPLACE \n "" GIT_HASH_ID ${GIT_HASH_ID})
-#string(REPLACE \n "" GIT_COMMIT_DATE ${GIT_COMMIT_DATE})
-#string(REPLACE \n "" GIT_BRANCH ${GIT_BRANCH})
-
-add_definitions(-DOIV_VERSION_REVISION="${GIT_HASH_ID}")
-#add_definitions(-DGIT_COMMIT_DATE="${GIT_COMMIT_DATE}")
-#add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
 
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
@@ -22,9 +10,6 @@ file(GLOB_RECURSE sourceFiles
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)
 add_executable (${TargetName} ${sourceFiles} )
-
-
-
 
 #Build resources for embedding an Icon into the executable 
 add_custom_command(TARGET ${TargetName} 

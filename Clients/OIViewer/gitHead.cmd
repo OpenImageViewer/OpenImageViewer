@@ -1,1 +1,0 @@
-@git rev-parse --short=8 head
