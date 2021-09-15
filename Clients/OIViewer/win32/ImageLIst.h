@@ -6,7 +6,33 @@
 class ImageList
 {
 public:
+    ImageList()
+    {
+        LOGFONT font{};
+        font.lfHeight = 20;
+        font.lfWeight = FW_NORMAL;
+        font.lfQuality = CLEARTYPE_QUALITY;
+        wcscpy_s(font.lfFaceName, L"Segoe UI");
+        fFont = CreateFontIndirect(&font);
 
+        fGrayBrush = CreateSolidBrush(RGB(245, 249, 213));
+        fLightgrayBrush = CreateSolidBrush(RGB(224, 249, 213));
+        fBlueBrush = CreateSolidBrush(RGB(0, 0, 200));
+        fPen = CreatePen(PS_DASHDOTDOT, lineWidth, RGB(0, 0, 0));
+     }
+
+    ~ImageList()
+    {
+        if (fPen)
+            DeleteObject(fPen);
+        if (fGrayBrush)
+            DeleteObject(fGrayBrush);
+        if (fLightgrayBrush)
+            DeleteObject(fLightgrayBrush);
+        if (fFont)
+            DeleteObject(fFont);
+
+    }
     struct ImageSelectionChangeArgs
     {
         int imageIndex = -1;
@@ -100,41 +126,12 @@ public:
         int imagePos = 30;
      
         PAINTSTRUCT ps;
-        
         BeginPaint(hwnd, &ps);
         HDC hdc = ps.hdc;// GetDC(hwnd);//  BeginPaint(GetHandleClient(), &ps);
-        
-        
         HDC hdcMem = CreateCompatibleDC(nullptr);
-        
-        HBRUSH grayBrush = CreateSolidBrush(RGB(245, 249, 213));
-        HBRUSH lightgrayBrush = CreateSolidBrush(RGB(224, 249, 213));
-        //HBRUSH greenBrush = CreateSolidBrush(RGB(0, 255, 0));
-        HBRUSH BlueBrush = CreateSolidBrush(RGB(0, 0, 200));
-        const int lineWidth = 2;
-        HPEN hPen = CreatePen(PS_DASHDOTDOT, lineWidth, RGB(0, 0, 0));
-        SelectObject(hdc, hPen);
+        SelectObject(hdc, fPen);
 
-
-
-
-        LOGFONT font {};
-        
-        font.lfHeight = 20;
-        font.lfWeight = FW_NORMAL;
-        wcscpy_s(font.lfFaceName, L"Segoe UI");
-
-        // Draw the text directly to compare to the bitmap
-        font.lfQuality = PROOF_QUALITY;
-        //HFONT hFont = CreateFontIndirect(&font);
-        font.lfQuality = 0;
-        //HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
-
-
-        //LOGFONT lf = *plf;
-        //lf.lfQuality = CLEARTYPE_QUALITY;
-        //HFONT hFont = CreateFontIndirect(&lf);
-        //HFONT hOldFont = (HFONT)SelectObject(hDC, hFont);
+        SelectObject(hdc, fFont);
 
 
         int currentEntry = 0;
@@ -149,9 +146,10 @@ public:
             r.right = entrywidth;
 
             if (currentEntry == fSelected)
-                FillRect(hdc, &r, BlueBrush);
+                FillRect(hdc, &r, fBlueBrush);
             else
-                FillRect(hdc, &r, currentEntry % 2 == 0 ? grayBrush : lightgrayBrush);
+                FillRect(hdc, &r, currentEntry % 2 == 0 ? fGrayBrush : fLightgrayBrush);
+
             MoveToEx(hdc, x, y + fEntryHeight - lineWidth, nullptr);
             
             int textpos = 5 + y;
@@ -289,6 +287,12 @@ public:
     }
 
 private:
+    static constexpr int lineWidth = 2;
+    HFONT fFont{};
+    HBRUSH fGrayBrush{};
+    HBRUSH fLightgrayBrush{};
+    HBRUSH fBlueBrush{};
+    HPEN fPen{};
     uint32_t fEntryHeight = 100;
     int fSelected = -1;
     int fPos = 0;
