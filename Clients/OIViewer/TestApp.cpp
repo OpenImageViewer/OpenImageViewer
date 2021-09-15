@@ -1857,11 +1857,19 @@ namespace OIV
         LockMouseToWindowMode lockMode = LockMouseToWindowMode::NoLock;
         const auto& mouseState = fMouseDevicesState.find(btnEvent.parent->GetID())->second;
         const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
+        const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
         const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
 
         if (btnEvent.button == MouseButton::Left)
         {
-            if (IsRightDown == false && IsRightCatured == false)
+            if (btnEvent.eventType == EventType::Pressed && IsRightDown && isMouseCursorOnTopOfWindowAndInsideClientRect)
+            {
+                // Rocker gesture - navigate backward
+                fRockerGestureActivate = true;
+                fContextMenuTimer.SetInterval(0);
+                JumpFiles(-1);
+            }
+            else if (IsRightDown == false && IsRightCatured == false)
             {
                 //Window drag and resize
                 if (Win32Helper::IsKeyPressed(VK_MENU) == false
@@ -1879,12 +1887,10 @@ namespace OIV
             {
                 lockMode = LockMouseToWindowMode::NoLock;
             }
+      
 
             fWindow.SetLockMouseToWindowMode(lockMode);
-        }
-
-        if (btnEvent.button == MouseButton::Left)
-        {
+      
             if (Win32Helper::IsKeyPressed(VK_MENU))
             {
                 SelectionRect::Operation op = SelectionRect::Operation::NoOp;
@@ -1896,6 +1902,8 @@ namespace OIV
                 SaveImageSpaceSelection();
 
             }
+
+          
         }
         if (btnEvent.button == MouseButton::Back || btnEvent.button == MouseButton::Forward)
         {
@@ -1913,9 +1921,19 @@ namespace OIV
                 
         }
 
+            
+
         if (btnEvent.button == MouseButton::Right && btnEvent.eventType == EventType::Pressed && isMouseCursorOnTopOfWindowAndInsideClientRect)
         {
-            if (fContextMenuTimer.GetInterval() == 0)
+            // Rocker gesture - navigate forward
+            if (IsLeftDown)
+            {
+                fRockerGestureActivate = true;
+                fContextMenuTimer.SetInterval(0);
+                JumpFiles(1);
+            }
+                
+            if (fContextMenuTimer.GetInterval() == 0 && fRockerGestureActivate == false)
             {
                 fContextMenuTimer.SetInterval(500);
                 fDownPosition = ::Win32::Win32Helper::GetMouseCursorPosition();
@@ -1935,7 +1953,7 @@ namespace OIV
         const auto& mouseState = fMouseDevicesState.find(mouseInput.deviceIndex)->second;
 
         //const bool IsLeftDown = mouseState.GetButtonState(MouseState::Button::Left) == MouseState::State::Down;
-        //const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
+        const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
         const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
 
         const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
@@ -2013,6 +2031,10 @@ namespace OIV
             fContextMenuTimer.SetInterval(0);
         }
 
+
+        if (IsLeftDown == false && IsRightDown == false)
+            fRockerGestureActivate = false;
+
     }
     void TestApp::OnRawInput(const LInput::RawInput::RawInputEvent& evnt)
     {
@@ -2070,21 +2092,31 @@ namespace OIV
         using namespace LInput;
         if (args.clickCount == 2 && fWindow.IsMouseCursorInClientRect() && fWindow.IsUnderMouseCursor())
         {
+            const auto& mouseState = fMouseDevicesState.begin()->second;
+            const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
+            const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
+
             if (args.button == MouseButton::Left)
             {
-                if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+                if (IsRightDown == false)
                 {
-                    CancelSelection();
-                }
-                else
-                {
-                    ToggleFullScreen(::Win32::Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
+                    if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+                    {
+                        CancelSelection();
+                    }
+                    else
+                    {
+                        ToggleFullScreen(::Win32::Win32Helper::IsKeyPressed(VK_MENU) ? true : false);
+                    }
                 }
             }
 
             if (args.button == MouseButton::Right)
             {
-                ExecutePredefinedCommand("PasteImageFromClipboard");
+                if (IsLeftDown == false)
+                {
+                    ExecutePredefinedCommand("PasteImageFromClipboard");
+                }
             }
         }
     }

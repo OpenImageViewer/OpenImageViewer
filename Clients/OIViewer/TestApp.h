@@ -352,6 +352,7 @@ namespace OIV
         bool fShowBorders = true;
         bool fImageInfoVisible = false;
         bool fIsActive = false;
+        bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
         enum class DeletedFileRemovalMode
         {
