@@ -7,5 +7,6 @@ namespace OIV
 		static std::wstring CreateImageInfoMessage(const OIVBaseImageSharedPtr& image);
 		static std::wstring CreateKeyBindingsMessage();
 		static std::wstring ParseImageSource(const OIVBaseImageSharedPtr& image);
+		static std::wstring GetFileTime(const std::wstring& filePath);
 	};
 }

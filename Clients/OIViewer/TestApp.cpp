@@ -1063,37 +1063,6 @@ namespace OIV
 
     void TestApp::UpdateTitle()
     {
-        auto GetBuildTimeStamp = []()-> std::wstring
-        {
-            auto fileTime = std::filesystem::last_write_time(LLUtils::PlatformUtility::GetDllPath());
-            std::chrono::system_clock::time_point systemTime;
-            auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
-            if (osVersion.major > 10 || (osVersion.major == 10 && osVersion.build >= 15063 /*Version 1703*/ ))
-            {
-                // Not sure if it's a MS STL bug, but using clock_cast invokes initialization of timezones information
-				// which in turn invokes icu.dll, supported only since windows 10 1703.
-                // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
-                systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
-            }
-            else
-            {
-                auto ticks = fileTime.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
-                systemTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
-            }
-            
-            auto in_time_t = std::chrono::system_clock::to_time_t(systemTime);
-            std::wstringstream ss;
-            tm tmDest;
-            errno_t errorCode = localtime_s(&tmDest, &in_time_t) != 0;
-            if (errorCode != 0)
-            {
-                using namespace std::string_literals;
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "could not convert time_t to a tm structure, error code: "s + std::to_string(errorCode));
-            }
-            ss << std::put_time(&tmDest, OIV_TEXT("%Y-%m-%d %X"));
-            return ss.str();
-        };
-    
         const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
 
 #ifdef OIV_RELEASE_SUFFIX
@@ -1102,7 +1071,7 @@ namespace OIV
             // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
             + L"." + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
-            + OIV_TEXT(" | ") + GetBuildTimeStamp()
+            + OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath())
 #endif			
 
             // If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
@@ -1110,8 +1079,6 @@ namespace OIV
 
             + OIV_TEXT(" | UNOFFICIAL")
 #endif
-
-
             ;
 		std::wstring title;
         if (GetOpenedFileName().empty() == false)

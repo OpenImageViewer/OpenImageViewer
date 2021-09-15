@@ -59,7 +59,36 @@ namespace OIV
         return MessageFormatter::FormatMetaText(args);
     }
 
+    std::wstring MessageHelper::GetFileTime(const std::wstring& filePath)
+    {
+        auto fileTime = std::filesystem::last_write_time(filePath);
+        std::chrono::system_clock::time_point systemTime;
+        auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
+        if (osVersion.major > 10 || (osVersion.major == 10 && osVersion.build >= 15063 /*Version 1703*/))
+        {
+            // Not sure if it's a MS STL bug, but using clock_cast invokes initialization of timezones information
+            // which in turn invokes icu.dll, supported only since windows 10 1703.
+            // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
+            systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
+        }
+        else
+        {
+            auto ticks = fileTime.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
+            systemTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
+        }
 
+        auto in_time_t = std::chrono::system_clock::to_time_t(systemTime);
+        std::wstringstream ss;
+        tm tmDest;
+        errno_t errorCode = localtime_s(&tmDest, &in_time_t) != 0;
+        if (errorCode != 0)
+        {
+            using namespace std::string_literals;
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "could not convert time_t to a tm structure, error code: "s + std::to_string(errorCode));
+        }
+        ss << std::put_time(&tmDest, OIV_TEXT("%Y-%m-%d %X"));
+        return ss.str();
+    }
     std::wstring  MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& image)
     {
         using namespace std;
@@ -74,16 +103,17 @@ namespace OIV
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
 
+        auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
+
         if (image->GetDescriptor().Source != ImageSource::File)
             messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
         else
-            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ 
-                MessageFormatter::FormatFilePath(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName()) });
+            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{MessageFormatter::FormatFilePath(filePath) });
 
-        auto fileSize = std::filesystem::file_size(std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName());
+        auto fileSize = std::filesystem::file_size(filePath);
 
         messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
-        
+        messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ GetFileTime(filePath) });
         auto bitmapSize = image->GetDescriptor().Width * image->GetDescriptor().Height * image->GetDescriptor().Bpp / CHAR_BIT;
         auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
         messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{L"1:" ,compressionRatio});
