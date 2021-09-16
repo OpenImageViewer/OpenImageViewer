@@ -102,21 +102,25 @@ namespace OIV
         args.valueColor = L"<textcolor=#ffffff>";
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
+        std::shared_ptr<OIVFileImage> fileImage = std::dynamic_pointer_cast<OIVFileImage>(image);
 
-        auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
+        if (fileImage != nullptr)
+        {
+            auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
 
-        if (image->GetDescriptor().Source != ImageSource::File)
-            messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
-        else
-            messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{MessageFormatter::FormatFilePath(filePath) });
+            if (image->GetDescriptor().Source != ImageSource::File)
+                messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
+            else
+                messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ MessageFormatter::FormatFilePath(filePath) });
 
-        auto fileSize = std::filesystem::file_size(filePath);
+            auto fileSize = std::filesystem::file_size(filePath);
 
-        messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
-        messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ GetFileTime(filePath) });
-        auto bitmapSize = image->GetDescriptor().Width * image->GetDescriptor().Height * image->GetDescriptor().Bpp / CHAR_BIT;
-        auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
-        messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{L"1:" ,compressionRatio});
+            messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
+            messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ GetFileTime(filePath) });
+            auto bitmapSize = image->GetDescriptor().Width * image->GetDescriptor().Height * image->GetDescriptor().Bpp / CHAR_BIT;
+            auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
+            messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ L"1:" ,compressionRatio });
+        }
 
         const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
         
