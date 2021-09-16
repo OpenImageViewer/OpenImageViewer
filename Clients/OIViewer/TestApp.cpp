@@ -1647,8 +1647,12 @@ namespace OIV
             auto image = imageIndex == 0 ? fImageState.GetOpenedImage() : fImageState.GetOpenedImage()->GetSubImages()[imageIndex - 1];
             fImageState.SetImageChainRoot(image);
             fRefreshOperation.Begin();
-            RefreshImage();
             FitToClientAreaAndCenter();
+            RefreshImage();
+
+            if (GetImageInfoVisible() == true)
+                ShowImageInfo();
+
             fRefreshOperation.End();
         }
     }
