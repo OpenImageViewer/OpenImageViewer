@@ -1270,7 +1270,7 @@ namespace OIV
         bitmapBuffer.bitsPerPixel = bpp;
         bitmapBuffer.rowPitch = LLUtils::Utility::Align<uint32_t>(pixelsResponseBGR.rowPitch, sizeof(DWORD));
 
-        LLUtils::Buffer colorBuffer(pixelsResponseBGR.width * bitmapBuffer.rowPitch);
+        LLUtils::Buffer colorBuffer(pixelsResponseBGR.height * bitmapBuffer.rowPitch);
         bitmapBuffer.buffer = colorBuffer.data();
         bitmapBuffer.height = pixelsResponseBGR.height;
         bitmapBuffer.width = pixelsResponseBGR.width;
