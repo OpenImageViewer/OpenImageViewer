@@ -72,7 +72,6 @@ namespace OIV
     {
         fOpenedImage = image;
         SetImageChainRoot(fOpenedImage);
-        SetDirtyStage(ImageChainStage::Begin);
     }
 
     void ImageState::ClearAll()
