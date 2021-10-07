@@ -2235,21 +2235,6 @@ namespace OIV
             fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
     }
 
-    template <typename value_type, typename container_type,typename target_type>
-    bool LoadValue(const container_type& container, std::string name, target_type& value)
-    {
-        auto it = container.find(name);
-        if (it != container.end())
-        {
-            value = static_cast<target_type>(std::get<value_type>(it->second));
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-
-    }
     template <typename value_type>
     value_type ParseValue(const std::wstring& value)
     {

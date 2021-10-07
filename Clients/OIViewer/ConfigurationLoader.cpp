@@ -101,6 +101,8 @@ namespace OIV
 						currentTmp.name = child.key();
 
 					}
+					else if (child.value().is_string())
+						currentChild.value = child.value().get<String>();
 					else
 						currentChild.value = child.value().dump(0);
 
