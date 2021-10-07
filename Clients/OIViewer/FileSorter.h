@@ -6,8 +6,11 @@ namespace OIV
     public:
         enum class SortType
         {
-            Name,
-            Date
+              Name
+            , Date
+            , Extension
+            , Count
+
         };
 
         enum class SortDirection
@@ -36,6 +39,25 @@ namespace OIV
             }
         } fFileListNameSorter;
 
+        struct FileExtensionSorter
+        {
+            bool operator() (const std::wstring& A, const std::wstring& B, SortDirection direction) const
+            {
+                using namespace LLUtils;
+                using path = std::filesystem::path;
+                path aPath(StringUtility::ToLower(A));
+                std::wstring aName = aPath.stem();
+                std::wstring aExt = aPath.extension();
+
+                path bPath(StringUtility::ToLower(B));
+                std::wstring bName = bPath.stem();
+                std::wstring bExt = bPath.extension();
+
+                return direction == SortDirection::Ascending ? (aExt < bExt || ((aExt == bExt) && aName < bName))
+                    : bExt < aExt || ((bExt == aExt) && bName < aName);
+            }
+        } fFileListExtensionSorter;
+
         struct FileDateSorter
         {
             bool operator() (const std::wstring& A, const std::wstring& B, SortDirection direction) const
@@ -53,10 +75,15 @@ namespace OIV
             switch (fSortType)
             {
             case SortType::Date:
-                return fFileListDateSorter(A, B, fSortDirection);
+                return fFileListDateSorter(A, B, GetActiveSortDirection());
                 break;
             case SortType::Name:
-                return fFileListNameSorter(A, B, fSortDirection);
+                return fFileListNameSorter(A, B, GetActiveSortDirection());
+                break;
+            case SortType::Extension:
+                return fFileListExtensionSorter(A, B, GetActiveSortDirection());
+            default:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
                 break;
             }
         }
@@ -70,18 +97,24 @@ namespace OIV
         {
             return fSortType;
         }
-            SortDirection GetSortDirection() const
+        
+        SortDirection GetActiveSortDirection() const
         {
-            return fSortDirection;
+            return fSortDirection[static_cast<size_t>(fSortType)];
         }
 
-        void SetSortDirection(SortDirection sortDirection)
+        void SetSortDirection(SortType sortType,  SortDirection sortDirection)
         {
-            fSortDirection = sortDirection;
+            fSortDirection[static_cast<size_t>(sortType)] = sortDirection;
+        }
+
+        void SetActiveSortDirection(SortDirection sortDirection)
+        {
+            SetSortDirection(fSortType, sortDirection);
         }
 
     private:
         SortType fSortType = SortType::Name;
-        SortDirection fSortDirection = SortDirection::Ascending;
+        std::array<SortDirection, static_cast<size_t>(SortType::Count)> fSortDirection{ SortDirection::Ascending , SortDirection::Descending, SortDirection::Ascending };
     };
 }

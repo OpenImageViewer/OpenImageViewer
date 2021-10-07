@@ -571,20 +571,29 @@ namespace OIV
         {
             if (fFileSorter.GetSortType() == FileSorter::SortType::Name)
                 reverseDirection = true;
-
-            fFileSorter.SetSortType(FileSorter::SortType::Name);
+            else 
+                fFileSorter.SetSortType(FileSorter::SortType::Name);
         }
             
         else if (sort_type == "date")
         {
             if (fFileSorter.GetSortType() == FileSorter::SortType::Date)
                 reverseDirection = true;
-            fFileSorter.SetSortType(FileSorter::SortType::Date);
+            else 
+                fFileSorter.SetSortType(FileSorter::SortType::Date);
+        }
+        
+        else if (sort_type == "extension")
+        {
+            if (fFileSorter.GetSortType() == FileSorter::SortType::Extension)
+                reverseDirection = true;
+            else 
+                fFileSorter.SetSortType(FileSorter::SortType::Extension);
         }
 
         if (reverseDirection)
         {
-            fFileSorter.SetSortDirection(fFileSorter.GetSortDirection() == FileSorter::SortDirection::Ascending ?
+            fFileSorter.SetActiveSortDirection(fFileSorter.GetActiveSortDirection() == FileSorter::SortDirection::Ascending ?
                 FileSorter::SortDirection::Descending : FileSorter::SortDirection::Ascending);
         }
 
@@ -593,7 +602,7 @@ namespace OIV
 
         auto userMessage = LLUtils::StringUtility::ToWString(request.displayName);
         
-        userMessage += std::wstring(L" [") + (fFileSorter.GetSortDirection() == FileSorter::SortDirection::Ascending ? L"Ascending" : L"Descending")
+        userMessage += std::wstring(L" [") + (fFileSorter.GetActiveSortDirection() == FileSorter::SortDirection::Ascending ? L"Ascending" : L"Descending")
             + L"]";
 
         result.resValue = userMessage;
@@ -2325,6 +2334,21 @@ namespace OIV
         {
             fReloadSettingsFileIfChanged = ParseValue<Bool>(value);
         }
+        else if (key == L"files/defaultsortmode")
+        {
+            if (value == L"name")
+                fFileSorter.SetSortType(FileSorter::SortType::Name);
+            else if (value == L"date")
+                fFileSorter.SetSortType(FileSorter::SortType::Date);
+            else if (value == L"extension")
+                fFileSorter.SetSortType(FileSorter::SortType::Extension);
+        }
+        else if (key == L"files/sortbynamedirection")
+            fFileSorter.SetSortDirection(FileSorter::SortType::Name, value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending);
+        else if (key == L"files/sortbydatedirection")
+            fFileSorter.SetSortDirection(FileSorter::SortType::Date, value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending);
+        else if (key == L"files/sortbyextensiondirection")
+            fFileSorter.SetSortDirection(FileSorter::SortType::Extension, value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending);
     }
 
     void TestApp::LoadSettings()
