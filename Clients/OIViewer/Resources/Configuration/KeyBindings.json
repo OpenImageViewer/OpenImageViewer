@@ -9,6 +9,7 @@
     { "5": "WindowSizeMultiFullScreen"},
     { "Grave": "ShowImageInfo" },
     { "Control+O": "OpenFile" },
+    { "Control+Shift+O": "OpenContainingFolder"},
     { "GreyDelete": "MoveFileToRecycleBin" },
     { "Shift+GreyDelete": "DeleteFile" },
     { "Alt+Enter": "ToggleFullScren" },

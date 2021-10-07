@@ -272,6 +272,12 @@
       "arguments": "cmd=newWindow"
     },
     {
+      "GroupID": "OpenContainingFolder",
+      "DisplayName": "Open containing folder",
+      "Name": "cmd_shell",
+      "arguments": "cmd=containingFolder"
+    },
+    {
       "GroupID": "OpenInPhotoshop",
       "DisplayName": "Open in photoshop",
       "Name": "cmd_shell",
