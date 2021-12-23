@@ -66,6 +66,7 @@
     { "GREYEND": "LastImageInFolder" },
     { "Alt+V": "OpenWithVivaldi" },
     { "Control+F1": "SortByName" },
-    { "Control+F2": "SortByDate" }
+    { "Control+F2": "SortByDate" },
+    { "Control+F3": "SortByExtension" }
   ]
 }
