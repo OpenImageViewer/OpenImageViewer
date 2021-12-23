@@ -265,6 +265,9 @@ namespace OIV
         static void NetSettingsCallback_(ItemChangedArgs* callback);
         void NetSettingsCallback(ItemChangedArgs* callback);
 
+        void SetBackgroundColor(int index, LLUtils::Color color);
+
+
         using netsettings_Create_func = void (*)(GuiCreateParams*);
         using netsettings_SetVisible_func = void (*)(bool);
         using netsettings_SaveSettings_func = void (*)();

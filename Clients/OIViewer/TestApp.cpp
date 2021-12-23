@@ -2334,6 +2334,18 @@ namespace OIV
             fFileSorter.SetSortDirection(FileSorter::SortType::Date, value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending);
         else if (key == L"files/sortbyextensiondirection")
             fFileSorter.SetSortDirection(FileSorter::SortType::Extension, value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending);
+        
+
+        else if (key == L"displaysettings/backgroundcolor1")
+        {
+            auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
+            auto backgroundColor1 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+        }
+        else if (key == L"displaysettings/backgroundcolor2")
+        {
+            auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
+            auto backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+        }
     }
 
     void TestApp::LoadSettings()
