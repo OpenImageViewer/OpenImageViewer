@@ -258,6 +258,8 @@ namespace OIV
         createParams.renderMode = static_cast<FreeTypeConnector::RenderMode>(request.renderMode);
         createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
         createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
+        createParams.flags = FreeTypeConnector::TextCreateFlags::Bidirectional | FreeTypeConnector::TextCreateFlags::UseMetaText;
+
 
         IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
 
