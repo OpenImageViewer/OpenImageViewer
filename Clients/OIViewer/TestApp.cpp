@@ -1723,7 +1723,7 @@ namespace OIV
         UpdateTitle();
     }
 
-    void TestApp::UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& filePath)
+    void TestApp::UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& filePath, const std::wstring& filePath2)
     {
         switch (fileOp)
         {
@@ -1747,7 +1747,7 @@ namespace OIV
                 
                 // File has been added to the current folder, indices have changed - update current file index
                 auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
-                fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
+   	            fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
  
                 UpdateTitle();
             }
@@ -1765,9 +1765,41 @@ namespace OIV
             }
         }
         break;
+        case FileWatcher::FileChangedOp::Rename:
+        {
+            auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
+            if (it != fListFiles.end())
+            {
+                auto fileNameToRemove = *it;
+                fListFiles.erase(it);
+                auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2, fFileSorter);
+                fListFiles.insert(itRenamedFile, filePath2);
+
+                if (filePath == GetOpenedFileName())
+                {
+                    UnloadOpenedImaged();
+                    LoadFile(filePath2, false);
+                }
+                else
+                {
+                    // File has been added to the current folder, indices have changed - update current file index
+                    auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
+                    fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
+                    UpdateTitle();
+                }
+
+            }
+            else
+            {
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Invalid file removal request");
+            }
+        }
+
+
+          break;
+
         case FileWatcher::FileChangedOp::Modified:
         case FileWatcher::FileChangedOp::None:
-        case FileWatcher::FileChangedOp::Rename:
         case FileWatcher::FileChangedOp::WatchedFolderRemoved:
             break;
         }
@@ -1789,18 +1821,17 @@ namespace OIV
             case FileWatcher::FileChangedOp::None:
                 break;
             case FileWatcher::FileChangedOp::Add:
-                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName, std::wstring());
                 break;
             case FileWatcher::FileChangedOp::Remove:
-                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName);
+                UpdateFileList(fileChangedEventArgs.fileOp, changedFileName, std::wstring());
                 break;
             case FileWatcher::FileChangedOp::Modified:
                 if (absoluteFilePath == changedFileName)
                     ProcessCurrentFileChanged();
                 break;
             case FileWatcher::FileChangedOp::Rename:
-                UpdateFileList(FileWatcher::FileChangedOp::Remove, changedFileName);
-                UpdateFileList(FileWatcher::FileChangedOp::Add, changedFileName2);
+                UpdateFileList(FileWatcher::FileChangedOp::Rename, changedFileName, changedFileName2);
                 if (absoluteFilePath == changedFileName2)
                     ProcessCurrentFileChanged();
                 break;

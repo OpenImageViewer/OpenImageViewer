@@ -2,22 +2,30 @@
 
 #include <mutex>
 
-#include "win32/MainWindow.h"
-#include "Win32/HighPrecisionTimer.h"
-#include "Win32/Timer.h"
 #include <defs.h>
 #include <LLUtils/Utility.h>
+#include <LLUtils/Logging/LogPredefined.h>
+#include <LLUtils/Rect.h>
+#include <LLUtils/EnumClassBitwise.h>
+
+#include <Win32/MonitorInfo.h>
+#include <Win32/NotificationIconGroup.h>
+#include <Win32/HighPrecisionTimer.h>
+#include <Win32/Timer.h>
+#include <Win32/Win32Window.h>
+
+
+#include "win32/MainWindow.h"
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
-#include <LLUtils/Rect.h>
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
 #include "FileSorter.h"
+
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Buttons/ButtonStates.h>
 #include <LInput/Mouse/MouseButton.h>
-
 #include <LInput/Win32/RawInput/RawInput.h>
 #include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
 
@@ -25,18 +33,19 @@
 #include "SelectionRect.h"
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
-#include <Win32/MonitorInfo.h>
+
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
-#include <LLUtils/Logging/LogPredefined.h>
+
 #include "ContextMenu.h"
 #include "FileWatcher.h"
-#include "Win32/NotificationIconGroup.h"
+
 #include "MouseMultiClickHandler.h"
-#include "LLUtils/EnumClassBitwise.h"
+
 #include "Extensions/NetSettings/GuiProvider.h"
+
 
 namespace OIV
 {
@@ -252,7 +261,7 @@ namespace OIV
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs); // callback from file watcher
         void ProcessCurrentFileChanged();
         void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
-        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName);
+        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName, const std::wstring& filePath2);
         void WatchCurrentFolder();
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
