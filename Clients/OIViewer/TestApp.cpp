@@ -2177,7 +2177,7 @@ namespace OIV
     {
         LLUtils::Logger::GetSingleton().AddLogTarget(&mLogFile);
 
-      
+        LoadSettings();
 
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
@@ -2185,7 +2185,6 @@ namespace OIV
             ProcessTopMost();
         }
         );
-  
 
         fTimerSlideShow.SetTargetWindow(fWindow.GetHandle());
         fTimerSlideShow.SetCallback([this]()
@@ -2259,8 +2258,6 @@ namespace OIV
         fRawInput.Enable(true);
 
         fMouseClickEventHandler.OnMouseClickEvent.Add(std::bind(&TestApp::OnMouseMultiClick, this, std::placeholders::_1));
-
-        LoadSettings();
 
         if (fReloadSettingsFileIfChanged)
             fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
