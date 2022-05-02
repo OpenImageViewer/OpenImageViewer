@@ -1767,31 +1767,25 @@ namespace OIV
         break;
         case FileWatcher::FileChangedOp::Rename:
         {
-            auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
-            if (it != fListFiles.end())
-            {
-                auto fileNameToRemove = *it;
+
+            //Erase old file name if exists in the images file list
+            if (decltype(fListFiles)::iterator it = std::find(fListFiles.begin(), fListFiles.end(), filePath); it != fListFiles.end())
                 fListFiles.erase(it);
-                auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2, fFileSorter);
-                fListFiles.insert(itRenamedFile, filePath2);
 
-                if (filePath == GetOpenedFileName())
-                {
-                    UnloadOpenedImaged();
-                    LoadFile(filePath2, false);
-                }
-                else
-                {
-                    // File has been added to the current folder, indices have changed - update current file index
-                    auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
-                    fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
-                    UpdateTitle();
-                }
+            auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2, fFileSorter);
+            fListFiles.insert(itRenamedFile, filePath2);
 
+            if (filePath == GetOpenedFileName())
+            {
+                UnloadOpenedImaged();
+                LoadFile(filePath2, false);
             }
             else
             {
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Invalid file removal request");
+                // File has been added to the current folder, indices have changed - update current file index
+                auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(), fFileSorter);
+                fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
+                UpdateTitle();
             }
         }
 
