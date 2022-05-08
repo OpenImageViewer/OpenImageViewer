@@ -1,25 +1,27 @@
 #pragma once
-#include "../OIVImage/OIVHandleImage.h"
 #include "../OIVCommands.h"
+#include <OIVImage/OIVBaseImage.h>
+#include "../../oiv/Source/ImageUtil.h"
+#include "../../oiv/Source/oiv.h"
+#include "../../oiv/Source/ApiGlobal.h"
 namespace OIV
 {
-    
     //Create an RGBA render compatible image, 
     // TODO: accept any render compatible image format.
 
     class OIVImageHelper
     {
     public:
-
         //TODO: add convertion parameters in case normalization is needed instead of the rainbow parameter.
-        static OIVBaseImageUniquePtr ConvertImage(OIVBaseImageUniquePtr image, OIV_TexelFormat texelFormat, bool useRainbow)
+        static OIVBaseImageSharedPtr ConvertImage(OIVBaseImageSharedPtr image, IMCodec::TexelFormat texelFormat, bool useRainbow)
         {
-            ImageHandle convertedHandle = ImageHandleNull;
-            if (image->GetDescriptor().texelFormat != texelFormat)
+            if (image->GetImage()->GetTexelFormat() != texelFormat)
             {
-                if (OIVCommands::ConvertImage(image->GetDescriptor().ImageHandle, texelFormat, useRainbow, convertedHandle) == RC_Success)
+                auto converted =  IMUtil::ImageUtil::ConvertImageWithNormalization(image->GetImage(), texelFormat, useRainbow);
+                
+                if (converted != nullptr)
                 {
-                    OIVBaseImageUniquePtr convertedImage = std::make_unique<OIVHandleImage>(convertedHandle);
+                    OIVBaseImageSharedPtr convertedImage = std::make_unique<OIVBaseImage>(ImageSource::GeneratedByLib, converted);
                     return convertedImage;
                 }
                 else
@@ -34,32 +36,27 @@ namespace OIV
             }
         }
 
-        static OIVBaseImageUniquePtr GetRendererCompatibleImage(OIVBaseImageUniquePtr image, bool useRainbow)
+        static OIVBaseImageSharedPtr GetRendererCompatibleImage(OIVBaseImageSharedPtr image, bool useRainbow)
         {
-            if (image->GetDescriptor().texelFormat != TF_I_R8_G8_B8_A8)
+            if (image->GetImage()->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
             {
-                return ConvertImage(image, TF_I_R8_G8_B8_A8, useRainbow);
+                return ConvertImage(image, IMCodec::TexelFormat::I_R8_G8_B8_A8, useRainbow);
             }
             else
             {
                 return image;
             }
         }
-        static OIVBaseImageUniquePtr ResampleImage(OIVBaseImageUniquePtr image, LLUtils::PointI32 scale)
+        static OIVBaseImageSharedPtr ResampleImage(OIVBaseImageSharedPtr image, LLUtils::PointI32 scale)
         {
-            OIV_CMD_Resample_Request req{};
-            req.imageHandle = image->GetDescriptor().ImageHandle;
-            req.size = static_cast<LLUtils::PointI32>(scale);
-            OIV_CMD_Resample_Response res;
-
-            if (OIVCommands::ExecuteCommand(OIV_CMD_ResampleImage, &req, &res) == RC_Success)
+            auto resampled = ApiGlobal::sPictureRenderer->Resample(image->GetImage(), scale);
+            if (resampled != nullptr)
             {
-                OIVBaseImageUniquePtr resampledImage = std::make_unique<OIVHandleImage>(res.imageHandle);
-                return resampledImage;
+                return std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, resampled);
             }
             else
             {
-                return OIVBaseImageUniquePtr();
+                return nullptr;
             }
         }
     };

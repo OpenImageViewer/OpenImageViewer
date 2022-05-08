@@ -331,6 +331,19 @@
       "Name": "cmd_navigate",
       "arguments": "amount=-1;subimage=true"
     },
+
+    {
+      "GroupID": "AnimationSpeedUp",
+      "DisplayName": "Animation speed up",
+      "Name": "cmd_sequencer",
+      "arguments": "cmd=changespeed;amount=5"
+    },
+    {
+      "GroupID": "AnimationSpeedDown",
+      "DisplayName": "Animation speed down",
+      "Name": "cmd_sequencer",
+      "arguments": "cmd=changespeed;amount=-5"
+    },
     {
       "GroupID": "FirstImageInFolder",
       "DisplayName": "Goto first image in folder",

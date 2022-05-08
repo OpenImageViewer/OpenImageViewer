@@ -22,6 +22,11 @@
 
 namespace OIV
 {
+    IRenderer* OIV::GetRenderer() 
+    {
+        return fRenderer.get();
+    }
+
     LLUtils::PointI32 OIV::GetClientSize() const
     {
         return fClientSize;
@@ -100,14 +105,16 @@ namespace OIV
 
         using namespace IMCodec;
         //Create target downscaled image.
-        ImageDescriptor desc = {};
-        desc.fProperties.Height = height;
-        desc.fProperties.Width = width;
-        desc.fProperties.RowPitchInBytes = width * sourceImage->GetBytesPerTexel();
-        desc.fProperties.TexelFormatDecompressed = sourceImage->GetImageType();
-        desc.fProperties.TexelFormatStorage = sourceImage->GetOriginalTexelFormat();
-        desc.fData.Allocate(width * height * sourceImage->GetBytesPerTexel());
-        ImageSharedPtr resampled = std::make_shared<IMCodec::Image>(desc);
+        ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+        ImageDescriptor& desc = imageItem->descriptor;
+        desc.height = height;
+        desc.width = width;
+        desc.rowPitchInBytes = width * sourceImage->GetBytesPerTexel();
+        desc.texelFormatDecompressed = sourceImage->GetTexelFormat();
+        desc.texelFormatStorage = sourceImage->GetOriginalTexelFormat();
+        imageItem->data.Allocate(width * height * sourceImage->GetBytesPerTexel());
+        
+        ImageSharedPtr resampled = std::make_shared<IMCodec::Image>(imageItem,ImageItemType::Unknown);
         ResamplerParams params;
         params.sourceBuffer = reinterpret_cast<const uint32_t*>(sourceImage->GetBufferAt(0, 0));
         params.sourceWidth = sourceImage->GetWidth();
@@ -131,14 +138,13 @@ namespace OIV
 
 		ResultCode result = RC_FileNotSupported;
         using namespace IMCodec;
-        VecImageSharedPtr images;
+        ImageSharedPtr image;
+        ImageLoaderFlags loadFlags = ((flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0) ? ImageLoaderFlags::OnlyRegisteredExtension : ImageLoaderFlags::None;
+        ImageResult loadResult = fImageLoader.Load(static_cast<const std::byte*>(buffer), size, extension,ImageLoadFlags::None, loadFlags, image);
 
-        bool loaded = fImageLoader.Load(static_cast<uint8_t*>(buffer), size, extension, (flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0, images);
-
-		if (loaded == true)
+		if (loadResult ==  ImageResult::Success)
 		{
-			ImageSharedPtr mainImage = images.empty() == false ? images[0] : nullptr;
-			if (mainImage != nullptr)
+			if (image != nullptr)
 			{
 				int exifOrientation = 0;
 				easyexif::EXIFInfo exifInfo;
@@ -149,22 +155,23 @@ namespace OIV
 
 				if (exifOrientation != 0)
 				{
-					const_cast<ImageDescriptor::MetaData&>(mainImage->GetDescriptor().fMetaData).exifOrientation = exifOrientation;
+                    
+					const_cast<ItemMetaData&>(image->GetMetaData()).exifData.orientation = exifOrientation;
 
 					// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
 					// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
-					mainImage = ApplyExifRotation(mainImage);
+					image = ApplyExifRotation(image);
 
 				}
-				handle = fImageManager.AddImage(mainImage);
+				handle = fImageManager.AddImage(image);
 
-				for (size_t i = 1; i < images.size(); i++)
+				for (size_t i = 0; i < image->GetNumSubImages(); i++)
 				{
 
 					if (exifOrientation != 0)
-						images[i] = ApplyExifRotation(images[i]);
+                        image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i)));
 
-					fImageManager.AddChildImage(images[i], handle);
+					fImageManager.AddChildImage(image->GetSubImage(i), handle);
 				}
 				result = RC_Success;
 			}
@@ -175,23 +182,22 @@ namespace OIV
     ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
     {
         using namespace IMCodec;
-
-        ImageDescriptor props;
-        props.fProperties.Height = loadRawRequest.height;
-        props.fProperties.Width = loadRawRequest.width;
-        props.fProperties.NumSubImages = 0;
-        props.fProperties.TexelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
-        props.fProperties.TexelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
-        props.fProperties.RowPitchInBytes = loadRawRequest.rowPitch;
-        const size_t bufferSize = props.fProperties.RowPitchInBytes * props.fProperties.Height;
-        props.fData.Allocate(bufferSize);
-        props.fData.Write(loadRawRequest.buffer, 0, bufferSize);
+        ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+        ImageDescriptor& props = imageItem->descriptor;
+        props.height = loadRawRequest.height;
+        props.width = loadRawRequest.width;
+        props.texelFormatStorage = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.texelFormatDecompressed = static_cast<IMCodec::TexelFormat>(loadRawRequest.texelFormat);
+        props.rowPitchInBytes = loadRawRequest.rowPitch;
+        const size_t bufferSize = props.rowPitchInBytes * props.height;
+        imageItem->data.Allocate(bufferSize);
+        imageItem->data.Write(loadRawRequest.buffer, 0, bufferSize);
 
         IMUtil::OIV_AxisAlignedTransform transform{};
         //transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(loadRawRequest.transformation);
         transform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(loadRawRequest.transformation);
 
-        ImageSharedPtr image = ImageSharedPtr(new Image(props));
+        ImageSharedPtr image = std::make_shared<Image>(imageItem, ImageItemType::Unknown);
         image = IMUtil::ImageUtil::Transform(transform, image);
 
         handle = fImageManager.AddImage(image);
@@ -203,7 +209,7 @@ namespace OIV
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
     {
         IMUtil::OIV_AxisAlignedTransform transform;
-        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->GetDescriptor().fMetaData.exifOrientation));
+        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->GetMetaData().exifData.orientation));
         transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
 
         return IMUtil::ImageUtil::Transform(transform, image);
@@ -213,75 +219,52 @@ namespace OIV
   
 
 
-
-    ResultCode OIV::UploadImageToRenderer(ImageHandle handle)
-    {
-        auto it = fImagesUploadToRenderer.find(handle);
-        if (it == fImagesUploadToRenderer.end())
-        {
-            fImagesUploadToRenderer.insert(handle);
-            fRenderer->SetImageBuffer(handle, fImageManager.GetImage(handle));
-        }
-
-        return RC_Success;
-    }
-
-    ResultCode OIV::RemoveImageFromRenderer(ImageHandle handle)
-    {
-        auto it = fImagesUploadToRenderer.find(handle);
-        if (it != fImagesUploadToRenderer.end())
-        {
-            fImagesUploadToRenderer.erase(handle);
-            fRenderer->RemoveImage(handle);
-        }
-
-        return RC_Success;
-    }
-
     ResultCode OIV::CreateText(const OIV_CMD_CreateText_Request &request, OIV_CMD_CreateText_Response &response)
     {
-    #if OIV_BUILD_FREETYPE == 1
-
-        OIVString text = request.text;
-        OIVString fontPath = request.fontPath;
-
-        //std::string u8Text = LLUtils::StringUtility::ToUTF8<OIVCHAR>(text);
-        //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
-        using namespace FreeType;
-        FreeTypeConnector::TextCreateParams createParams = {};
-        *reinterpret_cast<LLUtils::Color*>(&createParams.backgroundColor) = *reinterpret_cast<const LLUtils::Color*>(&request.backgroundColor);
-        createParams.fontPath = fontPath;
-        createParams.fontSize = request.fontSize;
-        createParams.outlineColor = { 0,0,0,255 };// request.outlineColor;
-        createParams.outlineWidth = request.outlineWidth;
-        createParams.text = text;
-        createParams.renderMode = static_cast<FreeTypeConnector::RenderMode>(request.renderMode);
-        createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
-        createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
-        createParams.flags = FreeTypeConnector::TextCreateFlags::Bidirectional | FreeTypeConnector::TextCreateFlags::UseMetaText;
-
-
-        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
-
-        if (imageText != nullptr)
-        {
-            if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
-                imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
-
-            ImageHandle handle = fImageManager.AddImage(imageText);
-            response.imageHandle = handle;
-            UploadImageToRenderer(handle);
-            return RC_Success;
-        }
-        else
-        {
-            return RC_InvalidParameters;
-        }
-
-
-#else
-        return RC_NotImplemented;
-#endif
+        return ResultCode::RC_NotImplemented;
+        
+//    #if OIV_BUILD_FREETYPE == 1
+//
+//        OIVString text = request.text;
+//        OIVString fontPath = request.fontPath;
+//
+//        //std::string u8Text = LLUtils::StringUtility::ToUTF8<OIVCHAR>(text);
+//        //std::string u8FontPath = LLUtils::StringUtility::ToUTF8<OIVCHAR>(fontPath);
+//        using namespace FreeType;
+//        TextCreateParams createParams = {};
+//        *reinterpret_cast<LLUtils::Color*>(&createParams.backgroundColor) = *reinterpret_cast<const LLUtils::Color*>(&request.backgroundColor);
+//        createParams.fontPath = fontPath;
+//        createParams.fontSize = request.fontSize;
+//        createParams.outlineColor = { 0,0,0,255 };// request.outlineColor;
+//        createParams.outlineWidth = request.outlineWidth;
+//        createParams.text = text;
+//        createParams.renderMode = static_cast<RenderMode>(request.renderMode);
+//        createParams.DPIx = request.DPIx == 0 ? 96 : request.DPIx;
+//        createParams.DPIy = request.DPIy == 0 ? 96 : request.DPIy;
+//        createParams.flags = TextCreateFlags::Bidirectional | TextCreateFlags::UseMetaText;
+//
+//
+//        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
+//
+//        if (imageText != nullptr)
+//        {
+//            if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
+//                imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
+//
+//            ImageHandle handle = fImageManager.AddImage(imageText);
+//            response.imageHandle = handle;
+//            UploadImageToRenderer(handle);
+//            return RC_Success;
+//        }
+//        else
+//        {
+//            return RC_InvalidParameters;
+//        }
+//
+//
+//#else
+//        return RC_NotImplemented;
+//#endif
     }
 
     ResultCode OIV::SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect)
@@ -323,13 +306,32 @@ namespace OIV
             res.width = image->GetWidth();
             res.height = image->GetHeight();
             res.rowPitch = image->GetRowPitchInBytes();
-            res.texelFormat = static_cast<OIV_TexelFormat>( image->GetImageType());
+            res.texelFormat = static_cast<OIV_TexelFormat>( image->GetTexelFormat());
             res.pixelBuffer = image->GetBuffer();
             return RC_Success;
         }
 
         return RC_InvalidHandle;
         
+    }
+
+    ResultCode OIV::AddRenderable(IRenderable* renderable)
+    {
+        if (fRenderer != nullptr)
+            fRenderer->AddRenderable(renderable);
+        else
+            fPendingRenderables.push_back(renderable);
+
+        return ResultCode::RC_Success;
+    }
+    ResultCode OIV::RemoveRenderable(IRenderable* renderable)
+    {
+        if (fRenderer != nullptr)
+            fRenderer->RemoveRenderable(renderable);
+        else
+            fPendingRenderables.erase(std::find(fPendingRenderables.begin(), fPendingRenderables.end(), renderable));
+
+        return ResultCode::RC_Success;
     }
 
     ResultCode OIV::CropImage(const OIV_CMD_CropImage_Request& request, OIV_CMD_CropImage_Response& response)
@@ -381,7 +383,7 @@ namespace OIV
                 && texel_request.y >= 0
                 && texel_request.y < image->GetHeight())
             {
-                texelresponse.type = (OIV_TexelFormat)image->GetImageType();
+                texelresponse.type = (OIV_TexelFormat)image->GetTexelFormat();
                 OIV_Util_GetBPPFromTexelFormat(texelresponse.type, &texelresponse.size);
                 memcpy_s(texelresponse.buffer, OIV_CMD_TexelInfo_Buffer_Size, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size / CHAR_BIT);
                     
@@ -394,22 +396,22 @@ namespace OIV
         
     }
 
-    ResultCode OIV::SetImageProperties(const OIV_CMD_ImageProperties_Request& imageProperties)
-    {
-        if (imageProperties.opacity > 0.0)
-        {
-            UploadImageToRenderer(imageProperties.imageHandle); // if not already uploaded
-        }
-        else
-        {
-            //Don't remove from renderer when opacity is 0, cache image in the GPU until removed.
-            //RemoveImageFromRenderer(imageProperties.imageHandle);
-        }
-        if (fImagesUploadToRenderer.contains(imageProperties.imageHandle))
-            fRenderer->SetImageProperties(imageProperties);
-        
-        return RC_Success;
-    }
+    //ResultCode OIV::SetImageProperties(const OIV_CMD_ImageProperties_Request& imageProperties)
+    //{
+    //    if (imageProperties.opacity > 0.0)
+    //    {
+    //        UploadImageToRenderer(imageProperties.imageHandle); // if not already uploaded
+    //    }
+    //    else
+    //    {
+    //        //Don't remove from renderer when opacity is 0, cache image in the GPU until removed.
+    //        //RemoveImageFromRenderer(imageProperties.imageHandle);
+    //    }
+    //    if (fImagesUploadToRenderer.contains(imageProperties.imageHandle))
+    //        fRenderer->SetImageProperties(imageProperties);
+    //    
+    //    return RC_Success;
+    //}
 
     ResultCode OIV::GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res)
     {
@@ -430,22 +432,25 @@ namespace OIV
 
     ResultCode OIV::GetSubImages(const OIV_CMD_GetSubImages_Request& req, OIV_CMD_GetSubImages_Response & res)
     {
-         ImageManager::VecImageHandles children = fImageManager.GetChildrenOf(req.handle);
+        return ResultCode::RC_NotImplemented;
+        // ImageManager::VecImageHandles children = fImageManager.GetChildrenOf(req.handle);
 
-         //Copy no more then res.sizeOfArray elements-
-         res.copiedElements = static_cast<uint32_t>(std::min<size_t>(req.arraySize, children.size()));
-         memcpy(req.childrenArray, children.data(), res.copiedElements * sizeof(ImageHandle));
+        // //Copy no more then res.sizeOfArray elements-
+        // res.copiedElements = static_cast<uint32_t>(std::min<size_t>(req.arraySize, children.size()));
+        // memcpy(req.childrenArray, children.data(), res.copiedElements * sizeof(ImageHandle));
 
-        return ResultCode::RC_Success;
+        //return ResultCode::RC_Success;
     }
 
     ResultCode OIV::UnloadFile(const ImageHandle handle)
     {
-        ResultCode result = RC_Success;
+        return ResultCode::RC_NotImplemented;
+
+        /*ResultCode result = RC_Success;
         RemoveImageFromRenderer(handle);
         fImageManager.RemoveImage(handle);
 
-        return result;
+        return result;*/
     }
 
     int OIV::Init()
@@ -468,6 +473,12 @@ namespace OIV
         );
 
         fRenderer = CreateBestRenderer();
+        for (const auto renderable : fPendingRenderables)
+            fRenderer->AddRenderable(renderable);
+            
+        fPendingRenderables.clear();
+        
+
         OIV_RendererInitializationParams params = {};
 
         auto GetVersionAsString = []
@@ -518,7 +529,7 @@ namespace OIV
             info.rowPitchInBytes = image->GetRowPitchInBytes();
             info.bitsPerPixel = image->GetBitsPerTexel();
             info.NumSubImages = image->GetNumSubImages();
-            info.texelFormat = static_cast<OIV_TexelFormat>(image->GetImageType());
+            info.texelFormat = static_cast<OIV_TexelFormat>(image->GetTexelFormat());
             return RC_Success;
         }
 

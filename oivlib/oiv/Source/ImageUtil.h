@@ -72,10 +72,12 @@ namespace IMUtil
 
             if (transform.rotation != OIV_AxisAlignedRotation::None || transform.flip != OIV_AxisAlignedFlip::None)
             {
+                ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
                 ImageDescriptor transformedProperties;
-                transformedProperties.fProperties = image->GetDescriptor().fProperties;
-                transformedProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
-                std::byte* dest = transformedProperties.fData.data();
+                imageItem->descriptor = image->GetDescriptor();
+                imageItem->data.Allocate(image->GetTotalSizeOfImageTexels());
+                imageItem->itemType = image->GetItemType();
+                std::byte* dest = imageItem->data.data();
 
                 const size_t MegaBytesPerThread = 6;
                 static const uint8_t MaxGlobalThrads = 32;
@@ -135,11 +137,11 @@ namespace IMUtil
 
 
                 if (transform.rotation == OIV_AxisAlignedRotation::Rotate90CW || transform.rotation == OIV_AxisAlignedRotation::Rotate90CCW)
-                    swap(transformedProperties.fProperties.Height, transformedProperties.fProperties.Width);
+                    swap(transformedProperties.height, transformedProperties.width);
 
-                transformedProperties.fProperties.RowPitchInBytes = transformedProperties.fProperties.Width * image->GetBytesPerTexel();
+                transformedProperties.rowPitchInBytes = transformedProperties.width * image->GetBytesPerTexel();
 
-                return ImageSharedPtr(new Image(transformedProperties));
+                return std::make_shared<Image>(imageItem,image->GetSubImageGroupType());
             }
             else
                 return image;
@@ -151,7 +153,7 @@ namespace IMUtil
 
             const NormalizeMode normalizeMode = isRainbow ? NormalizeMode::RainBow : NormalizeMode::GrayScale;
 
-            switch (image->GetImageType())
+            switch (image->GetTexelFormat())
             {
             case IMCodec::TexelFormat::F_X16:
                 image = Normalize<half_float::half>(image, normalizeMode);
@@ -189,17 +191,20 @@ namespace IMUtil
             if (image->GetIsByteAligned() == false)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "can not normalize a non byte aligned pixel format.");
 
-            ImageDescriptor normalizedImageProperties;
+            
+            ImageItemSharedPtr normalizedImageItem = std::make_shared<ImageItem>();
+            ImageDescriptor& normalizedImageProperties = normalizedImageItem->descriptor;
+            //imageItem->itemType = image->getty
 
             if (image->GetIsRowPitchNormalized() == true)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "image already normalized.");
 
 
             const std::byte* oldBuffer = image->GetBuffer();
-            normalizedImageProperties.fProperties = image->GetDescriptor().fProperties;
-            normalizedImageProperties.fData.Allocate(image->GetTotalSizeOfImageTexels());
+            normalizedImageProperties = image->GetDescriptor();
+            normalizedImageItem->data.Allocate(image->GetTotalSizeOfImageTexels());
             uint32_t targetRowPitch = image->GetBytesPerRowOfPixels();
-            std::byte* newBuffer = normalizedImageProperties.fData.data();
+            std::byte* newBuffer = normalizedImageItem->data.data();
 
             for (std::size_t y = 0; y < image->GetHeight(); y++)
                 for (std::size_t x = 0; x < targetRowPitch; x++)
@@ -210,10 +215,10 @@ namespace IMUtil
                     newBuffer[dstIndex] = oldBuffer[srcIndex];
                 }
 
-            normalizedImageProperties.fProperties.RowPitchInBytes = targetRowPitch;
+            normalizedImageProperties.rowPitchInBytes = targetRowPitch;
 
 
-            return ImageSharedPtr(new Image(normalizedImageProperties));
+            return std::make_shared<Image>(normalizedImageItem, image->GetSubImageGroupType());
         }
 
         static IMCodec::ImageSharedPtr Convert(IMCodec::ImageSharedPtr sourceImage, IMCodec::TexelFormat targetPixelFormat)
@@ -222,33 +227,33 @@ namespace IMUtil
 
             ImageSharedPtr convertedImage;
 
-            if (sourceImage->GetImageType() != targetPixelFormat)
+            if (sourceImage->GetTexelFormat() != targetPixelFormat)
             {
-                ImageDescriptor imagedescriptor;
-                imagedescriptor.fProperties = sourceImage->GetDescriptor().fProperties;
+                ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+                imageItem->descriptor = sourceImage->GetDescriptor();
 
                 uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
-                imagedescriptor.fData.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
+                imageItem->data.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
 
-                std::byte* dest = imagedescriptor.fData.data();
+                std::byte* dest = imageItem->data.data();
                 //TODO: convert without normalization.
                 ImageSharedPtr normalizedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
                 
-                imagedescriptor.fProperties.TexelFormatDecompressed = targetPixelFormat;
-                imagedescriptor.fProperties.RowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
+                imageItem->descriptor.texelFormatDecompressed = targetPixelFormat;
+                imageItem->descriptor.rowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
 
 
                 bool succcess = false;
 
                 if ((succcess = 
                     texelConvertor.Convert(targetPixelFormat
-                        , sourceImage->GetDescriptor().fProperties.TexelFormatDecompressed
+                        , sourceImage->GetDescriptor().texelFormatDecompressed
                         , dest
                         , normalizedImage->GetBuffer()
                         , normalizedImage->GetTotalPixels())) == false)
                 {
 
-                   auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetImageType(), targetPixelFormat));
+                   auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetTexelFormat(), targetPixelFormat));
                    
                    if (converter != sConvertionFunction.end())
                    {
@@ -264,7 +269,7 @@ namespace IMUtil
                 }
 
                 if (succcess == true)
-                    convertedImage = std::make_shared<Image>(imagedescriptor);
+                    convertedImage = std::make_shared<Image>(imageItem,sourceImage->GetSubImageGroupType());
                
             }
             else
@@ -283,13 +288,12 @@ namespace IMUtil
             {
                 using namespace IMCodec;
                 const std::byte* sourceBuffer = sourceImage->GetBuffer();
-
+                ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
 
                 const uint32_t destBufferSize = subimage.GetWidth() * subimage.GetHeight() * sourceImage->GetBytesPerTexel();
-                ImageDescriptor props;
-                props.fProperties = sourceImage->GetDescriptor().fProperties;
-                props.fData.Allocate(destBufferSize);
-                std::byte* destBuffer = props.fData.data();
+                imageItem->descriptor = sourceImage->GetDescriptor();
+                imageItem->data.Allocate(destBufferSize);
+                std::byte* destBuffer = imageItem->data.data();
 
                 for (int32_t y = 0; y < subimage.GetHeight(); y++)
                 {
@@ -304,16 +308,18 @@ namespace IMUtil
                 }
 
 
-                props.fProperties.Height = subimage.GetHeight();
-                props.fProperties.Width = subimage.GetWidth();
+                
+                imageItem->descriptor.height = subimage.GetHeight();
+                imageItem->descriptor.width = subimage.GetWidth();
 
-                props.fProperties.RowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
+                
+                imageItem->descriptor.rowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
 
-                ImageSharedPtr subImagePtr = ImageSharedPtr(new Image(props));
+                ImageSharedPtr subImagePtr = std::make_shared<Image>(imageItem, sourceImage->GetSubImageGroupType());
 
                 return subImagePtr;
             }
-            return IMCodec::ImageSharedPtr();
+            return nullptr;
         }
 
 
@@ -363,19 +369,30 @@ namespace IMUtil
         {
             const SourceSampleType* sampleData = reinterpret_cast<const SourceSampleType*> (sourceImage->GetBuffer());
             const uint32_t totalPixels = sourceImage->GetTotalPixels();
-
-            IMCodec::ImageDescriptor props;
-            props.fProperties = sourceImage->GetDescriptor().fProperties;
-            props.fProperties.TexelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-            props.fProperties.RowPitchInBytes = IMCodec::GetTexelFormatSize(props.fProperties.TexelFormatDecompressed) / CHAR_BIT * props.fProperties.Width;
-            props.fData.Allocate(props.fProperties.RowPitchInBytes * props.fProperties.Height);
+            using namespace IMCodec;
+            ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+            
+            imageItem->descriptor = sourceImage->GetDescriptor();
+            imageItem->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+            imageItem->descriptor.rowPitchInBytes = IMCodec::GetTexelFormatSize(imageItem->descriptor.texelFormatDecompressed) / CHAR_BIT * imageItem->descriptor.width;
+            imageItem->data.Allocate(imageItem->descriptor.rowPitchInBytes * imageItem->descriptor.height);
+            
 
             std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
-            std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(props.fData.data()), totalPixels);
+            std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(imageItem->data.data()), totalPixels);
 
             NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
 
-            return IMCodec::ImageSharedPtr(new IMCodec::Image(props));
+            return std::make_shared<Image>(imageItem,sourceImage->GetSubImageGroupType());
+        }
+
+
+        static IMCodec::ImageSharedPtr CropImage(IMCodec::ImageSharedPtr inputImage, const LLUtils::RectI32& rect)
+        {
+            LLUtils::RectI32 imageRect = { { 0,0 } , static_cast<LLUtils::PointI32>(inputImage->GetDimensions()) };
+            LLUtils::RectI32 cuttedRect = rect.Intersection(imageRect);
+            IMCodec::ImageSharedPtr subImage = IMUtil::ImageUtil::GetSubImage(inputImage, cuttedRect);
+            return subImage;
         }
     };
 }

@@ -278,31 +278,42 @@ LLUTILS_DISABLE_WARNING_POP
 
     void D3D11Renderer::DrawImage(const ImageEntry& entry)
     {
-        if (entry.texture == nullptr || entry.properties.opacity == 0.0 || entry.properties.visible == false)
+        auto renderable = entry.renderable;
+
+        if (renderable->GetOpacity() == 0.0 || renderable->GetVisible() == false)
             return;
 
-
-        const OIV_CMD_ImageProperties_Request& props = entry.properties;
         //TODO: change to switch statement and unify constant buffres.
 
+        renderable->PreRender();
+
+        if (renderable->GetIsImageDirty() )
+        {
+            const_cast<ImageEntry&>(entry).texture = OIVD3DHelper::CreateTexture(fDevice, renderable->GetImage(), false);
+            renderable->ClearImageDirty();
+            
+            if (entry.texture == nullptr)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "can not create texture");
+        }
+    
         CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
-        gpuBuffer.uImageOffset[0] = static_cast<float>(props.position.x);
-        gpuBuffer.uImageOffset[1] = static_cast<float>(props.position.y);
+        gpuBuffer.uImageOffset[0] = static_cast<float>(renderable->GetPosition().x);
+        gpuBuffer.uImageOffset[1] = static_cast<float>(renderable->GetPosition().y);
         gpuBuffer.uvViewportSize[0] = static_cast<float>(fViewport.Width);
         gpuBuffer.uvViewportSize[1] = static_cast<float>(fViewport.Height);
         gpuBuffer.uvViewportSize[2] = static_cast<float>(1.0 / fViewport.Width);
         gpuBuffer.uvViewportSize[3] = static_cast<float>(1.0 / fViewport.Height);
         gpuBuffer.uImageSize[0] = static_cast<float>(entry.texture->GetCreateParams().width);
         gpuBuffer.uImageSize[1] = static_cast<float>(entry.texture->GetCreateParams().height);
-        gpuBuffer.uScale[0] = static_cast<float>(props.scale.x);
-        gpuBuffer.uScale[1] = static_cast<float>(props.scale.y);
-        gpuBuffer.opacity = static_cast<float>(props.opacity);
+        gpuBuffer.uScale[0] = static_cast<float>(renderable->GetScale().x);
+        gpuBuffer.uScale[1] = static_cast<float>(renderable->GetScale().y);
+        gpuBuffer.opacity = static_cast<float>(renderable->GetOpacity());
 
         fBufferImageCommon->Update();
         fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
 
 
-        switch (props.imageRenderMode)
+        switch (renderable->GetImageRenderMode())
         {
         case OIV_Image_Render_mode::IRM_Overlay:
             fImageSimpleFragmentShader->Use();
@@ -315,7 +326,7 @@ LLUTILS_DISABLE_WARNING_POP
             LL_EXCEPTION_UNEXPECTED_VALUE;
         }
 
-        SetFilterLevel(props.filterType);
+        SetFilterLevel(renderable->GetFilterType());
         entry.texture->Use();
         fDevice->GetContext()->Draw(4, 0);
     }
@@ -330,7 +341,7 @@ LLUTILS_DISABLE_WARNING_POP
         for (const MapImageEntry::value_type& idEntryPair : fImageEntries)
         {
             const ImageEntry& entry = idEntryPair.second;
-            if (entry.properties.imageRenderMode == OIV_Image_Render_mode::IRM_MainImage)
+            if (entry.renderable->GetImageRenderMode()  == OIV_Image_Render_mode::IRM_MainImage)
                 DrawImage(entry);
         }
         
@@ -346,7 +357,7 @@ LLUTILS_DISABLE_WARNING_POP
         for (const MapImageEntry::value_type& idEntryPair : fImageEntries)
         {
             const ImageEntry& entry = idEntryPair.second;
-            if (entry.properties.imageRenderMode == OIV_Image_Render_mode::IRM_Overlay)
+            if (entry.renderable->GetImageRenderMode() == OIV_Image_Render_mode::IRM_Overlay)
                 DrawImage(entry);
         }
 
@@ -380,7 +391,7 @@ LLUTILS_DISABLE_WARNING_POP
         return 0;
     }
 
-    int D3D11Renderer::SetselectionRect(const SelectionRect& selection_rect)
+    int D3D11Renderer::SetselectionRect(const VisualSelectionRect& selection_rect)
     {
         fSelectionRect = selection_rect;
         CONSTANT_BUFFER_SELECTION_RECT& buffer = fBufferSelection->GetBuffer();
@@ -409,34 +420,20 @@ LLUTILS_DISABLE_WARNING_POP
         
     }
 
-    int D3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image)
+    int D3D11Renderer::AddRenderable(IRenderable* renderable)
     {
-        auto it = fImageEntries.find(id);
+        auto it = fImageEntries.find(renderable);
         if (it != fImageEntries.end())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "same image found");
 
-        it = fImageEntries.emplace(id, ImageEntry()).first;
-
-        it->second.texture = OIVD3DHelper::CreateTexture(fDevice, image, false);
-        return 0;
-    }
-
-    int D3D11Renderer::SetImageProperties(const OIV_CMD_ImageProperties_Request& properties)
-    {
-        ImageEntry entry{};
-        auto it = fImageEntries.find(properties.imageHandle);
-        if (it == fImageEntries.end())
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "image handle can not be found");
-
-        it->second.properties = properties;
+        it = fImageEntries.emplace(renderable, ImageEntry{ nullptr,renderable }).first;
         
         return 0;
     }
 
-
-    int D3D11Renderer::RemoveImage(uint32_t id)
+    int D3D11Renderer::RemoveRenderable(IRenderable* renderable)
     {
-        if (fImageEntries.erase(id) == 0)
+        if (fImageEntries.erase(renderable) == 0)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "can not remove image");
 
         return 0;

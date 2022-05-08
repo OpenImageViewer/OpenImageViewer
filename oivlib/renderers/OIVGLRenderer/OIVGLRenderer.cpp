@@ -78,7 +78,7 @@ namespace OIV
         return 0;
     }
 
-    int OIVGLRenderer::SetSelectionRect(SelectionRect selectionRect)
+    int OIVGLRenderer::SetSelectionRect(VisualSelectionRect selectionRect)
     {
         return 0;
     }

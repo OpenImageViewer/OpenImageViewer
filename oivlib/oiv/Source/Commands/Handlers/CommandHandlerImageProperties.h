@@ -18,7 +18,7 @@ namespace OIV
         {
             ResultCode result = RC_Success;
             const OIV_CMD_ImageProperties_Request* properties = reinterpret_cast<const OIV_CMD_ImageProperties_Request*>(request);
-            result = (ResultCode)ApiGlobal::sPictureRenderer->SetImageProperties(*properties);
+            //result = (ResultCode)ApiGlobal::sPictureRenderer->SetImageProperties(*properties);
 
             return result;
         }

@@ -182,6 +182,7 @@ namespace OIV
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         
 #pragma endregion //Commands
         void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
@@ -232,15 +233,15 @@ namespace OIV
         void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
-        void FinalizeImageLoad(ResultCode result);
-        void FinalizeImageLoadThreadSafe(ResultCode result);
+        void FinalizeImageLoad(bool isImageLoaded);
+        void FinalizeImageLoadThreadSafe(bool isImageLoaded);
         const std::wstring& GetOpenedFileName() const;
 		bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
-        void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, OIV_TexelFormat texelFormat);
+        void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
         bool PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
@@ -253,7 +254,7 @@ namespace OIV
         bool ToggleColorCorrection(); 
         void CancelSelection();
         void LoadSubImages();
-        void AddImageToControl(OIVBaseImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
+        void AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
         bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
@@ -273,7 +274,8 @@ namespace OIV
         void ShowSettings();
         static void NetSettingsCallback_(ItemChangedArgs* callback);
         void NetSettingsCallback(ItemChangedArgs* callback);
-
+        IMCodec::ImageSharedPtr GetImageByIndex(int32_t index);
+        bool IsSubImagesVisible() const;
         void SetBackgroundColor(int index, LLUtils::Color color);
 
 
@@ -314,7 +316,8 @@ namespace OIV
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
         std::wstring fListedFolder; // the current folder the the file list is taken from
-
+        int fCurrentFrame = 0;
+        double fCurrentSequencerSpeed = 1.0;
 
         using MouseButtonType = LInput::MouseButton ;
         template <typename T>
@@ -457,7 +460,9 @@ namespace OIV
         std::unique_ptr<ContextMenu<MenuItemData>> fContextMenu;
         LLUtils::PointI32 fDownPosition;
         ::Win32::Timer fContextMenuTimer;
+        ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
+
 
     };
 }

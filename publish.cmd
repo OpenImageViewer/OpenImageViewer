@@ -31,7 +31,7 @@ set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
 set OIV_RELEASE_SUFFIX=
 set OIV_VERSION_REVISION=0
-set OIV_VERSION_BUILD=6
+set OIV_VERSION_BUILD=8
 
 set VersionPath=.\oivlib\oiv\Include\Version.h
 set BuildPath=.\Build\Release
@@ -103,7 +103,7 @@ rem Pack symbols into 7z file.
 7z a -mx9 !BaseFileName!-Symbols.7z !BuildPath!\*.pdb
 
 rem Pack application into 7z file.
-7z a -mx9 !BaseFileName!.7z !BuildPath!\FreeImage.dll !BuildPath!\turbojpeg.dll !BuildPath!\libpng16.dll !BuildPath!\oiv.dll  !BuildPath!\OIViewer.exe !BuildPath!\Resources
+7z a -mx9 !BaseFileName!.7z !BuildPath!\FreeImage.dll !BuildPath!\turbojpeg.dll !BuildPath!\libpng16.dll !BuildPath!\OIViewer.exe !BuildPath!\Resources
 
 if  !errorlevel! neq 0 (
     echo.

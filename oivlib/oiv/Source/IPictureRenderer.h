@@ -1,6 +1,7 @@
 #pragma once
 #include <defs.h>
 #include <Image.h>
+#include <Interfaces/IRenderer.h>
 
 
 namespace OIV
@@ -8,6 +9,9 @@ namespace OIV
     class IPictureRenderer
     {
     public:
+        virtual IRenderer* GetRenderer() = 0;
+        virtual IMCodec::ImageSharedPtr Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize) = 0;
+    
         virtual ResultCode LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle) = 0;
         virtual ResultCode LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) = 0;
         virtual ResultCode UnloadFile(const ImageHandle handle) = 0;
@@ -26,8 +30,8 @@ namespace OIV
         virtual int SetClientSize(uint16_t width, uint16_t height) = 0;
         virtual ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request, OIV_CMD_AxisAlignedTransform_Response& response) = 0;
         virtual ~IPictureRenderer() {}
-        virtual ResultCode SetImageProperties(const OIV_CMD_ImageProperties_Request& imageProperties) = 0;
-        
+        virtual ResultCode AddRenderable(IRenderable* renderable) = 0;
+        virtual ResultCode RemoveRenderable(IRenderable* renderable) = 0;
         virtual ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) = 0;
         virtual ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) = 0;
         virtual ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req,OIV_CMD_ConvertFormat_Response& res) = 0;

@@ -1,4 +1,4 @@
-#include "../OIVImage/OIVBaseImage.h"
+#include <OIVImage/OIVBaseImage.h>
 namespace OIV
 {
 	class MessageHelper

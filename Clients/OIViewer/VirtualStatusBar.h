@@ -22,13 +22,12 @@ namespace OIV
 			if (label == fMapLabels.end())
 			{
 				OIVTextImage* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
-                texelValue->GetImageProperties().visible = fVisible;
-		        reinterpret_cast<LLUtils::Color&>(texelValue->GetTextOptions().backgroundColor) = LLUtils::Color(0, 0, 0, 192);
-				texelValue->GetTextOptions().fontPath = LabelManager::sFixedFontPath;
-				texelValue->GetTextOptions().fontSize = 11;
-				texelValue->GetTextOptions().renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
-				texelValue->GetTextOptions().outlineWidth = 0;
-
+                texelValue->SetVisible(fVisible);
+                texelValue->SetBackgroundColor(LLUtils::Color(0, 0, 0, 192));
+                texelValue->SetFontPath(LabelManager::sFixedFontPath);
+                texelValue->SetFontSize(11);
+                texelValue->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+                texelValue->SetOutlineWidth(0);
 				label = fMapLabels.emplace(labelName, texelValue).first;
 			}
 
@@ -45,16 +44,15 @@ namespace OIV
                 // labels placement logic, currently hard coded.
                 //TOOD: make it dynamic
 
-                if (text->GetImageProperties().opacity > 0.0) // if visible
+                if (text->GetImage() != nullptr &&  text->GetOpacity() > 0.0 && text->GetVisible() ) // if visible
                 {
                     if (name == "texelValue")
-                        text->GetImageProperties().position = { sizef.x - text->GetDescriptor().Width - 10 ,sizef.y - text->GetDescriptor().Height - 5 };
+                        text->SetPosition({ sizef.x - text->GetImage()->GetWidth() - 10 ,sizef.y - text->GetImage()->GetHeight() - 5 });
                     else if (name == "imageDescription")
-                        text->GetImageProperties().position = { 10 ,sizef.y - text->GetDescriptor().Height - 5 };
+                        text->SetPosition({ 10 ,sizef.y - text->GetImage()->GetHeight()- 5 });
                     else if (name == "texelPos")
-                        text->GetImageProperties().position = { (sizef.x - text->GetDescriptor().Width) / 2  ,sizef.y - text->GetDescriptor().Height - 5 };
+                        text->SetPosition({ (sizef.x - text->GetImage()->GetWidth()) / 2  ,sizef.y - text->GetImage()->GetHeight()- 5 });
 
-                    text->Update();
                 }
             }
 
@@ -71,7 +69,7 @@ namespace OIV
         void SetText(std::string elementName, const OIVString& text)
         {
             OIVTextImage* texelValue = GetOrCreateLabel(elementName);
-            texelValue->GetTextOptions().text = text;
+            texelValue->SetText(text);
 
             if (GetVisible())
             {
@@ -91,8 +89,7 @@ namespace OIV
                 fVisible = visible;
                 for (auto [name, text] : fMapLabels)
                 {
-                    text->GetImageProperties().visible = fVisible;
-                    text->Update();
+                    text->SetVisible(fVisible);
                 }
 
                 RepositionLabels();
@@ -107,10 +104,9 @@ namespace OIV
         bool SetOpacity(std::string elementName, double opacity)
         {
             OIVTextImage* label = GetOrCreateLabel(elementName);
-            if (label->GetImageProperties().opacity != opacity)
+            if (label->GetOpacity() != opacity)
             {
-                label->GetImageProperties().opacity = opacity;
-                label->Update();
+                label->SetOpacity(opacity);
                 return true;
             }
 

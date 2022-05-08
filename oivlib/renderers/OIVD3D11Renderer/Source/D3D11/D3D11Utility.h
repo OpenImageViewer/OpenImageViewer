@@ -15,7 +15,7 @@ namespace OIV
         static LLUtils::Buffer BufferFromBlob(ID3D10Blob* blob)
         {
             LLUtils::Buffer buffer(blob->GetBufferSize());
-            buffer.Write(static_cast<std::byte*>(blob->GetBufferPointer()), 0, buffer.Size());
+            buffer.Write(static_cast<const std::byte*>(blob->GetBufferPointer()), 0, buffer.Size());
             return buffer;
         }
 
