@@ -4,7 +4,7 @@
 
 namespace OIV
 {
-    struct SelectionRect
+    struct VisualSelectionRect
     {
         LLUtils::PointI32 p0;
         LLUtils::PointI32 p1;

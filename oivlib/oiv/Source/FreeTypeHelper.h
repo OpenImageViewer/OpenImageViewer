@@ -6,7 +6,7 @@ namespace FreeType
     class FreeTypeHelper
     {
     public:
-        static IMCodec::ImageSharedPtr CreateRGBAText(const FreeTypeConnector::TextCreateParams& createParams)
+        static IMCodec::ImageSharedPtr CreateRGBAText(const TextCreateParams& createParams)
         {
             FreeTypeConnector::Bitmap rasterizedText;
             FreeTypeConnector::GetSingleton().CreateBitmap(createParams, rasterizedText);
@@ -21,14 +21,17 @@ namespace FreeType
         static IMCodec::ImageSharedPtr BitmapToRGBAImage(const FreeTypeConnector::Bitmap& rasterizedText)
         {
             using namespace IMCodec;
-            ImageDescriptor props;
-            props.fProperties.NumSubImages = 0;
-            props.fProperties.Height = rasterizedText.height;
-            props.fData = rasterizedText.buffer.Clone();
-            props.fProperties.RowPitchInBytes = rasterizedText.rowPitch;
-            props.fProperties.Width = rasterizedText.width;
-            props.fProperties.TexelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
-            ImageSharedPtr textImage = ImageSharedPtr(new Image(props));
+            ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+            ImageDescriptor& props = imageItem->descriptor;
+
+            props.height= rasterizedText.height;
+            props.width = rasterizedText.width;
+            props.rowPitchInBytes = rasterizedText.rowPitch;
+            props.texelFormatDecompressed = TexelFormat::I_R8_G8_B8_A8;
+
+            imageItem->data = rasterizedText.buffer.Clone();
+            ImageSharedPtr textImage = std::make_shared<Image>(imageItem, ImageItemType::Unknown);
+
             return textImage;
         }
     };

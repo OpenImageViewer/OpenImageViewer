@@ -43,10 +43,10 @@ int mainFunction(int argc, const wchar_t** argv)
         {
             filePath = LLUtils::FileSystemHelper::ResolveFullPath(filePath);
             COPYDATASTRUCT copyData{};
-            copyData.dwData = OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY;
+            copyData.dwData = ::OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY;
             copyData.cbData = (filePath.length() + 1) * sizeof(decltype(filePath)::value_type);
             copyData.lpData = const_cast<wchar_t*>(filePath.c_str());
-            ::SendMessage(window, WM_COPYDATA, OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY, (LPARAM)(LPVOID)&copyData);
+            ::SendMessage(window, WM_COPYDATA, ::OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY, (LPARAM)(LPVOID)&copyData);
         }
         else
         {

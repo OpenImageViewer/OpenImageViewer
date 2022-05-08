@@ -2,9 +2,12 @@
 #include <array>
 #include "OIVImage/OIVBaseImage.h"
 #include "OIVImage/OIVFileImage.h"
+#include "../../oiv/Source/ImageUtil.h"
 
 namespace OIV
 {
+    //TODO: adjust resampling conditions
+    constexpr double ResampleScaleThreshold = 0.8;
     enum class ImageChainStage
     {
           SourceImage = 0
@@ -30,19 +33,20 @@ namespace OIV
     class ImageState
     {
     public:// const methods:
-        
+
         OIVBaseImageSharedPtr GetOpenedImage() const { return fOpenedImage; }
         bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
-        OIV_AxisAlignedRotation GetAxisAlignedRotation() const { return fAxisAlignedRotation; }
-        OIV_AxisAlignedFlip     GetAxisAlignedFlip() const { return fAxisAlignedFlip; }
+        IMUtil::OIV_AxisAlignedRotation GetAxisAlignedRotation() const { return fTransform.rotation; }
+        IMUtil::OIV_AxisAlignedFlip GetAxisAlignedFlip() const { return fTransform.flip; }
+        
         LLUtils::PointF64       GetScale() const { return fScale; }
         LLUtils::PointF64       GetOffset() const { return fOffset; }
 
         bool GetResample() const;
-        
+
         LLUtils::PointF64 GetVisibleSize();
         OIVBaseImageSharedPtr GetVisibleImage() const;
-    
+
     public:// mutating methods:
         void SetImageChainRoot(OIVBaseImageSharedPtr image);
         OIVBaseImageSharedPtr& GetImage(ImageChainStage imageStage);
@@ -62,13 +66,13 @@ namespace OIV
         OIVBaseImageSharedPtr ProcessStage(ImageChainStage stage, OIVBaseImageSharedPtr image);
         void Refresh(ImageChainStage requiredImageStage);
         void UpdateImageParameters(OIVBaseImageSharedPtr visibleImage, bool visible);
-        
+
         bool IsActuallyResampled() const;
         ImageChain& GetWorkingImageChain();
         const ImageChain& GetWorkingImageChain() const;
     private: // member fields
-        OIV_AxisAlignedRotation fAxisAlignedRotation = OIV_AxisAlignedRotation::AAT_None;
-        OIV_AxisAlignedFlip     fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
+
+        IMUtil::OIV_AxisAlignedTransform fTransform{ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::None };
         ImageChainStage fDirtyStage = ImageChainStage::Begin;
         ImageChain fCurrentImageChain;
         OIVBaseImageSharedPtr fOpenedImage;

@@ -1,14 +1,14 @@
 #include "MessageHelper.h"
 #include "MessageFormatter.h"
 #include "PixelHelper.h"
-#include "../OIVImage/OIVFileImage.h"
+#include  <OIVImage/OIVFileImage.h>
 #include "../ConfigurationLoader.h"
 #include "UnitsHelper.h"
 namespace OIV
 {
     std::wstring  MessageHelper::ParseImageSource(const OIVBaseImageSharedPtr& image)
     {
-        switch (image->GetDescriptor().Source)
+        switch (image->GetImageSource())
         {
         case ImageSource::None:
             return L"none";
@@ -38,8 +38,6 @@ namespace OIV
         args.valueColor = MessageFormatter::DefaultValueColor;
         args.spaceBetweenColumns = 3;
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
-
-
 
 
         auto keybindingsList = ConfigurationLoader::LoadKeyBindings();
@@ -108,7 +106,7 @@ namespace OIV
         {
             auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
 
-            if (image->GetDescriptor().Source != ImageSource::File)
+            if (image->GetImageSource() != ImageSource::File)
                 messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
             else
                 messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ MessageFormatter::FormatFilePath(filePath) });
@@ -117,23 +115,21 @@ namespace OIV
 
             messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
             messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ GetFileTime(filePath) });
-            auto bitmapSize = image->GetDescriptor().Width * image->GetDescriptor().Height * image->GetDescriptor().Bpp / CHAR_BIT;
+            auto bitmapSize = image->GetImage()->GetTotalSizeOfImageTexels();
             auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
             messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ L"1:" ,compressionRatio });
         }
-
-        const auto& texelInfo = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(image->GetDescriptor().texelFormat));
         
-        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ image->GetDescriptor().Width , "px" });
-        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ image->GetDescriptor().Height , "px" });
-        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetDescriptor().Bpp , " bpp" });
-        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(texelInfo) });
-        messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ image->GetDescriptor().NumSubImages });
-        messageValues.emplace_back("Load time",  MessageFormatter::ValueObjectList{ static_cast<long double>(image->GetDescriptor().LoadTime) , "ms" });
-        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ image->GetDescriptor().DisplayTime , "ms" });
-        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ image->GetDescriptor().pluginUsed != nullptr ? image->GetDescriptor().pluginUsed : "N/A" });
+        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ image->GetImage()->GetWidth() , "px" });
+        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ image->GetImage()->GetHeight() , "px" });
+        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetImage()->GetBitsPerTexel() , " bpp" });
+        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(image->GetImage()->GetTexelInfo()) });
+        messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ image->GetImage()->GetNumSubImages()});
+        messageValues.emplace_back("Load time",  MessageFormatter::ValueObjectList{ static_cast<long double>(image->GetImage()->GetRuntimeData().loadTime) , "ms" });
+        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ image->GetImage()->GetRuntimeData().displayTime , "ms" });
+        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ image->GetImage()->GetRuntimeData().pluginUsed.empty() == false ? image->GetImage()->GetRuntimeData().pluginUsed : L"N/A" });
         
-        auto uniqueValues = PixelHelper::CountUniqueValues(image);
+        auto uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
         if (uniqueValues > -1)
             messageValues.emplace_back("Unique values", MessageFormatter::ValueObjectList{ uniqueValues });
 

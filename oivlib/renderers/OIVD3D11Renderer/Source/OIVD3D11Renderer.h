@@ -18,13 +18,11 @@ namespace OIV
         void UpdateGpuParameters();
         int Redraw() override;
         int SetFilterLevel(OIV_Filter_type filterType) override;
-        int SetSelectionRect(SelectionRect selectionRect) override;
+        int SetSelectionRect(VisualSelectionRect selectionRect) override;
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
         
-        // Multi image API:
-        int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) override;
-        int SetImageProperties(const OIV_CMD_ImageProperties_Request& properties) override;
-        int RemoveImage(uint32_t id) override;
+        int AddRenderable(IRenderable* renderable) override;
+        int RemoveRenderable(IRenderable* renderable) override;
 
 #pragma endregion
 

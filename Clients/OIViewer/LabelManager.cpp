@@ -14,11 +14,7 @@ namespace OIV
         std::get<0>(fDPI) = params.monitorDesc.DPIx;
         std::get<1>(fDPI) = params.monitorDesc.DPIy;
         for (auto& [name, text] : fTextLabels)
-        {
-            text->GetTextOptions().DPIx = std::get<0>(fDPI);
-            text->GetTextOptions().DPIy = std::get<1>(fDPI);
-            text->Update();
-        }
+            text->SetDPI(std::get<0>(fDPI), std::get<1>(fDPI));
     }
 
     void LabelManager::RemoveAll()
@@ -31,7 +27,6 @@ namespace OIV
         auto it = fTextLabels.find(labelName);
         if (it != fTextLabels.end())
             fTextLabels.erase(it);
-
     }
 
     OIVTextImage* LabelManager::GetTextLabel(const std::string& labelName)
@@ -54,22 +49,21 @@ namespace OIV
     OIVTextImageUniquePtr LabelManager::CreateTemplatedText()
     {
         OIVTextImageUniquePtr text = std::make_unique<OIVTextImage>();
-        CreateTextParams& textOptions = text->GetTextOptions();
-        reinterpret_cast<LLUtils::Color&>(textOptions.backgroundColor) = LLUtils::Color(0, 0, 0, 180);
-        textOptions.fontPath = sFontPath;
-        textOptions.fontSize = 12;
-        textOptions.outlineWidth = 2;
-        textOptions.renderMode = OIV_PROP_CreateText_Mode::CTM_AntiAliased;
-        textOptions.DPIx = std::get<0>(fDPI);
-        textOptions.DPIy = std::get<1>(fDPI);
 
-        OIV_CMD_ImageProperties_Request& properties = text->GetImageProperties();
-        properties.position = { 0,0 };
-        properties.filterType = OIV_Filter_type::FT_None;
-        properties.imageRenderMode = OIV_Image_Render_mode::IRM_Overlay;
-        properties.scale = 1.0;
-        properties.visible = true;
-        properties.opacity = 1.0;
-        return std::move(text);
+        text->SetPosition(LLUtils::PointF64::Zero);
+        text->SetScale(LLUtils::PointF64::One);
+        text->SetFilterType(OIV_Filter_type::FT_None);
+        text->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
+        text->SetVisible(true);
+        text->SetOpacity(1.0);
+
+        text->SetDPI(std::get<0>(fDPI), std::get<1>(fDPI));
+        text->SetFontPath(sFontPath);
+        text->SetFontSize(12);
+        text->SetOutlineWidth(2);
+        text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+        text->SetBackgroundColor(LLUtils::Color(0, 0, 0, 180));
+        
+        return text;
     }
 }

@@ -9,7 +9,7 @@ namespace OIV
 
             DXGI_FORMAT textureFormat = DXGI_FORMAT_UNKNOWN;
 
-            switch (image->GetImageType())
+            switch (image->GetTexelFormat())
             {
             case IMCodec::TexelFormat::I_B8_G8_R8_A8:
                 textureFormat = DXGI_FORMAT_B8G8R8A8_UNORM;

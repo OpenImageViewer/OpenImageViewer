@@ -1,9 +1,7 @@
 #pragma once
 //TODO: define the following using cmake
 //MISC
-
-#define OIV_BUILD_FREETYPE 1
-
+// 
 //Renderer
 // Allow null render for debug purpose, this flag is disabled by default.
 #define OIV_ALLOW_NULL_RENDERER 1

@@ -46,16 +46,15 @@ namespace OIV
             }
         }
 
-        static std::string ParseTexelValue(const OIV_CMD_TexelInfo_Response& texelInfo)
+        static std::string ParseTexelValue(const  IMCodec::ImageSharedPtr image, LLUtils::PointI32 pixelPos)
         {
             using namespace IMCodec;
             std::stringstream ss;
-            const uint8_t* const buffer = texelInfo.buffer;
+            const uint8_t* buffer = reinterpret_cast<const uint8_t* >(image->GetBufferAt(pixelPos.x, pixelPos.y));
             std::string defaultColor = "<textcolor=#ff8930>";
 
             //TODO: remove static cast after removing usage of C API 
-            const auto& info = IMCodec::GetTexelInfo(static_cast<IMCodec::TexelFormat>(texelInfo.type));
-
+            const auto& info = image->GetTexelInfo();
 
             int currentpos = 0;
 

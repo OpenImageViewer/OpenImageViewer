@@ -24,13 +24,15 @@ namespace OIV
         ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req, OIV_CMD_ConvertFormat_Response& res) override;
         ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) override;
         ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) override;
+        ResultCode AddRenderable(IRenderable* renderable) override;
+        ResultCode RemoveRenderable(IRenderable* renderable) override;
         ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
         ResultCode GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse) override;
-        ResultCode SetImageProperties(const OIV_CMD_ImageProperties_Request&) override;
         ResultCode GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res) override;
         ResultCode ResampleImage(const OIV_CMD_Resample_Request& resampleRequest, ImageHandle& handle) override;
         ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) override;
         ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request, OIV_CMD_GetSubImages_Response& res) override;
+        IRenderer* GetRenderer() override;
         
         int Init() override;
         int SetParent(std::size_t handle) override;
@@ -41,6 +43,7 @@ namespace OIV
         int SetTexelGrid(const CmdRequestTexelGrid& viewParams) override;
         int SetClientSize(uint16_t width, uint16_t height) override;
         ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request, OIV_CMD_AxisAlignedTransform_Response& response) override;
+        IMCodec::ImageSharedPtr Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize) override;
 #pragma endregion
 
 #pragma region //-------------Private methods------------------
@@ -52,9 +55,6 @@ namespace OIV
         IMCodec::ImageSharedPtr GetDisplayImage() const;
         void RefreshRenderer();
         LLUtils::PointI32 GetClientSize() const;
-        ResultCode UploadImageToRenderer(ImageHandle handle);
-        ResultCode RemoveImageFromRenderer(ImageHandle handle);
-        IMCodec::ImageSharedPtr Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize);
 #pragma endregion
 
 #pragma region //-------------Private member fields------------------
@@ -91,7 +91,7 @@ namespace OIV
 
         
         OIV_PROP_TransparencyMode fTransparencyShade = OIV_PROP_TransparencyMode::TM_Medium;
-        std::set<ImageHandle> fImagesUploadToRenderer;
+        std::set<IRenderable*> fImagesUploadToRenderer;
         IMCodec::ImageLoader fImageLoader;
         ImageManager fImageManager;
         std::map<ImageHandle, std::vector<ImageHandle>> fImageToChildren;
@@ -102,6 +102,7 @@ namespace OIV
         LLUtils::PointI32 fClientSize = LLUtils::PointI32::Zero;
         OIV_CMD_RegisterCallbacks_Request fCallBacks = {};
         Resampler fResampler;
+        std::vector<IRenderable*> fPendingRenderables;
 #pragma endregion
     };
 }

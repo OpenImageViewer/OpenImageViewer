@@ -12,9 +12,9 @@ namespace OIV
         int Redraw() override { return 0; }
         int SetFilterLevel([[maybe_unused]] OIV_Filter_type filterLevel) override { return 0; }
         int SetExposure([[maybe_unused]] const OIV_CMD_ColorExposure_Request & exposure) override { return 0; }
-        int SetSelectionRect([[maybe_unused]] SelectionRect selectionRect) override { return 0; }
-        int SetImageBuffer([[maybe_unused]] uint32_t id, [[maybe_unused]] const IMCodec::ImageSharedPtr image) override { return 0; }
-        int SetImageProperties([[maybe_unused]] const OIV_CMD_ImageProperties_Request &) override { return 0; }
-        int RemoveImage([[maybe_unused]] uint32_t id) override { return 0; }
+        int SetSelectionRect([[maybe_unused]] VisualSelectionRect selectionRect) override { return 0; }
+
+        int AddRenderable([[maybe_unused]] IRenderable* renderable) override { return 0; }
+        int RemoveRenderable([[maybe_unused]] IRenderable* renderable) override { return 0; }
     };
 }

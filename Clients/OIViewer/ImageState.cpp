@@ -1,6 +1,5 @@
 #include "ImageState.h"
 #include "OIVCommands.h"
-#include "OIVImage/OIVHandleImage.h"
 #include "Helpers/OIVImageHelper.h"
 
 namespace OIV
@@ -71,7 +70,10 @@ namespace OIV
     void ImageState::SetOpenedImage(const OIVBaseImageSharedPtr& image)
     {
         fOpenedImage = image;
-        SetImageChainRoot(fOpenedImage);
+        if (fOpenedImage->GetImage()->GetItemType() != IMCodec::ImageItemType::Container)
+            SetImageChainRoot(fOpenedImage);
+        else
+            SetImageChainRoot(std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, fOpenedImage->GetImage()->GetSubImage(0)));
     }
 
     void ImageState::ClearAll()
@@ -83,8 +85,8 @@ namespace OIV
     void ImageState::Transform(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
 
-        const bool isHorizontalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Horizontal)) != 0;
-        const bool isVerticalFlip = (int)(fAxisAlignedFlip & static_cast<int>(OIV_AxisAlignedFlip::AAF_Vertical)) != 0;
+        const bool isHorizontalFlip = (int)((int)fTransform.flip & static_cast<int>(IMUtil::OIV_AxisAlignedFlip::Horizontal)) != 0;
+        const bool isVerticalFlip = (int)((int)fTransform.flip & static_cast<int>(IMUtil::OIV_AxisAlignedFlip::Vertical)) != 0;
         const bool isFlip = isVerticalFlip || isHorizontalFlip;
 
         // the two options to manage axes aligned transofrmation are either
@@ -96,14 +98,14 @@ namespace OIV
         {
             if (relativeRotation != AAT_Rotate90CW && relativeRotation != AAT_Rotate90CCW)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "Rotating image is currently limited to 90 degrees in CW/CCW");
-
-            fAxisAlignedRotation = static_cast<OIV_AxisAlignedRotation>((static_cast<int>(relativeRotation + fAxisAlignedRotation) % 4));
+            
+            fTransform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>((static_cast<int>(relativeRotation) + static_cast<int>(fTransform.rotation)) % 4);
             //If switching axes by rotating 90 degrees and flip is applied, then flip the flip axes.
             if (isFlip == true)
-                fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(3));
+                fTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(static_cast<int>(fTransform.flip) ^ static_cast<int>(3));
         }
 
-        fAxisAlignedFlip = static_cast<OIV_AxisAlignedFlip>(static_cast<int>(fAxisAlignedFlip) ^ static_cast<int>(flip));
+        fTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(static_cast<int>(fTransform.flip) ^ static_cast<int>(flip));
 
         SetDirtyStage(ImageChainStage::Deformed);
 
@@ -118,8 +120,7 @@ namespace OIV
 
     void ImageState::ResetUserState()
     {
-        fAxisAlignedRotation = OIV_AxisAlignedRotation::AAT_None;
-        fAxisAlignedFlip = OIV_AxisAlignedFlip::AAF_None;
+        fTransform = { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::None };
         fUseRainbowNormalization = false;
         SetDirtyStage(ImageChainStage::Deformed);
     }
@@ -160,8 +161,7 @@ namespace OIV
             auto visibleImage = GetVisibleImage();
             if (visibleImage != nullptr)
             {
-                visibleImage->GetImageProperties().scale = IsActuallyResampled() == true ? LLUtils::PointF64::One : fScale;
-                visibleImage->Update();
+                visibleImage->SetScale(IsActuallyResampled() == true ? LLUtils::PointF64::One : fScale);
             }
 
             if (GetResample() == true)
@@ -175,17 +175,16 @@ namespace OIV
         {
             fOffset = offset;
             auto visibleImage = GetVisibleImage();
-            visibleImage->GetImageProperties().position = fOffset.Round();
-            visibleImage->Update();
+            visibleImage->SetPosition(fOffset.Round());
         }
     }
 
     void ImageState::UpdateImageParameters(OIVBaseImageSharedPtr visibleImage, bool visible)
     {
-        visibleImage->GetImageProperties().position = GetOffset();
-        visibleImage->GetImageProperties().opacity = 1.0;
-        visibleImage->GetImageProperties().visible = visible;
-        visibleImage->Update();
+        visibleImage->SetVisible(visible);
+        visibleImage->SetPosition(GetOffset());
+        visibleImage->SetOpacity(1.0);
+        visibleImage->SetImageRenderMode(OIV_Image_Render_mode::IRM_MainImage);
     }
 
     OIVBaseImageSharedPtr ImageState::GetVisibleImage() const
@@ -211,7 +210,7 @@ namespace OIV
         Refresh(fFinalProcessingStage);
         auto visiblImage = GetVisibleImage();
         using namespace LLUtils;
-        PointF64 visibleImageSize(visiblImage->GetDescriptor().Width, visiblImage->GetDescriptor().Height);
+        PointF64 visibleImageSize = static_cast<PointF64>(visiblImage->GetImage()->GetDimensions());
 
         //If resampled, scale is already embedded in the image size, else multiplty by scale.
         return IsActuallyResampled() ? visibleImageSize : visibleImageSize * GetScale();
@@ -225,9 +224,7 @@ namespace OIV
         // hide the current active source image.
         if (souceImageSlot != nullptr)
         {
-            souceImageSlot->GetImageProperties().visible = false;
-            souceImageSlot->Update();
-
+            souceImageSlot->SetVisible(false);
         }
         //Assign the new source image        
         souceImageSlot = image;
@@ -261,18 +258,14 @@ namespace OIV
             return inputImage;
             break;
         case ImageChainStage::Deformed:
-            if (fAxisAlignedRotation != OIV_AxisAlignedRotation::AAT_None || fAxisAlignedFlip != OIV_AxisAlignedFlip::AAF_None)
+            if (fTransform.rotation != IMUtil::OIV_AxisAlignedRotation::None || fTransform.flip != IMUtil::OIV_AxisAlignedFlip::None)
             {
-                ImageHandle transformedHandle = ImageHandleNull;
-                
-                OIVCommands::TransformImage(inputImage->GetDescriptor().ImageHandle
-                    , fAxisAlignedRotation, fAxisAlignedFlip, transformedHandle);
-                
-                inputImage->GetImageProperties().visible = false;
-                inputImage->Update();
+                auto deformed = IMUtil::ImageUtil::Transform(fTransform, inputImage->GetImage());
 
-                auto deformed = std::make_shared<OIVHandleImage>(transformedHandle);
-                return deformed;
+                inputImage->SetVisible(false);
+
+                auto deformedOIVImage = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, deformed);
+                return deformedOIVImage;
             }
             else
             {
@@ -283,11 +276,10 @@ namespace OIV
         case ImageChainStage::Rasterized:
         {
 
-            inputImage->GetImageProperties().visible = false;
-            inputImage->Update();
+            inputImage->SetVisible(false);
 
             auto rasterized = OIVImageHelper::GetRendererCompatibleImage(inputImage, fUseRainbowNormalization);
-            rasterized->GetImageProperties().scale = fScale;
+            rasterized->SetScale(fScale);
             UpdateImageParameters(rasterized, true);
             return rasterized;
         }
@@ -296,23 +288,20 @@ namespace OIV
 
         case ImageChainStage::Resampled:
         {
-            //TODO: adjust resampling conditions
-            if (GetScale().x > 0.8 || GetScale().y > 0.8)
+            if (GetScale().x > ResampleScaleThreshold || GetScale().y > ResampleScaleThreshold)
             {
                 return nullptr;
             }
             else
             {
                 auto rasterized = fCurrentImageChain.Get(ImageChainStage::Rasterized);
-                LLUtils::PointF64 originalImageSize = { static_cast<double>(rasterized->GetDescriptor().Width) , static_cast<double>(rasterized->GetDescriptor().Height) };
+                LLUtils::PointF64 originalImageSize = static_cast<LLUtils::PointF64>(rasterized->GetImage()->GetDimensions());
                 auto resampled = OIVImageHelper::ResampleImage(rasterized, static_cast<LLUtils::PointI32>((originalImageSize * GetScale()).Round()));
                 //Resampled image is pixel perfect in relation to the client window, so no scale.
 
-                resampled->GetImageProperties().scale = LLUtils::PointF64::One;
+                resampled->SetScale(LLUtils::PointF64::One);
+                inputImage->SetVisible(false);
 
-                inputImage->GetImageProperties().visible = false;
-                inputImage->Update();
-                
                 UpdateImageParameters(resampled, true);
                 return resampled;
             }

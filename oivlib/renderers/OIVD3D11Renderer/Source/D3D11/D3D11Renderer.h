@@ -7,6 +7,7 @@
 #include "D3D11Texture.h"
 #include <defs.h>
 #include <Interfaces/IRendererDefs.h>
+#include <Interfaces/IRenderable.h>
 #include <map>
 
 namespace OIV
@@ -59,7 +60,7 @@ namespace OIV
     struct ImageEntry
     {
         D3D11TextureSharedPtr texture;
-        OIV_CMD_ImageProperties_Request properties;
+        IRenderable* renderable;
     };
 
     class D3D11Renderer 
@@ -73,11 +74,10 @@ namespace OIV
         void UpdateGpuParameters();
         int Redraw();
         int SetFilterLevel(OIV_Filter_type filterType);
-        int SetselectionRect(const SelectionRect& selection_rect);
+        int SetselectionRect(const VisualSelectionRect& selection_rect);
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
-        int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr& image);
-        int SetImageProperties(const OIV_CMD_ImageProperties_Request&);
-        int RemoveImage(uint32_t id);
+        int AddRenderable(IRenderable* renderable);
+        int RemoveRenderable(IRenderable* renderable);
 
 #pragma region //**** Private methods*****/
     private: 
@@ -95,8 +95,8 @@ namespace OIV
         D3D11ShaderUniquePtr fSelectionFragmentShaer;
         D3D11ShaderUniquePtr fImageSimpleFragmentShader;
         bool fIsParamsDirty = true;
-        SelectionRect fSelectionRect;
-        using MapImageEntry = std::map<uint16_t,ImageEntry>;
+        VisualSelectionRect fSelectionRect;
+        using MapImageEntry = std::map<IRenderable*, ImageEntry>;
         MapImageEntry fImageEntries;
         OIVString fDataPath;
         LLUtils::Color fBackgroundColor = { 45,45,48,255 };

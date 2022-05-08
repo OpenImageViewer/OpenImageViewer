@@ -75,16 +75,15 @@ namespace OIV
     }
 
     template <typename underlying_type>
-    int64_t PixelHelper::GetUniqueColors(const OIV_CMD_GetPixels_Response& pixelData, uint8_t bpp)
+    int64_t PixelHelper::GetUniqueColors(const IMCodec::ImageSharedPtr& image, IMCodec::ChannelWidth bpp)
     {
-        std::unordered_set<underlying_type> valueSet(pixelData.height * pixelData.width);
-        
-        OIV_Util_GetBPPFromTexelFormat(pixelData.texelFormat, &bpp);
-        const uint8_t* baseAddress = reinterpret_cast<const uint8_t*>(pixelData.pixelBuffer);
-        for (size_t y = 0; y < pixelData.height; y++)
+        std::unordered_set<underlying_type> valueSet(image->GetTotalPixels());
+
+        const uint8_t* baseAddress = reinterpret_cast<const uint8_t*>(image->GetBuffer());
+        for (size_t y = 0; y < image->GetHeight(); y++)
         {
-            size_t lineOffset = pixelData.rowPitch * y;
-            for (size_t x = 0; x < pixelData.width; x++)
+            size_t lineOffset = image->GetRowPitchInBytes() * y;
+            for (size_t x = 0; x < image->GetWidth(); x++)
             {
                 const uint8_t* currentValue = baseAddress + lineOffset + (x * bpp / CHAR_BIT);
                 valueSet.insert(*reinterpret_cast<const underlying_type*>(currentValue));
@@ -95,75 +94,63 @@ namespace OIV
     }
 
 
-    int64_t PixelHelper::CountUniqueValues(const OIVBaseImageSharedPtr& image)
+    int64_t PixelHelper::CountUniqueValues(const IMCodec::ImageSharedPtr& image)
     {
         int64_t numUniqueValues = -1;
 
-        OIV_CMD_GetPixels_Request pixelsRequest;
-        OIV_CMD_GetPixels_Response pixelsResponse;
+        const IMCodec::ChannelWidth bpp = image->GetBitsPerTexel();
 
-
-        pixelsRequest.handle = image->GetDescriptor().ImageHandle;
-        ResultCode result = OIVCommands::ExecuteCommand(CommandExecute::OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse);
-
-        if (result == ResultCode::RC_Success)
+        if (bpp % 8 == 0) // if bpp is multiples of 8
         {
-            uint8_t bpp;
-            OIV_Util_GetBPPFromTexelFormat(pixelsResponse.texelFormat, &bpp);
-            if (bpp % 8 == 0) // if bpp is multiples of 8
+            switch (bpp)
             {
-                if (OIVCommands::ExecuteCommand(OIV_CMD_GetPixels, &pixelsRequest, &pixelsResponse) == RC_Success)
+            case 8:
+                numUniqueValues = GetUniqueColors<ValueComparer<8 / CHAR_BIT>>(image, bpp);
+                break;
+            case 16:
+                numUniqueValues = GetUniqueColors<ValueComparer<16 / CHAR_BIT>>(image, bpp);
+                break;
+            case 24:
+                numUniqueValues = GetUniqueColors<ValueComparer<24 / CHAR_BIT>>(image, bpp);
+                break;
+            case 32:
+                numUniqueValues = GetUniqueColors<ValueComparer<32 / CHAR_BIT>>(image, bpp);
+                break;
+            case 48:
+                numUniqueValues = GetUniqueColors<ValueComparer<48 / CHAR_BIT>>(image, bpp);
+                break;
+            case 64:
+                numUniqueValues = GetUniqueColors<ValueComparer<64 / CHAR_BIT>>(image, bpp);
+                break;
+            case 72:
+                numUniqueValues = GetUniqueColors<ValueComparer<72 / CHAR_BIT>>(image, bpp);
+                break;
+            default:
+            {
+                //Slower way to count unique values by using additional indirection to access arbitrary memory size
+                using SetValues = std::unordered_set<ValueIndirectComparer, ValueIndirectComparer::Hasher>;
+                SetValues setValues(image->GetTotalPixels());
+
+                const uint8_t* baseAddress = reinterpret_cast<const uint8_t*>(image->GetBuffer());
+
+                for (size_t y = 0; y < image->GetHeight(); y++)
                 {
-                    switch (bpp)
+                    size_t lineOffset = image->GetRowPitchInBytes() * y;
+                    for (size_t x = 0; x < image->GetWidth(); x++)
                     {
-                    case 8:
-                        numUniqueValues = GetUniqueColors<ValueComparer<8 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 16:
-                        numUniqueValues = GetUniqueColors<ValueComparer<16 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 24:
-                        numUniqueValues = GetUniqueColors<ValueComparer<24 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 32:
-                        numUniqueValues = GetUniqueColors<ValueComparer<32 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 48:
-                        numUniqueValues = GetUniqueColors<ValueComparer<48 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 64:
-                        numUniqueValues = GetUniqueColors<ValueComparer<64 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    case 72:
-                        numUniqueValues = GetUniqueColors<ValueComparer<72 / CHAR_BIT>>(pixelsResponse, bpp);
-                        break;
-                    default:
-                    {
-                        //Slower way to count unique values by using additional indirection to access arbitrary memory size
-                        using SetValues = std::unordered_set<ValueIndirectComparer, ValueIndirectComparer::Hasher>;
-                        SetValues setValues(pixelsResponse.height * pixelsResponse.width);
-
-                        const uint8_t* baseAddress = reinterpret_cast<const uint8_t*>(pixelsResponse.pixelBuffer);
-
-                        for (size_t y = 0; y < pixelsResponse.height; y++)
-                        {
-                            size_t lineOffset = pixelsResponse.rowPitch * y;
-                            for (size_t x = 0; x < pixelsResponse.width; x++)
-                            {
-                                const uint8_t* currentValue = baseAddress + lineOffset + (x * bpp / CHAR_BIT);
-                                setValues.insert(ValueIndirectComparer(currentValue, bpp / CHAR_BIT));
-                            }
-                        }
-                        numUniqueValues = setValues.size();
-                    }
+                        const uint8_t* currentValue = baseAddress + lineOffset + (x * bpp / CHAR_BIT);
+                        setValues.insert(ValueIndirectComparer(currentValue, bpp / CHAR_BIT));
                     }
                 }
-                else
+                numUniqueValues = setValues.size();
+            }
+            }
+        }
+   else
                 {
                     LL_EXCEPTION_NOT_IMPLEMENT("unsupported bit width, currently only 8 bit and higher image are supported");
                 }
-            }
-        }
+
         return numUniqueValues;
     }
 }

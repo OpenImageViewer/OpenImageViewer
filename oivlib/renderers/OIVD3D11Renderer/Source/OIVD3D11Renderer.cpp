@@ -8,7 +8,7 @@ namespace OIV
         fD3D11Renderer = std::make_unique<D3D11Renderer>();
     }
 
-    int OIVD3D11Renderer::SetSelectionRect(SelectionRect selectionRect)
+    int OIVD3D11Renderer::SetSelectionRect(VisualSelectionRect selectionRect)
     {
         return fD3D11Renderer->SetselectionRect(selectionRect);
     }
@@ -42,18 +42,12 @@ namespace OIV
         return fD3D11Renderer->SetExposure(exposure);
     }
 
-    int OIVD3D11Renderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image)
+    int OIVD3D11Renderer::AddRenderable(IRenderable* renderable)
     {
-        return fD3D11Renderer->SetImageBuffer(id, image);
+        return fD3D11Renderer->AddRenderable(renderable);
     }
-    int OIVD3D11Renderer::SetImageProperties(const OIV_CMD_ImageProperties_Request& props)
+    int OIVD3D11Renderer::RemoveRenderable(IRenderable* renderable)
     {
-        return fD3D11Renderer->SetImageProperties(props);
+        return fD3D11Renderer->RemoveRenderable(renderable);
     }
-
-    int OIVD3D11Renderer::RemoveImage(uint32_t id)
-    {
-        return fD3D11Renderer->RemoveImage(id);
-    }
-
 }
