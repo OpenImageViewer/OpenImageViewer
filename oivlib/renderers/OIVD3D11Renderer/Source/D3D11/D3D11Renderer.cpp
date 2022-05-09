@@ -128,8 +128,7 @@ LLUTILS_DISABLE_WARNING_POP
         InitData.SysMemPitch = 0;
         InitData.SysMemSlicePitch = 0;*/
 
-        fBufferImageMain = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_MAIN>(new D3D11BufferBound<CONSTANT_BUFFER_IMAGE_MAIN>
-            (fDevice, cbDesc, nullptr));
+        fBufferImageMain = std::make_unique<D3D11BufferBound<CONSTANT_BUFFER_IMAGE_MAIN>>(fDevice, cbDesc, nullptr);
 
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         buffer.exposure = 1.0;
@@ -157,8 +156,7 @@ LLUTILS_DISABLE_WARNING_POP
         InitData.SysMemPitch = 0;
         InitData.SysMemSlicePitch = 0;*/
 
-        fBufferSelection = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> (
-            new D3D11BufferBound<CONSTANT_BUFFER_SELECTION_RECT>(fDevice, cbDesc, nullptr));
+        fBufferSelection = std::make_unique<D3D11BufferBound<CONSTANT_BUFFER_SELECTION_RECT>>(fDevice, cbDesc, nullptr);
 
         // Mark cpu buffer as invalid selection rect.
         fBufferSelection->GetBuffer().uSelectionRect[0] = -1;
@@ -175,8 +173,7 @@ LLUTILS_DISABLE_WARNING_POP
         cbDesc.MiscFlags = 0;
         cbDesc.StructureByteStride = 0;
         
-        fBufferImageCommon = D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_COMMON>(
-         new D3D11BufferBound<CONSTANT_BUFFER_IMAGE_COMMON>(fDevice, cbDesc, nullptr));
+        fBufferImageCommon = std::make_unique<D3D11BufferBound<CONSTANT_BUFFER_IMAGE_COMMON>>(fDevice, cbDesc, nullptr);
        
     }
         
@@ -210,13 +207,13 @@ LLUTILS_DISABLE_WARNING_POP
         path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
         path programsPath = executableDirPath / L"Resources/programs";
 
-        fImageVertexShader = D3D11ShaderUniquePtr (new D3D11VertexShader(fDevice));
+        fImageVertexShader = std::make_unique<D3D11VertexShader>(fDevice);
         fImageVertexShader->SetSourceFileName(programsPath / L"quad_vp.shader");
-        fImageFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fImageFragmentShader = std::make_unique< D3D11FragmentShader>(fDevice);
         fImageFragmentShader->SetSourceFileName(programsPath / L"quad_fp.shader");
-        fSelectionFragmentShaer = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fSelectionFragmentShaer = std::make_unique<D3D11FragmentShader>(fDevice);
         fSelectionFragmentShaer->SetSourceFileName(programsPath / L"quad_selection_fp.shader");
-        fImageSimpleFragmentShader = D3D11ShaderUniquePtr(new D3D11FragmentShader(fDevice));
+        fImageSimpleFragmentShader = std::make_unique<D3D11FragmentShader>(fDevice);
         fImageSimpleFragmentShader->SetSourceFileName(programsPath / L"quad_simple_fp.shader");
 
         std::filesystem::path shaderCachePath = std::filesystem::path(fDataPath) / L"ShaderCache/.";
@@ -233,7 +230,7 @@ LLUTILS_DISABLE_WARNING_POP
     int D3D11Renderer::Init(const OIV_RendererInitializationParams& initParams)
     {
         fDataPath = initParams.dataPath;
-        fDevice = D3D11DeviceSharedPtr(new D3D11Device());
+        fDevice = std::make_shared<D3D11Device>();
         fDevice->Create(reinterpret_cast<HWND>(initParams.container));
         
         ResizeBackBuffer(1280, 800);

@@ -30,40 +30,29 @@ namespace OIV
 {
     CommandProcessor::CommandProcessor()
     {
-        using namespace std;
-        fCommandHandlers =
-        {
-              {CE_Init,new CommandHandlerInit()}
-            , {OIV_CMD_LoadFile,new CommandHandlerLoadFile()}
-            , {OIV_CMD_LoadRaw,new CommandHandlerLoadRaw()}
-            , {OIV_CMD_UnloadFile,new CommandHandlerUnloadFile()}
-            , {CE_Refresh,new CommandHandlerRefresh()}
-            , {CE_TexelGrid,new CommandHandlerTexelGrid()}
-            , {CMD_SetClientSize,new CommandHandlerSetClientSize()}
-            , {OIV_CMD_Destroy,new CommandHandlerDestroy()}
-            , {OIV_CMD_AxisAlignedTransform,new CommandHandlerAxisAlignedTransform()}
-            , {OIV_CMD_ImageProperties,new CommandHandlerImageProperties()}
-            , {OIV_CMD_SetSelectionRect,new CommandHandlerSetSelectionRect()}
-            , {OIV_CMD_CropImage,new CommandHandlerCropImage()}
-            , {OIV_CMD_GetPixels,new CommandHandlerGetPixels()}
-            , {OIV_CMD_ConvertFormat,new CommandHandlerConvertFormat()}
-            , {OIV_CMD_ColorExposure,new CommandHandlerColorExposure()}
-            , {OIV_CMD_TexelInfo,new CommandHandlerTexelInfo()}
-            , {OIV_CMD_QueryImageInfo,new CommandHandlerQueryImageInfo()}
-            , {OIV_CMD_CreateText,new CommandHandlerCreateText()}
-            , {OIV_CMD_GetKnownFileTypes,new CommandHandlerGetKnownFileTypes()}
-            , {OIV_CMD_RegisterCallbacks,new CommandHandlerRegisterCallbacks()}
-            , {OIV_CMD_GetSubImages,new CommandHandlerGetSubImages()}
-            , {OIV_CMD_ResampleImage,new CommandHandlerResampleImage()}
-        };    
+        fCommandHandlers.emplace(CE_Init, std::make_unique<CommandHandlerInit>());
+        fCommandHandlers.emplace(OIV_CMD_LoadFile, std::make_unique<CommandHandlerLoadFile>());
+        fCommandHandlers.emplace(OIV_CMD_LoadRaw, std::make_unique<CommandHandlerLoadRaw>());
+        fCommandHandlers.emplace(OIV_CMD_UnloadFile, std::make_unique<CommandHandlerUnloadFile>());
+        fCommandHandlers.emplace(CE_Refresh, std::make_unique<CommandHandlerRefresh>());
+        fCommandHandlers.emplace(CE_TexelGrid, std::make_unique<CommandHandlerTexelGrid>());
+        fCommandHandlers.emplace(CMD_SetClientSize, std::make_unique<CommandHandlerSetClientSize>());
+        fCommandHandlers.emplace(OIV_CMD_Destroy, std::make_unique<CommandHandlerDestroy>());
+        fCommandHandlers.emplace(OIV_CMD_AxisAlignedTransform, std::make_unique<CommandHandlerAxisAlignedTransform>());
+        fCommandHandlers.emplace(OIV_CMD_ImageProperties, std::make_unique<CommandHandlerImageProperties>());
+        fCommandHandlers.emplace(OIV_CMD_SetSelectionRect, std::make_unique<CommandHandlerSetSelectionRect>());
+        fCommandHandlers.emplace(OIV_CMD_CropImage, std::make_unique<CommandHandlerCropImage>());
+        fCommandHandlers.emplace(OIV_CMD_GetPixels, std::make_unique<CommandHandlerGetPixels>());
+        fCommandHandlers.emplace(OIV_CMD_ConvertFormat, std::make_unique<CommandHandlerConvertFormat>());
+        fCommandHandlers.emplace(OIV_CMD_ColorExposure, std::make_unique<CommandHandlerColorExposure>());
+        fCommandHandlers.emplace(OIV_CMD_TexelInfo, std::make_unique<CommandHandlerTexelInfo>());
+        fCommandHandlers.emplace(OIV_CMD_QueryImageInfo, std::make_unique<CommandHandlerQueryImageInfo>());
+        fCommandHandlers.emplace(OIV_CMD_CreateText, std::make_unique<CommandHandlerCreateText>());
+        fCommandHandlers.emplace(OIV_CMD_GetKnownFileTypes, std::make_unique<CommandHandlerGetKnownFileTypes>());
+        fCommandHandlers.emplace(OIV_CMD_RegisterCallbacks, std::make_unique<CommandHandlerRegisterCallbacks>());
+        fCommandHandlers.emplace(OIV_CMD_GetSubImages, std::make_unique<CommandHandlerGetSubImages>());
+        fCommandHandlers.emplace(OIV_CMD_ResampleImage, std::make_unique<CommandHandlerResampleImage>());
     }
-
-    CommandProcessor::~CommandProcessor()
-    {
-        for (auto &pair : fCommandHandlers)
-            delete pair.second;
-    }
- 
 
     ResultCode CommandProcessor::ProcessCommand(CommandExecute command, const std::size_t requestSize, const void* requestData, const std::size_t responseSize, void* responseData)
     {

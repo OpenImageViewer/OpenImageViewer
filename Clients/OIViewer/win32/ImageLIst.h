@@ -219,19 +219,19 @@ public:
         is.seekg(0, std::ios::end);
         size_t length = is.tellg();
         is.seekg(0, std::ios::beg);
-        char* pBuffer = new char[length];
-        is.read(pBuffer, length);
+        auto pBuffer = std::make_unique<char[]>(length);
+        is.read(pBuffer.get(), length);
         is.close();
 
-        tagBITMAPFILEHEADER bfh = *(tagBITMAPFILEHEADER*)pBuffer;
-        tagBITMAPINFOHEADER bih = *(tagBITMAPINFOHEADER*)(pBuffer + sizeof(tagBITMAPFILEHEADER));
-        RGBQUAD             rgb = *(RGBQUAD*)(pBuffer + sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER));
+        tagBITMAPFILEHEADER bfh = *(tagBITMAPFILEHEADER*)pBuffer.get();
+        tagBITMAPINFOHEADER bih = *(tagBITMAPINFOHEADER*)(pBuffer.get() + sizeof(tagBITMAPFILEHEADER));
+        RGBQUAD             rgb = *(RGBQUAD*)(pBuffer.get() + sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER));
 
         BITMAPINFO bi;
         bi.bmiColors[0] = rgb;
         bi.bmiHeader = bih;
 
-        char* pPixels = (pBuffer + bfh.bfOffBits);
+        char* pPixels = (pBuffer.get() + bfh.bfOffBits);
         char* ppvBits;
 
 
@@ -255,12 +255,12 @@ public:
         HBITMAP hBitmap = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, (void**)&ppvBits, NULL, 0);
         SetDIBits(NULL, hBitmap, 0, bih.biHeight, pPixels, &bi, DIB_RGB_COLORS);
 
-        const uint8_t* pixels32 = new uint8_t[width * height * 4];
+        auto pixels32 = std::make_unique<uint8_t[]>(width * height * 4);
 
         uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(bih.biWidth * (bih.biBitCount / 8), 4);
 
         uint8_t* sourceLine = (uint8_t*)pPixels;
-        uint8_t* destLine = (uint8_t*)pixels32;
+        uint8_t* destLine = (uint8_t*)pixels32.get();
 
         LONG currentPixelInLine = 0;
         for (LONG line = 0; line < bih.biHeight; line++)
@@ -279,7 +279,7 @@ public:
         }
 
         HBITMAP hBitmap32 = CreateDIBSection(NULL, &bi32, DIB_RGB_COLORS, (void**)&ppvBits, NULL, 0);
-        SetDIBits(NULL, hBitmap32, 0, bihRGBA.biHeight, pixels32, &bi32, DIB_RGB_COLORS);
+        SetDIBits(NULL, hBitmap32, 0, bihRGBA.biHeight, pixels32.get(), &bi32, DIB_RGB_COLORS);
 
         //GetObject(hBitmap, sizeof(BITMAP), &cBitmap);
         //return hBitmap32;

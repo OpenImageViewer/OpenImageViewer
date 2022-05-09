@@ -37,7 +37,7 @@ namespace OIV
             buffer.rowPitchInBytes = image->GetRowPitchInBytes();
             
 
-            return D3D11TextureSharedPtr(new D3D11Texture(device, params, &buffer));
+            return std::make_shared<D3D11Texture>(device, params, &buffer);
 
         }
 }
