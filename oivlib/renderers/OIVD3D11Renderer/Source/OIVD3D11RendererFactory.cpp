@@ -5,6 +5,6 @@ namespace  OIV
 {
     IRendererSharedPtr D3D11RendererFactory::Create()
     {
-        return IRendererSharedPtr(new OIVD3D11Renderer());
+        return std::make_shared<OIVD3D11Renderer>();
     }
 }

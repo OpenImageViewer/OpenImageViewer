@@ -177,7 +177,8 @@ namespace  OIV
             D3D11Error::HandleError("Direct3D11 raised a logic error.\nReason: misuse of error handling - no error");
 
         std::size_t size = errors->GetBufferSize();
-        unique_ptr<char> errorString = unique_ptr<char>(new char[size]);
+
+        auto errorString = std::make_unique<char[]>(size);
         memcpy(errorString.get(), errors->GetBufferPointer(), size);
 
         string errorMessage = string("Direct3D11 Can not compile GPU program.\nreason: ") + errorString.get();

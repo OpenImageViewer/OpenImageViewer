@@ -39,11 +39,10 @@ namespace OIV
 
             if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &NullCommand, &res)) == RC_Success)
             {
-                res.knownFileTypes = new char[res.bufferSize];
+                auto knownFileTypes = std::make_unique<char[]>(res.bufferSize);
+                res.knownFileTypes = knownFileTypes.get();
                 if ((rc = ExecuteCommand(CommandExecute::OIV_CMD_GetKnownFileTypes, &NullCommand, &res)) == RC_Success)
                     o_fileTypes = res.knownFileTypes;
-
-                delete[] res.knownFileTypes;
             }
             return rc;
             

@@ -1122,7 +1122,7 @@ namespace OIV
     void TestApp::DeleteOpenedFile(bool permanently)
     {
         size_t stringLength = GetOpenedFileName().length();
-        std::unique_ptr<wchar_t> buffer = std::unique_ptr<wchar_t>(new wchar_t[stringLength + 2]);
+        auto buffer = std::make_unique<wchar_t[]>(stringLength + 2);
 
         memcpy(buffer.get(), GetOpenedFileName().c_str(), ( stringLength + 1) * sizeof(wchar_t));
 
