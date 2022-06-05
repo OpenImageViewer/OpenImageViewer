@@ -15,9 +15,6 @@ add_library (${TargetName} STATIC ${sourceFiles})
 option(OIV_BUILD_FREETYPE "build freetype" ON)
 
 
-
-set_target_properties(${TargetName} PROPERTIES LINK_FLAGS 
-"/DELAYLOAD:\"libpng16.dll\" /DELAYLOAD:\"FreeImage.dll\" /DELAYLOAD:\"D3DCompiler_47.dll\" /DELAYLOAD:\"dbghelp.dll\" /DELAYLOAD:\"turbojpeg.dll\"")
 target_compile_definitions(${TargetName} PRIVATE OIV_LIBRARY_BUILD)
 
 if ( ${OIV_BUILD_FREETYPE})

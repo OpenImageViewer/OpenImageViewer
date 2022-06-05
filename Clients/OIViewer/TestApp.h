@@ -229,6 +229,10 @@ namespace OIV
         void OnScroll(const LLUtils::PointF64& panAmount);
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
         bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
+        bool LoadFileOrFolder(const std::wstring& filePath);
+
+        LLUtils::ListWString GetSupportedFileListInFolder(const std::wstring& folderPath);
+        bool LoadFileInternal(std::shared_ptr<OIVFileImage> oivImageFile);
         void UpdateOpenImageUI();
         void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
@@ -420,6 +424,7 @@ namespace OIV
         std::wstring fPendingReloadFileName;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
+        std::wstring fPendingFolderLoad;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;
         ::Win32::NotificationIconGroup::IconID fNotificationIconID;
