@@ -1427,19 +1427,11 @@ namespace OIV
         IMCodec::ImageLoaderFlags loaderFlags = onlyRegisteredExtension == true ? IMCodec::ImageLoaderFlags::OnlyRegisteredExtension : IMCodec::ImageLoaderFlags::None;
         fFileDisplayTimer.Start();
         ResultCode result = file->Load(loaderFlags);
-        using namespace  std::string_literals;
+        using namespace std::string_literals;
         switch (result)
         {
         case ResultCode::RC_Success:
-            fCurrentFrame = 0;
-            fCurrentSequencerSpeed = 1.0;
-            fQueueImageInfoLoad = GetImageInfoVisible();
-            SetImageInfoVisible(false);
-            SetResamplingEnabled(false);
-            fImageState.SetOpenedImage(file);
-            //TODO: Load Sub images after finalizing image for faster experience.
-            LoadSubImages();
-            FinalizeImageLoadThreadSafe(result == RC_Success);
+            return LoadFileInternal(file);
             break;
         case ResultCode::RC_FileNotSupported:
             SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
@@ -1447,9 +1439,27 @@ namespace OIV
         default:
             SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
         }
-
         return result == RC_Success;
+
     }
+
+    bool TestApp::LoadFileInternal(std::shared_ptr<OIVFileImage> oivImageFile)
+    {
+        if (oivImageFile->GetImage() == nullptr)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Expected a valid image");
+
+        fCurrentFrame = 0;
+        fCurrentSequencerSpeed = 1.0;
+        fQueueImageInfoLoad = GetImageInfoVisible();
+        SetImageInfoVisible(false);
+        SetResamplingEnabled(false);
+        fImageState.SetOpenedImage(oivImageFile);
+        //TODO: Load Sub images after finalizing image for faster experience.
+        LoadSubImages();
+        FinalizeImageLoadThreadSafe(true);
+        return true;
+    }
+
 
     void TestApp::UpdateOpenImageUI()
     {
@@ -1505,18 +1515,11 @@ namespace OIV
 
         if (absoluteFolderPath != fListedFolder)
         {
+            auto fileList = GetSupportedFileListInFolder(absoluteFolderPath);
+
             //File is loaded from a different folder then the active one.
-            fListFiles.clear();
+            std::swap(fListFiles, fileList);
             fCurrentFileIndex = FileIndexStart;
-
-            std::string fileTypesAnsi;
-            OIVCommands::GetKnownFileTypes(fileTypesAnsi);
-
-            std::wstring fileTypes = LLUtils::StringUtility::ToWString(fileTypesAnsi);
-            LLUtils::FileSystemHelper::FindFiles(fListFiles, absoluteFolderPath, fileTypes, false, false);
-
-            SortFileList();
-
             fListedFolder = absoluteFolderPath;
         }
         
@@ -1558,9 +1561,13 @@ namespace OIV
         using namespace placeholders;
         
         wstring filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
+        const bool isDirectory = std::filesystem::is_directory(filePath);
 
-        const bool isInitialFileProvided = filePath.empty() == false;
+        const bool isInitialFileProvided = filePath.empty() == false && isDirectory == false;
         const bool isInitialFileExists = isInitialFileProvided && filesystem::exists(filePath);
+
+        if (isDirectory)
+            fPendingFolderLoad = filePath;
         
         
         future <bool> asyncResult;
@@ -2256,16 +2263,21 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
+
+        std::string fileTypesAnsi;
+        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
+        fKnownFileTypes = LLUtils::StringUtility::ToWString(LLUtils::StringUtility::ToLower(fileTypesAnsi));
+
+        auto fileTypeList = LLUtils::StringUtility::split(fKnownFileTypes, L';');
+        for (const auto& fileType : fileTypeList)
+            fKnownFileTypesSet.insert(fileType);
+
         fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
 
         //If a file has been succesfuly loaded, index all the file in the folder
         ProcessLoadedDirectory();
+
 		
-		if (IsImageOpen() == false)
-		{
-			ShowWelcomeMessage();
-			UpdateTitle();
-		}
 
         AddCommandsAndKeyBindings();
 
@@ -2288,13 +2300,8 @@ namespace OIV
         fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), fImageState.GetOpenedImage() != nullptr);
         fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), fImageState.GetOpenedImage() != nullptr);
 
-        std::string fileTypesAnsi;
-        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
-        fKnownFileTypes = LLUtils::StringUtility::ToWString(LLUtils::StringUtility::ToLower(fileTypesAnsi));
-        
-        auto fileTypeList =  LLUtils::StringUtility::split(fKnownFileTypes, L';');
-        for (const auto& fileType : fileTypeList)
-            fKnownFileTypesSet.insert(fileType);
+              
+
     	
         fNotificationIconID =  fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), LLUTILS_TEXT("Open Image Viewer"));
         fNotificationIcons.OnNotificationIconEvent.Add(std::bind(&TestApp::OnNotificationIcon, this, std::placeholders::_1));
@@ -2314,6 +2321,20 @@ namespace OIV
 
         if (fReloadSettingsFileIfChanged)
             fCOnfigurationFolderID = fFileWatcher.AddFolder(LLUtils::PlatformUtility::GetExeFolder() + LLUTILS_TEXT("./Resources/Configuration/."));
+
+
+        if (fPendingFolderLoad.empty() == false)
+        {
+            LoadFileOrFolder(fPendingFolderLoad);
+            fPendingFolderLoad.clear();
+        }
+
+        if (IsImageOpen() == false)
+        {
+            ShowWelcomeMessage();
+            UpdateTitle();
+        }
+
     }
 
     template <typename value_type>
@@ -3466,17 +3487,83 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be closed.");
     }
 
+    LLUtils::ListWString TestApp::GetSupportedFileListInFolder(const std::wstring& folderPath)
+    {
+        LLUtils::ListWString fileList;
+        if (std::filesystem::is_directory(folderPath))
+        {
+            LLUtils::FileSystemHelper::FindFiles(fileList, folderPath, fKnownFileTypes, false, false);
+            std::sort(fileList.begin(), fileList.end(), fFileSorter);
+        }
+        else
+        {
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Not a folder");
+        }
+       
+        return fileList;
+    }
 
+
+
+    bool TestApp::LoadFileOrFolder(const std::wstring& filePath)
+    {
+
+        bool success = false;
+        if (std::filesystem::is_directory(filePath))
+        {
+         
+            auto fileList = GetSupportedFileListInFolder(filePath);
+            size_t i;
+            std::shared_ptr<OIVFileImage> file;
+            ResultCode result = ResultCode::RC_NotInitialized;
+
+            if (fileList.empty() == false)
+            {
+                // Traverse file list untill a file has been successfully loaded
+                for (i = 0; i < fileList.size(); i++)
+                {
+                    file = std::make_shared<OIVFileImage>(fileList.at(i));
+                    result = file->Load(IMCodec::ImageLoaderFlags::None);
+                    if (result == RC_Success)
+                        break;
+
+                }
+            }
+
+            if (result == RC_Success)
+            {
+                std::swap(fListFiles, fileList);
+                fCurrentFileIndex = i;
+                fListedFolder = filePath;
+                success = LoadFileInternal(file);
+            }
+        }
+
+        else
+        {
+            if (LoadFile(filePath, false))
+                success = true;
+        }
+
+     
+
+        return success;
+    }
+	
     bool TestApp::HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
-        if (LoadFile(event_ddrag_drop_file->fileName, false))
+
+        std::wstring normalizedPath = std::filesystem::path(event_ddrag_drop_file->fileName).lexically_normal().wstring();
+        if (LoadFileOrFolder(normalizedPath))
         {
             fWindow.SetForground();
             return true;
         }
+
         return false;
-        
+
     }
+
     bool TestApp::ExecutePredefinedCommand(std::string command)
     {
         CommandManager::CommandRequest commandRequest = fCommandManager.GetCommandRequestGroup(command);
