@@ -742,24 +742,33 @@ namespace OIV
         CommandManager::CommandResult& result)
     {
         using namespace std;
-        string cmd = request.args.GetArgValue("cmd");
-        if (cmd == "cropSelectedArea")
-        {
-            CropVisibleImage();
-        }
-        else if (cmd == "selectAll")
-        {
-            result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
-            using namespace LLUtils;
-            RectI32 imageInScreenSpace = static_cast<LLUtils::RectI32>(ImageToClient({ { 0.0,0.0 }, { GetImageSize(ImageSizeType::Transformed) } }));
 
-            fRefreshOperation.Begin();
-            fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, { 0,0 });
-            fSelectionRect.SetSelection(SelectionRect::Operation::BeginDrag, imageInScreenSpace.GetCorner(Corner::TopLeft));
-            fSelectionRect.SetSelection(SelectionRect::Operation::Drag, imageInScreenSpace.GetCorner(Corner::BottomRight));
-            fSelectionRect.SetSelection(SelectionRect::Operation::EndDrag, imageInScreenSpace.GetCorner(Corner::BottomRight));
-            SaveImageSpaceSelection();
-            fRefreshOperation.End();
+        if (fImageState.GetOpenedImage() != nullptr)
+        {
+
+            string cmd = request.args.GetArgValue("cmd");
+            if (cmd == "cropSelectedArea")
+            {
+                CropVisibleImage();
+            }
+            else if (cmd == "selectAll")
+            {
+                result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
+                using namespace LLUtils;
+                RectI32 imageInScreenSpace = static_cast<LLUtils::RectI32>(ImageToClient({ { 0.0,0.0 }, { GetImageSize(ImageSizeType::Transformed) } }));
+
+                fRefreshOperation.Begin();
+                fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, { 0,0 });
+                fSelectionRect.SetSelection(SelectionRect::Operation::BeginDrag, imageInScreenSpace.GetCorner(Corner::TopLeft));
+                fSelectionRect.SetSelection(SelectionRect::Operation::Drag, imageInScreenSpace.GetCorner(Corner::BottomRight));
+                fSelectionRect.SetSelection(SelectionRect::Operation::EndDrag, imageInScreenSpace.GetCorner(Corner::BottomRight));
+                SaveImageSpaceSelection();
+                fRefreshOperation.End();
+            }
+        }
+        else
+        {
+            result.resValue = L"No image loaded";
         }
             
     }
@@ -2681,8 +2690,28 @@ namespace OIV
             for (const auto& binding : bindings)
                 result |= ExecutePredefinedCommand(binding.commandDescription);
         }
+
+        if (keyCombination.keydata().keycode == LInput::KeyCode::F4)
+        {
+            auto openedIMage = fImageState.GetOpenedImage();
+            if (openedIMage != nullptr)
+            {
+                auto image = openedIMage->GetImage();
+                if (image != nullptr && image->GetMetaData().exifData.latitude >= 0)
+                {
+                    std::wstringstream ss;
+                    const auto& exifData = image->GetImageItem()->metaData.exifData;
+                
+                    ss << "https://www.google.com/maps/place/@"<<exifData.latitude << "," << exifData.longitude << ",1000m//data=!3m1!1e3";
+
+                    auto str = ss.str();
+                    ShellExecute(nullptr, L"open", ss.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+                }
+            }
+         
+        }
+
         return result;
-            
     }
 
     void TestApp::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
