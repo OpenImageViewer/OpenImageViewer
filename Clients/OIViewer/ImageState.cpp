@@ -85,29 +85,51 @@ namespace OIV
     void ImageState::Transform(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
     {
 
-        const bool isHorizontalFlip = (int)((int)fTransform.flip & static_cast<int>(IMUtil::OIV_AxisAlignedFlip::Horizontal)) != 0;
-        const bool isVerticalFlip = (int)((int)fTransform.flip & static_cast<int>(IMUtil::OIV_AxisAlignedFlip::Vertical)) != 0;
-        const bool isFlip = isVerticalFlip || isHorizontalFlip;
-
         // the two options to manage axes aligned transofrmation are either
         //1. modify the original image so transformation would cumulative - not the case here.
         //2. preserve the original image and add compute the desired transformation - the case here.
-        // for simplicity the code accepts only 90 degrees rotations. 
+        // for simplicity the code accepts rotation only in 90 degrees rotations increments.
 
-        if (relativeRotation != OIV_AxisAlignedRotation::AAT_None)
+
+     
+        IMUtil::OIV_AxisAlignedTransform newTransform{};
+
+
+        newTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>( flip) ^ fTransform.flip;
+
+        const bool isSingleAxisFlip = newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal || newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Vertical;
+
+        const int rotationDirection = isSingleAxisFlip ? -1 : 1;
+
+        newTransform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>((4 + static_cast<int>(relativeRotation * rotationDirection) + static_cast<int>(fTransform.rotation)) % 4);
+
+        if (newTransform.flip != fTransform.flip || newTransform.rotation != fTransform.rotation)
         {
-            if (relativeRotation != AAT_Rotate90CW && relativeRotation != AAT_Rotate90CCW)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "Rotating image is currently limited to 90 degrees in CW/CCW");
-            
-            fTransform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>((static_cast<int>(relativeRotation) + static_cast<int>(fTransform.rotation)) % 4);
-            //If switching axes by rotating 90 degrees and flip is applied, then flip the flip axes.
-            if (isFlip == true)
-                fTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(static_cast<int>(fTransform.flip) ^ static_cast<int>(3));
+
+            // Use axis aligned transformations identities for better visual perception
+
+            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::None
+                && newTransform.flip == (IMUtil::OIV_AxisAlignedFlip::Horizontal | IMUtil::OIV_AxisAlignedFlip::Vertical))
+                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate180, IMUtil::OIV_AxisAlignedFlip::None };
+
+
+            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate180
+                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Vertical)
+                newTransform = { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Horizontal };
+
+            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate90CW
+                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal)
+                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate90CCW, IMUtil::OIV_AxisAlignedFlip::Vertical};
+
+            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate90CCW
+                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal)
+                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate90CW, IMUtil::OIV_AxisAlignedFlip::Vertical };
+
+            fTransform = newTransform;
+
+
+            SetDirtyStage(ImageChainStage::Deformed);
         }
-
-        fTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(static_cast<int>(fTransform.flip) ^ static_cast<int>(flip));
-
-        SetDirtyStage(ImageChainStage::Deformed);
 
     }
 

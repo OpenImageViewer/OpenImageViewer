@@ -427,7 +427,7 @@ namespace OIV
                 rotation = L"180 degrees";
                 break;
             case IMUtil::OIV_AxisAlignedRotation::Rotate90CCW:
-                rotation = L"180 degrees counter clockwise";
+                rotation = L"90 degrees counter clockwise";
                 break;
             case IMUtil::OIV_AxisAlignedRotation::None:
                 break;
