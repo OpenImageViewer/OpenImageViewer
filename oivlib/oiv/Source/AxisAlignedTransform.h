@@ -1,12 +1,14 @@
 #pragma once
+#include <LLUtils/EnumClassBitwise.h>
+
 namespace IMUtil
 {
     enum OIV_AxisAlignedRotation
     {
-          None
-        , Rotate90CW
-        , Rotate180
-        , Rotate90CCW
+          None          = 0
+        , Rotate90CW    = 1
+        , Rotate180     = 2
+        , Rotate90CCW   = 3
     };
 
     enum class OIV_AxisAlignedFlip
@@ -23,3 +25,5 @@ namespace IMUtil
         OIV_AxisAlignedFlip flip;
     };
 }
+
+LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS(IMUtil::OIV_AxisAlignedFlip)
