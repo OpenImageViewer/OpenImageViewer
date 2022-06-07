@@ -73,7 +73,6 @@ namespace IMUtil
             if (transform.rotation != OIV_AxisAlignedRotation::None || transform.flip != OIV_AxisAlignedFlip::None)
             {
                 ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
-                ImageDescriptor transformedProperties;
                 imageItem->descriptor = image->GetDescriptor();
                 imageItem->data.Allocate(image->GetTotalSizeOfImageTexels());
                 imageItem->itemType = image->GetItemType();
@@ -137,9 +136,9 @@ namespace IMUtil
 
 
                 if (transform.rotation == OIV_AxisAlignedRotation::Rotate90CW || transform.rotation == OIV_AxisAlignedRotation::Rotate90CCW)
-                    swap(transformedProperties.height, transformedProperties.width);
+                    swap(imageItem->descriptor.height, imageItem->descriptor.width);
 
-                transformedProperties.rowPitchInBytes = transformedProperties.width * image->GetBytesPerTexel();
+                imageItem->descriptor.rowPitchInBytes = imageItem->descriptor.width * image->GetBytesPerTexel();
 
                 return std::make_shared<Image>(imageItem,image->GetSubImageGroupType());
             }
