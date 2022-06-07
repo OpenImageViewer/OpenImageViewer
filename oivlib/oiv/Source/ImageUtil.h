@@ -370,19 +370,39 @@ namespace IMUtil
             const uint32_t totalPixels = sourceImage->GetTotalPixels();
             using namespace IMCodec;
             ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
-            
+
             imageItem->descriptor = sourceImage->GetDescriptor();
             imageItem->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
             imageItem->descriptor.rowPitchInBytes = IMCodec::GetTexelFormatSize(imageItem->descriptor.texelFormatDecompressed) / CHAR_BIT * imageItem->descriptor.width;
             imageItem->data.Allocate(imageItem->descriptor.rowPitchInBytes * imageItem->descriptor.height);
-            
 
-            std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
-            std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(imageItem->data.data()), totalPixels);
 
-            NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+            if (sourceImage->GetIsRowPitchNormalized() == true)
+            {
+                std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
+                std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(imageItem->data.data()), totalPixels);
 
-            return std::make_shared<Image>(imageItem,sourceImage->GetSubImageGroupType());
+                NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+            }
+            else
+            {
+                size_t sourceOffset = 0;
+                size_t destOffset = 0;
+                for (uint32_t y = 0; y < sourceImage->GetHeight(); y++)
+                {
+                    auto sourcePtr = reinterpret_cast<const uint8_t*>(sampleData) + sourceOffset;
+                    auto destPtr = reinterpret_cast<uint8_t*>(imageItem->data.data()) + destOffset;
+                    std::span sourceData(reinterpret_cast<const SourceSampleType*>(sourcePtr), sourceImage->GetWidth());
+                    std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(destPtr), sourceImage->GetWidth());
+
+                    NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+
+                    sourceOffset += sourceImage->GetRowPitchInBytes();
+                    destOffset += imageItem->descriptor.rowPitchInBytes;
+                }
+            }
+
+            return std::make_shared<Image>(imageItem, sourceImage->GetSubImageGroupType());
         }
 
 
