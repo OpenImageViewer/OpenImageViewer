@@ -16,6 +16,7 @@ namespace IMUtil
         ,{ ConvertKey(IMCodec::TexelFormat::I_A8_B8_G8_R8, IMCodec::TexelFormat::I_B8_G8_R8_A8),PixelUtil::ABGR32ToBGRA32 }
         ,{ ConvertKey(IMCodec::TexelFormat::I_R16_G16_B16, IMCodec::TexelFormat::I_R8_G8_B8_A8),PixelUtil::RGB48ToBGRA32 }
         ,{ ConvertKey(IMCodec::TexelFormat::I_X1,          IMCodec::TexelFormat::I_R8_G8_B8_A8),PixelUtil::A1ToRGBA32 }
+        ,{ ConvertKey(IMCodec::TexelFormat::I_X1,          IMCodec::TexelFormat::I_B8_G8_R8_A8),PixelUtil::A1ToRGBA32 }
         ,{ ConvertKey(IMCodec::TexelFormat::I_X16,         IMCodec::TexelFormat::I_R8_G8_B8_A8),PixelUtil::A16ToRGBA32 }
         ,{ ConvertKey(IMCodec::TexelFormat::I_B5_G5_R5_X1, IMCodec::TexelFormat::I_R8_G8_B8_A8),PixelUtil::BGR16ToRGBA32 }
         ,{ ConvertKey(IMCodec::TexelFormat::I_B5_G6_R5,    IMCodec::TexelFormat::I_R8_G8_B8_A8),PixelUtil::BGR565ToRGBA32 }
