@@ -74,11 +74,7 @@ namespace OIV
                 fIsDirty = true;
             }
         }
-        void  SetRenderMode(OIV_PROP_CreateText_Mode renderMode)
-        {
-            //fTextOptionsCurrent.
-            //(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
-        }
+  
         
         void  SetBackgroundColor(LLUtils::Color color)
         {

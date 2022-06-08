@@ -3768,7 +3768,7 @@ namespace OIV
             imageInfoText->SetBackgroundColor(LLUtils::Color(0, 0, 0, 127));
             imageInfoText->SetFontPath(LabelManager::sFixedFontPath);
             imageInfoText->SetFontSize(12);
-            imageInfoText->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+            //imageInfoText->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
             imageInfoText->SetOutlineWidth(2);
             imageInfoText->SetPosition({ 20,60 });
 
