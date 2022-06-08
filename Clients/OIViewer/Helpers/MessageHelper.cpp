@@ -124,6 +124,11 @@ namespace OIV
         messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ image->GetImage()->GetHeight() , "px" });
         messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetImage()->GetBitsPerTexel() , " bpp" });
         messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(image->GetImage()->GetTexelInfo()) });
+        if (image->GetImage()->GetOriginalTexelFormat() != IMCodec::TexelFormat::UNKNOWN
+            && image->GetImage()->GetOriginalTexelFormat() != image->GetImage()->GetTexelFormat())
+        {
+            messageValues.emplace_back("original channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(image->GetImage()->GetOriginalTexelInfo()) });
+        }
         messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ image->GetImage()->GetNumSubImages()});
         messageValues.emplace_back("Load time",  MessageFormatter::ValueObjectList{ static_cast<long double>(image->GetImage()->GetRuntimeData().loadTime) , "ms" });
         messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ image->GetImage()->GetRuntimeData().displayTime , "ms" });
