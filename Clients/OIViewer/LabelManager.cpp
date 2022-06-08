@@ -61,7 +61,7 @@ namespace OIV
         text->SetFontPath(sFontPath);
         text->SetFontSize(12);
         text->SetOutlineWidth(2);
-        text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+        //text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
         text->SetBackgroundColor(LLUtils::Color(0, 0, 0, 180));
         
         return text;
