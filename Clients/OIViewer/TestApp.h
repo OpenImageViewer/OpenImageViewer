@@ -134,7 +134,7 @@ namespace OIV
     private: //methods
 
 		std::wstring GetLogFilePath();
-		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args);
+		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack);
 #pragma region Win32 event handling
         bool handleKeyInput(const ::Win32::EventWinMessage* evnt);
         void HideUserMessageGradually();

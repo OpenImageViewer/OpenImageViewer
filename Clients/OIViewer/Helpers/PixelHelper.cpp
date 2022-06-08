@@ -146,10 +146,10 @@ namespace OIV
             }
             }
         }
-   else
-                {
-                    LL_EXCEPTION_NOT_IMPLEMENT("unsupported bit width, currently only 8 bit and higher image are supported");
-                }
+        else
+        {
+            LL_ERROR(LLUtils::Exception::ErrorCode::NotImplemented, "unsupported bit width, currently only 8 bit and higher image are supported");
+        }
 
         return numUniqueValues;
     }

@@ -896,7 +896,7 @@ namespace OIV
 	}
 
 
-    void TestApp::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args)
+    void TestApp::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack)
     {
         using namespace std;
         wstringstream ss;
@@ -909,11 +909,18 @@ namespace OIV
 
         if (args.systemErrorMessage.empty() == false)
             ss << "System error: " << args.systemErrorMessage;
+
         
-        ss << "call stack:" << endl << args.callstack;
+        ss << "call stack:" << endl;
+
+        if (seperatedCallStack.empty() == true)
+            ss << LLUtils::Exception::FormatStackTrace(args.stackTrace, args.exceptionmode == LLUtils::Exception::Mode::Error ? 3 : 0xFFF);
+        else
+            ss << seperatedCallStack;
 
 		mLogFile.Log(ss.str());
-        //MessageBoxW(IsMainThread() ? fWindow.GetHandle() : nullptr, displayMessage.c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
+       // if (args.exceptionmode == LLUtils::Exception::Mode::Error)
+         //   MessageBoxW(IsMainThread() ? fWindow.GetHandle() : nullptr, displayMessage.c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
         //DebugBreak();
     }
 
@@ -924,6 +931,7 @@ namespace OIV
         , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
         , fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this))
     {
+       // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
         OIV_CMD_RegisterCallbacks_Request request;
@@ -935,10 +943,10 @@ namespace OIV
             LLUtils::Exception::EventArgs localArgs;
             localArgs.errorCode = static_cast<LLUtils::Exception::ErrorCode>(args.errorCode);
             localArgs.functionName = args.functionName;
-            localArgs.callstack = args.callstack;
+            
             localArgs.description = args.description;
             localArgs.systemErrorMessage = args.systemErrorMessage;
-			reinterpret_cast<TestApp*>(userPointer)->HandleException(true, localArgs);
+            reinterpret_cast<TestApp*>(userPointer)->HandleException(true, localArgs, args.callstack);
         };
 		request.userPointer = this;
 
@@ -946,7 +954,7 @@ namespace OIV
 
         LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
         {
-            HandleException(false, args);
+                HandleException(false, args, {});
         }
         );
     }

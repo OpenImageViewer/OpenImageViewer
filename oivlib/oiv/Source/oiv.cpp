@@ -461,9 +461,10 @@ namespace OIV
         {
             if (fCallBacks.OnException != nullptr)
             {
+                auto formattedcallStack = LLUtils::Exception::FormatStackTrace(args.stackTrace);
                 OIV_Exception_Args localArgs = { };
                 localArgs.errorCode = static_cast<int>(args.errorCode);
-                localArgs.callstack = args.callstack.c_str();
+                localArgs.callstack = formattedcallStack.c_str();
                 localArgs.description = args.description.c_str();
                 localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
                 localArgs.functionName = args.functionName.c_str();

@@ -67,11 +67,12 @@ namespace IMUtil
             using namespace std;
             using namespace IMCodec;
 
-            if (image->GetIsByteAligned() == false)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "OIV::Image::Transom works only with byte aligned image formats.");
-
+          
             if (transform.rotation != OIV_AxisAlignedRotation::None || transform.flip != OIV_AxisAlignedFlip::None)
             {
+                if (image->GetIsByteAligned() == false)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "OIV::Image::Transom works only with byte aligned image formats.");
+
                 ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
                 imageItem->descriptor = image->GetDescriptor();
                 imageItem->data.Allocate(image->GetTotalSizeOfImageTexels());
