@@ -1244,10 +1244,10 @@ namespace OIV
         }
         else
         {
-            SetResamplingEnabled(true);
             ProcessLoadedDirectory();
         }
 
+        SetResamplingEnabled(true);
 
         if (fQueueImageInfoLoad == true)
         {
