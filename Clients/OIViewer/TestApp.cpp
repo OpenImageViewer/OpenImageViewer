@@ -2705,7 +2705,7 @@ namespace OIV
             if (openedIMage != nullptr)
             {
                 auto image = openedIMage->GetImage();
-                if (image != nullptr && image->GetMetaData().exifData.latitude >= 0)
+                if (image != nullptr && image->GetMetaData().exifData.latitude != std::numeric_limits<double>::max())
                 {
                     std::wstringstream ss;
                     const auto& exifData = image->GetImageItem()->metaData.exifData;
