@@ -57,7 +57,7 @@ namespace OIV
             }
         }
 
-        void  SetFontSize(uint16_t fontSize)
+        void SetFontSize(uint16_t fontSize)
         {
             if (fTextOptionsCurrent.fontSize != fontSize)
             {
@@ -66,7 +66,7 @@ namespace OIV
             }
 
         }
-        void  SetOutlineWidth(uint16_t outlineWidth) 
+        void SetOutlineWidth(uint16_t outlineWidth) 
         {
             if (fTextOptionsCurrent.outlineWidth != outlineWidth)
             {
@@ -76,11 +76,29 @@ namespace OIV
         }
   
         
-        void  SetBackgroundColor(LLUtils::Color color)
+        void SetBackgroundColor(LLUtils::Color color)
         {
             if (fTextOptionsCurrent.backgroundColor != color)
             {
                 fTextOptionsCurrent.backgroundColor = color;
+                fIsDirty = true;
+            }
+        }
+
+        void SetTextColor(LLUtils::Color color)
+        {
+            if (fTextOptionsCurrent.textColor != color)
+            {
+                fTextOptionsCurrent.textColor = color;
+                fIsDirty = true;
+            }
+        }
+
+        void SetUseMetaText(bool useMetaText)
+        {
+            if (fTextOptionsCurrent.useMetaText != useMetaText)
+            {
+                fTextOptionsCurrent.useMetaText = useMetaText;
                 fIsDirty = true;
             }
         }
@@ -125,5 +143,6 @@ namespace OIV
 
 
     using OIVTextImageUniquePtr = std::unique_ptr<OIVTextImage>;
+    using OIVTextImageSharedPtr = std::shared_ptr<OIVTextImage>;
 
 }
