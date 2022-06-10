@@ -295,6 +295,7 @@ private:
     HPEN fPen{};
     uint32_t fEntryHeight = 100;
     int fSelected = -1;
+    //First image index in display
     int fPos = 0;
     HWND fTargetWindow;
     std::vector<ImageDesc> fImages;
