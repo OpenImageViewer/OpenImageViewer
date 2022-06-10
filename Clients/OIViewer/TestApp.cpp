@@ -722,8 +722,10 @@ namespace OIV
         }
         else if (cmd == "selectedArea")
         {
-            CopyVisibleToClipBoard();
-            result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
+            if (CopyVisibleToClipBoard())
+                result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
+            else
+                result.resValue = L"Cannot copy to clipboard";
         }
     }
 
@@ -733,7 +735,7 @@ namespace OIV
     {
 
 
-        switch (PasteFromClipBoard())
+       switch (PasteFromClipBoard())
         {
         case ClipboardDataType::None:
             result.resValue = L"Nothing usable in clipboard";
@@ -745,9 +747,6 @@ namespace OIV
             result.resValue = L"Paste text from clipboard";
             break;
         }
-       
-           
-
     }
 
     void TestApp::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
@@ -2350,8 +2349,13 @@ namespace OIV
             UpdateTitle();
         }
 
-        fRTFFormatID = RegisterClipboardFormat(L"Rich Text Format");
-        fHTMLFormatID = RegisterClipboardFormat(L"HTML Format");
+        //Register clipboard format by PRIORITY
+        fClipboardHelper.RegisterFormat(CF_DIBV5);
+        fClipboardHelper.RegisterFormat(CF_DIB);
+        /*fHTMLFormatID = fClipboardHelper.RegisterFormat(L"HTML Format");
+        fRTFFormatID = fClipboardHelper.RegisterFormat(L"Rich Text Format");*/
+        fClipboardHelper.RegisterFormat(CF_UNICODETEXT);
+        fClipboardHelper.RegisterFormat(CF_TEXT);
     }
 
     template <typename value_type>
@@ -3149,133 +3153,84 @@ namespace OIV
     ClipboardDataType TestApp::PasteFromClipBoard()
     {
         ClipboardDataType clipboardType = ClipboardDataType::None;
-       
-        // const bool isBitmap = IsClipboardFormatAvailable(CF_BITMAP);
-        const bool isDIB = IsClipboardFormatAvailable(CF_DIB);
-        const bool isDIBV5 = IsClipboardFormatAvailable(CF_DIBV5);
-        const bool isAnsiText = IsClipboardFormatAvailable(CF_TEXT);
-        const bool isUnicodeText = IsClipboardFormatAvailable(CF_UNICODETEXT);
-        const bool isRTFText = IsClipboardFormatAvailable(fRTFFormatID);  
-        const bool isHTMLFormat = IsClipboardFormatAvailable(fHTMLFormatID);
+        const auto [formatType, buffer] = fClipboardHelper.GetClipboardData();
 
-
-        if (isDIB || isDIBV5 || isAnsiText || isUnicodeText || isRTFText || isHTMLFormat)
+        if (formatType == CF_DIB || formatType == CF_DIBV5)
         {
-            if (OpenClipboard(nullptr))
+            const tagBITMAPINFO* bitmapInfo = reinterpret_cast<const tagBITMAPINFO*>(buffer.data());
+            const BITMAPINFOHEADER* info = &(bitmapInfo->bmiHeader);
+            uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / CHAR_BIT), 4);
+
+            const std::byte* bitmapBitsconst = reinterpret_cast<const std::byte*>(info + 1);
+            std::byte* bitmapBits = const_cast<std::byte*>(bitmapBitsconst);
+
+            switch (info->biCompression)
             {
-                HANDLE hClipboard = nullptr;
-
-                if (isDIB || isDIBV5)
-                    hClipboard = GetClipboardData(CF_DIB);
-                else if (isHTMLFormat)
-                    hClipboard = GetClipboardData(fHTMLFormatID);
-                else if (isRTFText)
-                    hClipboard = GetClipboardData(fRTFFormatID);
-                else if (isUnicodeText)
-                    hClipboard = GetClipboardData(CF_UNICODETEXT);
-                else if (isAnsiText)
-                    hClipboard = GetClipboardData(CF_TEXT);
+            case BI_RGB:
+                break;
+            case BI_BITFIELDS:
+                bitmapBits += 3 * sizeof(DWORD);
+                break;
+            default:
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, std::string("Unsupported clipboard bitmap compression type :") + std::to_string(info->biCompression));
+            }
 
 
-
-                //LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Unsupported clipboard bitmap format type");
-
-                if (!hClipboard)
-                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "Unsupported clipboard bitmap format type");
-
-
-                if (hClipboard != nullptr && hClipboard != INVALID_HANDLE_VALUE)
-                {
-                    void* clipboardBuffer = GlobalLock(hClipboard);
-
-                    if (clipboardBuffer != nullptr)
-                    {
-                        if (isDIB || isDIBV5)
-                        {
-                            const tagBITMAPINFO* bitmapInfo = reinterpret_cast<tagBITMAPINFO*>(clipboardBuffer);
-                            const BITMAPINFOHEADER* info = &(bitmapInfo->bmiHeader);
-                            uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / 8), 4);
-
-                            const std::byte* bitmapBitsconst = reinterpret_cast<const std::byte*>(info + 1);
-                            std::byte* bitmapBits = const_cast<std::byte*>(bitmapBitsconst);
-
-                            switch (info->biCompression)
-                            {
-                            case BI_RGB:
-                                break;
-                            case BI_BITFIELDS:
-                                bitmapBits += 3 * sizeof(DWORD);
-                                break;
-                            default:
-                                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, std::string("Unsupported clipboard bitmap compression type :") + std::to_string(info->biCompression));
-                            }
+            LoadRaw(bitmapBits
+                , info->biWidth
+                , info->biHeight
+                , rowPitch
+                , info->biBitCount == 24 ? IMCodec::TexelFormat::I_B8_G8_R8 : IMCodec::TexelFormat::I_B8_G8_R8_A8);
 
 
-                            LoadRaw(bitmapBits
-                                , info->biWidth
-                                , info->biHeight
-                                , rowPitch
-                                , info->biBitCount == 24 ? IMCodec::TexelFormat::I_B8_G8_R8 : IMCodec::TexelFormat::I_B8_G8_R8_A8);
+            clipboardType = ClipboardDataType::Image;
+        }
+
+        else if (formatType == CF_UNICODETEXT || formatType == CF_TEXT)
+        {
+
+            std::wstring text;
+            /*if (isHTMLFormat)
+                text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);
+            if (isRTFText)
+                text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);*/
+            if (formatType == CF_UNICODETEXT)
+                text = (wchar_t*)buffer.data();
+            else if (formatType == CF_TEXT)
+                text = LLUtils::StringUtility::ToWString((const char*)buffer.data());
 
 
-                            clipboardType = ClipboardDataType::Image;
-                        }
-                        else if (isUnicodeText || isAnsiText || isRTFText || isHTMLFormat)
-                        {
-                            std::wstring text;
-                            /*if (isHTMLFormat)
-                                text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);
-                            if (isRTFText)
-                                text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);*/
-                            if (isUnicodeText)
-                                text = (wchar_t*)clipboardBuffer;
-                            else if (isAnsiText)
-                                text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);
+            if (text.empty() == false)
+            {
+                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>();
+                textImage->SetText(text);
+                textImage->SetPosition(LLUtils::PointF64::Zero);
+                textImage->SetScale(LLUtils::PointF64::One);
+                textImage->SetFilterType(OIV_Filter_type::FT_None);
+                textImage->SetImageRenderMode(OIV_Image_Render_mode::IRM_MainImage);
+                textImage->SetVisible(true);
+                textImage->SetOpacity(1.0);
 
-
-                            if (text.empty() == false)
-                            {
-                                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>();
-                                textImage->SetText(text);
-                                textImage->SetPosition(LLUtils::PointF64::Zero);
-                                textImage->SetScale(LLUtils::PointF64::One);
-                                textImage->SetFilterType(OIV_Filter_type::FT_None);
-                                textImage->SetImageRenderMode(OIV_Image_Render_mode::IRM_MainImage);
-                                textImage->SetVisible(true);
-                                textImage->SetOpacity(1.0);
-
-                                textImage->SetDPI(fCurrentMonitorProperties.DPIx, fCurrentMonitorProperties.DPIy);
-                                textImage->SetDPI(fCurrentMonitorProperties.DPIx, fCurrentMonitorProperties.DPIy);
-                                textImage->SetFontPath(LabelManager::sFontPath);
-                                textImage->SetFontSize(10);
-                                textImage->SetOutlineWidth(0);
-                                textImage->SetTextColor({ 48, 48, 48, 255 });
-                                textImage->SetUseMetaText(false);
-                                //text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
-                                textImage->SetBackgroundColor(LLUtils::Color(255, 255, 255, 255));
-                                //textImage->Create();
-                                textImage->Create();
-                                //textImage->GetImage();
-                                LoadOivImage(textImage);
-                                clipboardType = ClipboardDataType::Text;
-                            }
-                        }
-
-
-
-                        GlobalUnlock(clipboardBuffer);
-                    }
-                }
-
-                CloseClipboard();
+                textImage->SetDPI(fCurrentMonitorProperties.DPIx, fCurrentMonitorProperties.DPIy);
+                textImage->SetDPI(fCurrentMonitorProperties.DPIx, fCurrentMonitorProperties.DPIy);
+                textImage->SetFontPath(LabelManager::sFontPath);
+                textImage->SetFontSize(10);
+                textImage->SetOutlineWidth(0);
+                textImage->SetTextColor({ 48, 48, 48, 255 });
+                textImage->SetUseMetaText(false);
+                //text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+                textImage->SetBackgroundColor(LLUtils::Color(255, 255, 255, 255));
+                //textImage->Create();
+                textImage->Create();
+                //textImage->GetImage();
+                LoadOivImage(textImage);
+                clipboardType = ClipboardDataType::Text;
             }
         }
         return clipboardType;
-
     }
 
-
-    void TestApp::CopyVisibleToClipBoard()
+    bool TestApp::CopyVisibleToClipBoard()
     {
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         auto cropped =  IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt);
@@ -3289,50 +3244,18 @@ namespace OIV
                 auto clipboardCompatibleImage  = IMUtil::ImageUtil::ConvertImageWithNormalization(flipped, IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
                 if (clipboardCompatibleImage != nullptr)
                 {
-                    struct hDibDelete
-                    {
-                        bool dlt;
-                        HANDLE mHande;
-                        ~hDibDelete()
-                        {
-                            if (dlt && mHande)
-                            {
-                                GlobalFree(mHande);
-                            }
-                        }
-                    };
-
-
                     uint32_t width = clipboardCompatibleImage->GetWidth(); 
                     uint32_t height = clipboardCompatibleImage->GetHeight();
                     uint8_t bpp = clipboardCompatibleImage->GetBitsPerTexel();
-                    HANDLE hDib = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, clipboardCompatibleImage->GetBuffer());
+                    auto dibBUffer = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
 
-                    hDibDelete deletor = { true,hDib };
-
-
-                    if (::OpenClipboard(nullptr))
-                    {
-                        if (SetClipboardData(CF_DIB, hDib) != nullptr)
-                        {
-                            //succeeded do not free hDib.
-                            deletor.dlt = false;
-                        }
-                        else
-                        {
-                            LL_EXCEPTION_SYSTEM_ERROR("Unable to set clipboard data.");
-                        }
-                        if (CloseClipboard() == FALSE)
-                            LL_EXCEPTION_SYSTEM_ERROR("can not close clipboard.");
-
-                    }
-                    else
-                    {
-                        LL_EXCEPTION_SYSTEM_ERROR("Can not open clipboard.");
-                    }
+                    fClipboardHelper.SetClipboardData(CF_DIB, dibBUffer);
+                    return true;
                 }
             }
         }
+
+        return false;
     }
 
     void TestApp::CropVisibleImage()
