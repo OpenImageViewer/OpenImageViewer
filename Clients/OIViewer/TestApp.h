@@ -13,7 +13,7 @@
 #include <Win32/HighPrecisionTimer.h>
 #include <Win32/Timer.h>
 #include <Win32/Win32Window.h>
-
+#include <Win32/Clipboard.h>
 
 #include "win32/MainWindow.h"
 #include "AutoScroll.h"
@@ -252,7 +252,7 @@ namespace OIV
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
         ClipboardDataType PasteFromClipBoard();
-        void CopyVisibleToClipBoard();
+        bool CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
         void UnloadOpenedImaged();
@@ -357,6 +357,8 @@ namespace OIV
         ::Win32::Timer fTimerHideUserMessage;
         ::Win32::Timer fTimerTopMostRetention;
         ::Win32::Timer fTimerSlideShow;
+        ::Win32::Clipboard fClipboardHelper;
+
         int fTopMostCounter = 0;
         ::Win32::Timer fTimerNoActiveZoom;
         ::Win32::Timer fTimerNavigation;
@@ -378,6 +380,10 @@ namespace OIV
         bool fIsActive = false;
         bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
+        
+        ::Win32::ClipboardFormatType fRTFFormatID {};
+        ::Win32::ClipboardFormatType fHTMLFormatID {};
+
         enum class DeletedFileRemovalMode
         {
               None              = 0 << 0// Dont remove opened file if delted.
