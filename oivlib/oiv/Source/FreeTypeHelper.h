@@ -23,7 +23,7 @@ namespace FreeType
             using namespace IMCodec;
             ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
             ImageDescriptor& props = imageItem->descriptor;
-
+            imageItem->itemType = ImageItemType::Image;
             props.height= rasterizedText.height;
             props.width = rasterizedText.width;
             props.rowPitchInBytes = rasterizedText.rowPitch;
