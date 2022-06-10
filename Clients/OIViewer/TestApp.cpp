@@ -1359,6 +1359,7 @@ namespace OIV
             }
             //Reset selected sub image when loading new set of subimages
             fWindow.GetImageControl().GetImageList().SetSelected(-1);
+            fWindow.GetImageControl().RefreshScrollInfo();
         }
         else
         {

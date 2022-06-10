@@ -26,6 +26,21 @@ namespace OIV
 
             ImageList& GetImageList() { return fImageList; }
 
+            void RefreshScrollInfo()
+            {
+                const size_t deltaElements = fImageList.GetNumberOfElements() - fImageList.GetNumberOfDisplayedElements();
+                SCROLLINFO si{};
+                si.cbSize = sizeof(SCROLLINFO);
+                si.fMask = SIF_ALL;
+                si.nMin = 0;
+                si.nMax = static_cast<int>((std::max)(static_cast<size_t>(0), deltaElements));
+                si.nPage = 1;
+                si.nPos = (std::min)(GetScrollPos(GetHandle(), SB_VERT), si.nMax);
+                SetScrollInfo(GetHandle(), SB_VERT, &si, TRUE);
+                SetImagePos(si.nPos);
+                InvalidateRect(GetHandle(), nullptr, TRUE);
+            }
+
             bool HandleWindwMessage(const ::Win32::Event* evnt1)
             {
                 bool handled = true;
@@ -103,17 +118,7 @@ namespace OIV
 
                 case WM_SIZE:
                 {
-                    const size_t deltaElements = fImageList.GetNumberOfElements() - fImageList.GetNumberOfDisplayedElements();
-                    SCROLLINFO si {};
-                    si.cbSize = sizeof(SCROLLINFO);
-                    si.fMask = SIF_ALL;
-                    si.nMin = 0;
-                    si.nMax = static_cast<int>((std::max)(static_cast<size_t>(0), deltaElements));
-                    si.nPage = 1;
-                    si.nPos = (std::min)(GetScrollPos(GetHandle(), SB_VERT), si.nMax);
-                    SetScrollInfo(GetHandle(), SB_VERT, &si, TRUE);
-                    SetImagePos(si.nPos);
-                    InvalidateRect(GetHandle(), nullptr, TRUE);
+                    RefreshScrollInfo();
                 }
                 break;
                 default:
