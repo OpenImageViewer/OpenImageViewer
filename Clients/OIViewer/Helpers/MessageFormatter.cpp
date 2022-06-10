@@ -13,19 +13,19 @@ namespace OIV
 
     std::wstring MessageFormatter::FormatValueObject(const ValueObject& valueObject)
     {
-        switch (valueObject.index())
+        switch (valueObject.valueObject.index())
         {
         case 0:
-            return numberFormatWithCommas<std::wstring>(std::get<int64_t>(valueObject));
+            return numberFormatWithCommas<std::wstring>(std::get<int64_t>(valueObject.valueObject), valueObject.formatArgs);
             break;
         case 1:
-            return numberFormatWithCommas<std::wstring>(std::get<long double>(valueObject));
+            return numberFormatWithCommas<std::wstring>(std::get<long double>(valueObject.valueObject), valueObject.formatArgs);
             break;
         case 2:
-            return LLUtils::StringUtility::ToWString(std::get<std::string>(valueObject));
+            return LLUtils::StringUtility::ToWString(std::get<std::string>(valueObject.valueObject));
             break;
         case 3:
-            return std::get<std::wstring>(valueObject);
+            return std::get<std::wstring>(valueObject.valueObject);
 			break;
             break;
         }
@@ -268,7 +268,7 @@ namespace OIV
     }
 
     template<typename string_type, typename number_type>
-    string_type MessageFormatter::numberFormatWithCommas(number_type value)
+    string_type MessageFormatter::numberFormatWithCommas(number_type value, const ValueFormatArgs& format)
     {
         using char_type = typename string_type::value_type;
         struct Numpunct : public std::numpunct<char_type>
@@ -288,7 +288,7 @@ namespace OIV
         auto& ss = ssWrapper.ss;
 
         ss.str(string_type());
-        ss << std::setprecision(2) << std::fixed << value;
+        ss << std::setprecision(format.precsion) << std::fixed << value;
         return ss.str();
     }
 

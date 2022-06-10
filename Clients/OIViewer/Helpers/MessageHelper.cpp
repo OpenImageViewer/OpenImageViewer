@@ -51,7 +51,7 @@ namespace OIV
                 });
 
                 if (it != commands.end())
-                    messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList{ it->commandDisplayName });
+                    messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList{ {it->commandDisplayName} });
         }
 
         return MessageFormatter::FormatMetaText(args);
@@ -107,36 +107,63 @@ namespace OIV
             auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
 
             if (image->GetImageSource() != ImageSource::File)
-                messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ ParseImageSource(image) });
+                messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ { ParseImageSource(image) } });
             else
-                messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ MessageFormatter::FormatFilePath(filePath) });
+                messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ {MessageFormatter::FormatFilePath(filePath) } });
 
             auto fileSize = std::filesystem::file_size(filePath);
 
-            messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) });
-            messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ GetFileTime(filePath) });
+            messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ { UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) } });
+            messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ { GetFileTime(filePath) } });
             auto bitmapSize = image->GetImage()->GetTotalSizeOfImageTexels();
             auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
-            messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ L"1:" ,compressionRatio });
+            messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ {L"1:"} ,{compressionRatio }  });
         }
         
-        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ image->GetImage()->GetWidth() , "px" });
-        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ image->GetImage()->GetHeight() , "px" });
-        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ image->GetImage()->GetBitsPerTexel() , " bpp" });
-        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(image->GetImage()->GetTexelInfo()) });
+        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ { image->GetImage()->GetWidth()} ,{ "px" } });
+        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ {image->GetImage()->GetHeight() }, {"px"} });
+        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ {image->GetImage()->GetBitsPerTexel()} , {" bpp"} });
+        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ { MessageFormatter::FormatTexelInfo(image->GetImage()->GetTexelInfo()) } });
         if (image->GetImage()->GetOriginalTexelFormat() != IMCodec::TexelFormat::UNKNOWN
             && image->GetImage()->GetOriginalTexelFormat() != image->GetImage()->GetTexelFormat())
         {
-            messageValues.emplace_back("original channels info", MessageFormatter::ValueObjectList{ MessageFormatter::FormatTexelInfo(image->GetImage()->GetOriginalTexelInfo()) });
+            messageValues.emplace_back("original channels info", MessageFormatter::ValueObjectList{ {MessageFormatter::FormatTexelInfo(image->GetImage()->GetOriginalTexelInfo()) } });
         }
-        messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ image->GetImage()->GetNumSubImages()});
-        messageValues.emplace_back("Load time",  MessageFormatter::ValueObjectList{ static_cast<long double>(image->GetImage()->GetRuntimeData().loadTime) , "ms" });
-        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ image->GetImage()->GetRuntimeData().displayTime , "ms" });
-        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ image->GetImage()->GetRuntimeData().pluginUsed.empty() == false ? image->GetImage()->GetRuntimeData().pluginUsed : L"N/A" });
+        messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ {image->GetImage()->GetNumSubImages()} });
+        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(image->GetImage()->GetRuntimeData().loadTime)} , {"ms" }  });
+        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ {image->GetImage()->GetRuntimeData().displayTime} , {"ms" } });
+        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ {image->GetImage()->GetRuntimeData().pluginUsed.empty() == false ? image->GetImage()->GetRuntimeData().pluginUsed : L"N/A" } });
         
         auto uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
         if (uniqueValues > -1)
-            messageValues.emplace_back("Unique values", MessageFormatter::ValueObjectList{ uniqueValues });
+            messageValues.emplace_back("Unique values", MessageFormatter::ValueObjectList{ {uniqueValues } }
+    );
+
+
+        // Add meta data
+        const auto& metaData = image->GetImage()->GetMetaData();
+
+        if (metaData.exifData.longitude != std::numeric_limits<double>::max())
+            messageValues.emplace_back("Longitude", MessageFormatter::ValueObjectList{ { { metaData.exifData.longitude } , {6} } });
+
+        if (metaData.exifData.latitude != std::numeric_limits<double>::max())
+            messageValues.emplace_back("Latitude", MessageFormatter::ValueObjectList{ { {metaData.exifData.latitude} , {6} } });
+
+        if (metaData.exifData.altitude != std::numeric_limits<double>::max())
+            messageValues.emplace_back("Altitude", MessageFormatter::ValueObjectList{ {metaData.exifData.altitude},{"m"} });
+
+        if (metaData.exifData.make.empty() == false)
+            messageValues.emplace_back("Manufacturer", MessageFormatter::ValueObjectList{ {metaData.exifData.make } });
+
+        if (metaData.exifData.model.empty() == false)
+            messageValues.emplace_back("Model", MessageFormatter::ValueObjectList{ {metaData.exifData.model } });
+
+        if (metaData.exifData.software.empty() == false)
+            messageValues.emplace_back("Software", MessageFormatter::ValueObjectList{ {metaData.exifData.software} });
+
+        if (metaData.exifData.copyright.empty() == false)
+            messageValues.emplace_back("Copyright", MessageFormatter::ValueObjectList{ { metaData.exifData.copyright } });
+
 
         message += L'\n' + MessageFormatter::FormatMetaText(args);
         return message;
