@@ -30,7 +30,7 @@ namespace OIV
 
         if (imageText != nullptr)
         {
-            if (imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetOriginalTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
+            if (imageText->GetTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
 
             //this->fTextOptionsCached = this->fTextOptionsCurrent;
