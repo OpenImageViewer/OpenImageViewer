@@ -1211,73 +1211,6 @@ namespace OIV
             SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()));
     }
 
-    void TestApp::FinalizeImageLoad(bool isImageLoaded)
-    {
-        if (isImageLoaded == true)
-        {
-            // Enter this function only from the main thread.
-            assert("TestApp::FinalizeImageLoad() can be called only from the main thread" && IsMainThread());
-            // TODO: Upload image to renderer
-            fRefreshOperation.Begin();
-			
-            fImageState.ResetUserState();
-
-            if (fResetTransformationMode == ResetTransformationMode::ResetAll)
-                FitToClientAreaAndCenter();
-            
-            AutoPlaceImage();
-
-            if (fIsTryToLoadInitialFile == false)
-                UpdateTitle();
-
-            fImageState.Refresh(); // Make sure a render compatible image is available.
-            fWindow.SetShowImageControl(IsSubImagesVisible());
-            UnloadWelcomeMessage();
-            DisplayOpenedFileName();
-
-            if (fIsTryToLoadInitialFile == false)
-            {
-                fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), true);
-                fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), true);
-            }
-        	
-            fRefreshOperation.End();
-            fFileDisplayTimer.Stop();
-
-            const_cast<IMCodec::ItemRuntimeData&>(fImageState.GetOpenedImage()->GetImage()->GetRuntimeData()).displayTime = fFileDisplayTimer.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
-
-            fLastImageLoadTimeStamp.Start(); 
-        }
-
-        if (fIsTryToLoadInitialFile == true)
-        {
-            fWindow.SetVisible(true);
-            fIsTryToLoadInitialFile = false;
-        }
-        else
-        {
-            ProcessLoadedDirectory();
-        }
-
-        SetResamplingEnabled(true);
-
-        if (fQueueImageInfoLoad == true)
-        {
-            SetImageInfoVisible(true);
-            fQueueImageInfoLoad = false;
-        }
-
-        if (fImageState.GetOpenedImage()->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
-        {
-           //Start sequencer:
-            fSequencerTimer.SetInterval(1);
-
-        }
-        else
-        {
-            fSequencerTimer.SetInterval(0);
-        }
-    }
 
     void TestApp::WatchCurrentFolder()
     {
@@ -1433,21 +1366,6 @@ namespace OIV
         }
     }
 
-    void TestApp::FinalizeImageLoadThreadSafe(bool isImageLoaded)
-    {
-        if (IsMainThread())
-        {
-            FinalizeImageLoad(isImageLoaded);
-        }
-        else
-        {
-            // Wait for the main window to get initialized.
-            std::unique_lock<std::mutex> ul(fMutexWindowCreation);
-            
-            // send message to main thread.
-            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED, isImageLoaded, 0);
-        }
-    }
 
     bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
     {
@@ -1460,7 +1378,7 @@ namespace OIV
         switch (result)
         {
         case ResultCode::RC_Success:
-            return LoadFileInternal(file);
+            LoadOivImage(file);
             break;
         case ResultCode::RC_FileNotSupported:
             SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
@@ -1472,9 +1390,12 @@ namespace OIV
 
     }
 
-    bool TestApp::LoadFileInternal(std::shared_ptr<OIVFileImage> oivImageFile)
+    void TestApp::LoadOivImage(OIVBaseImageSharedPtr oivImage)
     {
-        if (oivImageFile->GetImage() == nullptr)
+        // Enter this function only from the main thread.
+        assert("TestApp::FinalizeImageLoad() can be called only from the main thread" && IsMainThread());
+
+        if (oivImage->GetImage() == nullptr)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Expected a valid image");
 
         fCurrentFrame = 0;
@@ -1482,11 +1403,61 @@ namespace OIV
         fQueueImageInfoLoad = GetImageInfoVisible();
         SetImageInfoVisible(false);
         SetResamplingEnabled(false);
-        fImageState.SetOpenedImage(oivImageFile);
-        //TODO: Load Sub images after finalizing image for faster experience.
+        fImageState.SetOpenedImage(oivImage);
+        
+        fRefreshOperation.Begin();
+
+        fImageState.ResetUserState();
+
+        if (fResetTransformationMode == ResetTransformationMode::ResetAll)
+            FitToClientAreaAndCenter();
+
+        AutoPlaceImage();
+
+        //if (fIsTryToLoadInitialFile == false)
+          //  UpdateTitle();
+
+        fImageState.Refresh();
+        fWindow.SetShowImageControl(IsSubImagesVisible());
+        UnloadWelcomeMessage();
+        DisplayOpenedFileName();
+
+        if (fContextMenu != nullptr)
+        {
+            fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), oivImage->GetImageSource() == ImageSource::File);
+            fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), oivImage->GetImageSource() == ImageSource::File);
+        }
+
+        fRefreshOperation.End();
+        fFileDisplayTimer.Stop();
+
         LoadSubImages();
-        FinalizeImageLoadThreadSafe(true);
-        return true;
+
+        const_cast<IMCodec::ItemRuntimeData&>(fImageState.GetOpenedImage()->GetImage()->GetRuntimeData()).displayTime = fFileDisplayTimer.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+
+        fLastImageLoadTimeStamp.Start();
+
+
+        if (fIsTryToLoadInitialFile == true)
+        {
+            fWindow.SetVisible(true);
+            fIsTryToLoadInitialFile = false;
+        }
+        else
+        {
+            ProcessLoadedDirectory();
+        }
+
+        SetResamplingEnabled(true);
+
+        if (fQueueImageInfoLoad == true)
+        {
+            SetImageInfoVisible(true);
+            fQueueImageInfoLoad = false;
+        }
+
+        // if sub images of main image are animation frame, start sequencer, otherwise make sure it's stopped
+        fSequencerTimer.SetInterval(fImageState.GetOpenedImage()->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame ? 1 : 0);
     }
 
 
@@ -1590,6 +1561,8 @@ namespace OIV
         using namespace placeholders;
         
         wstring filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
+        filePath = std::filesystem::path(filePath).lexically_normal();
+    
         const bool isDirectory = std::filesystem::is_directory(filePath);
 
         const bool isInitialFileProvided = filePath.empty() == false && isDirectory == false;
@@ -1607,7 +1580,12 @@ namespace OIV
                  
             fMutexWindowCreation.lock();
             // if initial file is provided, load asynchronously.
-            asyncResult = async(launch::async, &TestApp::LoadFile, this, filePath, false);
+            asyncResult = async(launch::async, [&]() ->bool
+                {
+                    fInitialFile = std::make_shared<OIVFileImage>(filePath);
+                    return fInitialFile->Load(IMCodec::ImageLoaderFlags::None) == RC_Success;
+                }
+            );
         }
         
         // initialize the windowing system of the window
@@ -1714,6 +1692,13 @@ namespace OIV
         }
 
         fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
+
+        if (isInitialFileLoadedSuccesfuly)
+        {
+            LoadOivImage(fInitialFile);
+            fInitialFile.reset();
+        }
+            
     }
 
     IMCodec::ImageSharedPtr TestApp::GetImageByIndex(int32_t index)
@@ -2326,13 +2311,13 @@ namespace OIV
         fContextMenu->AddItem(LLUTILS_TEXT("Quit"), MenuItemData{ "cmd_view_state","type=quit" });
 
 
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), fImageState.GetOpenedImage() != nullptr);
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), fImageState.GetOpenedImage() != nullptr);
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"), fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File);
+        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"), fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File);
 
               
 
     	
-        fNotificationIconID =  fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), LLUTILS_TEXT("Open Image Viewer"));
+        fNotificationIconID = fNotificationIcons.AddIcon(MAKEINTRESOURCE(IDI_APP_ICON), LLUTILS_TEXT("Open Image Viewer"));
         fNotificationIcons.OnNotificationIconEvent.Add(std::bind(&TestApp::OnNotificationIcon, this, std::placeholders::_1));
 
         fNotificationContextMenu = std::make_unique < ContextMenu<int>> (fWindow.GetHandle());
@@ -2364,6 +2349,8 @@ namespace OIV
             UpdateTitle();
         }
 
+        fRTFFormatID = RegisterClipboardFormat(L"Rich Text Format");
+        fHTMLFormatID = RegisterClipboardFormat(L"HTML Format");
     }
 
     template <typename value_type>
@@ -3155,10 +3142,7 @@ namespace OIV
         ResultCode result = rawImage->Load(params, { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical });
 
         if (result == RC_Success)
-        {
-            fImageState.SetOpenedImage(rawImage);
-            FinalizeImageLoadThreadSafe(result == ResultCode::RC_Success);
-        }
+            LoadOivImage(rawImage);
     }
 
     ClipboardDataType TestApp::PasteFromClipBoard()
@@ -3359,12 +3343,9 @@ namespace OIV
         if (cropped != nullptr)
         {
             auto oivCropped = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib,cropped);
-            fImageState.SetImageChainRoot(oivCropped);
+            LoadOivImage(oivCropped);
             CancelSelection();
         }
-
-        FinalizeImageLoadThreadSafe(cropped != nullptr);
-
     }
 
 
@@ -3503,10 +3484,6 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WN_FIRST_FRAME_DISPLAYED:
             AfterFirstFrameDisplayed();
             break;
-        
-        case Win32::UserMessage::PRIVATE_WN_NOTIFY_LOADED:
-            FinalizeImageLoadThreadSafe(static_cast<bool>( evnt->message.wParam));
-        break;
         
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
             fAutoScroll->PerformAutoScroll();
@@ -3652,7 +3629,8 @@ namespace OIV
                 std::swap(fListFiles, fileList);
                 fCurrentFileIndex = i;
                 fListedFolder = filePath;
-                success = LoadFileInternal(file);
+                LoadOivImage(file);
+                success = true;
             }
         }
 
