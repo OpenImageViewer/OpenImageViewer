@@ -73,6 +73,13 @@ namespace OIV
          , Count
     };
 
+    enum ClipboardDataType
+    {
+          None
+        , Image
+        , Text
+    };
+
    
 
     //Assue Count exists and presenting the total number of values in an enum.
@@ -246,7 +253,7 @@ namespace OIV
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
-        bool PasteFromClipBoard();
+        ClipboardDataType PasteFromClipBoard();
         void CopyVisibleToClipBoard();
         void CropVisibleImage();
         void AfterFirstFrameDisplayed();
