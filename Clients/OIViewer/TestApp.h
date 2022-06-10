@@ -239,13 +239,11 @@ namespace OIV
         bool LoadFileOrFolder(const std::wstring& filePath);
 
         LLUtils::ListWString GetSupportedFileListInFolder(const std::wstring& folderPath);
-        bool LoadFileInternal(std::shared_ptr<OIVFileImage> oivImageFile);
+        void LoadOivImage(OIVBaseImageSharedPtr oivImage);
         void UpdateOpenImageUI();
         void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
-        void FinalizeImageLoad(bool isImageLoaded);
-        void FinalizeImageLoadThreadSafe(bool isImageLoaded);
         const std::wstring& GetOpenedFileName() const;
 		bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
@@ -443,6 +441,7 @@ namespace OIV
         void SortFileList();
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
+        std::shared_ptr<OIVFileImage> fInitialFile;
 
 		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
 
