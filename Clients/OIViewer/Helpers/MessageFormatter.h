@@ -12,7 +12,19 @@ namespace OIV
         static inline std::wstring DefaultValueColor = L"<textcolor=#98f733>";
         static inline std::wstring DefaultHeaderColor = L"<textcolor=#ff00ff>";
 
-        using ValueObject =  std::variant<int64_t, long double, std::string, std::wstring>;
+        struct ValueFormatArgs
+        {
+            int precsion = 2;
+        };
+
+        using ValueObjectBase =  std::variant<int64_t, long double, std::string, std::wstring>;
+        struct ValueObject
+        {
+            ValueObjectBase valueObject;
+            ValueFormatArgs formatArgs;
+
+        };
+
         using ValueObjectList = std::vector<ValueObject>;
         using MessagesValues = std::vector<std::pair<std::string, ValueObjectList>>;
         
@@ -47,6 +59,6 @@ namespace OIV
         static DecomposedPath DecomposePath(const std::filesystem::path& filePath);
 
         template<typename string_type, typename number_type>
-        static string_type numberFormatWithCommas(number_type value);
+        static string_type numberFormatWithCommas(number_type value, const ValueFormatArgs& format);
     };
 }
