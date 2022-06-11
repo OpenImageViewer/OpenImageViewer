@@ -348,6 +348,15 @@ LLUTILS_DISABLE_WARNING_POP
         //Draw selection rect.
         if (fBufferSelection->GetBuffer().uSelectionRect[0] != -1)
         {
+            CONSTANT_BUFFER_SELECTION_RECT& buffer = fBufferSelection->GetBuffer();
+            if (static_cast<int32_t>(fViewport.Width) != buffer.uvViewportSize[0]
+                || static_cast<int32_t>(fViewport.Height) != buffer.uvViewportSize[1])
+            {
+                buffer.uvViewportSize[0] = static_cast<int32_t>(fViewport.Width);
+                buffer.uvViewportSize[1] = static_cast<int32_t>(fViewport.Height);
+                fBufferSelection->Update();
+            }
+
             fBufferSelection->Use(ShaderStage::FragmentShader, 0);
             fSelectionFragmentShaer->Use();
             context->Draw(4, 0);
