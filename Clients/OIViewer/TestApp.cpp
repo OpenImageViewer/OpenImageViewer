@@ -1386,10 +1386,10 @@ namespace OIV
             LoadOivImage(file);
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
             break;
         default:
-            SetUserMessageThreadSafe(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
         }
         return result == RC_Success;
 
@@ -1420,9 +1420,6 @@ namespace OIV
             FitToClientAreaAndCenter();
 
         AutoPlaceImage();
-
-        //if (fIsTryToLoadInitialFile == false)
-          //  UpdateTitle();
 
         fImageState.Refresh();
         fWindow.SetShowImageControl(IsSubImagesVisible());
@@ -1585,7 +1582,6 @@ namespace OIV
         {
             fIsTryToLoadInitialFile = true;
                  
-            fMutexWindowCreation.lock();
             // if initial file is provided, load asynchronously.
             asyncResult = async(launch::async, [&]() ->bool
                 {
@@ -1619,10 +1615,6 @@ namespace OIV
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
         fWindow.GetCanvasWindow().AddEventListener(std::bind(&TestApp::HandleClientWindowMessages, this, _1));
 
-
-        if (isInitialFileExists == true)
-            fMutexWindowCreation.unlock();
-        
 		fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
 		fTimerHideUserMessage.SetCallback([this]()
 			{
@@ -3468,9 +3460,6 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL:
             fAutoScroll->PerformAutoScroll();
             break;
-        case Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE:
-            SetUserMessage(fLastMessageForMainThread, static_cast<int32_t>(uMsg.wParam));
-            break;
         case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
             OnFileChangedImpl(reinterpret_cast<FileWatcher::FileChangedEventArgs*>(uMsg.wParam));
             break;
@@ -3705,22 +3694,6 @@ namespace OIV
             return HandleFileDragDropEvent(dragDropEvent);
 
         return false;
-    }
-
-    void TestApp::SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay)
-    {
-        if (IsMainThread() == true)
-		{
-            SetUserMessage(message, hideDelay);
-		}
-        else
-        {
-            fLastMessageForMainThread = message;
-            // Wait for the main window to get initialized.
-            std::unique_lock<std::mutex> ul(fMutexWindowCreation);
-			
-            PostMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_NOTIFY_USER_MESSAGE, hideDelay, 0);
-        }
     }
 
     void TestApp::SetUserMessage(const std::wstring& message,int32_t hideDelay )
