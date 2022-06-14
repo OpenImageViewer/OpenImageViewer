@@ -18,7 +18,7 @@
       "Name": "cmd_toggle_keybindings",
       "arguments": "type=settings"
     },
-    
+
     {
       "GroupID": "OpenFile",
       "DisplayName": "Open file",
@@ -288,6 +288,12 @@
       "DisplayName": "Open with vivaldi",
       "Name": "cmd_shell",
       "arguments": "cmd=openWith;app=C:/Users/Nicker/AppData/Local/Vivaldi/Application/vivaldi.exe"
+    },
+    {
+      "GroupID": "OpenLocationInGoogleMaps",
+      "DisplayName": "Open in google maps",
+      "Name": "cmd_shell",
+      "arguments": "cmd=openWithGoogleMaps"
     },
     {
       "GroupID": "CopySelectedAreaToClipboard",

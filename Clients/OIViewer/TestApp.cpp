@@ -850,6 +850,29 @@ namespace OIV
             if (photoshopApplicationPath.empty() == false)
                 ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), GetOpenedFileName().c_str(), nullptr, SW_SHOWDEFAULT);
         }
+        else if (cmd == "openWithGoogleMaps")
+        {
+            auto openedIMage = fImageState.GetOpenedImage();
+            if (openedIMage != nullptr)
+            {
+                auto image = openedIMage->GetImage();
+                if (image != nullptr && image->GetMetaData().exifData.latitude != std::numeric_limits<double>::max())
+                {
+                    std::wstringstream ss;
+                    const auto& exifData = image->GetImageItem()->metaData.exifData;
+
+                    ss << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude << ",1000m//data=!3m1!1e3";
+
+                    auto str = ss.str();
+                    ShellExecute(nullptr, L"open", ss.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+                }
+                else
+                {
+                    result.resValue = L"No geo location data found";
+
+                }
+            }
+        }
         else if (cmd == "containingFolder")
         {
             if (GetOpenedFileName().empty() == false)
@@ -2716,26 +2739,6 @@ namespace OIV
         {
             for (const auto& binding : bindings)
                 result |= ExecutePredefinedCommand(binding.commandDescription);
-        }
-
-        if (keyCombination.keydata().keycode == LInput::KeyCode::F4)
-        {
-            auto openedIMage = fImageState.GetOpenedImage();
-            if (openedIMage != nullptr)
-            {
-                auto image = openedIMage->GetImage();
-                if (image != nullptr && image->GetMetaData().exifData.latitude != std::numeric_limits<double>::max())
-                {
-                    std::wstringstream ss;
-                    const auto& exifData = image->GetImageItem()->metaData.exifData;
-                
-                    ss << "https://www.google.com/maps/place/@"<<exifData.latitude << "," << exifData.longitude << ",1000m//data=!3m1!1e3";
-
-                    auto str = ss.str();
-                    ShellExecute(nullptr, L"open", ss.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
-                }
-            }
-         
         }
 
         return result;
