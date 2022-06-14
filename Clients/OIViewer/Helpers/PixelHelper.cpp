@@ -104,6 +104,8 @@ namespace OIV
         {
             switch (bpp)
             {
+            case 0:
+                break;
             case 8:
                 numUniqueValues = GetUniqueColors<ValueComparer<8 / CHAR_BIT>>(image, bpp);
                 break;

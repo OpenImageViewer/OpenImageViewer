@@ -20,8 +20,18 @@ namespace OIV
         using ValueObjectBase =  std::variant<int64_t, long double, std::string, std::wstring>;
         struct ValueObject
         {
-            ValueObjectBase valueObject;
-            ValueFormatArgs formatArgs;
+            ValueObject(const ValueObjectBase& objectBase) : valueObject(objectBase)
+            {
+
+            }
+
+            ValueObject(const ValueObjectBase& objectBase, const ValueFormatArgs& args) : valueObject(objectBase)
+                , formatArgs(args)
+            {
+
+            }
+            ValueObjectBase valueObject{};
+            ValueFormatArgs formatArgs{};
 
         };
 

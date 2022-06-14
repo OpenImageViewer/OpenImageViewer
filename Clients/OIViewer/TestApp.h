@@ -123,6 +123,7 @@ namespace OIV
     public:
         void OnLabelRefreshRequest();
         TestApp();
+        ~TestApp();
         void Init(std::wstring filePath);
         void Run();
         void Destroy();
@@ -276,6 +277,7 @@ namespace OIV
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
         void ShowImageInfo();
+        void CountColorsAsync();
         void SetImageInfoVisible(bool visible);
         bool GetImageInfoVisible() const;
         void ProcessLoadedDirectory();
@@ -329,6 +331,9 @@ namespace OIV
         std::wstring fListedFolder; // the current folder the the file list is taken from
         int fCurrentFrame = 0;
         double fCurrentSequencerSpeed = 1.0;
+        IMCodec::ImageSharedPtr fCountingImageColor;
+        std::atomic_bool fIsColorThreadRunning = false;
+        std::thread fCountingColorsThread;
 
         using MouseButtonType = LInput::MouseButton ;
         template <typename T>

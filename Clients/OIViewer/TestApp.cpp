@@ -49,7 +49,7 @@
 #include "ContextMenu.h"
 #include "globals.h"
 #include "ConfigurationLoader.h"
-
+#include "Helpers/PixelHelper.h"
 
 #include "resource.h"
 
@@ -933,6 +933,12 @@ namespace OIV
        // if (args.exceptionmode == LLUtils::Exception::Mode::Error)
          //   MessageBoxW(IsMainThread() ? fWindow.GetHandle() : nullptr, displayMessage.c_str(), L"Unhandled exception has occured.", MB_OK | MB_APPLMODAL);
         //DebugBreak();
+    }
+
+    TestApp::~TestApp()
+    {
+        if (fCountingColorsThread.joinable())
+            fCountingColorsThread.join();
     }
 
     TestApp::TestApp()
@@ -3467,7 +3473,38 @@ namespace OIV
         case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
             OnFileChangedImpl(reinterpret_cast<FileWatcher::FileChangedEventArgs*>(uMsg.wParam));
             break;
+        case Win32::UserMessage::PRIVATE_WM_COUNT_COLORS:
+        {
+            fIsColorThreadRunning = false;
 
+            if (fImageState.GetImage(ImageChainStage::SourceImage)->GetImage().get() == (IMCodec::Image*)uMsg.wParam)
+            {
+                //Still the same image on display, assing number of colors and refresh ImageInfo
+
+                // -2 means that color counting has been tried and failed.
+
+                fCountingImageColor.reset();
+
+                const_cast<IMCodec::ItemRuntimeData&>(
+                    fImageState.GetImage(ImageChainStage::SourceImage)->GetImage()->GetRuntimeData())
+                    .numUniqueColors = (int64_t)uMsg.lParam != -1 ? (int64_t)uMsg.lParam : -2;
+                if (GetImageInfoVisible() == true)
+                {
+                    ShowImageInfo();
+                }
+				 
+            }
+            else
+            {
+                // If a different image on display Just count colors
+                if (GetImageInfoVisible() == true)
+                    CountColorsAsync();
+            }
+
+
+            
+        }
+        break;
             case WM_COPYDATA:
             {
                 COPYDATASTRUCT* cds = (COPYDATASTRUCT*)uMsg.lParam;
@@ -3796,11 +3833,40 @@ namespace OIV
         return false;
     }
 
+
+    void TestApp::CountColorsAsync()
+    {
+        //Ensure shared tr refcount doesn't get to zero 
+         // by assiging it to a private memeber field.
+
+        auto openedImage = fImageState.GetImage(ImageChainStage::SourceImage)->GetImage();
+        const auto& runtimeData = openedImage->GetRuntimeData();
+        if (runtimeData.numUniqueColors == -1)
+        {
+            if (fIsColorThreadRunning == false)
+            {
+                fIsColorThreadRunning = true;
+                if (fCountingColorsThread.joinable())
+                    fCountingColorsThread.join();
+
+                fCountingImageColor = openedImage;
+                fCountingColorsThread = std::thread([](IMCodec::ImageSharedPtr image, HWND windowHandle)-> void
+                    {
+                        int64_t uniqueValues = PixelHelper::CountUniqueValues(image);
+                        ::PostMessage(windowHandle, Win32::UserMessage::PRIVATE_WM_COUNT_COLORS, (WPARAM)image.get(), (LPARAM)uniqueValues);
+
+                    }, fCountingImageColor, fWindow.GetHandle());
+            }
+        }
+    }
+
     void TestApp::ShowImageInfo()
     {
         if (IsImageOpen())
         {
-            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetImage(ImageChainStage::SourceImage));
+            CountColorsAsync();
+
+            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetOpenedImage(), fImageState.GetImage(ImageChainStage::SourceImage)->GetImage());
             OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
 
             imageInfoText->SetText(imageInfoString);
