@@ -286,6 +286,8 @@ namespace OIV
         IMCodec::ImageSharedPtr GetImageByIndex(int32_t index);
         bool IsSubImagesVisible() const;
         void SetBackgroundColor(int index, LLUtils::Color color);
+        void UpdateSelectionRectText();
+     
 
 
         using netsettings_Create_func = void (*)(GuiCreateParams*);

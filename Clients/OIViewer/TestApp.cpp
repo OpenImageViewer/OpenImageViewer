@@ -2800,10 +2800,54 @@ namespace OIV
         }
     }
 
+    void TestApp::UpdateSelectionRectText()
+    {
+        OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
+        auto selectionSizeStr = std::to_wstring(fImageSpaceSelection.GetWidth()) + L" X " + std::to_wstring(fImageSpaceSelection.GetHeight());
+        auto selectionTopLeft = fImageSpaceSelection.GetCorner(LLUtils::Corner::TopLeft);
+        auto selectionBottomRight = fImageSpaceSelection.GetCorner(LLUtils::Corner::BottomRight);
+
+        if (selectionSizeText == nullptr)
+        {
+            // Create new user message.
+            selectionSizeText = fLabelManager.GetOrCreateTextLabel("selectionSizeText");
+            selectionSizeText->SetBackgroundColor(LLUtils::Color(0));
+            selectionSizeText->SetFontPath(LabelManager::sFontPath);
+            selectionSizeText->SetFontSize(10);
+            selectionSizeText->SetOutlineWidth(1);
+
+            selectionSizeText->SetFilterType(OIV_Filter_type::FT_None);
+            selectionSizeText->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
+            selectionSizeText->SetScale({ 1.0,1.0 });
+            selectionSizeText->SetOpacity(1.0);
+        }
+
+        auto selectionRectPosition = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::TopLeft);
+        // text already exists, just make visible.
+        selectionSizeText->SetVisible(true);
+        selectionSizeText->SetText(selectionSizeStr);
+        selectionSizeText->Create();
+       
+        auto seelctionRectWidth = fSelectionRect.GetSelectionRect().GetWidth();
+        int32_t posX = selectionRectPosition.x + fSelectionRect.GetSelectionRect().GetWidth() / 2  - selectionSizeText->GetImage()->GetWidth() / 2;
+        int32_t posY = selectionRectPosition.y - selectionSizeText->GetImage()->GetHeight();
+
+        //if vetical position is above client area, place text below selection rect     
+        if (posY < 0)
+            posY = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::BottomRight).y;
+
+        // if vertical position is below client area, place text inside the rectangle
+        if (posY + selectionSizeText->GetImage()->GetHeight() >= fWindow.GetClientSize().cy)
+            posY =  std::max(0, selectionRectPosition.y);
+
+        selectionSizeText->SetPosition({ static_cast<double>(posX), static_cast<double>(posY) });
+    }
     void TestApp::SaveImageSpaceSelection()
     {
-            if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
-             fImageSpaceSelection =  static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round());
+        if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+            fImageSpaceSelection = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round());
+
+        UpdateSelectionRectText();
     }
 
     void TestApp::LoadImageSpaceSelection()
@@ -2812,11 +2856,16 @@ namespace OIV
         {
             LLUtils::RectI32 r = static_cast<LLUtils::RectI32>(ImageToClient(static_cast<LLUtils::RectF64>(fImageSpaceSelection)));
             fSelectionRect.UpdateSelection(r);
+            UpdateSelectionRectText();
         }
     }
 
     void TestApp::CancelSelection()
     {
+        OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
+        if (selectionSizeText != nullptr)
+            selectionSizeText->SetVisible(false);
+
         fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, { 0,0 });
         fImageSpaceSelection = decltype(fImageSpaceSelection)::Zero;
     }
