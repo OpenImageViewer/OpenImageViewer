@@ -773,7 +773,9 @@ namespace OIV
                 fSelectionRect.SetSelection(SelectionRect::Operation::BeginDrag, imageInScreenSpace.GetCorner(Corner::TopLeft));
                 fSelectionRect.SetSelection(SelectionRect::Operation::Drag, imageInScreenSpace.GetCorner(Corner::BottomRight));
                 fSelectionRect.SetSelection(SelectionRect::Operation::EndDrag, imageInScreenSpace.GetCorner(Corner::BottomRight));
-                SaveImageSpaceSelection();
+                
+                SetImageSpaceSelection(LLUtils::RectI32{ { 0, 0 }, LLUtils::PointI32 { GetImageSize(ImageSizeType::Transformed) } });
+   
                 fRefreshOperation.End();
             }
         }
@@ -2026,9 +2028,10 @@ namespace OIV
                     op = SelectionRect::Operation::BeginDrag;
                 else if (btnEvent.eventType == EventType::Released && fWindow.IsUnderMouseCursor())
                     op = SelectionRect::Operation::EndDrag;
-                fSelectionRect.SetSelection(op, fWindow.GetMousePosition());
-                SaveImageSpaceSelection();
+                
 
+                fSelectionRect.SetSelection(op, SnapToScreenSpaceImagePixels(fWindow.GetMousePosition()));
+                SaveImageSpaceSelection();
             }
 
           
@@ -2108,7 +2111,8 @@ namespace OIV
         {
             if (IsLeftCaptured)
             {
-                fSelectionRect.SetSelection(SelectionRect::Operation::Drag, fWindow.GetMousePosition());
+                auto snappedPOsition = SnapToScreenSpaceImagePixels(fWindow.GetMousePosition());
+                fSelectionRect.SetSelection(SelectionRect::Operation::Drag, snappedPOsition);
                 SaveImageSpaceSelection();
             }
         }
@@ -2848,17 +2852,31 @@ namespace OIV
             posY = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::BottomRight).y;
 
         // if vertical position is below client area, place text inside the rectangle
-        if (posY + selectionSizeText->GetImage()->GetHeight() >= fWindow.GetClientSize().cy)
+        if (posY + static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight()) >= static_cast<int32_t>(fWindow.GetClientSize().cy))
             posY =  std::max(0, selectionRectPosition.y);
 
         selectionSizeText->SetPosition({ static_cast<double>(posX), static_cast<double>(posY) });
     }
+
+    LLUtils::PointI32 TestApp::SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen)
+    {
+        using namespace LLUtils;
+        auto imageSpacePoint = static_cast<LLUtils::PointI32>(ClientToImage(pointOnScreen).Round());
+        auto snappedscreenSpacePoint = ImageToClient(static_cast<LLUtils::PointF64>(imageSpacePoint));
+        return  static_cast<PointI32>(snappedscreenSpacePoint.Round());
+    }
+
+
+    void TestApp::SetImageSpaceSelection(const LLUtils::RectI32& rect)
+    {
+        fImageSpaceSelection = rect;
+        UpdateSelectionRectText();
+    }
+
     void TestApp::SaveImageSpaceSelection()
     {
         if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
-            fImageSpaceSelection = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round());
-
-        UpdateSelectionRectText();
+            SetImageSpaceSelection(static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round()));
     }
 
     void TestApp::LoadImageSpaceSelection()
