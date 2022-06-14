@@ -87,7 +87,8 @@ namespace OIV
         ss << std::put_time(&tmDest, OIV_TEXT("%Y-%m-%d %X"));
         return ss.str();
     }
-    std::wstring  MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& image)
+    
+    std::wstring MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const IMCodec::ImageSharedPtr& rasterized)
     {
         using namespace std;
         wstring message = MessageFormatter::DefaultHeaderColor + L"Image information\n";
@@ -100,14 +101,14 @@ namespace OIV
         args.valueColor = L"<textcolor=#ffffff>";
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
-        std::shared_ptr<OIVFileImage> fileImage = std::dynamic_pointer_cast<OIVFileImage>(image);
+        std::shared_ptr<OIVFileImage> fileImage = std::dynamic_pointer_cast<OIVFileImage>(oivImage);
 
         if (fileImage != nullptr)
         {
-            auto const& filePath = std::dynamic_pointer_cast<OIVFileImage>(image)->GetFileName();
+            auto const& filePath = fileImage->GetFileName();
 
-            if (image->GetImageSource() != ImageSource::File)
-                messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ { ParseImageSource(image) } });
+            if (fileImage->GetImageSource() != ImageSource::File)
+                messageValues.emplace_back("Source", MessageFormatter::ValueObjectList{ { ParseImageSource(fileImage) } });
             else
                 messageValues.emplace_back("File path", MessageFormatter::ValueObjectList{ {MessageFormatter::FormatFilePath(filePath) } });
 
@@ -115,33 +116,54 @@ namespace OIV
 
             messageValues.emplace_back("File size", MessageFormatter::ValueObjectList{ { UnitHelper::FormatUnit(fileSize,UnitType::BinaryDataShort,0,0) } });
             messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ { GetFileTime(filePath) } });
-            auto bitmapSize = image->GetImage()->GetTotalSizeOfImageTexels();
+            auto bitmapSize = rasterized->GetTotalSizeOfImageTexels();
             auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
             messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ {L"1:"} ,{compressionRatio }  });
         }
         
-        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ { image->GetImage()->GetWidth()} ,{ "px" } });
-        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ {image->GetImage()->GetHeight() }, {"px"} });
-        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ {image->GetImage()->GetBitsPerTexel()} , {" bpp"} });
-        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ { MessageFormatter::FormatTexelInfo(image->GetImage()->GetTexelInfo()) } });
-        if (image->GetImage()->GetOriginalTexelFormat() != IMCodec::TexelFormat::UNKNOWN
-            && image->GetImage()->GetOriginalTexelFormat() != image->GetImage()->GetTexelFormat())
+        auto underlyingImage = rasterized;
+        const bool isAnimation = underlyingImage->GetItemType() == IMCodec::ImageItemType::Container
+            && underlyingImage->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame;
+
+       
+        if (isAnimation)
+            messageValues.emplace_back("Num frames", MessageFormatter::ValueObjectList{ { underlyingImage->GetNumSubImages()} });
+        else
+            messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ {underlyingImage->GetNumSubImages()} });
+
+
+        auto rasterImage = rasterized;
+
+        if (isAnimation)
         {
-            messageValues.emplace_back("original channels info", MessageFormatter::ValueObjectList{ {MessageFormatter::FormatTexelInfo(image->GetImage()->GetOriginalTexelInfo()) } });
+            rasterImage = underlyingImage->GetSubImage(0);
         }
-        messageValues.emplace_back("Num sub-images", MessageFormatter::ValueObjectList{ {image->GetImage()->GetNumSubImages()} });
-        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(image->GetImage()->GetRuntimeData().loadTime)} , {"ms" }  });
-        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ {image->GetImage()->GetRuntimeData().displayTime} , {"ms" } });
-        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ {image->GetImage()->GetRuntimeData().pluginUsed.empty() == false ? image->GetImage()->GetRuntimeData().pluginUsed : L"N/A" } });
+
+      
+
+        messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ { rasterImage->GetWidth()} ,{ "px" } });
+        messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ {rasterImage->GetHeight() }, {"px"} });
+        messageValues.emplace_back("bit depth", MessageFormatter::ValueObjectList{ {rasterImage->GetBitsPerTexel()} , {" bpp"} });
+        messageValues.emplace_back("channels info", MessageFormatter::ValueObjectList{ { MessageFormatter::FormatTexelInfo(rasterImage->GetTexelInfo()) } });
+        if (rasterImage->GetOriginalTexelFormat() != IMCodec::TexelFormat::UNKNOWN
+            && rasterImage->GetOriginalTexelFormat() != rasterImage->GetTexelFormat())
+        {
+            messageValues.emplace_back("original channels info", MessageFormatter::ValueObjectList{ {MessageFormatter::FormatTexelInfo(rasterImage->GetOriginalTexelInfo()) } });
+        }
+
+        const auto& runtimeData = oivImage->GetImage()->GetRuntimeData();
+        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(runtimeData.loadTime)} , {"ms" }  });
+        messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ {runtimeData.displayTime} , {"ms" } });
+        messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ {runtimeData.pluginUsed.empty() == false ? runtimeData.pluginUsed : L"Unknown" } });
         
-        auto uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
+        auto uniqueValues = rasterImage->GetRuntimeData().numUniqueColors;
         if (uniqueValues > -1)
             messageValues.emplace_back("Unique values", MessageFormatter::ValueObjectList{ {uniqueValues } }
     );
 
 
         // Add meta data
-        const auto& metaData = image->GetImage()->GetMetaData();
+        const auto& metaData = oivImage->GetImage()->GetMetaData();
 
         if (metaData.exifData.longitude != std::numeric_limits<double>::max())
             messageValues.emplace_back("Longitude", MessageFormatter::ValueObjectList{ { { metaData.exifData.longitude } , {6} } });
