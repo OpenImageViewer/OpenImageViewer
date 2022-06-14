@@ -213,6 +213,7 @@ namespace OIV
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         //void UpdateUIZoom();
+        void SetImageSpaceSelection(const LLUtils::RectI32& rect);
         void SaveImageSpaceSelection();
         void LoadImageSpaceSelection();
         void SetZoomInternal(double zoom, int x = -1, int y = -1, bool preserveFitToScreenState = false);
@@ -288,6 +289,7 @@ namespace OIV
         void UpdateSelectionRectText();
      
 
+        LLUtils::PointI32 SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen);
 
         using netsettings_Create_func = void (*)(GuiCreateParams*);
         using netsettings_SetVisible_func = void (*)(bool);
