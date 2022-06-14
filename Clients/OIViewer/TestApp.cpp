@@ -1136,26 +1136,38 @@ namespace OIV
             + OIV_TEXT(" | UNOFFICIAL")
 #endif
             ;
-		std::wstring title;
-        if (GetOpenedFileName().empty() == false)
+        std::wstring title;
+        if (fImageState.GetOpenedImage() != nullptr)
         {
-            auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
-            std::wstringstream ss;
-            if (GetAppActive() == true)
+            switch (fImageState.GetOpenedImage()->GetImageSource())
             {
-                ss << (fCurrentFileIndex == FileIndexStart ?
-                    0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size()
-                    << L" | ";
+            case ImageSource::File:
+            {
+                auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
+                std::wstringstream ss;
+                if (GetAppActive() == true)
+                {
+                    ss << (fCurrentFileIndex == FileIndexStart ?
+                        0 : fCurrentFileIndex + 1) << L"/" << fListFiles.size()
+                        << L" | ";
+                }
+
+                ss << decomposedPath.fileName << decomposedPath.extension
+                    << " @ " << std::wstring_view(decomposedPath.parentPath.data(), decomposedPath.parentPath.length() - 1);
+
+                title = ss.str() + L" - ";
             }
-
-            ss << decomposedPath.fileName << decomposedPath.extension
-                << " @ " << std::wstring_view(decomposedPath.parentPath.data(), decomposedPath.parentPath.length() - 1);
-
-            title = ss.str() + L" - ";
+            break;
+            case ImageSource::Clipboard:
+                title = L"Clipboard - ";
+                break;
+            default:
+                title = L"Unknown image source - ";
+                break;
+            }
         }
-		title += cachedVersionString;
-
-		fWindow.SetTitle(title);
+        title += cachedVersionString;
+        fWindow.SetTitle(title);
     }
     
    
@@ -1452,6 +1464,8 @@ namespace OIV
             ProcessLoadedDirectory();
         }
 
+        UpdateOpenImageUI();
+
         SetResamplingEnabled(true);
 
         if (fQueueImageInfoLoad == true)
@@ -1499,8 +1513,6 @@ namespace OIV
 
             if (it != fListFiles.end())
                 fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-
-            UpdateTitle();
         }
     }
 
@@ -1734,6 +1746,8 @@ namespace OIV
 
             if (GetImageInfoVisible() == true)
                 ShowImageInfo();
+
+            UpdateOpenImageUI();
 
             fRefreshOperation.End();
         }
@@ -2289,8 +2303,7 @@ namespace OIV
 
         //If a file has been succesfuly loaded, index all the file in the folder
         ProcessLoadedDirectory();
-
-		
+        UpdateTitle();
 
         AddCommandsAndKeyBindings();
 
@@ -2624,7 +2637,6 @@ namespace OIV
         {
             assert(fileIndex >= 0 && fileIndex < static_cast<FileIndexType>(totalFiles));
             fCurrentFileIndex = fileIndex;
-            UpdateTitle();
         }
         return isLoaded;
     }
@@ -3250,7 +3262,7 @@ namespace OIV
 
             if (text.empty() == false)
             {
-                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>();
+                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>(ImageSource::Clipboard);
                 textImage->SetText(text);
                 textImage->SetPosition(LLUtils::PointF64::Zero);
                 textImage->SetScale(LLUtils::PointF64::One);

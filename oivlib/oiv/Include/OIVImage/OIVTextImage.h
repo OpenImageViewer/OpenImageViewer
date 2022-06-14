@@ -23,10 +23,17 @@ namespace OIV
     class OIVTextImage : public OIVBaseImage
     {
     public:
-        OIVTextImage() : OIVBaseImage(ImageSource::InternalText) 
+
+        OIVTextImage(ImageSource imageSource) : OIVBaseImage(imageSource)
+
         {
             fTextOptionsCurrent.bidirectional = true;
             fTextOptionsCurrent.useMetaText = true;
+        }
+
+        OIVTextImage() : OIVTextImage(ImageSource::InternalText)
+        {
+          
         }
     
 #pragma region Text rendering
