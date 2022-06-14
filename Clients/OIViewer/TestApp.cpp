@@ -1378,7 +1378,6 @@ namespace OIV
         std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
         IMCodec::ImageLoaderFlags loaderFlags = onlyRegisteredExtension == true ? IMCodec::ImageLoaderFlags::OnlyRegisteredExtension : IMCodec::ImageLoaderFlags::None;
-        fFileDisplayTimer.Start();
         ResultCode result = file->Load(loaderFlags);
         using namespace std::string_literals;
         switch (result)
@@ -1403,6 +1402,8 @@ namespace OIV
 
         if (oivImage->GetImage() == nullptr)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Expected a valid image");
+        
+        fFileDisplayTimer.Start();
 
         fCurrentFrame = 0;
         fCurrentSequencerSpeed = 1.0;
