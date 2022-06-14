@@ -1,7 +1,5 @@
 #pragma once
 
-#include <mutex>
-
 #include <defs.h>
 #include <LLUtils/Utility.h>
 #include <LLUtils/Logging/LogPredefined.h>
@@ -165,7 +163,6 @@ namespace OIV
         void ProbeForMonitorChange();
         void PerformRefresh();
         void SetUserMessage(const std::wstring& message, int32_t hideDelay = 0);
-        void SetUserMessageThreadSafe(const std::wstring& message, int32_t hideDelay = 0);
         void SetDebugMessage(const std::string& message);
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
@@ -355,7 +352,6 @@ namespace OIV
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;
         DWORD fMainThreadID = GetCurrentThreadId();
-        std::mutex fMutexWindowCreation;
         SelectionRect fSelectionRect;
         uint32_t fMinDelayRemoveMessage = 1000;
         uint32_t fDelayPerCharacter = 40;
@@ -436,7 +432,6 @@ namespace OIV
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
-        std::wstring fLastMessageForMainThread;
         FileWatcher fFileWatcher;
         std::wstring fCurrentFolderWatched;
         std::wstring fPendingReloadFileName;
