@@ -43,6 +43,8 @@ namespace OIV
             {
                 // labels placement logic, currently hard coded.
                 //TOOD: make it dynamic
+                if (text->GetImage() == nullptr)
+                    text->Create();
 
                 if (text->GetImage() != nullptr &&  text->GetOpacity() > 0.0 && text->GetVisible() ) // if visible
                 {
