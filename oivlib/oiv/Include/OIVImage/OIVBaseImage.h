@@ -4,9 +4,11 @@
 #include <memory>
 #include <LLUtils/StopWatch.h>
 #include <LLUtils/Point.h>
+#include <LLUtils/UniqueIDProvider.h>
 #include <Image.h>
 #include <defs.h>
 #include <Interfaces/IRenderable.h>
+#include <mutex>
 
 namespace OIV
 {
@@ -58,7 +60,7 @@ namespace OIV
         OIV_Image_Render_mode GetImageRenderMode() const override {return fImagePropertiesCurrent.imageRenderMode;}
         bool GetIsImageDirty() const override{return fIsImageDirty;}
         void ClearImageDirty() override {fIsImageDirty = false;}
-        
+        uint32_t GetID() const override { return fObjectId; }
         void PreRender() override {PerformPreRender();}
 
 
@@ -143,10 +145,14 @@ namespace OIV
         OIV_CMD_ImageProperties_Request fImagePropertiesCurrent{};
         OIV_CMD_ImageProperties_Request fImagePropertiesCached{};
 
+        static inline LLUtils::UniqueIdProvider<uint32_t> fUniqueIdProvider{ 1 };
         ImageSource fSource;
+        decltype(fUniqueIdProvider)::underlying_type fObjectId;
         IMCodec::ImageSharedPtr fImage;
         bool fIsImageDirty = true;
         bool fIsDirty = true;
+        std::mutex fRendererMutex;
+
     };
 
     using OIVBaseImageSharedPtr = std::shared_ptr<OIVBaseImage>;

@@ -96,7 +96,18 @@ namespace OIV
         D3D11ShaderUniquePtr fImageSimpleFragmentShader;
         bool fIsParamsDirty = true;
         VisualSelectionRect fSelectionRect;
-        using MapImageEntry = std::map<IRenderable*, ImageEntry>;
+
+
+        struct MapLess
+        {
+            bool operator() (const IRenderable* A, const  IRenderable* B) const
+            {
+                return A->GetID() < B->GetID();
+            }
+        };
+
+
+        using MapImageEntry = std::map<IRenderable*, ImageEntry, MapLess>;
         MapImageEntry fImageEntries;
         OIVString fDataPath;
         LLUtils::Color fBackgroundColor = { 45,45,48,255 };
