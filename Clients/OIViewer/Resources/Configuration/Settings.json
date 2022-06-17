@@ -12,7 +12,7 @@
     "slideshowinterval": 2000.0,
     "quickbrowsedelay": 100.0,
     "imagemargins": {
-      "x": 0.0,
+      "x": 0.25,
       "y": 0.25
     }
   },
