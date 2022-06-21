@@ -127,9 +127,32 @@ namespace OIV
             case 72:
                 numUniqueValues = GetUniqueColors<ValueComparer<72 / CHAR_BIT>>(image, bpp);
                 break;
+            case 80:
+                numUniqueValues = GetUniqueColors<ValueComparer<80 / CHAR_BIT>>(image, bpp);
+                break;
+            case 88:
+                numUniqueValues = GetUniqueColors<ValueComparer<88 / CHAR_BIT>>(image, bpp);
+                break;
+            case 96:
+                numUniqueValues = GetUniqueColors<ValueComparer<96 / CHAR_BIT>>(image, bpp);
+                break;
+            case 104:
+                numUniqueValues = GetUniqueColors<ValueComparer<104 / CHAR_BIT>>(image, bpp);
+                break;
+            case 112:
+                numUniqueValues = GetUniqueColors<ValueComparer<112 / CHAR_BIT>>(image, bpp);
+                break;
+            case 120:
+                numUniqueValues = GetUniqueColors<ValueComparer<120 / CHAR_BIT>>(image, bpp);
+                break;
+            case 128:
+                numUniqueValues = GetUniqueColors<ValueComparer<128 / CHAR_BIT>>(image, bpp);
+                break;
             default:
             {
-                //Slower way to count unique values by using additional indirection to access arbitrary memory size
+                // Slower way to count unique values by using additional indirection to access arbitrary memory size.
+                // This is a fallback for cases where BPP is different than multiples of 8 till 128 BPP.
+                // In practice, execution path should never get here.
                 using SetValues = std::unordered_set<ValueIndirectComparer, ValueIndirectComparer::Hasher>;
                 SetValues setValues(image->GetTotalPixels());
 
