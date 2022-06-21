@@ -2670,8 +2670,10 @@ namespace OIV
     
     void TestApp::ToggleFullScreen(bool multiFullScreen)
     {
+        fRefreshOperation.Begin();
         fWindow.ToggleFullScreen(multiFullScreen);
 		Center();
+        fRefreshOperation.End();
     }
 
     void TestApp::ToggleBorders()
@@ -3373,8 +3375,9 @@ namespace OIV
         switch (message.message)
         {
         case WM_SIZE:
+            fRefreshOperation.Begin();
             UpdateWindowSize();
-            fRefreshOperation.Queue();
+            fRefreshOperation.End();
             break;
         }
         return retValue;
