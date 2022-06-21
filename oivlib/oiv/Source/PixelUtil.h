@@ -306,6 +306,30 @@ LLUTILS_DISABLE_WARNING_POP
         }
 
 
+        static void RGBF32ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
+        {
+
+#pragma pack(push,1)
+            struct RGBF32
+            {
+                float r, g, b;
+            };
+#pragma pack(pop)
+
+            BitTexel32* dst = (BitTexel32*)i_dest;
+            const RGBF32* src = reinterpret_cast<const RGBF32 *>(i_src);
+
+            for (size_t i = start; i < end; i++)
+            {
+                const RGBF32& rgbF32 = src[i];
+                dst[i].X = static_cast<uint8_t>(rgbF32.r * 255);
+                dst[i].Y = static_cast<uint8_t>(rgbF32.g * 255);
+                dst[i].Z = static_cast<uint8_t>(rgbF32.b * 255);
+                dst[i].W = 255;
+            }
+        }
+
+
         static void BGR565ToRGBA32(std::byte* i_dest, const std::byte* i_src, std::size_t start, std::size_t end)
         {
 #pragma pack(push,1)
