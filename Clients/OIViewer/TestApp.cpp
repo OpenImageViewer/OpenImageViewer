@@ -2793,13 +2793,16 @@ namespace OIV
         {
             using namespace LLUtils;
             SIZE clientSize = fWindow.GetCanvasSize();
-            PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
-            double zoom = std::min(ratio.x, ratio.y);
-            fRefreshOperation.Begin();
-            fIsLockFitToScreen = true;
-            SetZoomInternal(zoom, -1, -1, true);
-            Center();
-            fRefreshOperation.End();
+            if (clientSize.cx > 0 && clientSize.cy > 0) // window might minimized.
+            {
+                PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
+                double zoom = std::min(ratio.x, ratio.y);
+                fRefreshOperation.Begin();
+                fIsLockFitToScreen = true;
+                SetZoomInternal(zoom, -1, -1, true);
+                Center();
+                fRefreshOperation.End();
+            }
         }
     }
     
