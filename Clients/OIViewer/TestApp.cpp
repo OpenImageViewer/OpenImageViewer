@@ -3259,7 +3259,7 @@ namespace OIV
             const BITMAPINFOHEADER* info = &(bitmapInfo->bmiHeader);
             uint32_t rowPitch = LLUtils::Utility::Align<uint32_t>(info->biWidth * (info->biBitCount / CHAR_BIT), 4);
 
-            const std::byte* bitmapBitsconst = reinterpret_cast<const std::byte*>(info + 1);
+            const std::byte* bitmapBitsconst =  reinterpret_cast<const std::byte*>(info) + info->biSize;
             std::byte* bitmapBits = const_cast<std::byte*>(bitmapBitsconst);
 
             switch (info->biCompression)
