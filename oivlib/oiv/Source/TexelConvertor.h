@@ -187,6 +187,7 @@ namespace OIV
             ,{ConvertKey(IMCodec::TexelFormat::I_B8_G8_R8, IMCodec::TexelFormat::I_R8_G8_B8), SwizzleFuncType(Swizzle< 8, 8, 2, 1, 0>)}
             ,{ConvertKey(IMCodec::TexelFormat::I_B8_G8_R8, IMCodec::TexelFormat::I_B8_G8_R8_A8), SwizzleFuncType(SwizzleAppend< 8, 8, 3,0xFF, 0, 1, 2>)}
             ,{ConvertKey(IMCodec::TexelFormat::I_B8_G8_R8, IMCodec::TexelFormat::I_R8_G8_B8_A8), SwizzleFuncType(SwizzleAppend< 8, 8, 3,0xFF, 2, 1, 0>)}
+            ,{ConvertKey(IMCodec::TexelFormat::I_R8_G8_B8_A8, IMCodec::TexelFormat::I_R8_G8_B8), SwizzleFuncType(Swizzle< 8, 8, 0, 1, 2>)}
             ,{ConvertKey(IMCodec::TexelFormat::I_B16_G16_R16_A16, IMCodec::TexelFormat::I_B8_G8_R8_A8), SwizzleFuncType(Swizzle<8, 16, 0, 1, 2 ,3>)}
             ,{ConvertKey(IMCodec::TexelFormat::I_R16_G16_B16_A16, IMCodec::TexelFormat::I_R8_G8_B8_A8), SwizzleFuncType(Swizzle<8, 16, 0, 1, 2, 3>)}
             ,{ConvertKey(IMCodec::TexelFormat::I_R16_G16_B16_A16, IMCodec::TexelFormat::I_B8_G8_R8_A8), SwizzleFuncType(Swizzle<8, 16, 2, 1, 0,3>)}
