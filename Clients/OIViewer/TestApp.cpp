@@ -58,24 +58,27 @@ namespace OIV
     void TestApp::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
 
-        using namespace LLUtils;
-        using namespace std;
+        if (IsImageOpen())
+        {
+            using namespace LLUtils;
+            using namespace std;
 
 
-        string cxStr = request.args.GetArgValue("cx");
-        string cyStr = request.args.GetArgValue("cy");
-        double val = std::atof(request.args.GetArgValue("val").c_str());
+            string cxStr = request.args.GetArgValue("cx");
+            string cyStr = request.args.GetArgValue("cy");
+            double val = std::atof(request.args.GetArgValue("val").c_str());
 
-        int32_t cx = cxStr.empty() ? -1 : std::atoi(cxStr.c_str());
-        int32_t cy = cyStr.empty() ? -1 : std::atoi(cyStr.c_str());
+            int32_t cx = cxStr.empty() ? -1 : std::atoi(cxStr.c_str());
+            int32_t cy = cyStr.empty() ? -1 : std::atoi(cyStr.c_str());
 
-        ZoomInternal(val, cx, cy);
-        
-        wstringstream ss;
-        ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
-            << fixed << setprecision(2) << GetScale() * 100.0 << "%)";
+            ZoomInternal(val, cx, cy);
 
-        result.resValue = ss.str();
+            wstringstream ss;
+            ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>("
+                << fixed << setprecision(2) << GetScale() * 100.0 << "%)";
+
+            result.resValue = ss.str();
+        }
     }
 
     void TestApp::CMD_ViewState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
@@ -120,13 +123,19 @@ namespace OIV
         }
         else if (type == "imageFilterUp")
         {
-            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) + 1));
-            filterTypeChanged = true;
+            if (fImageState.GetVisibleImage() != nullptr)
+            {
+                SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) + 1));
+                filterTypeChanged = true;
+            }
         }
         else if (type == "imageFilterDown")
         {
-            SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
-            filterTypeChanged = true;
+            if (fImageState.GetVisibleImage() != nullptr)
+            {
+                SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
+                filterTypeChanged = true;
+            }
         }
         else if (type == "toggleFullScreen") // Toggle fullscreen
         {
@@ -3113,15 +3122,18 @@ namespace OIV
     {
         SIZE size = fWindow.GetCanvasSize();
 
-        CmdSetClientSizeRequest req{ static_cast<uint16_t>(size.cx),
-            static_cast<uint16_t>(size.cy) };
+        if (size.cx > 0 && size.cy > 0) // window might minimized.
+        {
+            CmdSetClientSizeRequest req{ static_cast<uint16_t>(size.cx),
+                static_cast<uint16_t>(size.cy) };
 
-        OIVCommands::ExecuteCommand(CMD_SetClientSize,
-            &req, &NullCommand);
-        //UpdateCanvasSize();
-		AutoPlaceImage();
-        auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
-        fVirtualStatusBar.ClientSizeChanged(point);
+            OIVCommands::ExecuteCommand(CMD_SetClientSize,
+                &req, &NullCommand);
+            //UpdateCanvasSize();
+            AutoPlaceImage();
+            auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
+            fVirtualStatusBar.ClientSizeChanged(point);
+        }
     }
 
     LLUtils::PointF64 TestApp::GetCanvasCenter()
