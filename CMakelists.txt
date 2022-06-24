@@ -111,6 +111,8 @@ execute_process (COMMAND git rev-parse --short=8 head WORKING_DIRECTORY ${CMAKE_
 string(REPLACE \n "" GIT_HASH_ID ${GIT_HASH_ID})
 add_definitions(-DOIV_VERSION_REVISION="${GIT_HASH_ID}")
 
+include_directories(./Extensions)
+
 option(WIN32_LIB_BUILD_SAMPLES "build win32 samples" OFF)
 add_subdirectory(./External/Win32)
 add_subdirectory(oivlib)

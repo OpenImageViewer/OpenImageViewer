@@ -395,7 +395,7 @@ LLUTILS_DISABLE_WARNING_POP
 
         }
         fDevice->GetdDevice()->CreateSamplerState(&desc, fSamplerState.ReleaseAndGetAddressOf());
-        fDevice-> GetContext()->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
+        fDevice->GetContext()->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
 
         return 0;
     }

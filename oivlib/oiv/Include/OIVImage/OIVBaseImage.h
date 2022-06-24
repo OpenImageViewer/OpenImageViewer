@@ -17,6 +17,7 @@ namespace OIV
           None
         , File
         , Clipboard
+        , ClipboardText
         , InternalText
         , GeneratedByLib
     };

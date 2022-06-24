@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <execution>
 #include <span>
+#include "PixelUtil.h"
 
 namespace IMUtil
 {
@@ -67,7 +68,7 @@ namespace IMUtil
             using namespace std;
             using namespace IMCodec;
 
-          
+
             if (transform.rotation != OIV_AxisAlignedRotation::None || transform.flip != OIV_AxisAlignedFlip::None)
             {
                 if (image->GetIsByteAligned() == false)
@@ -141,7 +142,7 @@ namespace IMUtil
 
                 imageItem->descriptor.rowPitchInBytes = imageItem->descriptor.width * image->GetBytesPerTexel();
 
-                return std::make_shared<Image>(imageItem,image->GetSubImageGroupType());
+                return std::make_shared<Image>(imageItem, image->GetSubImageGroupType());
             }
             else
                 return image;
@@ -174,15 +175,16 @@ namespace IMUtil
             case IMCodec::TexelFormat::S_X16:
                 image = ImageUtil::Normalize<int16_t>(image, normalizeMode);
                 break;
+            /*case IMCodec::TexelFormat::F_R32_G32_B32:
+                image = ImageUtil::Normalize<int16_t>(image, normalizeMode);
+                break;*/
 
             default:
                 image = ImageUtil::Convert(image, targetTexelFormat);
             }
 
             return image;
-
         }
-
 
         static IMCodec::ImageSharedPtr NormalizePitch(IMCodec::ImageSharedPtr image)
         {
@@ -191,7 +193,7 @@ namespace IMUtil
             if (image->GetIsByteAligned() == false)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::LogicError, "can not normalize a non byte aligned pixel format.");
 
-            
+
             ImageItemSharedPtr normalizedImageItem = std::make_shared<ImageItem>();
             ImageDescriptor& normalizedImageProperties = normalizedImageItem->descriptor;
             //imageItem->itemType = image->getty
@@ -238,14 +240,14 @@ namespace IMUtil
                 std::byte* dest = imageItem->data.data();
                 //TODO: convert without normalization.
                 ImageSharedPtr normalizedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
-                
+
                 imageItem->descriptor.texelFormatDecompressed = targetPixelFormat;
                 imageItem->descriptor.rowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
 
 
                 bool succcess = false;
-
-                if ((succcess = 
+                // Try convert using the meta programmed swizzler
+                if ((succcess =
                     texelConvertor.Convert(targetPixelFormat
                         , sourceImage->GetDescriptor().texelFormatDecompressed
                         , dest
@@ -253,24 +255,25 @@ namespace IMUtil
                         , normalizedImage->GetTotalPixels())) == false)
                 {
 
-                   auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetTexelFormat(), targetPixelFormat));
-                   
-                   if (converter != sConvertionFunction.end())
-                   {
+                    // if couldn't convert using the above method, try a 'standard' conversion method
+                    auto converter = sConvertionFunction.find(ConvertKey(sourceImage->GetTexelFormat(), targetPixelFormat));
 
-                           PixelUtil::Convert(converter->second
-                               , &dest
-                               , normalizedImage->GetBuffer()
-                               , targetPixelSize
-                               , normalizedImage->GetTotalPixels());
-                           
-                           succcess = true;
-                   }
+                    if (converter != sConvertionFunction.end())
+                    {
+
+                        PixelUtil::Convert(converter->second
+                            , &dest
+                            , normalizedImage->GetBuffer()
+                            , targetPixelSize
+                            , normalizedImage->GetTotalPixels());
+
+                        succcess = true;
+                    }
                 }
 
                 if (succcess == true)
-                    convertedImage = std::make_shared<Image>(imageItem,sourceImage->GetSubImageGroupType());
-               
+                    convertedImage = std::make_shared<Image>(imageItem, sourceImage->GetSubImageGroupType());
+
             }
             else
             { // No need to convert, return source image.
@@ -307,12 +310,9 @@ namespace IMUtil
                     }
                 }
 
-
-                
                 imageItem->descriptor.height = subimage.GetHeight();
                 imageItem->descriptor.width = subimage.GetWidth();
 
-                
                 imageItem->descriptor.rowPitchInBytes = subimage.GetWidth() * sourceImage->GetBytesPerTexel();
 
                 ImageSharedPtr subImagePtr = std::make_shared<Image>(imageItem, sourceImage->GetSubImageGroupType());
@@ -322,17 +322,12 @@ namespace IMUtil
             return nullptr;
         }
 
-
-
-
-        template <typename _FwdItDst, typename _FwdItSrc >
-        static void NormalizeAnyToRGBA(_FwdItDst _DstFirst, _FwdItDst _DstLast, _FwdItSrc _SrcFirst, _FwdItSrc _SrcLast, NormalizeMode mode)
+        template <typename _FwdItDst, typename _FwdItSrc, typename value_type = typename _FwdItDst::value_type, 
+            typename Range = std::pair<value_type, value_type> >
+        static void NormalizeAnyToRGBA(_FwdItDst _DstFirst, _FwdItDst _DstLast, _FwdItSrc _SrcFirst, _FwdItSrc _SrcLast, NormalizeMode mode, const Range& minMax)
         {
-            auto minMax = std::minmax_element(std::execution::parallel_unsequenced_policy(), _SrcFirst, _SrcLast);
-            const auto range = *minMax.second - *minMax.first;
-            using value_type = typename _FwdItDst::value_type;
-
             //destination is assumed to be 8 bit RGBA.
+            const auto range = minMax.second - minMax.first;
             static_assert(sizeof(value_type) == sizeof(LLUtils::Color), "Currently normalization support output for 32 bit color only");
 
             while (_SrcFirst != _SrcLast)
@@ -345,7 +340,7 @@ namespace IMUtil
                 case NormalizeMode::Default:
                 case NormalizeMode::GrayScale:
                 {
-                    uint8_t grayValue = std::min(static_cast<uint8_t>(static_cast<double>(sourceSample - *minMax.first) / range * 255.0 + 0.5), static_cast<uint8_t>(255));
+                    uint8_t grayValue = std::min(static_cast<uint8_t>(static_cast<double>(sourceSample - minMax.first) / range * 255.0 + 0.5), static_cast<uint8_t>(255));
                     destSample = LLUtils::Color(grayValue, grayValue, grayValue);
                 }
                 break;
@@ -353,7 +348,7 @@ namespace IMUtil
                 case NormalizeMode::RainBow:
                 {
                     //Red (0) is the minimum , Magenta is the maximum (300)
-                    const uint16_t hue = static_cast<uint16_t>(static_cast<double>(sourceSample - *minMax.first) / range * 300.0);
+                    const uint16_t hue = static_cast<uint16_t>(static_cast<double>(sourceSample - minMax.first) / range * 300.0);
                     destSample = LLUtils::Color::FromHSL(hue, 0.5, 0.5);
                 }
                 break;
@@ -364,6 +359,48 @@ namespace IMUtil
             }
         }
 
+        /// <summary>
+        /// Find min and maximum value in typed data structure, traversing line by line
+        /// </summary>
+        /// <typeparam name="SourceSampleType"></typeparam>
+        /// <param name="sampleData"></param>
+        /// <param name="width"></param>
+        /// <param name="rowPitch"></param>
+        /// <param name="height"></param>
+        /// <returns></returns>
+        template <typename SourceSampleType>
+        static std::pair<SourceSampleType, SourceSampleType> FindMinMax(const SourceSampleType* sampleData, uint32_t width, uint32_t rowPitch, uint32_t height)
+        {
+            size_t sourceOffset = 0;
+            SourceSampleType min = std::numeric_limits< SourceSampleType>::max();
+            SourceSampleType max = std::numeric_limits< SourceSampleType>::min();
+            for (uint32_t y = 0; y < height; y++)
+            {
+                auto sourcePtr = reinterpret_cast<const uint8_t*>(sampleData) + sourceOffset;
+                for (uint32_t x = 0; x < width; x++)
+                {
+                    const SourceSampleType sample = reinterpret_cast<const SourceSampleType*>(sourcePtr)[x];
+                    if (sample < min)
+                        min = sample;
+
+                    if (sample > max)
+                        max = sample;
+                }
+
+                sourceOffset += rowPitch;
+            }
+
+            return { min,max };
+        }
+
+
+        /// <summary>
+        /// Normalize data from single channel to RGBA
+        /// </summary>
+        /// <typeparam name="SourceSampleType"></typeparam>
+        /// <param name="sourceImage"></param>
+        /// <param name="normalizeMode"></param>
+        /// <returns></returns>
         template <class SourceSampleType>
         static IMCodec::ImageSharedPtr Normalize(IMCodec::ImageSharedPtr sourceImage, NormalizeMode normalizeMode)
         {
@@ -377,16 +414,18 @@ namespace IMUtil
             imageItem->descriptor.rowPitchInBytes = IMCodec::GetTexelFormatSize(imageItem->descriptor.texelFormatDecompressed) / CHAR_BIT * imageItem->descriptor.width;
             imageItem->data.Allocate(imageItem->descriptor.rowPitchInBytes * imageItem->descriptor.height);
 
-
             if (sourceImage->GetIsRowPitchNormalized() == true)
             {
                 std::span sourceData(reinterpret_cast<const SourceSampleType*>(sampleData), totalPixels);
                 std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(imageItem->data.data()), totalPixels);
-
-                NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+                //Find minMax is a single pass since image data is consecutive 
+                auto minMax = std::minmax_element(std::execution::parallel_unsequenced_policy(), std::begin(sourceData), std::end(sourceData));
+                NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode, std::make_pair(*minMax.first, *minMax.second) );
             }
             else
             {
+                //find min max row by row by calling  FindMinMax
+                auto minMax = FindMinMax(sampleData, sourceImage->GetWidth(), sourceImage->GetRowPitchInBytes(), sourceImage->GetHeight());
                 size_t sourceOffset = 0;
                 size_t destOffset = 0;
                 for (uint32_t y = 0; y < sourceImage->GetHeight(); y++)
@@ -396,7 +435,7 @@ namespace IMUtil
                     std::span sourceData(reinterpret_cast<const SourceSampleType*>(sourcePtr), sourceImage->GetWidth());
                     std::span bgraData(reinterpret_cast<PixelUtil::BitTexel32Ex*>(destPtr), sourceImage->GetWidth());
 
-                    NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode);
+                    NormalizeAnyToRGBA(std::begin(bgraData), std::end(bgraData), std::begin(sourceData), std::end(sourceData), normalizeMode, minMax);
 
                     sourceOffset += sourceImage->GetRowPitchInBytes();
                     destOffset += imageItem->descriptor.rowPitchInBytes;
@@ -406,13 +445,52 @@ namespace IMUtil
             return std::make_shared<Image>(imageItem, sourceImage->GetSubImageGroupType());
         }
 
-
         static IMCodec::ImageSharedPtr CropImage(IMCodec::ImageSharedPtr inputImage, const LLUtils::RectI32& rect)
         {
             LLUtils::RectI32 imageRect = { { 0,0 } , static_cast<LLUtils::PointI32>(inputImage->GetDimensions()) };
             LLUtils::RectI32 cuttedRect = rect.Intersection(imageRect);
             IMCodec::ImageSharedPtr subImage = IMUtil::ImageUtil::GetSubImage(inputImage, cuttedRect);
             return subImage;
+        }
+
+        static bool HasAlphaChannelAndInUse(IMCodec::ImageSharedPtr inputImage)
+        {
+            bool alphaChannelInUse{};
+            bool alphaChannelFound{};
+            IMCodec::ChannelWidth alphaChannelWidth{};
+            for (auto c = 0; c < inputImage->GetTexelInfo().numChannles; c++)
+                if (inputImage->GetTexelInfo().channles[c].semantic == IMCodec::ChannelSemantic::Opacity)
+                {
+                    alphaChannelFound = true;
+                    alphaChannelWidth = inputImage->GetTexelInfo().channles[c].width;
+                }
+
+
+            if (alphaChannelFound == true)
+            {
+                if (alphaChannelWidth % 8 != 0 || inputImage->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
+                {
+                    //Currently, support only RGBA input
+                    //If alpha channel exist and its width is is not multiple of 8, for simplicity assume that alpha is in use.
+                    alphaChannelInUse = true;
+                }
+                else
+                {
+                    
+
+                    for (uint32_t y = 0; y < inputImage->GetHeight(); y++)
+                        for (uint32_t x = 0; x < inputImage->GetWidth(); x++)
+                        {
+                            if (((const PixelUtil::BitTexel32*)inputImage->GetBufferAt(x, y))->W != 255)
+                            {
+                                alphaChannelInUse = true;
+                                break;
+                            }
+                        }
+                }
+            }
+
+            return alphaChannelInUse;
         }
     };
 }

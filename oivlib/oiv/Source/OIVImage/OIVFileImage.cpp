@@ -40,11 +40,11 @@ namespace OIV
     
 	OIVFileImage::OIVFileImage(const std::wstring& fileName) : OIVBaseImage(ImageSource::File), fFileName(fileName) {}
     
-	ResultCode OIVFileImage::Load(IMCodec::ImageLoaderFlags loaderFlags)
+	ResultCode OIVFileImage::Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags)
 	{
-		return Load(loaderFlags, IMCodec::ImageLoadFlags::None);
+		return Load(imageCodec, loaderFlags, IMCodec::ImageLoadFlags::None, {});
 	}
-    ResultCode OIVFileImage::Load(IMCodec::ImageLoaderFlags loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags)
+    ResultCode OIVFileImage::Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params)
     {
         using namespace LLUtils;
         FileMapping fileMapping(fFileName);
@@ -59,7 +59,7 @@ namespace OIV
 		ResultCode result = RC_FileNotSupported;
 		using namespace IMCodec;
 		ImageSharedPtr image;
-		ImageResult loadResult = fImageLoader.Load(static_cast<const std::byte*>(buffer), size, extension.c_str(), imageLoadFlags, loaderFlags, image);
+		ImageResult loadResult = imageCodec->Decode(static_cast<const std::byte*>(buffer), size, extension.c_str(), imageLoadFlags, loaderFlags, params,image);
 
 		if (loadResult == ImageResult::Success)
 		{

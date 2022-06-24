@@ -18,12 +18,17 @@
       "Name": "cmd_toggle_keybindings",
       "arguments": "type=settings"
     },
-
     {
       "GroupID": "OpenFile",
       "DisplayName": "Open file",
       "Name": "cmd_open_file",
       "arguments": ""
+    },
+    {
+      "GroupID": "SaveFile",
+      "DisplayName": "Save visible to file",
+      "Name": "cmd_open_file",
+      "arguments": "cmd=savefile"
     },
     {
       "GroupID": "MoveFileToRecycleBin",
