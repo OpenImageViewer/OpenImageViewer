@@ -34,7 +34,7 @@ set OIV_VERSION_REVISION=0
 set OIV_VERSION_BUILD=8
 
 set VersionPath=.\oivlib\oiv\Include\Version.h
-set BuildPath=.\Build\Release
+set BuildPath=.\Build\bin\Release
 set BuildOperation=Build
 rem Global build variables - END
 
@@ -58,7 +58,15 @@ if [%OIV_OFFICIAL_RELEASE%] == [0] (
 )
 
 
-for /f "tokens=*" %%i in ('timestamp') do set TIMESTAMP=%%i
+echo "Build timestamp..."
+pushd .
+cd Utils
+call buildTimeStamp.cmd
+set timeStampPath=.\Build\timestamp.exe
+popd
+
+
+for /f "tokens=*" %%i in ('%timeStampPath%') do set TIMESTAMP=%%i
 
 set DATE_YYMMDD=%TIMESTAMP:~0,4%-%TIMESTAMP:~5,2%-%TIMESTAMP:~8,2%
 set DATE_YYMMDD_HH_mm_SS=%DATE_YYMMDD%_%TIMESTAMP:~11,2%-%TIMESTAMP:~14,2%-%TIMESTAMP:~17,2%
@@ -94,7 +102,7 @@ if  !errorlevel! neq 0 (
 rem=====================================================================================================
 rem Pack files
 if !OpPack! equ 1 (
-set OutputPath=%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
+set OutputPath=./Build/%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
 copy %DependenciesPath%\*.dll %BuildPath%\
 md !OutputPath!
 set BaseFileName=!OutputPath!/!DATE_YYMMDD!-OIV-!versionString!-Win32x64VC-LLVM
@@ -103,7 +111,7 @@ rem Pack symbols into 7z file.
 7z a -mx9 !BaseFileName!-Symbols.7z !BuildPath!\*.pdb
 
 rem Pack application into 7z file.
-7z a -mx9 !BaseFileName!.7z !BuildPath!\FreeImage.dll !BuildPath!\turbojpeg.dll !BuildPath!\libpng16.dll !BuildPath!\OIViewer.exe !BuildPath!\Resources
+7z a -mx9 !BaseFileName!.7z !BuildPath!\FreeImage.dll !BuildPath!\turbojpeg.dll !BuildPath!\zlib.dll !BuildPath!\tiff.dll !BuildPath!\libpng16.dll !BuildPath!\OIViewer.exe !BuildPath!\Resources
 
 if  !errorlevel! neq 0 (
     echo.
