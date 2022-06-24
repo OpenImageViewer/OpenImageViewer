@@ -92,7 +92,6 @@ namespace OIV
         
         OIV_PROP_TransparencyMode fTransparencyShade = OIV_PROP_TransparencyMode::TM_Medium;
         std::set<IRenderable*> fImagesUploadToRenderer;
-        IMCodec::ImageLoader fImageLoader;
         ImageManager fImageManager;
         std::map<ImageHandle, std::vector<ImageHandle>> fImageToChildren;
         IRendererSharedPtr fRenderer = nullptr;

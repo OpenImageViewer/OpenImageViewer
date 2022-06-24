@@ -11,12 +11,9 @@ namespace OIV
     public:
         const std::wstring& GetFileName() const;
         OIVFileImage(const std::wstring& fileName);
-        ResultCode Load(IMCodec::ImageLoaderFlags loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags);
-        ResultCode Load(IMCodec::ImageLoaderFlags loaderFlags);
-
+        ResultCode Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params);
+        ResultCode Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags);
     private:
-        thread_local static inline IMCodec::ImageLoader fImageLoader;
-
         const std::wstring fFileName;
     };
 }

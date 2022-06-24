@@ -133,50 +133,53 @@ namespace OIV
     // IPictureViewr implementation
     ResultCode OIV::LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags, ImageHandle& handle)
     {
-        if (buffer == nullptr || size == 0)
-            return RC_InvalidParameters;
 
-		ResultCode result = RC_FileNotSupported;
-        using namespace IMCodec;
-        ImageSharedPtr image;
-        ImageLoaderFlags loadFlags = ((flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0) ? ImageLoaderFlags::OnlyRegisteredExtension : ImageLoaderFlags::None;
-        ImageResult loadResult = fImageLoader.Load(static_cast<const std::byte*>(buffer), size, extension,ImageLoadFlags::None, loadFlags, image);
+        return ResultCode::RC_NotImplemented;
 
-		if (loadResult ==  ImageResult::Success)
-		{
-			if (image != nullptr)
-			{
-				int exifOrientation = 0;
-				easyexif::EXIFInfo exifInfo;
-				if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data
-					&& exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
-					exifOrientation = exifInfo.Orientation;
+  //      if (buffer == nullptr || size == 0)
+  //          return RC_InvalidParameters;
+
+		//ResultCode result = RC_FileNotSupported;
+  //      using namespace IMCodec;
+  //      ImageSharedPtr image;
+  //      ImageLoaderFlags loadFlags = ((flags & OIV_CMD_LoadFile_Flags::OnlyRegisteredExtension) != 0) ? ImageLoaderFlags::OnlyRegisteredExtension : ImageLoaderFlags::None;
+  //      ImageResult loadResult = fImageLoader.Load(static_cast<const std::byte*>(buffer), size, extension,ImageLoadFlags::None, loadFlags, image);
+
+		//if (loadResult ==  ImageResult::Success)
+		//{
+		//	if (image != nullptr)
+		//	{
+		//		int exifOrientation = 0;
+		//		easyexif::EXIFInfo exifInfo;
+		//		if (flags & OIV_CMD_LoadFile_Flags::Load_Exif_Data
+		//			&& exifInfo.parseFrom(static_cast<const unsigned char*>(buffer), static_cast<unsigned int>(size)) == PARSE_EXIF_SUCCESS)
+		//			exifOrientation = exifInfo.Orientation;
 
 
-				if (exifOrientation != 0)
-				{
-                    
-					const_cast<ItemMetaData&>(image->GetMetaData()).exifData.orientation = exifOrientation;
+		//		if (exifOrientation != 0)
+		//		{
+  //                  
+		//			const_cast<ItemMetaData&>(image->GetMetaData()).exifData.orientation = exifOrientation;
 
-					// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
-					// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
-					image = ApplyExifRotation(image);
+		//			// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
+		//			// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
+		//			image = ApplyExifRotation(image);
 
-				}
-				handle = fImageManager.AddImage(image);
+		//		}
+		//		handle = fImageManager.AddImage(image);
 
-				for (size_t i = 0; i < image->GetNumSubImages(); i++)
-				{
+		//		for (size_t i = 0; i < image->GetNumSubImages(); i++)
+		//		{
 
-					if (exifOrientation != 0)
-                        image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i)));
+		//			if (exifOrientation != 0)
+  //                      image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i)));
 
-					fImageManager.AddChildImage(image->GetSubImage(i), handle);
-				}
-				result = RC_Success;
-			}
-		}
-		return result;
+		//			fImageManager.AddChildImage(image->GetSubImage(i), handle);
+		//		}
+		//		result = RC_Success;
+		//	}
+		//}
+		//return result;
     }
 
     ResultCode OIV::LoadRaw(const OIV_CMD_LoadRaw_Request& loadRawRequest, int16_t& handle) 
@@ -415,13 +418,14 @@ namespace OIV
 
     ResultCode OIV::GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res)
     {
-        std::wstring knownFileTypes = fImageLoader.GetKnownFileTypes();
+        return RC_NotImplemented; 
+     /*   std::wstring knownFileTypes = fImageLoader.GetKnownFileTypes();
         std::string knownFileTypesAnsi =  LLUtils::StringUtility::ConvertString<std::string>(knownFileTypes);
         res.bufferSize = knownFileTypesAnsi.size() + 1;
         if (res.knownFileTypes != nullptr)
             memcpy(res.knownFileTypes, knownFileTypesAnsi.data(), knownFileTypesAnsi.size() + 1);
         
-        return RC_Success;
+        return RC_Success;*/
     }
 
     ResultCode OIV::RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks)

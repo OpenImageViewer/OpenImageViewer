@@ -14,6 +14,7 @@
 #include <Win32/Win32Window.h>
 #include <Win32/Win32Helper.h>
 #include <Win32/MonitorInfo.h>
+#include <Win32/FileDialog.h>
 
 #include <LInput/Keys/KeyCombination.h>
 #include <LInput/Keys/KeyBindings.h>
@@ -395,12 +396,71 @@ namespace OIV
         }
     }
 
-    void TestApp::CMD_OpenFile([[maybe_unused]]  const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& response)
+    void TestApp::CMD_OpenFile([[maybe_unused]] const CommandManager::CommandRequest& request, [[maybe_unused]] CommandManager::CommandResult& response)
     {
-        std::wstring fileName = ::Win32::Win32Helper::OpenFile(fWindow.GetHandle());
-        if (fileName.empty() == false)
+
+        std::string cmd = request.args.GetArgValue("cmd");
+        if (cmd == "savefile")
         {
-            LoadFile(fileName, false);
+            using namespace ::Win32;
+            std::wstring saveFilePath;
+            std::wstring defaultFileName;
+            if (IsImageOpen())
+            {
+                auto openedImage = fImageState.GetOpenedImage();
+                auto imageSource = openedImage->GetImageSource();
+                switch (imageSource)
+                {
+                case ImageSource::ClipboardText:
+                    defaultFileName = L"text";
+                    break;
+                case ImageSource::File:
+                {
+                    std::filesystem::path p = std::dynamic_pointer_cast<OIVFileImage>(openedImage)->GetFileName();
+                    defaultFileName = p.stem();
+                }
+                break;
+                case ImageSource::Clipboard:
+                    defaultFileName = L"clipboard";
+                        break;
+                default: 
+                    defaultFileName = L"image";
+                    break;
+                }
+
+                auto result = FileDialog::Show(FileDialogType::SaveFile, fSaveComDlgFilters.GetFilters(), L"Save an image"
+                    , fWindow.GetHandle(), L"*." + fDefaultSaveFileExtension, fDefaultSaveFileFormatIndex, defaultFileName, saveFilePath);
+
+                if (result == FileDialogResult::Success)
+                {
+                    std::wstring extension = LLUtils::StringUtility::ToLower(std::filesystem::path(saveFilePath).extension().wstring());
+                    std::wstring_view sv(extension);
+
+                    if (sv.empty() == false)
+                        sv = sv.substr(1);
+
+                    auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
+
+                    if (IMUtil::ImageUtil::HasAlphaChannelAndInUse(rasterized) == false)
+                        rasterized = IMUtil::ImageUtil::Convert(rasterized, IMCodec::TexelFormat::I_R8_G8_B8); // Get rid of the Alpha channel
+
+
+                    LLUtils::Buffer encodedBuffer;
+
+                    fImageCodec.Encode(rasterized, sv.data(), encodedBuffer);
+                    LLUtils::File::WriteAllBytes(saveFilePath, encodedBuffer.size(), encodedBuffer.data());
+                }
+            }
+        }
+
+        else
+        {
+            using namespace ::Win32;
+            std::wstring openFilePath;
+            auto result = FileDialog::Show(FileDialogType::OpenFile, fOpenComDlgFilters.GetFilters(), L"Open image", fWindow.GetHandle(), {}, 0, {}, openFilePath);
+
+            if (result == FileDialogResult::Success)
+                LoadFile(openFilePath, IMCodec::ImageLoaderFlags::None);
         }
     }
 
@@ -1419,12 +1479,15 @@ namespace OIV
     }
 
 
-    bool TestApp::LoadFile(std::wstring filePath, bool onlyRegisteredExtension)
+    bool TestApp::LoadFile(std::wstring filePath, IMCodec::ImageLoaderFlags loaderFlags)
     {
         std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
-        IMCodec::ImageLoaderFlags loaderFlags = onlyRegisteredExtension == true ? IMCodec::ImageLoaderFlags::OnlyRegisteredExtension : IMCodec::ImageLoaderFlags::None;
-        ResultCode result = file->Load(loaderFlags);
+        
+        IMCodec::Parameters params = { {L"canvasWidth", (int)fWindow.GetClientSize().cx}, {L"canvasHeight", (int)fWindow.GetClientSize().cy} };
+
+        ResultCode result = file->Load(&fImageCodec, loaderFlags, IMCodec::ImageLoadFlags::None, params);
+
         using namespace std::string_literals;
         switch (result)
         {
@@ -1632,7 +1695,7 @@ namespace OIV
             asyncResult = async(launch::async, [&]() ->bool
                 {
                     fInitialFile = std::make_shared<OIVFileImage>(filePath);
-                    return fInitialFile->Load(IMCodec::ImageLoaderFlags::None) == RC_Success;
+                    return fInitialFile->Load(&fImageCodec, IMCodec::ImageLoaderFlags::None) == RC_Success;
                 }
             );
         }
@@ -1899,7 +1962,7 @@ namespace OIV
                 if (filePath == GetOpenedFileName())
                 {
                     UnloadOpenedImaged();
-                    LoadFile(filePath2, false);
+                    LoadFile(filePath2, IMCodec::ImageLoaderFlags::None);
                 }
                 else
                 {
@@ -1997,7 +2060,7 @@ namespace OIV
             {
                 std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
                 std::unique_ptr<OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
-                if (fileImage->Load(IMCodec::ImageLoaderFlags::OnlyRegisteredExtension) == RC_Success)
+                if (fileImage->Load(&fImageCodec, IMCodec::ImageLoaderFlags::OnlyRegisteredExtension) == RC_Success)
                 {
                     fileImage->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
                     fileImage->SetPosition(static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - static_cast<LLUtils::PointI32>(fileImage->GetImage()->GetDimensions()) / 2));
@@ -2297,15 +2360,15 @@ namespace OIV
     {
         LLUtils::Logger::GetSingleton().AddLogTarget(&mLogFile);
 
-      
+
 
         fTimerTopMostRetention.SetTargetWindow(fWindow.GetHandle());
         fTimerTopMostRetention.SetCallback([this]()
-        {
-            ProcessTopMost();
-        }
+            {
+                ProcessTopMost();
+            }
         );
-  
+
 
         fTimerSlideShow.SetTargetWindow(fWindow.GetHandle());
         fTimerSlideShow.SetCallback([this]()
@@ -2317,7 +2380,7 @@ namespace OIV
 
                 SetSlideShowEnabled(foundFile);
             });
-        
+
         fDoubleTap.callback = [this]()
         {
             fWindow.SetAlwaysOnTop(true);
@@ -2326,14 +2389,95 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
+        auto codecsInfo = fImageCodec.GetCodecsInfo();
 
-        std::string fileTypesAnsi;
-        OIVCommands::GetKnownFileTypes(fileTypesAnsi);
-        fKnownFileTypes = LLUtils::StringUtility::ToWString(LLUtils::StringUtility::ToLower(fileTypesAnsi));
+        //Build known image extension set and open/save dialog filters
+        ::Win32::FileDialogFilterBuilder::ListFileDialogFilters readFilters;
+        ::Win32::FileDialogFilterBuilder::ListFileDialogFilters writeFilters;
 
-        auto fileTypeList = LLUtils::StringUtility::split(fKnownFileTypes, L';');
-        for (const auto& fileType : fileTypeList)
-            fKnownFileTypesSet.insert(fileType);
+        readFilters.push_back({ L"All files (*.*)" , {{ L"*.*" }} });
+
+        readFilters.push_back({ L"All supported image formats" , {} });
+
+        auto allFormatsIdx = readFilters.size() - 1;
+        
+
+        for (const auto& codecInfo : codecsInfo)
+        {
+            for (const auto& extensionCollection : codecInfo.extensionCollection)
+            {
+                if ((codecInfo.capabilities & IMCodec::CodecCapabilities::BulkCodec) != IMCodec::CodecCapabilities::BulkCodec) // Make sure it isn't a bulk codec
+                {
+                    if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Decode) == IMCodec::CodecCapabilities::Decode)  // Can the codec decode data
+                    {
+                        //Prepare read filters for Open file Dialog, and Prepare known file types data structure
+                        readFilters.push_back({});
+                        auto& readFilter = readFilters.back();
+
+                        std::wstring readDialogDescription;
+                        for (const auto& extension : extensionCollection.listExtensions)
+                        {
+                            readDialogDescription += LLUtils::StringUtility::ToUpper(extension) + L'/';
+                            auto lowercaseExtension = LLUtils::StringUtility::ToLower(extension);
+                            fKnownFileTypesSet.insert(lowercaseExtension);
+                            readFilter.extensions.push_back(L"*." + lowercaseExtension);
+                            readFilters.at(allFormatsIdx).extensions.push_back(L"*." + lowercaseExtension);
+                        }
+
+                        if (readDialogDescription.empty() == false)
+                            readDialogDescription.erase(readDialogDescription.length() - 1, 1);
+
+
+                        readFilter.description = readDialogDescription + L" - " + extensionCollection.description;
+                    }
+
+                    if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Encode) == IMCodec::CodecCapabilities::Encode)  // Can the codec encode data
+                    {
+                        //Prepare write filter for Save file Dialog 
+                        writeFilters.push_back({});
+                        auto& writeFilter = writeFilters.back();
+
+                        std::wstring saveDialogDescription;
+                        for (const auto& extension : extensionCollection.listExtensions)
+                        {
+                            saveDialogDescription += LLUtils::StringUtility::ToUpper(extension) + L'/';
+                            auto lowercaseExtension = LLUtils::StringUtility::ToLower(extension);
+                            if (writeFilter.extensions.empty()) // Add only the primary format.
+                                writeFilter.extensions.push_back(L"*." + lowercaseExtension);
+
+                            if (lowercaseExtension == L"png")
+                                fDefaultSaveFileFormatIndex = writeFilters.size();
+
+                        }
+
+                        if (saveDialogDescription.empty() == false)
+                            saveDialogDescription.erase(saveDialogDescription.length() - 1, 1);
+
+
+                        writeFilter.description = saveDialogDescription + L" - " + extensionCollection.description;
+                    }
+                }
+            }
+        }
+
+        if (fDefaultSaveFileFormatIndex == -1)
+            fDefaultSaveFileFormatIndex = 0;
+
+        fOpenComDlgFilters = { readFilters };
+        fSaveComDlgFilters = { writeFilters };
+
+        std::wstringstream ss;
+
+        for (const auto& knownExtension : fKnownFileTypesSet)
+            ss << knownExtension << L';';
+        
+        if (ss.rdbuf()->in_avail() > 0)
+        {
+            ss.seekp(-1, std::ios_base::end);
+            ss << L'\0';
+        }
+        
+        fKnownFileTypes = ss.str();
 
         fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
 
@@ -2666,7 +2810,7 @@ namespace OIV
             std::advance(it, fileIndex);
         }
         
-        while ((isLoaded = LoadFile(*it, true)) == false);
+        while ((isLoaded = LoadFile(*it, IMCodec::ImageLoaderFlags::OnlyRegisteredExtensionRelaxed)) == false);
 
 
         if (isLoaded)
@@ -3300,7 +3444,7 @@ namespace OIV
 
             if (text.empty() == false)
             {
-                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>(ImageSource::Clipboard);
+                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>(ImageSource::ClipboardText);
                 textImage->SetText(text);
                 textImage->SetPosition(LLUtils::PointF64::Zero);
                 textImage->SetScale(LLUtils::PointF64::One);
@@ -3451,7 +3595,7 @@ namespace OIV
         {
             if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
             {
-                LoadFile(requestedFile, false);
+                LoadFile(requestedFile, IMCodec::ImageLoaderFlags::None);
             }
             else
             {
@@ -3460,7 +3604,7 @@ namespace OIV
                 switch (mbResult)
                 {
                 case IDYES:
-                    LoadFile(GetOpenedFileName(), false);
+                    LoadFile(GetOpenedFileName(), IMCodec::ImageLoaderFlags::None);
                     break;
                 case IDNO:
                     break;
@@ -3475,7 +3619,7 @@ namespace OIV
         switch (fMofifiedFileReloadMode)
         {
         case MofifiedFileReloadMode::AutoBackground:
-            LoadFile(GetOpenedFileName(), false); // Load file immediatly
+            LoadFile(GetOpenedFileName(), IMCodec::ImageLoaderFlags::None); // Load file immediatly
             break;
         case MofifiedFileReloadMode::AutoForeground:
         case MofifiedFileReloadMode::Confirmation: // implicitly foreground
@@ -3552,7 +3696,7 @@ namespace OIV
                 if (uMsg.wParam == ::OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY)
                 {
                     wchar_t* fileToLoad = reinterpret_cast<wchar_t*>(cds->lpData);
-                    LoadFile(fileToLoad, false);
+                    LoadFile(fileToLoad, IMCodec::ImageLoaderFlags::None);
                     fWindow.SetVisible(true);
                 }
             }
@@ -3668,7 +3812,7 @@ namespace OIV
                 for (i = 0; i < fileList.size(); i++)
                 {
                     file = std::make_shared<OIVFileImage>(fileList.at(i));
-                    result = file->Load(IMCodec::ImageLoaderFlags::None);
+                    result = file->Load(&fImageCodec, IMCodec::ImageLoaderFlags::None);
                     if (result == RC_Success)
                         break;
 
@@ -3687,7 +3831,7 @@ namespace OIV
 
         else
         {
-            if (LoadFile(filePath, false))
+            if (LoadFile(filePath, IMCodec::ImageLoaderFlags::None))
                 success = true;
         }
 

@@ -12,6 +12,7 @@
 #include <Win32/Timer.h>
 #include <Win32/Win32Window.h>
 #include <Win32/Clipboard.h>
+#include <Win32/FileDialog.h>
 
 #include "win32/MainWindow.h"
 #include "AutoScroll.h"
@@ -42,7 +43,7 @@
 
 #include "MouseMultiClickHandler.h"
 
-#include "Extensions/NetSettings/GuiProvider.h"
+#include <NetSettings/GuiProvider.h>
 
 
 namespace OIV
@@ -234,7 +235,7 @@ namespace OIV
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
-        bool LoadFile(std::wstring filePath, bool onlyRegisteredExtension);
+        bool LoadFile(std::wstring filePath, IMCodec::ImageLoaderFlags loaderFlags);
         bool LoadFileOrFolder(const std::wstring& filePath);
 
         LLUtils::ListWString GetSupportedFileListInFolder(const std::wstring& folderPath);
@@ -385,6 +386,7 @@ namespace OIV
         bool fIsActive = false;
         bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
+        IMCodec::ImageCodec fImageCodec;
         
         ::Win32::ClipboardFormatType fRTFFormatID {};
         ::Win32::ClipboardFormatType fHTMLFormatID {};
@@ -439,6 +441,10 @@ namespace OIV
         std::wstring fPendingReloadFileName;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
+        ::Win32::FileDialogFilterBuilder fOpenComDlgFilters;
+        ::Win32::FileDialogFilterBuilder fSaveComDlgFilters;
+        std::wstring fDefaultSaveFileExtension = L"png";
+        int16_t fDefaultSaveFileFormatIndex = -1;
         std::wstring fPendingFolderLoad;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;

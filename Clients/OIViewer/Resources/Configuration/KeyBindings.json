@@ -9,6 +9,7 @@
     { "5": "WindowSizeMultiFullScreen" },
     { "Grave": "ShowImageInfo" },
     { "Control+O": "OpenFile" },
+    { "Control+S": "SaveFile" },
     { "Control+Shift+O": "OpenContainingFolder" },
     { "Control+L": "OpenLocationInGoogleMaps" },
     { "GreyDelete": "MoveFileToRecycleBin" },
