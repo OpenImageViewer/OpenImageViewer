@@ -111,7 +111,7 @@ rem Pack symbols into 7z file.
 7z a -mx9 !BaseFileName!-Symbols.7z !BuildPath!\*.pdb
 
 rem Pack application into 7z file.
-7z a -mx9 !BaseFileName!.7z !BuildPath!\FreeImage.dll !BuildPath!\turbojpeg.dll !BuildPath!\zlib.dll !BuildPath!\tiff.dll !BuildPath!\libpng16.dll !BuildPath!\OIViewer.exe !BuildPath!\Resources
+7z a -mx9 !BaseFileName!.7z !BuildPath!\*.dll !BuildPath!\*.exe !BuildPath!\Resources
 
 if  !errorlevel! neq 0 (
     echo.
