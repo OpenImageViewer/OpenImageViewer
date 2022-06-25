@@ -252,8 +252,10 @@ namespace OIV
         void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
         ClipboardDataType PasteFromClipBoard();
+        bool SetClipboardImage(IMCodec::ImageSharedPtr image);
         bool CopyVisibleToClipBoard();
         void CropVisibleImage();
+        void CutSelectedArea();
         void AfterFirstFrameDisplayed();
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);

@@ -449,9 +449,49 @@ namespace IMUtil
         {
             LLUtils::RectI32 imageRect = { { 0,0 } , static_cast<LLUtils::PointI32>(inputImage->GetDimensions()) };
             LLUtils::RectI32 cuttedRect = rect.Intersection(imageRect);
-            IMCodec::ImageSharedPtr subImage = IMUtil::ImageUtil::GetSubImage(inputImage, cuttedRect);
+            IMCodec::ImageSharedPtr subImage = GetSubImage(inputImage, cuttedRect);
             return subImage;
         }
+
+
+
+        static IMCodec::ImageSharedPtr FillColor(IMCodec::ImageSharedPtr inputImage, const LLUtils::RectI32& rect, LLUtils::Color color)
+        {
+            if (inputImage->GetTexelFormat() == IMCodec::TexelFormat::I_R8_G8_B8_A8)
+            {
+                LLUtils::RectI32 image = { { 0,0 } ,{ static_cast<int32_t> (inputImage->GetWidth())  , static_cast<int32_t> (inputImage->GetHeight()) } };
+
+                auto topLeft = rect.GetCorner(LLUtils::Corner::TopLeft);
+
+                if (rect.IsNonNegative() && rect.IsInside(image))
+                {
+                    using namespace IMCodec;
+                    const std::byte* sourceBuffer = inputImage->GetBuffer();
+
+                    ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+
+                    //Copy the image item
+                    *imageItem = *inputImage->GetImageItem();
+
+                    std::byte* imageBuffer = imageItem->data.data();
+
+                    for (int32_t y = 0; y < rect.GetHeight(); y++)
+                    {
+                        for (int32_t x = 0; x < rect.GetWidth(); x++)
+                        {
+                            auto curPos = imageBuffer + (topLeft.y +  y) * imageItem->descriptor.rowPitchInBytes + (x +  topLeft.x) * GetTexelFormatSize(imageItem->descriptor.texelFormatDecompressed) / CHAR_BIT;
+                            *reinterpret_cast<LLUtils::Color*>(curPos) = color;
+                        }
+                    }
+
+                    ImageSharedPtr cuttedImagePtr = std::make_shared<Image>(imageItem, inputImage->GetSubImageGroupType());
+
+                    return cuttedImagePtr;
+                }
+            }
+            return nullptr;
+        }
+        
 
         static bool HasAlphaChannelAndInUse(IMCodec::ImageSharedPtr inputImage)
         {

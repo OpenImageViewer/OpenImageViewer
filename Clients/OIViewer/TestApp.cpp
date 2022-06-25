@@ -796,6 +796,10 @@ namespace OIV
             else
                 result.resValue = L"Cannot copy to clipboard";
         }
+        else if (cmd == "cut")
+        {
+            CutSelectedArea();
+        }
     }
 
 
@@ -3472,32 +3476,37 @@ namespace OIV
         return clipboardType;
     }
 
+    bool TestApp::SetClipboardImage(IMCodec::ImageSharedPtr image)
+    {
+        auto clipboardCompatibleImage = IMUtil::ImageUtil::ConvertImageWithNormalization(image, IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
+        if (clipboardCompatibleImage != nullptr)
+        {
+            uint32_t width = clipboardCompatibleImage->GetWidth();
+            uint32_t height = clipboardCompatibleImage->GetHeight();
+            uint8_t bpp = clipboardCompatibleImage->GetBitsPerTexel();
+            auto dibBUffer = LLUtils::PlatformUtility::CreateDIB<1>(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
+            fClipboardHelper.SetClipboardData(CF_DIB, dibBUffer);
+            auto dibV5BUffer = LLUtils::PlatformUtility::CreateDIB<5>(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
+            fClipboardHelper.SetClipboardData(CF_DIBV5, dibV5BUffer);
+            return true;
+        }
+        return false;
+    }
+
     bool TestApp::CopyVisibleToClipBoard()
     {
         LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
         auto cropped =  IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt);
+        bool result = false;
         if (cropped != nullptr)
         {
             //2. Flip the image vertically and convert it to BGRA for the clipboard.
             auto flipped =  IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, cropped);
             if (flipped != nullptr)
-            {
-
-                auto clipboardCompatibleImage  = IMUtil::ImageUtil::ConvertImageWithNormalization(flipped, IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
-                if (clipboardCompatibleImage != nullptr)
-                {
-                    uint32_t width = clipboardCompatibleImage->GetWidth(); 
-                    uint32_t height = clipboardCompatibleImage->GetHeight();
-                    uint8_t bpp = clipboardCompatibleImage->GetBitsPerTexel();
-                    auto dibBUffer = LLUtils::PlatformUtility::CreateDIB(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
-
-                    fClipboardHelper.SetClipboardData(CF_DIB, dibBUffer);
-                    return true;
-                }
-            }
+                result = SetClipboardImage(flipped);
         }
 
-        return false;
+        return result;
     }
 
     void TestApp::CropVisibleImage()
@@ -3514,12 +3523,28 @@ namespace OIV
         }
     }
 
+    void TestApp::CutSelectedArea()
+    {
+        //Please note that currently this function works on the rasterized image, a more general solution is needed to work on a previous stage image.
+        
+        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
+
+        SetClipboardImage(IMUtil::ImageUtil::GetSubImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt));
+
+        auto colorFilled = IMUtil::ImageUtil::FillColor(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt, LLUtils::Color(0,0,0,255));
+
+        if (colorFilled != nullptr)
+        {
+            auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
+            LoadOivImage(oivColorFilled);
+            CancelSelection();
+        }
+    }
 
     void TestApp::AfterFirstFrameDisplayed()
     {
         PostInitOperations();
     }
-    
 
     LRESULT TestApp::ClientWindwMessage(const ::Win32::Event* evnt1)
     {
