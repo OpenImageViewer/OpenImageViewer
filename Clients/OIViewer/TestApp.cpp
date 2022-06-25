@@ -1256,8 +1256,11 @@ namespace OIV
                 title = ss.str() + L" - ";
             }
             break;
+            case ImageSource::ClipboardText:
+                title = L"Clipboard text - ";
+                break;
             case ImageSource::Clipboard:
-                title = L"Clipboard - ";
+                title = L"Clipboard image - ";
                 break;
             default:
                 title = L"Unknown image source - ";
