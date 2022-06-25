@@ -58,6 +58,7 @@
     { "Control+C": "CopySelectedAreaToClipboard" },
     { "Control+Shift+C": "CopyFileNameToClipboard" },
     { "Control+V": "PasteImageFromClipboard" },
+    { "Control+X": "Cut" },
     { "GREYRIGHT": "NextImageInFolder" },
     { "GREYPGDN": "NextImageInFolder" },
     { "GREYLEFT": "PreviousImageInFolder" },

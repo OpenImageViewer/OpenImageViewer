@@ -313,11 +313,18 @@
       "arguments": "cmd=fileName"
     },
     {
+      "GroupID": "Cut",
+      "DisplayName": "Cut selected area",
+      "Name": "cmd_copyToClipboard",
+      "arguments": "cmd=cut"
+    },
+    {
       "GroupID": "PasteImageFromClipboard",
       "DisplayName": "Paste image from clipboard",
       "Name": "cmd_pasteFromClipboard",
       "arguments": ""
     },
+
     {
       "GroupID": "NextImageInFolder",
       "DisplayName": "Next image",
