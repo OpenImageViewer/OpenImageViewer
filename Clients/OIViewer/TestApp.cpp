@@ -2660,12 +2660,16 @@ namespace OIV
         else if (key == L"displaysettings/backgroundcolor1")
         {
             auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
-            auto backgroundColor1 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+            LLUtils::Color backgroundColor1 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+            ApiGlobal::sPictureRenderer->SetBackgroundColor(0, backgroundColor1);
+            fRefreshOperation.Queue();
         }
         else if (key == L"displaysettings/backgroundcolor2")
         {
             auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
-            auto backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+            LLUtils::Color backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
+            ApiGlobal::sPictureRenderer->SetBackgroundColor(1, backgroundColor2);
+            fRefreshOperation.Queue();
         }
     }
 

@@ -33,6 +33,7 @@ namespace OIV
         ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) override;
         ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request, OIV_CMD_GetSubImages_Response& res) override;
         IRenderer* GetRenderer() override;
+        ResultCode SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
         
         int Init() override;
         int SetParent(std::size_t handle) override;

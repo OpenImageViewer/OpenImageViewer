@@ -15,7 +15,7 @@ namespace OIV
         virtual int SetFilterLevel(OIV_Filter_type filterType) = 0;
         virtual int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) = 0;
         virtual int SetSelectionRect(VisualSelectionRect selectionRect) = 0;
-
+        virtual int SetBackgroundColor(int index, LLUtils::Color backgroundColor) = 0;
 
         virtual int AddRenderable(IRenderable* renderable) = 0;
         virtual int RemoveRenderable(IRenderable* renderable) = 0;

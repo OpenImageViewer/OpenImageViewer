@@ -14,6 +14,7 @@
 	#define lerp mix
 #endif
 
+#include "globals.shader"
 #include "colorCorrection.shader"
 #include "imagecommon.shader"
 
@@ -24,15 +25,19 @@ STATIC_CONST float4 midnightBlue = float4(25 / 255.0, 25 / 255.0 , 112 / 255.0, 
 STATIC_CONST float4 darkBlue = float4(0 / 255.0, 0 / 255.0, 40 / 255.0, 1);
 STATIC_CONST float4 red = float4(1, 0, 0, 1);
 
-//TODO: extract background colours to the CPU.
 STATIC_CONST float4 BackgroundColor1  = black;
 STATIC_CONST float4 BackgroundColor2 = darkBlue;
 
 //Globals
 
+cbuffer Globals_ : register(b2) 
+{
+	Globals globals;
+};
+
 cbuffer BaseImageData_ : register(b0) 
 {
-BaseImageData baseImageData;
+	BaseImageData baseImageData;
 };
 
 cbuffer MainImageData : register(b1) 
@@ -179,7 +184,7 @@ void DrawPixelGrid(
 void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
 {
 	//if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-            texel = GetChecker(BackgroundColor1, BackgroundColor2, screenUV, viewportSize);
+            texel = GetChecker(globals.BackgroundColor1, globals.BackgroundColor2, screenUV, viewportSize);
 }
 
 void DrawImage(float2 uv

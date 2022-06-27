@@ -19,6 +19,12 @@ namespace OIV
         int32_t uSelectionRect[4]; // p0 (x,y) ,  p1 (z,w)
     };
 
+    struct CONSTANT_BUFFER_GLOBALS
+    {
+        float backgroundColor1[4];
+        float backgroundColor2[4];
+    };
+
     struct CONSTANT_BUFFER_IMAGE_COMMON
     {
         float uvViewportSize[4];
@@ -78,6 +84,7 @@ namespace OIV
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
         int AddRenderable(IRenderable* renderable);
         int RemoveRenderable(IRenderable* renderable);
+        int SetBackgroundColor(int index, LLUtils::Color backgroundColor);
 
 #pragma region //**** Private methods*****/
     private: 
@@ -95,7 +102,15 @@ namespace OIV
         D3D11ShaderUniquePtr fSelectionFragmentShaer;
         D3D11ShaderUniquePtr fImageSimpleFragmentShader;
         bool fIsParamsDirty = true;
+        bool fGlobalsDirty = true;
         VisualSelectionRect fSelectionRect;
+        std::array<LLUtils::Color, 2> fBackgroundColors =
+        {
+            {
+                 {0, 0, 0, 255} // black
+                ,{0,0,40,255} // dark blue
+            }
+        };
 
 
         struct MapLess
@@ -115,6 +130,7 @@ namespace OIV
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport {};
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> fBufferSelection;
+        D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_GLOBALS> fBufferGlobals;
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_COMMON> fBufferImageCommon;
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_IMAGE_MAIN> fBufferImageMain;
         

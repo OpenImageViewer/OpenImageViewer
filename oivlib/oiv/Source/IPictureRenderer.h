@@ -42,5 +42,6 @@ namespace OIV
 
         virtual ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) = 0;
         virtual ResultCode ResampleImage(const OIV_CMD_Resample_Request&, ImageHandle&) = 0;
+        virtual ResultCode SetBackgroundColor(int index, LLUtils::Color backgroundColor) = 0;
     };
 }
