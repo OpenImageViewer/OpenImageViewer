@@ -3488,10 +3488,16 @@ namespace OIV
             uint32_t height = clipboardCompatibleImage->GetHeight();
             uint8_t bpp = clipboardCompatibleImage->GetBitsPerTexel();
             auto dibBUffer = LLUtils::PlatformUtility::CreateDIB<1>(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
-            fClipboardHelper.SetClipboardData(CF_DIB, dibBUffer);
-            auto dibV5BUffer = LLUtils::PlatformUtility::CreateDIB<5>(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
-            fClipboardHelper.SetClipboardData(CF_DIBV5, dibV5BUffer);
-            return true;
+            auto result =  fClipboardHelper.SetClipboardData(CF_DIB, dibBUffer);
+
+            if (result == ::Win32::ClipboardResult::Success)
+            {
+                auto dibV5BUffer = LLUtils::PlatformUtility::CreateDIB<5>(width, height, bpp, clipboardCompatibleImage->GetRowPitchInBytes(), clipboardCompatibleImage->GetBuffer());
+                result = fClipboardHelper.SetClipboardData(CF_DIBV5, dibV5BUffer);
+            }
+
+            if (result == ::Win32::ClipboardResult::Success)
+                return true;
         }
         return false;
     }
