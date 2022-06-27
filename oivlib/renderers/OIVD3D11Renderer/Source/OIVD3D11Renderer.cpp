@@ -50,4 +50,10 @@ namespace OIV
     {
         return fD3D11Renderer->RemoveRenderable(renderable);
     }
+
+    int OIVD3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    {
+        return fD3D11Renderer->SetBackgroundColor(index, backgroundColor);
+    }
+    
 }

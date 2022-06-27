@@ -162,6 +162,21 @@ LLUTILS_DISABLE_WARNING_POP
         fBufferSelection->GetBuffer().uSelectionRect[0] = -1;
     }
 
+    {
+        D3D11_BUFFER_DESC cbDesc;
+        cbDesc.ByteWidth = LLUtils::Utility::Align<UINT>(sizeof(CONSTANT_BUFFER_GLOBALS), 16);
+        cbDesc.Usage = D3D11_USAGE_DYNAMIC;
+        cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        cbDesc.MiscFlags = 0;
+        cbDesc.StructureByteStride = 0;
+
+        fBufferGlobals = std::make_unique<D3D11BufferBound<CONSTANT_BUFFER_GLOBALS>>(fDevice, cbDesc, nullptr);
+        
+        memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+    }
+
     //Create constant buffer for selection rect.
     {
         // Fill in a buffer description.
@@ -274,6 +289,11 @@ LLUTILS_DISABLE_WARNING_POP
             //    , 0);
             fIsParamsDirty = false;
         }
+        if (fGlobalsDirty)
+        {
+            fBufferGlobals->Update();
+            fGlobalsDirty = false;
+        }
     }
 
     void D3D11Renderer::DrawImage(const ImageEntry& entry)
@@ -312,7 +332,6 @@ LLUTILS_DISABLE_WARNING_POP
         fBufferImageCommon->Update();
         fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
 
-
         switch (renderable->GetImageRenderMode())
         {
         case OIV_Image_Render_mode::IRM_Overlay:
@@ -336,7 +355,8 @@ LLUTILS_DISABLE_WARNING_POP
     {
         UpdateGpuParameters();
         ID3D11DeviceContext* context = fDevice->GetContext();
-        
+
+        fBufferGlobals->Use(ShaderStage::FragmentShader, 2);
         //Draw images
         for (const MapImageEntry::value_type& idEntryPair : fImageEntries)
         {
@@ -444,6 +464,18 @@ LLUTILS_DISABLE_WARNING_POP
     {
         if (fImageEntries.erase(renderable) == 0)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem, "can not remove image");
+
+        return 0;
+    }
+
+    int D3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    {
+        fBackgroundColors.at(index) = backgroundColor;
+        if (index == 0 )
+            memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        else 
+            memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        fGlobalsDirty = true;
 
         return 0;
     }

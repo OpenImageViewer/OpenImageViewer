@@ -318,6 +318,13 @@ namespace OIV
         
     }
 
+    ResultCode OIV::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    {
+        fRenderer->SetBackgroundColor(index, backgroundColor);
+
+        return ResultCode::RC_Success;
+    }
+
     ResultCode OIV::AddRenderable(IRenderable* renderable)
     {
         if (fRenderer != nullptr)
