@@ -803,7 +803,7 @@ namespace OIV
     }
 
 
-    void TestApp::CMD_PasteFromClipboard(const CommandManager::CommandRequest& request,
+    void TestApp::CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
         CommandManager::CommandResult& result)
     {
 
@@ -1326,7 +1326,7 @@ namespace OIV
     void TestApp::DisplayOpenedFileName()
     {
         if (IsOpenedImageIsAFile())
-            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()));
+            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()),  UserMessageGroups::SuccessfulFileLoad,MessageFlags::Interchangeable | MessageFlags::Moveable);
     }
 
 
@@ -1502,10 +1502,10 @@ namespace OIV
             LoadOivImage(file);
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s, UserMessageGroups::FailedFileLoad,MessageFlags::Persistent);
             break;
         default:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s, UserMessageGroups::FailedFileLoad, MessageFlags::Persistent);
         }
         return result == RC_Success;
 
@@ -1731,12 +1731,6 @@ namespace OIV
         fWindow.AddEventListener(std::bind(&TestApp::HandleMessages, this, _1));
         fWindow.GetCanvasWindow().AddEventListener(std::bind(&TestApp::HandleClientWindowMessages, this, _1));
 
-		fTimerHideUserMessage.SetTargetWindow(fWindow.GetHandle());
-		fTimerHideUserMessage.SetCallback([this]()
-			{
-				HideUserMessageGradually();
-			}
-		);
 
         fRefreshOperation.Begin();
 
@@ -1781,6 +1775,11 @@ namespace OIV
                  RefreshImage();
              });
 
+
+         fMessageManager = std::make_unique<MessageManager>(fWindow.GetHandle(), &fLabelManager, 5, [&]()->void
+         {
+                 fRefreshOperation.Queue();
+         });
         
         OIVCommands::Init(fWindow.GetCanvasHandle());
 
@@ -1803,7 +1802,7 @@ namespace OIV
         if (isInitialFileProvided && !isInitialFileExists)
         {
             using namespace  std::string_literals;
-            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s);
+            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s, UserMessageGroups::FailedFileLoad, MessageFlags::Persistent);
         }
 
         fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
@@ -2987,8 +2986,6 @@ namespace OIV
     {
         OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
         auto selectionSizeStr = std::to_wstring(fImageSpaceSelection.GetWidth()) + L" X " + std::to_wstring(fImageSpaceSelection.GetHeight());
-        auto selectionTopLeft = fImageSpaceSelection.GetCorner(LLUtils::Corner::TopLeft);
-        auto selectionBottomRight = fImageSpaceSelection.GetCorner(LLUtils::Corner::BottomRight);
 
         if (selectionSizeText == nullptr)
         {
@@ -3011,7 +3008,6 @@ namespace OIV
         selectionSizeText->SetText(selectionSizeStr);
         selectionSizeText->Create();
        
-        auto seelctionRectWidth = fSelectionRect.GetSelectionRect().GetWidth();
         int32_t posX = selectionRectPosition.x + fSelectionRect.GetSelectionRect().GetWidth() / 2  - selectionSizeText->GetImage()->GetWidth() / 2;
         int32_t posY = selectionRectPosition.y - selectionSizeText->GetImage()->GetHeight();
 
@@ -3573,7 +3569,7 @@ namespace OIV
     void TestApp::SetTopMostUserMesage()
     {
         std::wstring message = L"Top most ending in..." + std::to_wstring(fTopMostCounter);
-        SetUserMessage(message, -1);
+        SetUserMessage(message, WindowOnTop ,MessageFlags::Interchangeable | MessageFlags::ManualRemove);
     }
 
     bool TestApp::GetAppActive() const
@@ -3608,7 +3604,7 @@ namespace OIV
             {
                 fTimerTopMostRetention.SetInterval(0);
                 fWindow.SetAlwaysOnTop(false);
-                HideUserMessageGradually();
+                fMessageManager->RemoveGroup(WindowOnTop);
             }
             else
                 SetTopMostUserMesage();
@@ -3919,97 +3915,9 @@ namespace OIV
         return false;
     }
 
-    void TestApp::SetUserMessage(const std::wstring& message,int32_t hideDelay )
+    void TestApp::SetUserMessage(const std::wstring& message, GroupID groupID, MessageFlags groupFlags)
     {
-        OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
-        if (userMessage == nullptr)
-        {
-            // Create new user message.
-            userMessage = fLabelManager.GetOrCreateTextLabel("userMessage");
-            userMessage->SetBackgroundColor(LLUtils::Color(0));
-            userMessage->SetFontPath(LabelManager::sFontPath);
-            userMessage->SetFontSize(12);
-            userMessage->SetOutlineWidth(2);
-
-            userMessage->SetPosition({ 20,20 });
-            userMessage->SetFilterType(OIV_Filter_type::FT_None);
-            userMessage->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
-            userMessage->SetScale({ 1.0,1.0 });
-            userMessage->SetOpacity(1.0);
-            userMessage->SetVisible(true);
-        }
-        else
-        {
-            // user message already exists, just make visible.
-            userMessage->SetVisible(true);
-            userMessage->SetOpacity(1.0);
-        }
-
-        std::wstring wmsg = L"<textcolor=#ff8930>";
-        wmsg += message;
-        userMessage->SetText(wmsg);
-
-        if (userMessage->IsDirty())
-        {
-            fRefreshOperation.Queue();
-
-            int32_t messageDelay = 0;
-            if (hideDelay == 0)     //Auto hide delay
-            {
-                messageDelay = std::max(fMinDelayRemoveMessage, static_cast<uint32_t>(message.length() * fDelayPerCharacter));
-            }
-            else
-            {
-                hideDelay = messageDelay;
-            }
-
-            if (messageDelay > 0 )
-                fTimerHideUserMessage.SetInterval(messageDelay);
-        }
-    }
-    
-    void TestApp::SetDebugMessage(const std::string& message)
-    {
-        OIVTextImage* debugMessage =  fLabelManager.GetOrCreateTextLabel("debugLabel");
-        
-
-        std::wstring wmsg = L"<textcolor=#ff8930>";
-        wmsg += LLUtils::StringUtility::ToWString(message);
-        debugMessage->SetText(wmsg);
-        debugMessage->SetBackgroundColor(LLUtils::Color(0, 0, 0, 180));
-        debugMessage->SetFontPath(LabelManager::sFontPath);
-
-        if (debugMessage->IsDirty())
-        {
-            fRefreshOperation.Queue();
-        }
-    }
-    
-    void TestApp::HideUserMessageGradually()
-    {
-        OIVTextImage* userMessage = fLabelManager.GetTextLabel("userMessage");
-
-        double opacity = userMessage->GetOpacity();
-
-        constexpr double OpacityThreshold = 0.01;
-        if (opacity > OpacityThreshold)
-        {
-            fTimerHideUserMessage.SetInterval(5);
-            opacity *= 0.8;
-        }
-        else
-        {
-            // Remove message from display.
-            userMessage->SetVisible(false);
-            opacity = 1.0;
-            fTimerHideUserMessage.SetInterval(0);
-        }
-
-        userMessage->SetOpacity(opacity);
-
-        if (userMessage->IsDirty())
-            fRefreshOperation.Queue();
-        
+        fMessageManager->SetUserMessage(groupID, groupFlags, message);
     }
 
     bool TestApp::ExecuteCommandInternal(const CommandRequestIntenal& requestInternal)

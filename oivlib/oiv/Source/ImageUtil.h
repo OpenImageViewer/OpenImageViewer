@@ -466,8 +466,6 @@ namespace IMUtil
                 if (rect.IsNonNegative() && rect.IsInside(image))
                 {
                     using namespace IMCodec;
-                    const std::byte* sourceBuffer = inputImage->GetBuffer();
-
                     ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
 
                     //Copy the image item
