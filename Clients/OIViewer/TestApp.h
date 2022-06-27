@@ -42,6 +42,7 @@
 #include "FileWatcher.h"
 
 #include "MouseMultiClickHandler.h"
+#include "UI/MessageManager.h"
 
 #include <NetSettings/GuiProvider.h>
 
@@ -79,7 +80,13 @@ namespace OIV
         , Text
     };
 
-   
+    enum UserMessageGroups
+    {
+          Default
+        , SuccessfulFileLoad
+        , FailedFileLoad
+        , WindowOnTop
+    };
 
     //Assue Count exists and presenting the total number of values in an enum.
     template <typename T, typename UnderlyingType = typename std::underlying_type_t<T>>
@@ -144,7 +151,6 @@ namespace OIV
 		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack);
 #pragma region Win32 event handling
         bool handleKeyInput(const ::Win32::EventWinMessage* evnt);
-        void HideUserMessageGradually();
         LRESULT ClientWindwMessage(const ::Win32::Event * evnt1);
         void SetTopMostUserMesage();
         void ProcessTopMost();
@@ -163,8 +169,7 @@ namespace OIV
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
         void ProbeForMonitorChange();
         void PerformRefresh();
-        void SetUserMessage(const std::wstring& message, int32_t hideDelay = 0);
-        void SetDebugMessage(const std::string& message);
+        void SetUserMessage(const std::wstring& message, GroupID groupID = 0, MessageFlags groupFlags = MessageFlags::Interchangeable);
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
         bool ExecutePredefinedCommand(std::string command);
@@ -181,7 +186,7 @@ namespace OIV
         void CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_CopyToClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
-        void CMD_PasteFromClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_ImageManipulation(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
@@ -358,11 +363,8 @@ namespace OIV
         OIVBaseImageSharedPtr fAutoScrollAnchor;
         DWORD fMainThreadID = GetCurrentThreadId();
         SelectionRect fSelectionRect;
-        uint32_t fMinDelayRemoveMessage = 1000;
-        uint32_t fDelayPerCharacter = 40;
         uint32_t fQueueResamplingDelay = 50;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
-        ::Win32::Timer fTimerHideUserMessage;
         ::Win32::Timer fTimerTopMostRetention;
         ::Win32::Timer fTimerSlideShow;
         ::Win32::Clipboard fClipboardHelper;
@@ -451,6 +453,7 @@ namespace OIV
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;
         ::Win32::NotificationIconGroup::IconID fNotificationIconID;
+        std::unique_ptr<MessageManager> fMessageManager;
         void OnSettingChange(const std::wstring& key, const std::wstring& value);
         void LoadSettings();
         void SetResamplingEnabled(bool enable);
