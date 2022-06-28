@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
 option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
+option(OIV_WARNING_LEVEL_EXTREME "Warning level extreme" FALSE)
 
 # Define Release by default.
 if(NOT CMAKE_BUILD_TYPE)
@@ -79,23 +80,27 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()    
 
 
-
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    add_compile_options(-Wextra -Wpedantic -Wimplicit-fallthrough)
-  # using Clang
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  # using GCC
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-  # using Intel C++
-elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    add_compile_options(/permissive-)
-    #add_compile_options(/W1)
-# using Visual Studio C++
-  if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-    string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-  else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-  endif()
+if (OIV_WARNING_LEVEL_EXTREME)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    #enabled warnings flags
+        add_compile_options(-Wextra -Wpedantic -Wall -Wpessimizing-move)
+        #specifically disable the following warning flags
+        add_compile_options(-Wno-c++98-compat -Wno-c++11-compat -Wno-c++14-compat -Wno-c++98-compat-pedantic -Wno-reserved-id-macro -Wno-newline-eof -Wno-global-constructors -Wno-exit-time-destructors -Wno-float-equal -Wno-covered-switch-default -Wno-unreachable-code-break)
+      # using Clang
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+      # using GCC
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+      # using Intel C++
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        add_compile_options(/permissive-)
+        #add_compile_options(/W1)
+    # using Visual Studio C++
+    if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+        string(REGEX REPLACE "/W[0-4]" "/Wall /wd4668 /wd5039 /wd4514 /wd4820 /wd4625 /wd4626 /wd4710 /wd5045 /wd4061" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+      else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+      endif()
+    endif()
 endif()
 
 
