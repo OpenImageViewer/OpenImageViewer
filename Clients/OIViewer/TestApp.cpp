@@ -1262,6 +1262,9 @@ namespace OIV
             case ImageSource::Clipboard:
                 title = L"Clipboard image - ";
                 break;
+            case ImageSource::GeneratedByLib:
+                title = L"Internal image - ";
+                break;
             default:
                 title = L"Unknown image source - ";
                 break;
@@ -3536,17 +3539,32 @@ namespace OIV
     {
         //Please note that currently this function works on the rasterized image, a more general solution is needed to work on a previous stage image.
         
-        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
+        auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
 
-        SetClipboardImage(IMUtil::ImageUtil::GetSubImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt));
+        LLUtils::RectI32 subImageRect = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
 
-        auto colorFilled = IMUtil::ImageUtil::FillColor(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt, LLUtils::Color(0,0,0,255));
+        const LLUtils::RectI32 imageRect = { { 0,0 } ,{ static_cast<int32_t> (rasterized->GetWidth())
+      , static_cast<int32_t> (rasterized->GetHeight()) } };
 
-        if (colorFilled != nullptr)
+        subImageRect = subImageRect.Intersection(imageRect);
+
+        if (subImageRect.IsEmpty() == false)
         {
-            auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
-            LoadOivImage(oivColorFilled);
-            CancelSelection();
+            SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
+
+            auto colorFilled = IMUtil::ImageUtil::FillColor(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), subImageRect, LLUtils::Color(0, 0, 0, 255));
+
+            
+
+            if (colorFilled != nullptr)
+            {
+                auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
+                auto lastState = fResetTransformationMode;
+                fResetTransformationMode = ResetTransformationMode::DoNothing;
+                LoadOivImage(oivColorFilled);
+                fResetTransformationMode = lastState;
+                CancelSelection();
+            }
         }
     }
 
