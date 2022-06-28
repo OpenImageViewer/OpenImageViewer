@@ -27,6 +27,7 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Im
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
 
+option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
 add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
 add_subdirectory(${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper ./external/FreeTypeWrapper)
 add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
