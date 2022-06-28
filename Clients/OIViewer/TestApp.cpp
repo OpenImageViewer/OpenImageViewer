@@ -674,20 +674,25 @@ namespace OIV
         using namespace LLUtils;
         using namespace std;
         string command = request.args.GetArgValue("cmd");
-        if (command == "changespeed")
+        auto openedImage = fImageState.GetOpenedImage();
+        if (openedImage != nullptr && openedImage->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
         {
-            auto amount = request.args.GetArgValue("amount");
-            double amountVal = std::stod(amount, nullptr) / 100.0;
-            
-            fCurrentSequencerSpeed *= 1 + amountVal;
+            if (command == "changespeed")
+            {
+                auto amount = request.args.GetArgValue("amount");
+                double amountVal = std::stod(amount, nullptr) / 100.0;
 
-            wstringstream ss;
-            ss << "<textcolor=#ff8930>" << L"Animation speed" << L"<textcolor=#7672ff> ("
-                << fixed << setprecision(2) << fCurrentSequencerSpeed * 100 << "%)";
+                fCurrentSequencerSpeed *= 1 + amountVal;
 
-            result.resValue = ss.str();
+                wstringstream ss;
+                ss << "<textcolor=#ff8930>" << L"Animation speed" << L"<textcolor=#7672ff> ("
+                    << fixed << setprecision(2) << fCurrentSequencerSpeed * 100 << "%)";
+
+                result.resValue = ss.str();
+            }
         }
     }
+
     void TestApp::CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
