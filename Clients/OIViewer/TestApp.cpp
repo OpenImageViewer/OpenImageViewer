@@ -447,7 +447,7 @@ namespace OIV
 
                     LLUtils::Buffer encodedBuffer;
 
-                    fImageCodec.Encode(rasterized, sv.data(), encodedBuffer);
+                    fImageLoader.Encode(rasterized, sv.data(), encodedBuffer);
                     LLUtils::File::WriteAllBytes(saveFilePath, encodedBuffer.size(), encodedBuffer.data());
                 }
             }
@@ -460,7 +460,7 @@ namespace OIV
             auto result = FileDialog::Show(FileDialogType::OpenFile, fOpenComDlgFilters.GetFilters(), L"Open image", fWindow.GetHandle(), {}, 0, {}, openFilePath);
 
             if (result == FileDialogResult::Success)
-                LoadFile(openFilePath, IMCodec::ImageLoaderFlags::None);
+                LoadFile(openFilePath, IMCodec::PluginTraverseMode::NoTraverse);
         }
     }
 
@@ -934,12 +934,12 @@ namespace OIV
             if (openedIMage != nullptr)
             {
                 auto image = openedIMage->GetImage();
-                if (image != nullptr && image->GetMetaData().exifData.latitude != std::numeric_limits<double>::max())
+                if (image != nullptr && openedIMage->GetMetaData()->exifData.latitude != std::numeric_limits<double>::max())
                 {
                     std::wstringstream ss;
-                    const auto& exifData = image->GetImageItem()->metaData.exifData;
+                    const auto& exifData = openedIMage->GetMetaData()->exifData;
 
-                    ss << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude << ",1000m//data=!3m1!1e3";
+                    ss << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude << ",1000m/data=!3m1!1e3";
 
                     auto str = ss.str();
                     ShellExecute(nullptr, L"open", ss.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
@@ -1050,6 +1050,9 @@ namespace OIV
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
         , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
         , fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this))
+        //, fFileCache(&fImageLoader, std::bind(&TestApp::OnImageReady, this, std::placeholders::_1))
+         
+       
     {
        // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
@@ -1121,6 +1124,8 @@ namespace OIV
         fCommandManager.AddCommand(CommandManager::Command("cmd_set_window_size", std::bind(&TestApp::CMD_SetWindowSize, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_sort_files", std::bind(&TestApp::CMD_SortFiles, this, _1, _2)));
         fCommandManager.AddCommand(CommandManager::Command("cmd_sequencer", std::bind(&TestApp::CMD_Sequencer, this, _1, _2)));
+
+
 
     }
 
@@ -1334,7 +1339,7 @@ namespace OIV
     void TestApp::DisplayOpenedFileName()
     {
         if (IsOpenedImageIsAFile())
-            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()),  UserMessageGroups::SuccessfulFileLoad,MessageFlags::Interchangeable | MessageFlags::Moveable);
+            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()),  static_cast<GroupID>(UserMessageGroups::SuccessfulFileLoad),MessageFlags::Interchangeable | MessageFlags::Moveable);
     }
 
 
@@ -1494,14 +1499,16 @@ namespace OIV
     }
 
 
-    bool TestApp::LoadFile(std::wstring filePath, IMCodec::ImageLoaderFlags loaderFlags)
+    bool TestApp::LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
         std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
+      //  fFileCache.Add(normalizedPath);
+
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
         
         IMCodec::Parameters params = { {L"canvasWidth", (int)fWindow.GetClientSize().cx}, {L"canvasHeight", (int)fWindow.GetClientSize().cy} };
 
-        ResultCode result = file->Load(&fImageCodec, loaderFlags, IMCodec::ImageLoadFlags::None, params);
+        ResultCode result = file->Load(&fImageLoader, loaderFlags, IMCodec::ImageLoadFlags::None, params);
 
         using namespace std::string_literals;
         switch (result)
@@ -1510,10 +1517,10 @@ namespace OIV
             LoadOivImage(file);
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s, UserMessageGroups::FailedFileLoad,MessageFlags::Persistent);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad),MessageFlags::Persistent);
             break;
         default:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s, UserMessageGroups::FailedFileLoad, MessageFlags::Persistent);
+            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
         }
         return result == RC_Success;
 
@@ -1561,7 +1568,7 @@ namespace OIV
 
         LoadSubImages();
 
-        const_cast<IMCodec::ItemRuntimeData&>(fImageState.GetOpenedImage()->GetImage()->GetRuntimeData()).displayTime = fFileDisplayTimer.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds);
+        fImageState.GetOpenedImage()->SetDisplayTime(fFileDisplayTimer.GetElapsedTimeReal(LLUtils::StopWatch::TimeUnit::Milliseconds));
 
         fLastImageLoadTimeStamp.Start();
 
@@ -1710,7 +1717,7 @@ namespace OIV
             asyncResult = async(launch::async, [&]() ->bool
                 {
                     fInitialFile = std::make_shared<OIVFileImage>(filePath);
-                    return fInitialFile->Load(&fImageCodec, IMCodec::ImageLoaderFlags::None) == RC_Success;
+                    return fInitialFile->Load(&fImageLoader, IMCodec::PluginTraverseMode::NoTraverse) == RC_Success;
                 }
             );
         }
@@ -1810,7 +1817,7 @@ namespace OIV
         if (isInitialFileProvided && !isInitialFileExists)
         {
             using namespace  std::string_literals;
-            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s, UserMessageGroups::FailedFileLoad, MessageFlags::Persistent);
+            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
         }
 
         fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
@@ -1849,7 +1856,6 @@ namespace OIV
         {
            auto image = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, GetImageByIndex(imageIndex));
                 
-
             fImageState.SetImageChainRoot(image);
             fRefreshOperation.Begin();
             FitToClientAreaAndCenter();
@@ -1976,7 +1982,7 @@ namespace OIV
                 if (filePath == GetOpenedFileName())
                 {
                     UnloadOpenedImaged();
-                    LoadFile(filePath2, IMCodec::ImageLoaderFlags::None);
+                    LoadFile(filePath2, IMCodec::PluginTraverseMode::NoTraverse);
                 }
                 else
                 {
@@ -2074,7 +2080,7 @@ namespace OIV
             {
                 std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) + L"./Resources/Cursors/arrow-C.cur";
                 std::unique_ptr<OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
-                if (fileImage->Load(&fImageCodec, IMCodec::ImageLoaderFlags::OnlyRegisteredExtension) == RC_Success)
+                if (fileImage->Load(&fImageLoader, IMCodec::PluginTraverseMode::AnyPlugin) == RC_Success)
                 {
                     fileImage->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
                     fileImage->SetPosition(static_cast<LLUtils::PointF64>(static_cast<LLUtils::PointI32>(fWindow.GetMousePosition()) - static_cast<LLUtils::PointI32>(fileImage->GetImage()->GetDimensions()) / 2));
@@ -2403,7 +2409,8 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
-        auto codecsInfo = fImageCodec.GetCodecsInfo();
+
+        auto codecsInfo = fImageLoader.GetImageCodec().GetPluginsInfo();
 
         //Build known image extension set and open/save dialog filters
         ::Win32::FileDialogFilterBuilder::ListFileDialogFilters readFilters;
@@ -2545,7 +2552,7 @@ namespace OIV
 
         if (fPendingFolderLoad.empty() == false)
         {
-            LoadFileOrFolder(fPendingFolderLoad);
+            LoadFileOrFolder(fPendingFolderLoad, IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType);
             fPendingFolderLoad.clear();
         }
 
@@ -2667,16 +2674,16 @@ namespace OIV
 
         else if (key == L"displaysettings/backgroundcolor1")
         {
-            auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
-            LLUtils::Color backgroundColor1 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
-            ApiGlobal::sPictureRenderer->SetBackgroundColor(0, backgroundColor1);
+            //auto argb = ;
+            //LLUtils::Color backgroundColor1 = { argb.channels[0], argb.channels[1] ,argb.channels[2] , argb.channels[3] };
+            ApiGlobal::sPictureRenderer->SetBackgroundColor(0, LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value)));
             fRefreshOperation.Queue();
         }
         else if (key == L"displaysettings/backgroundcolor2")
         {
-            auto argb = LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value));
-            LLUtils::Color backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };
-            ApiGlobal::sPictureRenderer->SetBackgroundColor(1, backgroundColor2);
+            /*auto argb = ;
+            LLUtils::Color backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0] };*/
+            ApiGlobal::sPictureRenderer->SetBackgroundColor(1, LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value)));
             fRefreshOperation.Queue();
         }
     }
@@ -2828,7 +2835,7 @@ namespace OIV
             std::advance(it, fileIndex);
         }
         
-        while ((isLoaded = LoadFile(*it, IMCodec::ImageLoaderFlags::OnlyRegisteredExtensionRelaxed)) == false);
+        while ((isLoaded = LoadFile(*it, IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::OnlyKnownFileType)) == false);
 
 
         if (isLoaded)
@@ -3032,6 +3039,10 @@ namespace OIV
             posY =  std::max(0, selectionRectPosition.y);
 
         selectionSizeText->SetPosition({ static_cast<double>(posX), static_cast<double>(posY) });
+    }
+
+    void TestApp::OnImageReady(IMCodec::ImageSharedPtr image)
+    {
     }
 
     LLUtils::PointI32 TestApp::SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen)
@@ -3432,14 +3443,29 @@ namespace OIV
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, std::string("Unsupported clipboard bitmap compression type :") + std::to_string(info->biCompression));
             }
 
+            using namespace IMCodec;
+            ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
+            ImageDescriptor& props = imageItem->descriptor;
 
-            LoadRaw(bitmapBits
-                , info->biWidth
-                , info->biHeight
-                , rowPitch
-                , info->biBitCount == 24 ? IMCodec::TexelFormat::I_B8_G8_R8 : IMCodec::TexelFormat::I_B8_G8_R8_A8);
+            imageItem->itemType = ImageItemType::Image;
+            props.height = info->biHeight;
+            props.width = info->biWidth;
+            props.texelFormatStorage = info->biBitCount == 24 ? IMCodec::TexelFormat::I_B8_G8_R8 : IMCodec::TexelFormat::I_B8_G8_R8_A8;
+            props.texelFormatDecompressed = info->biBitCount == 24 ? IMCodec::TexelFormat::I_B8_G8_R8 : IMCodec::TexelFormat::I_B8_G8_R8_A8;
+            props.rowPitchInBytes = rowPitch;
+            const size_t bufferSize = props.rowPitchInBytes * props.height;
+            imageItem->data.Allocate(bufferSize);
+            imageItem->data.Write(bitmapBits, 0, bufferSize);
+            auto image = std::make_shared<Image>(imageItem, ImageItemType::Unknown);
+            
+            if (info->biCompression == BI_BITFIELDS) // no support for alpha channel, convert to BGR
+                image = IMUtil::ImageUtil::Convert(image,  IMCodec::TexelFormat::I_B8_G8_R8);
 
+            image = IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, image);
 
+            std::shared_ptr<OIVBaseImage> rawImage = std::make_shared<OIVBaseImage>(ImageSource::Clipboard, image);
+
+            LoadOivImage(rawImage);
             clipboardType = ClipboardDataType::Image;
         }
 
@@ -3602,7 +3628,7 @@ namespace OIV
     void TestApp::SetTopMostUserMesage()
     {
         std::wstring message = L"Top most ending in..." + std::to_wstring(fTopMostCounter);
-        SetUserMessage(message, WindowOnTop ,MessageFlags::Interchangeable | MessageFlags::ManualRemove);
+        SetUserMessage(message, static_cast<GroupID>(UserMessageGroups::WindowOnTop) ,MessageFlags::Interchangeable | MessageFlags::ManualRemove);
     }
 
     bool TestApp::GetAppActive() const
@@ -3637,7 +3663,7 @@ namespace OIV
             {
                 fTimerTopMostRetention.SetInterval(0);
                 fWindow.SetAlwaysOnTop(false);
-                fMessageManager->RemoveGroup(WindowOnTop);
+                fMessageManager->RemoveGroup(static_cast<GroupID>(UserMessageGroups::WindowOnTop));
             }
             else
                 SetTopMostUserMesage();
@@ -3652,7 +3678,7 @@ namespace OIV
         {
             if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
             {
-                LoadFile(requestedFile, IMCodec::ImageLoaderFlags::None);
+                LoadFile(requestedFile, IMCodec::PluginTraverseMode::NoTraverse);
             }
             else
             {
@@ -3661,7 +3687,7 @@ namespace OIV
                 switch (mbResult)
                 {
                 case IDYES:
-                    LoadFile(GetOpenedFileName(), IMCodec::ImageLoaderFlags::None);
+                    LoadFile(GetOpenedFileName(), IMCodec::PluginTraverseMode::NoTraverse);
                     break;
                 case IDNO:
                     break;
@@ -3676,7 +3702,7 @@ namespace OIV
         switch (fMofifiedFileReloadMode)
         {
         case MofifiedFileReloadMode::AutoBackground:
-            LoadFile(GetOpenedFileName(), IMCodec::ImageLoaderFlags::None); // Load file immediatly
+            LoadFile(GetOpenedFileName(), IMCodec::PluginTraverseMode::NoTraverse); // Load file immediatly
             break;
         case MofifiedFileReloadMode::AutoForeground:
         case MofifiedFileReloadMode::Confirmation: // implicitly foreground
@@ -3719,22 +3745,16 @@ namespace OIV
         {
             fIsColorThreadRunning = false;
 
-            if (fImageState.GetImage(ImageChainStage::SourceImage)->GetImage().get() == (IMCodec::Image*)uMsg.wParam)
+            if (fImageState.GetImage(ImageChainStage::SourceImage).get() == reinterpret_cast<OIVBaseImage*>(uMsg.wParam))
             {
-                //Still the same image on display, assing number of colors and refresh ImageInfo
+                // Still the same image on display, assing number of colors and refresh ImageInfo
 
-                // -2 means that color counting has been tried and failed.
-
+                // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't restart for this image.
                 fCountingImageColor.reset();
+                fImageState.GetImage(ImageChainStage::SourceImage)->SetNumUniqueColors((int64_t)uMsg.lParam != UniqueColorsUninitialized -1 ? (int64_t)uMsg.lParam : UniqueColorsFailed);
 
-                const_cast<IMCodec::ItemRuntimeData&>(
-                    fImageState.GetImage(ImageChainStage::SourceImage)->GetImage()->GetRuntimeData())
-                    .numUniqueColors = (int64_t)uMsg.lParam != -1 ? (int64_t)uMsg.lParam : -2;
                 if (GetImageInfoVisible() == true)
-                {
                     ShowImageInfo();
-                }
-				 
             }
             else
             {
@@ -3742,9 +3762,6 @@ namespace OIV
                 if (GetImageInfoVisible() == true)
                     CountColorsAsync();
             }
-
-
-            
         }
         break;
             case WM_COPYDATA:
@@ -3753,7 +3770,7 @@ namespace OIV
                 if (uMsg.wParam == ::OIV::Win32::UserMessage::PRIVATE_WM_LOAD_FILE_EXTERNALLY)
                 {
                     wchar_t* fileToLoad = reinterpret_cast<wchar_t*>(cds->lpData);
-                    LoadFile(fileToLoad, IMCodec::ImageLoaderFlags::None);
+                    LoadFile(fileToLoad, IMCodec::PluginTraverseMode::NoTraverse);
                     fWindow.SetVisible(true);
                 }
             }
@@ -3851,7 +3868,7 @@ namespace OIV
 
 
 
-    bool TestApp::LoadFileOrFolder(const std::wstring& filePath)
+    bool TestApp::LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
 
         bool success = false;
@@ -3869,7 +3886,7 @@ namespace OIV
                 for (i = 0; i < fileList.size(); i++)
                 {
                     file = std::make_shared<OIVFileImage>(fileList.at(i));
-                    result = file->Load(&fImageCodec, IMCodec::ImageLoaderFlags::None);
+                    result = file->Load(&fImageLoader, IMCodec::PluginTraverseMode::NoTraverse);
                     if (result == RC_Success)
                         break;
 
@@ -3888,7 +3905,7 @@ namespace OIV
 
         else
         {
-            if (LoadFile(filePath, IMCodec::ImageLoaderFlags::None))
+            if (LoadFile(filePath, traverseMode))
                 success = true;
         }
 
@@ -3901,7 +3918,7 @@ namespace OIV
     {
 
         std::wstring normalizedPath = std::filesystem::path(event_ddrag_drop_file->fileName).lexically_normal().wstring();
-        if (LoadFileOrFolder(normalizedPath))
+        if (LoadFileOrFolder(normalizedPath, IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType))
         {
             fWindow.SetForground();
             return true;
@@ -3975,11 +3992,12 @@ namespace OIV
     void TestApp::CountColorsAsync()
     {
         //Ensure shared tr refcount doesn't get to zero 
-         // by assiging it to a private memeber field.
+        // by assiging it to a private memeber field.
 
-        auto openedImage = fImageState.GetImage(ImageChainStage::SourceImage)->GetImage();
-        const auto& runtimeData = openedImage->GetRuntimeData();
-        if (runtimeData.numUniqueColors == -1)
+        auto openedImage = fImageState.GetImage(ImageChainStage::SourceImage);
+        
+        // Count colors ONLY if non initialized, meaning it's the first time of trying to count colors
+        if (openedImage->GetNumUniqueColors() == UniqueColorsUninitialized)
         {
             if (fIsColorThreadRunning == false)
             {
@@ -3988,10 +4006,11 @@ namespace OIV
                     fCountingColorsThread.join();
 
                 fCountingImageColor = openedImage;
-                fCountingColorsThread = std::thread([](IMCodec::ImageSharedPtr image, HWND windowHandle)-> void
+                fCountingColorsThread = std::thread([](OIVBaseImageSharedPtr image, HWND windowHandle)-> void
                     {
-                        int64_t uniqueValues = PixelHelper::CountUniqueValues(image);
-                        ::PostMessage(windowHandle, Win32::UserMessage::PRIVATE_WM_COUNT_COLORS, (WPARAM)image.get(), (LPARAM)uniqueValues);
+                        int64_t uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
+                ::PostMessage(windowHandle, Win32::UserMessage::PRIVATE_WM_COUNT_COLORS, (WPARAM)image.get(), (LPARAM)uniqueValues);
+                
 
                     }, fCountingImageColor, fWindow.GetHandle());
             }
@@ -4004,7 +4023,10 @@ namespace OIV
         {
             CountColorsAsync();
 
-            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(fImageState.GetOpenedImage(), fImageState.GetImage(ImageChainStage::SourceImage)->GetImage());
+            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(
+                fImageState.GetOpenedImage(), 
+                fImageState.GetImage(ImageChainStage::SourceImage)
+            , fImageLoader.GetImageCodec() );
             OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
 
             imageInfoText->SetText(imageInfoString);

@@ -1,4 +1,4 @@
-#pragma once
+//#pragma once
 #include "../CommandHandler.h"
 #include <defs.h>
 #include "../CommandProcessor.h"
@@ -38,8 +38,8 @@ namespace OIV
                     loadResponse->width = static_cast<uint32_t>(image->GetWidth());
                     loadResponse->height = static_cast<uint32_t>(image->GetHeight());
                     loadResponse->bpp = static_cast<uint8_t>(image->GetBitsPerTexel());
-                    loadResponse->loadTime = image->GetRuntimeData().loadTime;
-                    loadResponse->pluginUsed = image->GetRuntimeData().pluginUsed.c_str();
+                    loadResponse->loadTime = image->GetProcessData().processTime;
+                    //loadResponse->pluginUsed = image->GetProcessData().pluginUsed. c_str();
                     loadResponse->sizeInMemory = image->GetSizeInMemory();
                     loadResponse->handle = handle;
                     loadResponse->numSubImages = image->GetNumSubImages();

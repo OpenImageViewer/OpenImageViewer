@@ -2,7 +2,7 @@
 #include <string>
 #include <map>
 #include <variant>
-#include "../../External/ImageCodec/ImageLoader/Include/TexelFormat.h"
+#include <TexelFormat.h>
 namespace OIV
 {
     class MessageFormatter

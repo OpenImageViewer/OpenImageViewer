@@ -7,32 +7,68 @@
 namespace OIV
 {
 
-	OIV_AxisAlignedRotation ResolveExifRotation(unsigned short exifRotation)
+	IMUtil::OIV_AxisAlignedTransform  ResolveExifRotation(unsigned short exifRotation)
 	{
-		OIV_AxisAlignedRotation rotation;
+		//  1 = Horizontal(normal)
+		//	2 = Mirror horizontal
+		//	3 = Rotate 180
+		//	4 = Mirror vertical
+		//	5 = Mirror horizontal and rotate 270 CW
+		//	6 = Rotate 90 CW
+		//	7 = Mirror horizontal and rotate 90 CW
+		//	8 = Rotate 270 CW
+
+		
+
+		IMUtil::OIV_AxisAlignedTransform transform{};
 		switch (exifRotation)
 		{
+		case 1:
+			//  1 = Horizontal(normal)
+			break;
+		case 2:
+			//	2 = Mirror horizontal
+			transform.flip = IMUtil::OIV_AxisAlignedFlip::Horizontal;
+			break;
 		case 3:
-			rotation = AAT_Rotate180;
+			//	3 = Rotate 180
+			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate180;
+			break;
+		case 4:
+			//	4 = Mirror vertical
+			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
+			break;
+		case 5:
+			//	5 = Mirror horizontal and rotate 270 CW
+			// In OIV as opoosed to EXIF, rotation is done first, then flip, so flip vertically instead of horizontally
+			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CCW;
+			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
 			break;
 		case 6:
-			rotation = AAT_Rotate90CW;
+			//	6 = Rotate 90 CW
+			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CW;
+			break;
+		case 7:
+			//	7 = Mirror horizontal and rotate 90 CW.
+			// In OIV as opoosed to EXIF, rotation is done first, then flip, so flip vertically instead of horizontally.
+			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CW;
+			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
 			break;
 		case 8:
-			rotation = AAT_Rotate90CCW;
+			//	8 = Rotate 270 CW
+			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CCW;
 			break;
 		default:
-			rotation = AAT_None;
+			break;
 		}
-		return rotation;
+		return transform;
 	}
 
-	IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image)
+	IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image, int exitOrientation)
 	{
-		IMUtil::OIV_AxisAlignedTransform transform;
-		transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->GetMetaData().exifData.orientation));
-		transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
-		return IMUtil::ImageUtil::Transform(transform, image);
+		//IMUtil::OIV_AxisAlignedTransform transform = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(exitOrientation));
+		//transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
+		return IMUtil::ImageUtil::Transform(ResolveExifRotation(exitOrientation), image);
 	}
 
 
@@ -40,43 +76,38 @@ namespace OIV
     
 	OIVFileImage::OIVFileImage(const std::wstring& fileName) : OIVBaseImage(ImageSource::File), fFileName(fileName) {}
     
-	ResultCode OIVFileImage::Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags)
+	ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags)
 	{
 		return Load(imageCodec, loaderFlags, IMCodec::ImageLoadFlags::None, {});
 	}
-    ResultCode OIVFileImage::Load(IMCodec::IImageCodec* imageCodec, IMCodec::ImageLoaderFlags loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params)
+    ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params)
     {
-        using namespace LLUtils;
-        FileMapping fileMapping(fFileName);
-        void* buffer = fileMapping.GetBuffer();
-        std::size_t size = fileMapping.GetSize();
-        std::string extension = LLUtils::StringUtility::ConvertString<std::string>(StringUtility::GetFileExtension(fFileName));
-
-
-		if (buffer == nullptr || size == 0)
-			return RC_InvalidParameters;
-
+		
 		ResultCode result = RC_FileNotSupported;
 		using namespace IMCodec;
 		ImageSharedPtr image;
-		ImageResult loadResult = imageCodec->Decode(static_cast<const std::byte*>(buffer), size, extension.c_str(), imageLoadFlags, loaderFlags, params,image);
+		ImageResult loadResult = imageCodec->Decode(fFileName, imageLoadFlags, params,loaderFlags, image);
 
 		if (loadResult == ImageResult::Success)
 		{
 			if (image != nullptr)
 			{
-
-				if (image->GetMetaData().exifData.orientation != 0)
+				ItemMetaDataSharedPtr metaData;
+				if (imageCodec->LoadMetaData(fFileName, metaData) == ImageResult::Success)
 				{
-					// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
-					// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
-					image = ApplyExifRotation(image);
+					auto exifOrientation = metaData->exifData.orientation;
+					if (exifOrientation > 1)
+					{
+						// I see no use of using the original image, discard source image and use the image with exif rotation applied. 
+						// If needed, responsibility for exif rotation can be transferred to the user by returning MetaData.exifOrientation.
+						image = ApplyExifRotation(image, exifOrientation);
+					}
 
+					for (size_t i = 0; i < image->GetNumSubImages(); i++)
+						image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i), exifOrientation));
 				}
 
-				for (size_t i = 0; i < image->GetNumSubImages(); i++)
-					image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i)));
-
+				SetMetaData(metaData);
 				SetUnderlyingImage(image);
 				result = RC_Success;
 			}

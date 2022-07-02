@@ -32,7 +32,7 @@
 #include "SelectionRect.h"
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
-
+#include "FileSystem/FileCache.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
@@ -45,6 +45,8 @@
 #include "UI/MessageManager.h"
 
 #include <NetSettings/GuiProvider.h>
+#include <ImageLoader.h>
+#include <ImageCodec.h>
 
 
 namespace OIV
@@ -73,14 +75,14 @@ namespace OIV
          , Count
     };
 
-    enum ClipboardDataType
+    enum class ClipboardDataType
     {
           None
         , Image
         , Text
     };
 
-    enum UserMessageGroups
+    enum class UserMessageGroups
     {
           Default
         , SuccessfulFileLoad
@@ -206,7 +208,6 @@ namespace OIV
         bool JumpFiles(FileIndexType step);
 		void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
-        void ToggleSlideShow();
         void SetSlideShowEnabled(bool enabled);
         bool GetSlideShowEnabled() const {return fSlideShowEnabled;}
         void SetFilterLevel(OIV_Filter_type filterType);
@@ -218,7 +219,6 @@ namespace OIV
         void ZoomInternal(double amount, int zoomX, int zoomY);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
-        //void UpdateUIZoom();
         void SetImageSpaceSelection(const LLUtils::RectI32& rect);
         void SaveImageSpaceSelection();
         void LoadImageSpaceSelection();
@@ -227,7 +227,6 @@ namespace OIV
         LLUtils::PointF64 GetOffset() const;
         LLUtils::PointF64 ImageToClient(LLUtils::PointF64 imagepos) const;
         LLUtils::RectF64 ImageToClient(LLUtils::RectF64 clientRect) const;
-        //void UpdateCanvasSize();
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
         LLUtils::PointF64 GetCanvasCenter();
@@ -240,13 +239,12 @@ namespace OIV
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
-        bool LoadFile(std::wstring filePath, IMCodec::ImageLoaderFlags loaderFlags);
-        bool LoadFileOrFolder(const std::wstring& filePath);
+        bool LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags);
+        bool LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode);
 
         LLUtils::ListWString GetSupportedFileListInFolder(const std::wstring& folderPath);
         void LoadOivImage(OIVBaseImageSharedPtr oivImage);
         void UpdateOpenImageUI();
-        void SetOpenImage(const OIVBaseImageSharedPtr& image_descriptor);
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
         const std::wstring& GetOpenedFileName() const;
@@ -293,9 +291,8 @@ namespace OIV
         void NetSettingsCallback(ItemChangedArgs* callback);
         IMCodec::ImageSharedPtr GetImageByIndex(int32_t index);
         bool IsSubImagesVisible() const;
-        void SetBackgroundColor(int index, LLUtils::Color color);
         void UpdateSelectionRectText();
-     
+        void OnImageReady(IMCodec::ImageSharedPtr image);
 
         LLUtils::PointI32 SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen);
 
@@ -338,9 +335,10 @@ namespace OIV
         std::wstring fListedFolder; // the current folder the the file list is taken from
         int fCurrentFrame = 0;
         double fCurrentSequencerSpeed = 1.0;
-        IMCodec::ImageSharedPtr fCountingImageColor;
+        OIVBaseImageSharedPtr fCountingImageColor;
         std::atomic_bool fIsColorThreadRunning = false;
         std::thread fCountingColorsThread;
+        //FileCache fFileCache;
 
         using MouseButtonType = LInput::MouseButton ;
         template <typename T>
@@ -390,7 +388,7 @@ namespace OIV
         bool fIsActive = false;
         bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
-        IMCodec::ImageCodec fImageCodec;
+        IMCodec::ImageLoader fImageLoader;
         
         ::Win32::ClipboardFormatType fRTFFormatID {};
         ::Win32::ClipboardFormatType fHTMLFormatID {};

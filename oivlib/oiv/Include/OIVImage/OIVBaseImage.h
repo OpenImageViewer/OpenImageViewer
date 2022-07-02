@@ -12,6 +12,9 @@
 
 namespace OIV
 {
+    constexpr int64_t UniqueColorsUninitialized = -1;
+    constexpr int64_t UniqueColorsFailed = -2;
+
     enum class ImageSource
     {
           None
@@ -34,20 +37,53 @@ namespace OIV
             std::wstringstream ss;
             ss << fImage->GetWidth() << L" X " << fImage->GetHeight() << L" X "
                 << fImage->GetBitsPerTexel() << L" BPP | loaded in " << std::fixed << std::setprecision(1)
-                << fImage->GetRuntimeData().loadTime << L" ms"
+                << fImage->GetImageItem()->processData.processTime << L" ms"
                 //<< L"/" << fDescriptor.DisplayTime + fDescriptor.LoadTime << L" ms"
                 ;
 
             return ss.str();
         }
 
+        
 
         void SetUnderlyingImage(IMCodec::ImageSharedPtr image);
+
+        void SetMetaData(IMCodec::ItemMetaDataSharedPtr metaData)
+        {
+            fImageMetaData = metaData;
+        }
+
+        const IMCodec::ItemMetaDataSharedPtr& GetMetaData()
+        {
+            return fImageMetaData;
+        }
 
         bool IsDirty() const
         {
             return PerformIsDirty();
         }
+
+        void SetDisplayTime(double displayTime)
+        {
+            fDisplayTime = displayTime;
+        }
+
+        double GetDisplayTime()
+        {
+            return fDisplayTime;
+        }
+
+        void SetNumUniqueColors(int64_t numUniqueColors)
+        {
+            fNumUniqueColors = numUniqueColors;
+        }
+
+        int64_t GetNumUniqueColors()
+        {
+            return fNumUniqueColors;
+        }
+
+
 
 
 #pragma region IRenderable
@@ -148,11 +184,14 @@ namespace OIV
 
         static inline LLUtils::UniqueIdProvider<uint32_t> fUniqueIdProvider{ 1 };
         ImageSource fSource;
+        IMCodec::ItemMetaDataSharedPtr fImageMetaData;
         decltype(fUniqueIdProvider)::underlying_type fObjectId;
         IMCodec::ImageSharedPtr fImage;
         bool fIsImageDirty = true;
         bool fIsDirty = true;
         std::mutex fRendererMutex;
+        double fDisplayTime{};
+        int64_t fNumUniqueColors = UniqueColorsUninitialized;
 
     };
 

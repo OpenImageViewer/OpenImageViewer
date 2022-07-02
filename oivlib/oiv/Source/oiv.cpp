@@ -2,7 +2,7 @@
 #include <exif.h>
 #include "Interfaces/IRenderer.h"
 #include "NullRenderer.h"
-#include <ImageLoader.h>
+
 #include "ImageUtil.h"
 #include "Configuration.h"
 #include "FreeTypeHelper.h"
@@ -211,11 +211,11 @@ namespace OIV
 
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
     {
-        IMUtil::OIV_AxisAlignedTransform transform;
-        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->GetMetaData().exifData.orientation));
+        LL_EXCEPTION_NOT_IMPLEMENT("not implemented");
+        /*IMUtil::OIV_AxisAlignedTransform transform;
+        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->Get GetMetaData().exifData.orientation));
         transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
-
-        return IMUtil::ImageUtil::Transform(transform, image);
+        return IMUtil::ImageUtil::Transform(transform, image);*/
     }
 
 

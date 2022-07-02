@@ -34,7 +34,7 @@ add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 
 target_link_libraries(${TargetName} 
 #Local libraries
-ImageLoader
+ImageCodec
 easyexif
 FreeTypeWrapper
 OIVD3D11Renderer

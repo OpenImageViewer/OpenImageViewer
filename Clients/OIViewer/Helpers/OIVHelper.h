@@ -3,7 +3,7 @@
 #include <defs.h>
 #include <sstream>
 #include <limits>
-#include "../ImageCodec/ImageLoader/Include/TexelFormat.h"
+#include <TexelFormat.h>
 #include <ExoticNumbers/half.hpp>
 #include <ExoticNumbers/Float24.h>
 #include "MessageFormatter.h"

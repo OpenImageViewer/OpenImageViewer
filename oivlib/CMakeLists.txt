@@ -10,7 +10,7 @@ include_directories(./oiv/Include)
 include_directories(renderers/OIVD3D11Renderer/Include)
 include_directories(${ExternalFolder}/ExoticNumbers/include)
 include_directories(${ExternalFolder}/LLUtils/Include)
-include_directories(${ExternalFolder}/ImageCodec/ImageLoader/include)
+include_directories(${ExternalFolder}/ImageCodec/ImageCodec/include)
 
 add_subdirectory(oiv)
 add_subdirectory(renderers)

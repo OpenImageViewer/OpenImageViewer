@@ -6,7 +6,6 @@
 #include <LLUtils/StringDefs.h>
 #include <LLUtils/BitFlags.h>
 
-
 namespace OIV
 {
 

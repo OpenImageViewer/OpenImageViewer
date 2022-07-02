@@ -29,7 +29,7 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/Win32/Win32/Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageLoader/include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageCodec/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
 target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/include)

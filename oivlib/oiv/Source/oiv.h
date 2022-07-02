@@ -1,6 +1,5 @@
 #pragma once
 #include "IPictureRenderer.h"
-#include <ImageLoader.h>
 #include <Interfaces/IRenderer.h>
 #include "ImageManager.h"
 #include "Resampler.h"
@@ -62,7 +61,7 @@ namespace OIV
 
     private:
 
-        const std::array<uint8_t, 6> sShades
+        static constexpr std::array<uint8_t, 6> sShades
         {
              255
             ,204
@@ -81,7 +80,7 @@ namespace OIV
 
 
 
-        const std::array<CheckerBoard, OIV_PROP_TransparencyMode::TM_Count> transparencyCheckerShades
+        static constexpr std::array<CheckerBoard, OIV_PROP_TransparencyMode::TM_Count> transparencyCheckerShades
         {
               CheckerBoard{ {sShades[0],sShades[0],sShades[0], static_cast<uint8_t>(255)}, {sShades[1],sShades[1],sShades[1] ,static_cast<uint8_t>(255)} }
             , CheckerBoard{ {sShades[2],sShades[2],sShades[2], static_cast<uint8_t>(255)}, {sShades[3],sShades[3],sShades[3] ,static_cast<uint8_t>(255)} }

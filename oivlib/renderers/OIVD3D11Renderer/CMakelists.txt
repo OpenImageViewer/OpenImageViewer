@@ -8,8 +8,6 @@ file(GLOB_RECURSE sourceFiles
 
 set(TargetName OIVD3D11Renderer)
 add_library (${TargetName} ${sourceFiles} )
-target_include_directories(${TargetName} PRIVATE ../ImageCodec/Image/Include)
-target_include_directories(${TargetName} PRIVATE ../ImageCodec/ImageLoader/Include)
 target_link_libraries(${TargetName} 
 dbghelp.lib
 dxgi.lib
