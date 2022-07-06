@@ -18,11 +18,17 @@ public:
         fGrayBrush = CreateSolidBrush(RGB(245, 249, 213));
         fLightgrayBrush = CreateSolidBrush(RGB(224, 249, 213));
         fBlueBrush = CreateSolidBrush(RGB(0, 0, 200));
-        fPen = CreatePen(PS_DASHDOTDOT, lineWidth, RGB(0, 0, 0));
+        fPen = CreatePen(PS_SOLID, lineWidth, RGB(0, 0, 0));
+        fVerticalPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 255));
+        fVerticalPen2 = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
      }
 
     ~ImageList()
     {
+        if (fVerticalPen2)
+            DeleteObject(fVerticalPen2);
+        if (fVerticalPen)
+            DeleteObject(fVerticalPen);
         if (fPen)
             DeleteObject(fPen);
         if (fGrayBrush)
@@ -137,6 +143,7 @@ public:
         int currentEntry = 0;
         int x = 0;
         int y = fPos * -100;
+		
         for (const ImageDesc& imageDesc : fImages)
         {
             RECT r;
@@ -146,14 +153,20 @@ public:
             r.right = entrywidth;
 
             if (currentEntry == fSelected)
+            {
                 FillRect(hdc, &r, fBlueBrush);
+                SetTextColor(hdc, RGB(255, 255, 255));
+            }
             else
+            {
                 FillRect(hdc, &r, currentEntry % 2 == 0 ? fGrayBrush : fLightgrayBrush);
+                SetTextColor(hdc, RGB(0, 0, 0));
+            }
 
             MoveToEx(hdc, x, y + fEntryHeight - lineWidth, nullptr);
             
             int textpos = 5 + y;
-
+            
             LineTo(hdc, entrywidth, y + fEntryHeight - lineWidth);
             {
                 RECT r1 = { 0, textpos ,0, textpos + 24 };
@@ -196,6 +209,17 @@ public:
             y += fEntryHeight;
             SelectObject(hdcMem, hbmOld);
         }
+        
+        SelectObject(hdc, fVerticalPen);
+        MoveToEx(hdc, 0, 0, nullptr);
+        LineTo(hdc, 0, y);
+        SelectObject(hdc, fVerticalPen2);
+        MoveToEx(hdc, 1, 0, nullptr);
+        LineTo(hdc, 1, y);
+
+        SelectObject(hdc, fVerticalPen);
+        MoveToEx(hdc, 2, 0, nullptr);
+        LineTo(hdc, 2, y);
 
         
         DeleteDC(hdcMem);
@@ -293,6 +317,8 @@ private:
     HBRUSH fLightgrayBrush{};
     HBRUSH fBlueBrush{};
     HPEN fPen{};
+    HPEN fVerticalPen{};
+    HPEN fVerticalPen2{};
     uint32_t fEntryHeight = 100;
     int fSelected = -1;
     //First image index in display
