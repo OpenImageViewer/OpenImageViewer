@@ -185,11 +185,9 @@ namespace OIV
     {
         if (fMessages.size() + 1 > fMaxMessages)
         {
-            auto MessageData = fMessages.back();
-            fMessages.push_front(MessageData);
             ListMessageData::iterator lastElement = fMessages.end();
             std::advance(lastElement, -1);
-            RemoveElement(lastElement);
+            std::rotate(fMessages.begin(), lastElement, fMessages.end());
         }
         else
         {
