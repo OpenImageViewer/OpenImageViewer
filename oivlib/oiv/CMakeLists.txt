@@ -32,6 +32,10 @@ add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
 add_subdirectory(${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper ./external/FreeTypeWrapper)
 add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 
+if (OIV_DISABLE_WARNINGS_EXTERNAL_LIBS)
+    target_compile_definitions(easyexif PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
 target_link_libraries(${TargetName} 
 #Local libraries
 ImageCodec

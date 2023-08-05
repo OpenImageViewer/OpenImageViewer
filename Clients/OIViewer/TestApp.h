@@ -323,8 +323,6 @@ namespace OIV
         AutoScrollUniquePtr fAutoScroll;
         RecrusiveDelayedOp fRefreshOperation;
         RecrusiveDelayedOp fPreserveImageSpaceSelection;
-        int fKeyboardPanSpeed = 1;
-        double fKeyboardZoomSpeed = 0.1;
         double fMaxPixelSize = 30.0;
         double fMinImageSize = 150.0;
         uint32_t fSlideShowIntervalms = 3000;
@@ -390,8 +388,8 @@ namespace OIV
         LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
         IMCodec::ImageLoader fImageLoader;
         
-        ::Win32::ClipboardFormatType fRTFFormatID {};
-        ::Win32::ClipboardFormatType fHTMLFormatID {};
+        //::Win32::ClipboardFormatType fRTFFormatID {};
+        //::Win32::ClipboardFormatType fHTMLFormatID {};
 
         enum class DeletedFileRemovalMode
         {

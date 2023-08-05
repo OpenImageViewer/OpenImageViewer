@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
 option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
 option(OIV_WARNING_LEVEL_EXTREME "Warning level extreme" FALSE)
+option(OIV_DISABLE_WARNINGS_EXTERNAL_LIBS "Disable warnings for external libraries" TRUE)
 option(OIV_VERBOSE "Verbose" FALSE)
 
 # Define Release by default.
@@ -18,9 +19,6 @@ endif(NOT CMAKE_BUILD_TYPE)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 
-
-
-#Optimizations
 if (OIV_VERBOSE)
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -88,8 +86,11 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options(/Zo)    #Enhance Optimized Debugging
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zi>)    #seperate debug information
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwhole-program-vtables>)    
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fstrict-vtable-pointers>)    
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwhole-program-vtables>)
+        
+        if (${CMAKE_CXX_COMPILER_VERSION} GREATER_EQUAL "16")
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fstrict-vtable-pointers>)    
+        endif()
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-flto>) #link time optimization code generation
     endif()
 endif()

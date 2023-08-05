@@ -17,7 +17,7 @@ namespace OIV
         ResultCode ExecuteImpl(const void* request, const std::size_t requestSize, void* response, const std::size_t responseSize) override
         {
             ResultCode result = RC_Success;
-            const OIV_CMD_ImageProperties_Request* properties = reinterpret_cast<const OIV_CMD_ImageProperties_Request*>(request);
+            //const OIV_CMD_ImageProperties_Request* properties = reinterpret_cast<const OIV_CMD_ImageProperties_Request*>(request);
             //result = (ResultCode)ApiGlobal::sPictureRenderer->SetImageProperties(*properties);
 
             return result;
