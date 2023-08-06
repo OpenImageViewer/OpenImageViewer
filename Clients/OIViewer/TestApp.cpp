@@ -2427,8 +2427,7 @@ namespace OIV
         {
             for (const auto& extensionCollection : codecInfo.extensionCollection)
             {
-                if ((codecInfo.capabilities & IMCodec::CodecCapabilities::BulkCodec) != IMCodec::CodecCapabilities::BulkCodec) // Make sure it isn't a bulk codec
-                {
+                
                     if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Decode) == IMCodec::CodecCapabilities::Decode)  // Can the codec decode data
                     {
                         //Prepare read filters for Open file Dialog, and Prepare known file types data structure
@@ -2452,7 +2451,9 @@ namespace OIV
                         readFilter.description = readDialogDescription + L" - " + extensionCollection.description;
                     }
 
-                    if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Encode) == IMCodec::CodecCapabilities::Encode)  // Can the codec encode data
+                    if ( (codecInfo.capabilities & IMCodec::CodecCapabilities::Encode) == IMCodec::CodecCapabilities::Encode
+                        &&  (codecInfo.capabilities & IMCodec::CodecCapabilities::BulkCodec) != IMCodec::CodecCapabilities::BulkCodec) // Make sure it isn't a bulk codec
+                        
                     {
                         //Prepare write filter for Save file Dialog 
                         writeFilters.push_back({});
@@ -2477,7 +2478,7 @@ namespace OIV
 
                         writeFilter.description = saveDialogDescription + L" - " + extensionCollection.description;
                     }
-                }
+                
             }
         }
 
