@@ -21,20 +21,22 @@ rem Set custom paths
 setlocal EnableDelayedExpansion
 rem Global build variables - START
 set CMakePath=C:\Program Files\CMake\bin
-set MSBuildPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\amd64
+set MSBuildPath=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64
 set SevenZipPath=C:\Program Files\7-Zip
 set GitPath=C:\Program Files\Git\bin
 set DependenciesPath=.\oiv\Dependencies
-set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%;%CMakePath%
+set NinjaPath=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja
+set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%;%CMakePath%;%NinjaPath%
 rem Change to 1 to make an official build
 set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
 set OIV_RELEASE_SUFFIX=
 set OIV_VERSION_REVISION=0
 set OIV_VERSION_BUILD=8
-
+set BuildType="RelWithDebInfo"
 set VersionPath=.\oivlib\oiv\Include\Version.h
-set BuildPath=.\Build\bin\Release
+set BuildPath=.\publish
+set BinPath=%BuildPath%\bin
 set BuildOperation=Build
 rem Global build variables - END
 
@@ -80,7 +82,7 @@ echo ==============================================
 rem=====================================================================================================
 rem Run Cmake
 if !OpRunCmake! equ 1 (
-cmake -DCMAKE_GENERATOR="Visual Studio 16 2019"  -A x64 -DIMCODEC_BUILD_CODEC_PSD=ON -DIMCODEC_BUILD_CODEC_JPG=ON -DIMCODEC_BUILD_CODEC_PNG=ON -DIMCODEC_BUILD_CODEC_DDS=ON -DIMCODEC_BUILD_CODEC_GIF=ON -DIMCODEC_BUILD_CODEC_TIFF=ON -DIMCODEC_BUILD_CODEC_WEBP=ON -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -DOIV_RELEASE_SUFFIX=L\"%OIV_RELEASE_SUFFIX%\" -S . -B ./build
+cmake.exe -S . -B %BuildPath% -G "Ninja" -DCMAKE_BUILD_TYPE=%BuildType% -DCMAKE_MT="C:/Program Files (x86)/Windows Kits/10/bin/10.0.22000.0/x64/mt.exe" -DCMAKE_C_COMPILER="C:/PROGRAM FILES/MICROSOFT VISUAL STUDIO/2022/ENTERPRISE/VC/Tools/Llvm/x64/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="C:/PROGRAM FILES/MICROSOFT VISUAL STUDIO/2022/ENTERPRISE/VC/Tools/Llvm/x64/bin/clang-cl.exe" -DCMAKE_MAKE_PROGRAM="C:/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -DCMAKE_RC_COMPILER="C:/Program Files (x86)/Windows Kits/10/bin/10.0.22000.0/x64/rc.exe" -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -DOIV_RELEASE_SUFFIX=L\"%OIV_RELEASE_SUFFIX%\"
 if  !errorlevel! neq 0 (
     echo.
     echo Error: Failed to generate cmake configuration, please make sure cmake is installed correctly: https://cmake.org
@@ -91,27 +93,36 @@ if  !errorlevel! neq 0 (
 rem=====================================================================================================
 rem Build project
 if !OpBuild! equ 1 (
-msbuild.exe .\Build\OpenImageViewer.sln /m /p:ToolExe=clang-cl.exe /p:ToolPath="C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\Llvm\x64\bin"  /p:configuration=Release /t:%BuildOperation% /p:OIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD%;OIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE%
+call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
 if  !errorlevel! neq 0 (
     echo.
     echo Compilation error
     echo.
     goto :FAILURE
 )
+cd publish
+ninja
+if  !errorlevel! neq 0 (
+    echo.
+    echo Compilation error
+    echo.
+    goto :FAILURE
+)
+cd ..
 )
 rem=====================================================================================================
 rem Pack files
 if !OpPack! equ 1 (
-set OutputPath=./Build/%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
-copy %DependenciesPath%\*.dll %BuildPath%\
+set OutputPath=./%BuildPath%/%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
+copy %DependenciesPath%\*.dll %BinPath%\
 md !OutputPath!
 set BaseFileName=!OutputPath!/!DATE_YYMMDD!-OIV-!versionString!-Win32x64VC-LLVM
 
 rem Pack symbols into 7z file.
-7z a -mx9 !BaseFileName!-Symbols.7z !BuildPath!\*.pdb
+7z a -mx9 !BaseFileName!-Symbols.7z !BinPath!\*.pdb
 
 rem Pack application into 7z file.
-7z a -mx9 !BaseFileName!.7z !BuildPath!\*.dll !BuildPath!\*.exe !BuildPath!\Resources
+7z a -mx9 !BaseFileName!.7z !BinPath!\*.dll !BinPath!\*.exe !BinPath!\Resources
 
 if  !errorlevel! neq 0 (
     echo.
