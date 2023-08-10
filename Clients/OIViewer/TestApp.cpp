@@ -1462,10 +1462,18 @@ namespace OIV
     bool TestApp::IsSubImagesVisible() const
     {
         using namespace IMCodec;
-        const auto mainImage = fImageState.GetOpenedImage()->GetImage();
-        return mainImage != nullptr 
-            && mainImage->GetSubImageGroupType() != ImageItemType::AnimationFrame
-            && mainImage->GetNumSubImages() > 0;
+        if (fImageState.GetOpenedImage() != nullptr)
+        {
+            const auto mainImage = fImageState.GetOpenedImage()->GetImage();
+            return mainImage != nullptr
+                && mainImage->GetSubImageGroupType() != ImageItemType::AnimationFrame
+                && mainImage->GetNumSubImages() > 0;
+        }
+        else
+        {
+            return false;
+        }
+
     }
 
     void TestApp::LoadSubImages()
