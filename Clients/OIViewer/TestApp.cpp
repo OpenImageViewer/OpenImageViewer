@@ -1514,7 +1514,20 @@ namespace OIV
         switch (result)
         {
         case ResultCode::RC_Success:
-            LoadOivImage(file);
+        {
+            const bool isImageInsideSizeLimits = file->GetImage()->GetWidth() <= 16384 || file->GetImage()->GetHeight() <= 16384;
+            if (isImageInsideSizeLimits)
+            {
+                LoadOivImage(file);
+            }
+            else
+            {
+                using namespace std::string_literals;
+                SetUserMessage(L"Can not load the file: "s + MessageFormatter::FormatFilePath(file->GetFileName()) + \
+                    L", image dimensions are more than 16384: ", static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
+            }
+        }
+
             break;
         case ResultCode::RC_FileNotSupported:
             SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad),MessageFlags::Persistent);
