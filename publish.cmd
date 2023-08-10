@@ -20,22 +20,24 @@ set OpPack=1
 rem Set custom paths
 setlocal EnableDelayedExpansion
 rem Global build variables - START
-set CMakePath=C:\Program Files\CMake\bin
-set MSBuildPath=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\amd64
-set SevenZipPath=C:\Program Files\7-Zip
-set GitPath=C:\Program Files\Git\bin
-set DependenciesPath=.\oiv\Dependencies
-set NinjaPath=C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja
+set VSdir=C:/Program Files/Microsoft Visual Studio/2022/Enterprise
+set CMakePath=C:/Program Files/CMake/bin
+set MSBuildPath=%VSdir%/MSBuild/Current/Bin/amd64
+set SevenZipPath=C:/Program Files/7-Zip
+set GitPath=C:/Program Files/Git/bin
+set DependenciesPath=./oiv/Dependencies
+set NinjaPath=%VSdir%/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja
 set path=%path%;%MSBuildPath%;%SevenZipPath%;%GitPath%;%CMakePath%;%NinjaPath%
+set WindowsKitDir=C:/Program Files (x86)/Windows Kits/10/bin/10.0.22000.0
 rem Change to 1 to make an official build
 set OIV_OFFICIAL_BUILD=1
 set OIV_OFFICIAL_RELEASE=0
 set OIV_RELEASE_SUFFIX=
 set OIV_VERSION_REVISION=0
-set OIV_VERSION_BUILD=8
+set OIV_VERSION_BUILD=9
 set BuildType="RelWithDebInfo"
 set VersionPath=.\oivlib\oiv\Include\Version.h
-set BuildPath=.\publish
+set BuildPath=./publish
 set BinPath=%BuildPath%\bin
 set BuildOperation=Build
 rem Global build variables - END
@@ -82,10 +84,16 @@ echo ==============================================
 rem=====================================================================================================
 rem Run Cmake
 if !OpRunCmake! equ 1 (
-cmake.exe -S . -B %BuildPath% -G "Ninja" -DCMAKE_BUILD_TYPE=%BuildType% -DCMAKE_MT="C:/Program Files (x86)/Windows Kits/10/bin/10.0.22000.0/x64/mt.exe" -DCMAKE_C_COMPILER="C:/PROGRAM FILES/MICROSOFT VISUAL STUDIO/2022/ENTERPRISE/VC/Tools/Llvm/x64/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="C:/PROGRAM FILES/MICROSOFT VISUAL STUDIO/2022/ENTERPRISE/VC/Tools/Llvm/x64/bin/clang-cl.exe" -DCMAKE_MAKE_PROGRAM="C:/Program Files/Microsoft Visual Studio/2022/Enterprise/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe" -DCMAKE_RC_COMPILER="C:/Program Files (x86)/Windows Kits/10/bin/10.0.22000.0/x64/rc.exe" -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON -DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD% -DOIV_RELEASE_SUFFIX=L\"%OIV_RELEASE_SUFFIX%\"
+cmake.exe -S . -B %BuildPath% -G "Ninja" -DCMAKE_BUILD_TYPE=%BuildType% -DCMAKE_MT="%WindowsKitDir%/x64/mt.exe" ^
+-DCMAKE_C_COMPILER="%VSdir%/VC/Tools/Llvm/x64/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="%VSdir%/VC/Tools/Llvm/x64/bin/clang-cl.exe" ^
+-DCMAKE_MAKE_PROGRAM="%NinjaPath%/ninja.exe" -DCMAKE_RC_COMPILER="%WindowsKitDir%/x64/rc.exe" -DIMCODEC_BUILD_CODEC_FREEIMAGE=ON ^
+-DOIV_OFFICIAL_BUILD=%OIV_OFFICIAL_BUILD% -DOIV_OFFICIAL_RELEASE=%OIV_OFFICIAL_RELEASE% -DOIV_VERSION_BUILD=%OIV_VERSION_BUILD%  ^
+-DOIV_RELEASE_SUFFIX=L\"%OIV_RELEASE_SUFFIX%\"
+
 if  !errorlevel! neq 0 (
     echo.
-    echo Error: Failed to generate cmake configuration, please make sure cmake is installed correctly: https://cmake.org
+    [91m Error: Failed to generate cmake configuration, please make sure cmake is installed correctly: https://cmake.org
+    echo [0m
     echo.
     goto :FAILURE
 )
@@ -93,10 +101,11 @@ if  !errorlevel! neq 0 (
 rem=====================================================================================================
 rem Build project
 if !OpBuild! equ 1 (
-call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+call "%VSdir%\VC\Auxiliary\Build\vcvars64.bat"
 if  !errorlevel! neq 0 (
     echo.
-    echo Compilation error
+    echo [91m Compilation error
+    echo [0m
     echo.
     goto :FAILURE
 )
@@ -104,7 +113,8 @@ cd publish
 ninja
 if  !errorlevel! neq 0 (
     echo.
-    echo Compilation error
+    echo [91m Compilation error
+    echo [0m
     echo.
     goto :FAILURE
 )
@@ -126,7 +136,8 @@ rem Pack application into 7z file.
 
 if  !errorlevel! neq 0 (
     echo.
-    echo Can not pack files
+    echo [91m Can not pack files
+    echo [0m
     echo.
     goto :FAILURE
 )
@@ -136,7 +147,8 @@ if  !errorlevel! neq 0 (
 
 echo.
 echo ==========
-echo ^|Success^^!^|
+echo [92m ^|Success^^!^|
+echo [0m
 echo ==========
 echo.
 goto :END
@@ -145,7 +157,8 @@ goto :END
 :FAILURE
 echo.
 echo ==========
-echo ^|Failed to execute operations.^|
+echo [91m ^|Failed to execute operations.^|
+echo [0m
 echo ==========
 echo.
 
