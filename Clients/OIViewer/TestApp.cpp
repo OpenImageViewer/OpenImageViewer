@@ -1518,6 +1518,8 @@ namespace OIV
 
         ResultCode result = file->Load(&fImageLoader, loaderFlags, IMCodec::ImageLoadFlags::None, params);
 
+        auto formattedFilePath = MessageFormatter::FormatFilePath(file->GetFileName()) + L"<textcolor=#ff8930>";
+
         using namespace std::string_literals;
         switch (result)
         {
@@ -1531,17 +1533,17 @@ namespace OIV
             else
             {
                 using namespace std::string_literals;
-                SetUserMessage(L"Can not load the file: "s + MessageFormatter::FormatFilePath(file->GetFileName()) + \
+                SetUserMessage(L"Can not load the file: "s + formattedFilePath + \
                     L", image dimensions are more than 16384: ", static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
             }
         }
 
             break;
         case ResultCode::RC_FileNotSupported:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", image format is not supported"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad),MessageFlags::Persistent);
+            SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", image format is not supported"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad),MessageFlags::Persistent);
             break;
         default:
-            SetUserMessage(L"Can not load the file: "s + normalizedPath + L", unkown error"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
+            SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", unkown error"s, static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
         }
         return result == RC_Success;
 
