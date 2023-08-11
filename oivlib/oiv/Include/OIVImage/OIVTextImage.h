@@ -1,5 +1,9 @@
 #pragma once
 #include "OIVBaseImage.h"
+#include <LLUtils/BitFlags.h>
+#include <LLUtils/Templates.h>
+#include <FreeTypeWrapper/FreeTypeConnector.h>
+
 
 namespace OIV
 {
@@ -7,11 +11,12 @@ namespace OIV
     {
         std::wstring fontPath;
         std::wstring text;
-        uint16_t fontSize;
+        int32_t maxWidth;
+        uint32_t outlineWidth;
         LLUtils::Color textColor;
         LLUtils::Color backgroundColor;
         LLUtils::Color outlineColor;
-        uint32_t outlineWidth;
+        uint16_t fontSize;
         uint16_t DPIx;
         uint16_t DPIy;
         bool useMetaText;
@@ -19,22 +24,30 @@ namespace OIV
     };
 
     
+    struct TextMetrics
+    {
+        uint32_t rowHeight;
+        uint32_t totalRows;
+    };
+
 
     class OIVTextImage : public OIVBaseImage
     {
+        enum class DirtyFlags : uint32_t
+        {
+              None      = 0
+            , Metrics   = 1 << 0
+            , Bitmap    = 1 << 1
+            , All       = LLUtils::GetMaxBitsMask<uint32_t>()
+        };
+        LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DirtyFlags);
+
     public:
 
-        OIVTextImage(ImageSource imageSource) : OIVBaseImage(imageSource)
+        OIVTextImage(ImageSource imageSource);
 
-        {
-            fTextOptionsCurrent.bidirectional = true;
-            fTextOptionsCurrent.useMetaText = true;
-        }
-
-        OIVTextImage() : OIVTextImage(ImageSource::InternalText)
-        {
-          
-        }
+        OIVTextImage();
+        
     
 #pragma region Text rendering
         void SetText(const std::wstring& text)
@@ -42,7 +55,7 @@ namespace OIV
             if (fTextOptionsCurrent.text != text)
             {
                 fTextOptionsCurrent.text = text;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
         void SetDPI(uint16_t dpix, uint16_t dpiy)
@@ -51,7 +64,7 @@ namespace OIV
             {
                 fTextOptionsCurrent.DPIx = dpix;
                 fTextOptionsCurrent.DPIy = dpiy;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
 
@@ -60,7 +73,7 @@ namespace OIV
             if (fTextOptionsCurrent.fontPath != sFontPath)
             {
                 fTextOptionsCurrent.fontPath = sFontPath;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
 
@@ -69,7 +82,7 @@ namespace OIV
             if (fTextOptionsCurrent.fontSize != fontSize)
             {
                 fTextOptionsCurrent.fontSize = fontSize;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
 
         }
@@ -78,7 +91,7 @@ namespace OIV
             if (fTextOptionsCurrent.outlineWidth != outlineWidth)
             {
                 fTextOptionsCurrent.outlineWidth = outlineWidth;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
   
@@ -88,7 +101,7 @@ namespace OIV
             if (fTextOptionsCurrent.backgroundColor != color)
             {
                 fTextOptionsCurrent.backgroundColor = color;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
 
@@ -97,7 +110,7 @@ namespace OIV
             if (fTextOptionsCurrent.textColor != color)
             {
                 fTextOptionsCurrent.textColor = color;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
 
@@ -106,13 +119,24 @@ namespace OIV
             if (fTextOptionsCurrent.useMetaText != useMetaText)
             {
                 fTextOptionsCurrent.useMetaText = useMetaText;
-                fIsDirty = true;
+                fDirtyFlags.set(DirtyFlags::All);
             }
         }
 
+        void SetMaxWidth(int32_t maxWidth)
+        {
+            if (fTextOptionsCurrent.maxWidth != maxWidth)
+            {
+                fTextOptionsCurrent.maxWidth = maxWidth;
+                fDirtyFlags.set(DirtyFlags::All);
+            }
+        }
+
+        TextMetrics GetMetrics();
+        void UpdateTextMetrics();
         void Create()
         {
-            CreateText();
+            UpdateBitmap();
         }
 
     
@@ -130,22 +154,40 @@ namespace OIV
         
     protected:
 
+        void UpdateBitmap()
+        {
+            UpdateTextMetrics();
+            if (fDirtyFlags.test(DirtyFlags::Bitmap))
+            {
+                auto textImage = CreateText();
+                if (textImage != nullptr)
+                {
+                    SetUnderlyingImage(textImage);
+                    fDirtyFlags.clear(DirtyFlags::Bitmap);
+                }
+            }
+
+        }
+
         void PerformPreRender() override 
         { 
             OIVBaseImage::PerformPreRender();
-            
-            if (fIsDirty == true)
-                CreateText();
+            UpdateBitmap();
+
         };
 
         bool PerformIsDirty() const override
         {
-            return fIsDirty || OIVBaseImage::PerformIsDirty();
+            return fDirtyFlags.testAny(DirtyFlags::All) || OIVBaseImage::PerformIsDirty();
         };
 
     private:
-       ResultCode CreateText();
-       bool fIsDirty = true;
+
+       FreeType::TextCreateParams GetCreateParams();
+       IMCodec::ImageSharedPtr CreateText();
+       LLUtils::BitFlags<DirtyFlags> fDirtyFlags{};
+       FreeType::TextMetrics fCachedTextMetrics;
+        
     };
 
 

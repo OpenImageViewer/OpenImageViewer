@@ -62,6 +62,7 @@ namespace OIV
         void CreateMessageTemplate(MessageData& messageData);
         void UpdateMessage(const std::wstring& message, MessageData& messageData);
         void OnRefresh();
+        void OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams);
     private:
         HWND fWindow;
         LLUtils::UniqueIdProvider<uint16_t> fMessageIDProvider { 1 };
@@ -75,5 +76,10 @@ namespace OIV
         ::Win32::Timer fFadeTimer;
         RequestRefreshCallbackType fRefreshCallback;
         RecrusiveDelayedOp fRefreshRequest;
+        int32_t fMaxMessageWidth{};
+        int32_t fMarginLeft = 20;
+        int32_t fMarginTop = 20;
+        int32_t fMarginRight = 20;
+
 	};
 }

@@ -6,10 +6,22 @@
 namespace OIV
 {
 
-    ResultCode OIVTextImage::CreateText()
-    {
-#if OIV_BUILD_FREETYPE == 1
+    
+    OIVTextImage::OIVTextImage(ImageSource imageSource) : OIVBaseImage(imageSource)
 
+    {
+        fTextOptionsCurrent.bidirectional = true;
+        fTextOptionsCurrent.useMetaText = true;
+    }
+
+    OIVTextImage::OIVTextImage() : OIVTextImage(ImageSource::InternalText)
+    {
+
+    }
+    
+
+    FreeType::TextCreateParams OIVTextImage::GetCreateParams()
+    {
         using namespace FreeType;
 
         FreeType::TextCreateParams createParams {};
@@ -25,24 +37,47 @@ namespace OIV
         createParams.DPIy = fTextOptionsCurrent.DPIy == 0 ? 96 : fTextOptionsCurrent.DPIy;
         createParams.flags |= fTextOptionsCurrent.useMetaText ? TextCreateFlags::UseMetaText : TextCreateFlags::None;
         createParams.flags |= fTextOptionsCurrent.bidirectional ? TextCreateFlags::Bidirectional : TextCreateFlags::None;
+        createParams.maxWidthPx = fTextOptionsCurrent.maxWidth;
+        return createParams;
+    }
+    
 
-        IMCodec::ImageSharedPtr imageText = FreeTypeHelper::CreateRGBAText(createParams);
+    void OIVTextImage::UpdateTextMetrics()
+    {
+        using namespace FreeType;
+
+        if (fDirtyFlags.test(DirtyFlags::Metrics))
+        {
+            FreeTypeConnector::GetSingleton().MeasureText({ GetCreateParams() }, fCachedTextMetrics);
+            fDirtyFlags.clear(DirtyFlags::Metrics);
+        }
+    }
+
+
+    TextMetrics OIVTextImage::GetMetrics()
+    {
+        UpdateTextMetrics();
+        return { fCachedTextMetrics.rowHeight, fCachedTextMetrics.totalRows };
+    }
+
+    
+
+    IMCodec::ImageSharedPtr OIVTextImage::CreateText()
+    {
+#if OIV_BUILD_FREETYPE == 1
+
+        IMCodec::ImageSharedPtr imageText = FreeType::FreeTypeHelper::CreateRGBAText(GetCreateParams(), &fCachedTextMetrics);
 
         if (imageText != nullptr)
         {
             if (imageText->GetTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
-
-            //this->fTextOptionsCached = this->fTextOptionsCurrent;
-
-            SetUnderlyingImage(imageText);
-            fIsDirty = false;
-            
-            return RC_Success;
         }
 
-        return RC_InvalidParameters;
+        return imageText;
 #endif
+
+        return nullptr;
 
     }
 }

@@ -13,9 +13,22 @@ namespace OIV
         {
             ::Win32::MonitorDesc monitorDesc;
         };
+
         using MonitorChangeEvent = LLUtils::Event<void(const MonitorChangeEventParams&)>;
         
         MonitorChangeEvent MonitorChange;
+
+
+        struct SizeChangeEventParams
+        {
+            int32_t width;
+            int32_t height;
+            
+        };
+
+        using SizeChangeEvent = LLUtils::Event<void(const SizeChangeEventParams&)>;
+
+        SizeChangeEvent SizeChange;
 
         
     };

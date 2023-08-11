@@ -58,7 +58,6 @@ if (OIV_RELEASE_SUFFIX)
   add_compile_definitions(OIV_RELEASE_SUFFIX=${OIV_RELEASE_SUFFIX})
 endif()
 
-
 #Optimizations
 if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

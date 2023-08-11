@@ -24,7 +24,7 @@ add_custom_command(TARGET ${TargetName}
                    COMMENT "Compiling resources"
                    
                    )
-
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)

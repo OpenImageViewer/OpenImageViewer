@@ -10,7 +10,31 @@ namespace OIV
         fTimerHideUserMessage.SetCallback(std::bind(&MessageManager::OnTimer, this));
         fFadeTimer.SetTargetWindow(fWindow);
         fFadeTimer.SetCallback(std::bind(&MessageManager::OnTimer, this));
+
+        EventManager::GetSingleton().SizeChange.Add(std::bind(&MessageManager::OnWindowSizeChange, this, std::placeholders::_1));
     }
+
+    void MessageManager::OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams)
+    {
+        fMaxMessageWidth = sizeChangedParams.width - (fMarginLeft + fMarginRight);
+
+        bool needrefresh = false;
+        for (const auto& messageData : fMessages)
+        {
+            messageData.message->SetMaxWidth(fMaxMessageWidth);
+            if (messageData.message->IsDirty())
+                needrefresh |= true;
+        }
+
+        if (needrefresh)
+        {
+
+            fRefreshRequest.Begin();
+            UpdateMessagesPosition();
+            fRefreshRequest.End();
+        }
+    }
+    
 
     void MessageManager::OnRefresh()
     {
@@ -108,12 +132,15 @@ namespace OIV
     {
         bool needrefresh = false;
         int curIndex = 0;
+        int pos = fMarginTop;
         for (const auto& messageData : fMessages)
         {
-            messageData.message->SetPosition({ 20, static_cast<double>( (curIndex + 1) * 20 )});
+            auto metrics = messageData.message->GetMetrics();
+            messageData.message->SetPosition({ static_cast<double>(fMarginLeft), static_cast<double>(pos)});
             if (messageData.message->IsDirty())
                 needrefresh |= true;
 
+            pos += metrics.totalRows * metrics.rowHeight;
             curIndex++;
         }
 
@@ -153,12 +180,13 @@ namespace OIV
         messageData.message->SetFontPath(LabelManager::sFontPath);
         messageData.message->SetFontSize(12);
         messageData.message->SetOutlineWidth(2);
-        messageData.message->SetPosition({ 20,20 });
+        messageData.message->SetPosition(static_cast<LLUtils::PointF64>(LLUtils::PointI32(fMarginLeft,fMarginTop)));
         messageData.message->SetFilterType(OIV_Filter_type::FT_None);
         messageData.message->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
         messageData.message->SetScale({ 1.0,1.0 });
         messageData.message->SetOpacity(1.0);
         messageData.message->SetVisible(true);
+        messageData.message->SetMaxWidth(fMaxMessageWidth);
     }
     
 

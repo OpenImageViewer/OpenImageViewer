@@ -3056,13 +3056,33 @@ namespace OIV
         int32_t posX = selectionRectPosition.x + fSelectionRect.GetSelectionRect().GetWidth() / 2  - selectionSizeText->GetImage()->GetWidth() / 2;
         int32_t posY = selectionRectPosition.y - selectionSizeText->GetImage()->GetHeight();
 
+        const auto selectinTopLeft = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::TopLeft);
+        const auto selectinBottomRight = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::BottomRight);
+        const auto clientSize = static_cast<LLUtils::PointI32>(fWindow.GetClientSize());
+
+
         //if vetical position is above client area, place text below selection rect     
         if (posY < 0)
-            posY = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::BottomRight).y;
+            posY = selectinBottomRight.y;
 
         // if vertical position is below client area, place text inside the rectangle
-        if (posY + static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight()) >= static_cast<int32_t>(fWindow.GetClientSize().cy))
+        if (posY + static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight()) >= clientSize.y)
             posY =  std::max(0, selectionRectPosition.y);
+
+        // if horizontal position is far right
+
+        if (posX + static_cast<int32_t>(selectionSizeText->GetImage()->GetWidth()) >= clientSize.x)
+        {
+            posX = selectionRectPosition.x - selectionSizeText->GetImage()->GetWidth();
+            posY = selectinTopLeft.y + (selectinBottomRight.y - selectinTopLeft.y) / 2;
+        }
+
+        if (posX < 0)
+        {
+            posX = selectinBottomRight.x;
+            posY = selectinTopLeft.y + (selectinBottomRight.y - selectinTopLeft.y) / 2;
+        }
+
 
         selectionSizeText->SetPosition({ static_cast<double>(posX), static_cast<double>(posY) });
     }
@@ -3329,6 +3349,8 @@ namespace OIV
             AutoPlaceImage();
             auto point = static_cast<LLUtils::PointI32>(fWindow.GetCanvasSize());
             fVirtualStatusBar.ClientSizeChanged(point);
+
+            EventManager::GetSingleton().SizeChange.Raise(EventManager::SizeChangeEventParams{ static_cast<int32_t>(size.cx) , static_cast<int32_t>(size.cy)} );
         }
     }
 
