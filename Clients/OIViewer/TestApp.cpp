@@ -1525,8 +1525,7 @@ namespace OIV
         {
         case ResultCode::RC_Success:
         {
-            const bool isImageInsideSizeLimits = file->GetImage()->GetWidth() <= 16384 || file->GetImage()->GetHeight() <= 16384;
-            if (isImageInsideSizeLimits)
+            if (file->GetImage()->GetWidth() <= 16384 && file->GetImage()->GetHeight() <= 16384)
             {
                 LoadOivImage(file);
             }
