@@ -900,7 +900,7 @@ namespace OIV
             if (numElements > 0)
             {
                 FileIndexType nextIndex = LLUtils::Math::Modulu<FileIndexType>(imageList.GetSelected() + amount, numElements);
-                imageList.SetSelected(nextIndex);
+                imageList.SetSelected(static_cast<int>(nextIndex));
             }
         }
         else
@@ -1407,7 +1407,7 @@ namespace OIV
             uint8_t B;
         };
 #pragma pack(pop)
-        for (size_t l = 0; l < maskBuffer.height; l++)
+        for (uint32_t l = 0; l < maskBuffer.height; l++)
         {
             const uint32_t sourceOffset = l * bgraImage->GetRowPitchInBytes();
             const uint32_t colorOffset = l * bitmapBuffer.rowPitch;
@@ -1484,17 +1484,17 @@ namespace OIV
         if (IsSubImagesVisible())
         {
             const auto isMainAnActualImage = mainImage->GetImage()->GetItemType() != ImageItemType::Container;
-            const auto totalImages = mainImage->GetImage()->GetNumSubImages() + (isMainAnActualImage ? 1 : 0);
+            const uint16_t totalImages = static_cast<uint16_t>(mainImage->GetImage()->GetNumSubImages() + (isMainAnActualImage ? 1 : 0));
             //Add the first image.
-            int currentImage = 0;
+            uint16_t currentImage = 0;
             if (isMainAnActualImage)
-                AddImageToControl(mainImage->GetImage(), static_cast<uint16_t>(currentImage++), static_cast<uint16_t>(totalImages));
+                AddImageToControl(mainImage->GetImage(), static_cast<uint16_t>(currentImage++), totalImages);
 
             //add the rest of subimages.
-            for (size_t i = 0; i < numSubImages; i++)
+            for (uint16_t i = 0; i < numSubImages; i++)
             {
                 auto currentSubImage = mainImage->GetImage()->GetSubImage(i);
-                AddImageToControl(currentSubImage, static_cast<uint16_t>(currentImage++), static_cast<uint16_t>(totalImages));
+                AddImageToControl(currentSubImage, static_cast<uint16_t>(currentImage++), totalImages);
             }
             //Reset selected sub image when loading new set of subimages
             fWindow.GetImageControl().GetImageList().SetSelected(-1);
@@ -1806,8 +1806,11 @@ namespace OIV
                  auto currentImage = fImageState.GetOpenedImage()->GetImage()->GetSubImage(fCurrentFrame);
                  fImageState.SetImageChainRoot(std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
                  auto nextFrame = (fCurrentFrame + 1) % fImageState.GetOpenedImage()->GetImage()->GetNumSubImages();
-                 // Minimum frame delay is one so it can be slowed down when neccesaey
-                 fSequencerTimer.SetInterval(std::max<uint32_t>(1, std::max<uint32_t>(1,currentImage->GetAnimationData().delayMilliseconds) / fCurrentSequencerSpeed));
+
+                 // When Animation data is not found, set minimum frame delay to 5 milliseconds.
+                 constexpr uint32_t MinFrameDelay = 5u;
+                 fSequencerTimer.SetInterval(std::max(1u, 
+                     static_cast<uint32_t>(static_cast<double>( std::max(MinFrameDelay,currentImage->GetAnimationData().delayMilliseconds)) / fCurrentSequencerSpeed)));
                  fCurrentFrame = nextFrame;
                  RefreshImage();
              });
@@ -2490,7 +2493,7 @@ namespace OIV
                                 writeFilter.extensions.push_back(L"*." + lowercaseExtension);
 
                             if (lowercaseExtension == L"png")
-                                fDefaultSaveFileFormatIndex = writeFilters.size();
+                                fDefaultSaveFileFormatIndex = static_cast<int16_t>(writeFilters.size());
 
                         }
 
@@ -2619,7 +2622,7 @@ namespace OIV
         
         if (key == L"viewsettings/maxzoom")
         {
-            auto val = ParseValue<Integral>(value);
+            auto val = ParseValue<Float>(value);
             fMaxPixelSize = val;
         }
         else if (key == L"viewsettings/imagemargins/x")
@@ -2627,24 +2630,24 @@ namespace OIV
         else if (key == L"viewsettings/imagemargins/y")
             fImageMargins.y = ParseValue<Float>(value);
         else if (key == L"viewsettings/minimagesize")
-            fMinImageSize = ParseValue<Integral>(value);
+            fMinImageSize = ParseValue<Float>(value);
         else if (key == L"viewsettings/slideshowinterval")
-            fSlideShowIntervalms = ParseValue<Integral>(value);
+            fSlideShowIntervalms = static_cast<uint32_t>(ParseValue<Integral>(value));
         else if (key == L"viewsettings/quickbrowsedelay")
-            fQuickBrowseDelay = ParseValue<Integral>(value);
+            fQuickBrowseDelay = static_cast<uint16_t>(ParseValue<Integral>(value));
 
         //Auto scroll
 
         else if (key == L"autoscroll/deadzoneradius")
-            fAutoScroll->SetDeadZoneRadius(ParseValue<Integral>(value));
+            fAutoScroll->SetDeadZoneRadius(static_cast<int32_t>(ParseValue<Integral>(value)));
         else if (key == L"autoscroll/speedfactorin")
             fAutoScroll->SetSpeedFactorIn(ParseValue<Float>(value));
         else if (key == L"autoscroll/speedfactorout")
             fAutoScroll->SetSpeedFactorOut(ParseValue<Float>(value));
         else if (key == L"autoscroll/speedfactorrange")
-            fAutoScroll->SetSpeedFactorRange(ParseValue<Integral>(value));
+            fAutoScroll->SetSpeedFactorRange(static_cast<int32_t>(ParseValue<Integral>(value)));
         else if (key == L"autoscroll/maxspeed")
-            fAutoScroll->SetMaxSpeed(ParseValue<Integral>(value));
+            fAutoScroll->SetMaxSpeed(static_cast<int32_t>(ParseValue<Integral>(value)));
 
         //deleted file removal mode
 
@@ -4135,4 +4138,4 @@ namespace OIV
     }
 
 }
-
+ 

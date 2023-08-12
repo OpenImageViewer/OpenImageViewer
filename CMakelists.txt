@@ -64,12 +64,12 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         #MSVC optimizations
         #compiler optimizations
-        add_compile_options(/O2)    #maximum optimization
-        add_compile_options(/Ob2)   #inline function expansion
-        add_compile_options(/Oi)    #enable instrinsic functions
-        add_compile_options(/Ot)    #favor fast code
-        add_compile_options(/Oy)    #Omit frame pointers
-        add_compile_options(/GT)    #enalbe fiber safe optimiations
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/O2>)    #maximum optimization
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Ob2>)   #inline function expansion
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Oi>)    #enable instrinsic functions
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Ot>)    #favor fast code
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Oy>)    #Omit frame pointers
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/GT>)    #enalbe fiber safe optimiations
     
         #linker optimizations
         add_link_options(/OPT:REF)  #remove unreferenced code/data
@@ -77,13 +77,13 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     
         #   Publish specific optimization flags
         #if (OIV_OFFICIAL_BUILD)
-           add_compile_options(/GL)    #whole program optimization
+           add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/GL>)    #whole program optimization
            add_link_options(/LTCG)     #link time optimization code generation
         #endif()
 
         #Always generate debug info
         add_link_options(/DEBUG)    #(Generate Debug Info)
-        add_compile_options(/Zo)    #Enhance Optimized Debugging
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zo>)    #Enhance Optimized Debugging
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zi>)    #seperate debug information
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwhole-program-vtables>)

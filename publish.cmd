@@ -38,7 +38,7 @@ set OIV_VERSION_BUILD=9
 set BuildType="RelWithDebInfo"
 set VersionPath=.\oivlib\oiv\Include\Version.h
 set BuildPath=./publish
-set BinPath=%BuildPath%\bin
+set BinPath=%BuildPath%/bin
 set BuildOperation=Build
 rem Global build variables - END
 
@@ -124,7 +124,7 @@ rem=============================================================================
 rem Pack files
 if !OpPack! equ 1 (
 set OutputPath=./%BuildPath%/%DATE_YYMMDD_HH_mm_SS%-v%versionStringShort%
-copy %DependenciesPath%\*.dll %BinPath%\
+xcopy "%DependenciesPath%\*.dll" "%BinPath%\" /D /F
 md !OutputPath!
 set BaseFileName=!OutputPath!/!DATE_YYMMDD!-OIV-!versionString!-Win32x64VC-LLVM
 

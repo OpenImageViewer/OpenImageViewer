@@ -119,7 +119,7 @@ namespace OIV
 			menuItemInfo.hbmpChecked = nullptr;
 			menuItemInfo.hbmpUnchecked = nullptr;
 			menuItemInfo.dwTypeData = const_cast<LLUtils::native_char_type*>(it->first.c_str());
-			menuItemInfo.cch = it->first.length();
+			menuItemInfo.cch = static_cast<UINT>(it->first.length());
 			menuItemInfo.hbmpItem = nullptr;
 			menuItemInfo.wID = fCurrentItemID;
 

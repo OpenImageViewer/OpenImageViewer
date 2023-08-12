@@ -103,7 +103,7 @@ namespace OIV
 						image = ApplyExifRotation(image, exifOrientation);
 					}
 
-					for (size_t i = 0; i < image->GetNumSubImages(); i++)
+					for (uint16_t i = 0; i < image->GetNumSubImages(); i++)
 						image->SetSubImage(i, ApplyExifRotation(image->GetSubImage(i), exifOrientation));
 				}
 

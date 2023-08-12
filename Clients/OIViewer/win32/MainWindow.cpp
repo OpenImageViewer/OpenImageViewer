@@ -56,7 +56,7 @@ namespace OIV
             fCanvasWindow.SetTransparent(true);
 
           
-            SetWindowIcon(::Win32::MakeIntResource(IDI_APP_ICON));
+            SetWindowIcon(::Win32::MakeIntResource(static_cast<size_t>(IDI_APP_ICON)));
 
            
        

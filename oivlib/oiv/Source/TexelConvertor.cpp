@@ -64,7 +64,7 @@ namespace OIV
                                 std::byte* targetAddress = reinterpret_cast< std::byte*>
                                     (reinterpret_cast<uint8_t*>(destBuffer) + (DestTexellSize * baseTexel));
 
-                                ConvertSegment(targetAddress, sourceAddress, texelsPerThread, sourceTexelSize, DestTexellSize, swizzleFunc);
+                                ConvertSegment(targetAddress, sourceAddress, texelsPerThread, static_cast<uint8_t>(sourceTexelSize), static_cast<uint8_t>(DestTexellSize), swizzleFunc);
                             }
                         );
                     }
@@ -79,7 +79,7 @@ namespace OIV
                     std::byte* targetAddress = reinterpret_cast<std::byte*>
                         (reinterpret_cast<uint8_t*>(destBuffer) + (DestTexellSize * baseTexel));
                     
-                    ConvertSegment(targetAddress, sourceAddress, totalTexels % totalThreads , sourceTexelSize, DestTexellSize, swizzleFunc);
+                    ConvertSegment(targetAddress, sourceAddress, totalTexels % totalThreads , static_cast<uint8_t>(sourceTexelSize), static_cast<uint8_t>(DestTexellSize), swizzleFunc);
 
 
                     for (uint8_t i = 0; i < totalThreads; i++)

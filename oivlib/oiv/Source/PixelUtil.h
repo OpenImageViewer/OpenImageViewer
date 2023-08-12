@@ -248,8 +248,8 @@ LLUTILS_DISABLE_WARNING_POP
             BitTexel32* dst = (BitTexel32*)i_dest;
             for (size_t i = start; i < end; i++)
             {
-                const int byteOffset = i / CHAR_BIT;
-                const int bitOffset = i % CHAR_BIT;
+                const size_t byteOffset = i / CHAR_BIT;
+                const size_t bitOffset = i % CHAR_BIT;
                 //OutputDebugString(byteOffset)
                 uint8_t currentByte = (reinterpret_cast<const uint8_t*>(i_src))[byteOffset];
                 uint8_t color = ((currentByte & (1 << (7 - bitOffset))) != 0) ? 255 : 0;
@@ -459,7 +459,7 @@ LLUTILS_DISABLE_WARNING_POP
 
                     const std::size_t idxDest =  destY * destWidth + destX;
 
-                    PixelUtil::CopyTexel(transformInfo.dstBuffer, idxDest, srcRow, x, transformInfo.bytesPerTexel);
+                    PixelUtil::CopyTexel(transformInfo.dstBuffer, idxDest, srcRow, x, static_cast<uint8_t>(transformInfo.bytesPerTexel));
                 }
         }
 

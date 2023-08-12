@@ -23,7 +23,7 @@ namespace OIV
 
         bool isFading = false;
         bool refreshNeeded = false;
-        int64_t nextEvent = std::numeric_limits<int64_t>::max();
+        int32_t nextEvent = std::numeric_limits<int32_t>::max();
 
         std::vector<ListMessageData::iterator> elementsToRemove;
 
@@ -52,7 +52,7 @@ namespace OIV
                     }
                     else
                     {
-                        nextEvent = std::min(nextEvent, dueDone);
+                        nextEvent = std::min(nextEvent,  static_cast<int32_t>(dueDone));
                     }
                 }
             }
@@ -90,7 +90,7 @@ namespace OIV
 
         fFadeTimer.SetInterval(isFading ? 5 : 0);
 
-        if (nextEvent != std::numeric_limits<int64_t>::max())
+        if (nextEvent != std::numeric_limits<int32_t>::max())
         {
             fTimerHideUserMessage.SetInterval(nextEvent);
         }
