@@ -64,11 +64,15 @@ if [%OIV_OFFICIAL_RELEASE%] == [0] (
 
 echo "Build timestamp..."
 pushd .
-cd Utils
-call buildTimeStamp.cmd
-set timeStampPath=.\Build\timestamp.exe
+cd %BuildPath%
+set BuildAbsPath=%CD%
 popd
-
+pushd .
+cd Utils
+call buildTimeStamp.cmd %BuildAbsPath%
+popd
+rem Change directory seperator from'/' to '\' for the timestamp command
+set timeStampPath=.\!BuildPath:~2!\timestamp.exe
 
 for /f "tokens=*" %%i in ('%timeStampPath%') do set TIMESTAMP=%%i
 
@@ -80,7 +84,6 @@ echo SHORT VERSION: !versionStringShort!
 echo SHORT DATE   : !DATE_YYMMDD!
 echo LONG DATE    : !DATE_YYMMDD_HH_mm_SS!
 echo ==============================================
-
 rem=====================================================================================================
 rem Run Cmake
 if !OpRunCmake! equ 1 (
