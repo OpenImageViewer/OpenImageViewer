@@ -181,16 +181,24 @@ namespace OIV
                     using namespace LLUtils;
                     decltype(fSelectionRect)::Point_Type topLeft = fSelectionRect.GetCorner(LLUtils::Corner::TopLeft);
                     decltype(fSelectionRect)::Point_Type bottomRight = fSelectionRect.GetCorner(LLUtils::Corner::BottomRight);
-                    PointI32 p0 = {
-                       fLockMode == LockMode::LockWidth  ? topLeft.x : std::min<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
-                       fLockMode == LockMode::LockHeight ? topLeft.y : std::min<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
-                    };
-                    PointI32 p1 = {
-                       fLockMode == LockMode::LockWidth  ? bottomRight.x : std::max<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
-                       fLockMode == LockMode::LockHeight ? bottomRight.y : std::max<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
-                    };
-                    fSelectionRect = {p0,p1};
-                    NotifySelectionRectChanged(true);
+
+                    auto diff = (posWindowSpace - fSelectStartPoint).Abs();
+
+                    if (diff.x != 0 && diff.y != 0)
+                    {
+
+                        PointI32 p0 = {
+                           fLockMode == LockMode::LockWidth ? topLeft.x : std::min<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
+                           fLockMode == LockMode::LockHeight ? topLeft.y : std::min<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
+                        };
+                        PointI32 p1 = {
+                           fLockMode == LockMode::LockWidth ? bottomRight.x : std::max<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
+                           fLockMode == LockMode::LockHeight ? bottomRight.y : std::max<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
+                        };
+                        fSelectionRect = { p0,p1 };
+                        NotifySelectionRectChanged(true);
+                        
+                    }
                     fOperation = operation;
                 }
 
