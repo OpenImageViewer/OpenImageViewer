@@ -26,7 +26,6 @@ void RunApp(std::wstring filePath)
     OIV::TestApp testApp;
     testApp.Init(filePath);
     testApp.Run();
-    testApp.Destroy();
 }
 
 int mainFunction(int argc, const wchar_t** argv)

@@ -2764,14 +2764,7 @@ namespace OIV
         }
     }
 
-    void TestApp::Destroy()
-    {
-        // destroy OIV resources before destroying OIV.
-        fImageState.ClearAll();
-        fLabelManager.RemoveAll();
-        // Destroy OIV when window is closed.
-        OIVCommands::ExecuteCommand(OIV_CMD_Destroy, &NullCommand, &NullCommand);
-    }
+
 
     double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
     {

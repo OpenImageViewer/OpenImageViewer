@@ -134,7 +134,6 @@ namespace OIV
         ~TestApp();
         void Init(std::wstring filePath);
         void Run();
-        void Destroy();
         static std::wstring GetAppDataFolder();
         static HWND FindTrayBarWindow();
 
