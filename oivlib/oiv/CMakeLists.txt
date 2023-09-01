@@ -29,7 +29,11 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
 
 option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
 add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
-add_subdirectory(${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper ./external/FreeTypeWrapper)
+
+
+option(FREETYPE_WRAPPER_BUILD_SAMPLES "freetype build samples" OFF)
+
+add_subdirectory(${ExternalFolder}/FreeTypeWrapper/ ./external/FreeTypeWrapper)
 add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 
 if (OIV_DISABLE_WARNINGS_EXTERNAL_LIBS)

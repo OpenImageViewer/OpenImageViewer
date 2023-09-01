@@ -8,6 +8,7 @@
 #include <defs.h>
 #include <Interfaces/IRendererDefs.h>
 #include <Interfaces/IRenderable.h>
+#include <LLUtils/Color.h>
 #include <map>
 
 namespace OIV
@@ -104,11 +105,11 @@ namespace OIV
         bool fIsParamsDirty = true;
         bool fGlobalsDirty = true;
         VisualSelectionRect fSelectionRect;
-        std::array<LLUtils::Color, 2> fBackgroundColors =
+        std::array<LLUtils::ColorF32, 2> fBackgroundColors =
         {
             {
-                 {0, 0, 0, 255} // black
-                ,{0,0,40,255} // dark blue
+                 {static_cast<uint8_t>(0), static_cast < uint8_t>(0),static_cast < uint8_t>(0), static_cast < uint8_t>(255)} // black
+                ,{static_cast <uint8_t>(0),static_cast < uint8_t>(0),static_cast < uint8_t>(40),static_cast < uint8_t>(255)} // dark blue
             }
         };
 
@@ -125,7 +126,7 @@ namespace OIV
         using MapImageEntry = std::map<IRenderable*, ImageEntry, MapLess>;
         MapImageEntry fImageEntries;
         OIVString fDataPath;
-        LLUtils::Color fBackgroundColor = { 45,45,48,255 };
+        LLUtils::ColorF32 fBackgroundColor = { static_cast<uint8_t>(45),static_cast < uint8_t>(45),static_cast < uint8_t>(48),static_cast < uint8_t>(255) };
 
 #pragma region /* Direct3D111 resources*/
         D3D11_VIEWPORT fViewport {};

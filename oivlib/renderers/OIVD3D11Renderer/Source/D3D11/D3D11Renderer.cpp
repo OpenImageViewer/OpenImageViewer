@@ -27,8 +27,8 @@ namespace OIV
         UINT offset = 0;
         d3dContext->IASetVertexBuffers(0, 1, fVertexBuffer.GetAddressOf(), &stride, &offset);
         d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-        
-        d3dContext->OMSetBlendState(fBlendState.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>().data() , static_cast<UINT>(0xFFFFFFFF));
+
+        d3dContext->OMSetBlendState(fBlendState.Get(), fBackgroundColor.channels.data(), static_cast<UINT>(0xFFFFFFFF));
         d3dContext->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
         
         d3dContext->RSSetViewports(1, &fViewport);
@@ -60,7 +60,7 @@ LLUTILS_DISABLE_WARNING_POP
 
         
         d3dContext->OMSetRenderTargets(1, fRenderTargetView.GetAddressOf(), nullptr);
-        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), fBackgroundColor.GetNormalizedColorValue<FLOAT>().data());
+        d3dContext->ClearRenderTargetView(fRenderTargetView.Get(), fBackgroundColor.channels.data());
     }
 
     void D3D11Renderer::CreateBuffers()
@@ -173,8 +173,8 @@ LLUTILS_DISABLE_WARNING_POP
 
         fBufferGlobals = std::make_unique<D3D11BufferBound<CONSTANT_BUFFER_GLOBALS>>(fDevice, cbDesc, nullptr);
         
-        memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
-        memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].channels.data(), sizeof(float) * 4);
+        memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].channels.data(), sizeof(float) * 4);
     }
 
     //Create constant buffer for selection rect.
@@ -272,8 +272,8 @@ LLUTILS_DISABLE_WARNING_POP
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         
         buffer.uShowGrid = viewParams.showGrid;
-        memcpy(buffer.transparencyColor1, viewParams.uTransparencyColor1.GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
-        memcpy(buffer.transparencyColor2, viewParams.uTransparencyColor2.GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+        memcpy(buffer.transparencyColor1, static_cast<LLUtils::ColorF32>(viewParams.uTransparencyColor1).channels.data(), sizeof(float) * 4);
+        memcpy(buffer.transparencyColor2, static_cast<LLUtils::ColorF32>(viewParams.uTransparencyColor2).channels.data(), sizeof(float) * 4);
 
         fIsParamsDirty = true;
         
@@ -470,11 +470,11 @@ LLUTILS_DISABLE_WARNING_POP
 
     int D3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
     {
-        fBackgroundColors.at(index) = backgroundColor;
+        fBackgroundColors.at(index) = static_cast<LLUtils::ColorF32>(backgroundColor);
         if (index == 0 )
-            memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+            memcpy(fBufferGlobals->GetBuffer().backgroundColor1, fBackgroundColors[0].channels.data(), sizeof(float) * 4);
         else 
-            memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].GetNormalizedColorValue<float>().data(), sizeof(float) * 4);
+            memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].channels.data(), sizeof(float) * 4);
         fGlobalsDirty = true;
 
         return 0;

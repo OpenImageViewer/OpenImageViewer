@@ -4,6 +4,11 @@
 #include <LLUtils/Templates.h>
 #include <FreeTypeWrapper/FreeTypeConnector.h>
 
+namespace FreeType
+{
+    class FreeTypeConnector;
+}
+
 
 namespace OIV
 {
@@ -19,8 +24,11 @@ namespace OIV
         uint16_t fontSize;
         uint16_t DPIx;
         uint16_t DPIy;
+
         bool useMetaText;
         bool bidirectional;
+        bool lineEndFixedWidth;
+        FreeType::RenderMode renderMode;
     };
 
     
@@ -44,9 +52,9 @@ namespace OIV
 
     public:
 
-        OIVTextImage(ImageSource imageSource);
+        OIVTextImage(ImageSource imageSource, FreeType::FreeTypeConnector* freeType);
 
-        OIVTextImage();
+        OIVTextImage(FreeType::FreeTypeConnector* freeType);
         
     
 #pragma region Text rendering
@@ -132,6 +140,25 @@ namespace OIV
             }
         }
 
+        void SetTextRenderMode(FreeType::RenderMode renderMode)
+        {
+            if (fTextOptionsCurrent.renderMode != renderMode)
+            {
+                fTextOptionsCurrent.renderMode = renderMode;
+                fDirtyFlags.set(DirtyFlags::All);
+            }
+        }
+
+        void SetLineEndFixedWidth(bool lineEndFixedWidth)
+        {
+            if (fTextOptionsCurrent.lineEndFixedWidth != lineEndFixedWidth)
+            {
+                fTextOptionsCurrent.lineEndFixedWidth = lineEndFixedWidth;
+                fDirtyFlags.set(DirtyFlags::All);
+            }
+        }
+
+
         TextMetrics GetMetrics();
         void UpdateTextMetrics();
         void Create()
@@ -187,6 +214,7 @@ namespace OIV
        IMCodec::ImageSharedPtr CreateText();
        LLUtils::BitFlags<DirtyFlags> fDirtyFlags{};
        FreeType::TextMetrics fCachedTextMetrics;
+       FreeType::FreeTypeConnector* fFreeType{};
         
     };
 

@@ -6,10 +6,11 @@ namespace FreeType
     class FreeTypeHelper
     {
     public:
-        static IMCodec::ImageSharedPtr CreateRGBAText(const TextCreateParams& createParams, TextMetrics* metrics)
+
+        static IMCodec::ImageSharedPtr CreateRGBAText(FreeTypeConnector* freeType, const TextCreateParams& createParams, TextMetrics* metrics)
         {
             FreeTypeConnector::Bitmap rasterizedText;
-            FreeTypeConnector::GetSingleton().CreateBitmap(createParams, rasterizedText, metrics);
+            freeType->CreateBitmap(createParams, rasterizedText, metrics);
 
             if (rasterizedText.width != 0 && rasterizedText.height != 0)
                 return BitmapToRGBAImage(rasterizedText);

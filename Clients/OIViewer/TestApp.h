@@ -433,6 +433,7 @@ namespace OIV
 
 
         CommandManager fCommandManager;
+        std::unique_ptr<FreeType::FreeTypeConnector> fFreeType;
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;

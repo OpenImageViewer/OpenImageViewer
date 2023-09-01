@@ -1050,6 +1050,8 @@ namespace OIV
         , fPreserveImageSpaceSelection(std::bind(&TestApp::OnPreserveSelectionRect, this))
         , fSelectionRect(std::bind(&TestApp::OnSelectionRectChanged, this,std::placeholders::_1, std::placeholders::_2))
         , fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this))
+        , fFreeType(std::make_unique<FreeType::FreeTypeConnector>())
+        , fLabelManager(fFreeType.get())
         //, fFileCache(&fImageLoader, std::bind(&TestApp::OnImageReady, this, std::placeholders::_1))
          
        
@@ -3036,10 +3038,12 @@ namespace OIV
         {
             // Create new user message.
             selectionSizeText = fLabelManager.GetOrCreateTextLabel("selectionSizeText");
-            selectionSizeText->SetBackgroundColor(LLUtils::Color(0));
             selectionSizeText->SetFontPath(LabelManager::sFontPath);
-            selectionSizeText->SetFontSize(10);
-            selectionSizeText->SetOutlineWidth(1);
+            selectionSizeText->SetFontSize(11);
+            selectionSizeText->SetBackgroundColor({ 0,0,0, 192});
+            selectionSizeText->SetTextColor({ 170, 170, 170, 255 });
+            selectionSizeText->SetTextRenderMode(FreeType::RenderMode::Antialiased);
+            selectionSizeText->SetOutlineWidth(0);
 
             selectionSizeText->SetFilterType(OIV_Filter_type::FT_None);
             selectionSizeText->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
@@ -3533,7 +3537,7 @@ namespace OIV
 
             if (text.empty() == false)
             {
-                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>(ImageSource::ClipboardText);
+                OIVTextImageSharedPtr textImage = std::make_shared<OIVTextImage>(ImageSource::ClipboardText, fFreeType.get());
                 textImage->SetText(text);
                 textImage->SetPosition(LLUtils::PointF64::Zero);
                 textImage->SetScale(LLUtils::PointF64::One);

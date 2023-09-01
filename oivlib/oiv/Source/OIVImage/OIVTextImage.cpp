@@ -7,14 +7,15 @@ namespace OIV
 {
 
     
-    OIVTextImage::OIVTextImage(ImageSource imageSource) : OIVBaseImage(imageSource)
-
+    OIVTextImage::OIVTextImage(ImageSource imageSource, FreeType::FreeTypeConnector* freeType) : OIVBaseImage(imageSource)
     {
+        fFreeType = freeType;
         fTextOptionsCurrent.bidirectional = true;
         fTextOptionsCurrent.useMetaText = true;
+        fTextOptionsCurrent.renderMode = FreeType::RenderMode::Antialiased;
     }
 
-    OIVTextImage::OIVTextImage() : OIVTextImage(ImageSource::InternalText)
+    OIVTextImage::OIVTextImage(FreeType::FreeTypeConnector* freeType ) : OIVTextImage(ImageSource::InternalText, freeType)
     {
 
     }
@@ -32,12 +33,14 @@ namespace OIV
         createParams.outlineColor = { 0,0,0,255 };// request.outlineColor;
         createParams.outlineWidth = fTextOptionsCurrent.outlineWidth;
         createParams.text = fTextOptionsCurrent.text;
-        createParams.renderMode = RenderMode::Antialiased;
+        createParams.renderMode = fTextOptionsCurrent.renderMode;
         createParams.DPIx = fTextOptionsCurrent.DPIx == 0 ? 96 : fTextOptionsCurrent.DPIx;
         createParams.DPIy = fTextOptionsCurrent.DPIy == 0 ? 96 : fTextOptionsCurrent.DPIy;
         createParams.flags |= fTextOptionsCurrent.useMetaText ? TextCreateFlags::UseMetaText : TextCreateFlags::None;
         createParams.flags |= fTextOptionsCurrent.bidirectional ? TextCreateFlags::Bidirectional : TextCreateFlags::None;
+        createParams.flags |= fTextOptionsCurrent.lineEndFixedWidth ? TextCreateFlags::LineEndFixedWidth : TextCreateFlags::None;
         createParams.maxWidthPx = fTextOptionsCurrent.maxWidth;
+        createParams.textColor = fTextOptionsCurrent.textColor;
         return createParams;
     }
     
@@ -48,7 +51,7 @@ namespace OIV
 
         if (fDirtyFlags.test(DirtyFlags::Metrics))
         {
-            FreeTypeConnector::GetSingleton().MeasureText({ GetCreateParams() }, fCachedTextMetrics);
+            fFreeType->MeasureText({ GetCreateParams() }, fCachedTextMetrics);
             fDirtyFlags.clear(DirtyFlags::Metrics);
         }
     }
@@ -57,7 +60,7 @@ namespace OIV
     TextMetrics OIVTextImage::GetMetrics()
     {
         UpdateTextMetrics();
-        return { fCachedTextMetrics.rowHeight, fCachedTextMetrics.totalRows };
+        return { fCachedTextMetrics.rowHeight,static_cast<uint32_t>(  fCachedTextMetrics.lineMetrics.size())};
     }
 
     
@@ -66,10 +69,11 @@ namespace OIV
     {
 #if OIV_BUILD_FREETYPE == 1
 
-        IMCodec::ImageSharedPtr imageText = FreeType::FreeTypeHelper::CreateRGBAText(GetCreateParams(), &fCachedTextMetrics);
+        IMCodec::ImageSharedPtr imageText = FreeType::FreeTypeHelper::CreateRGBAText(fFreeType, GetCreateParams(), &fCachedTextMetrics);
 
         if (imageText != nullptr)
         {
+            //If Texel format is not RGBA or BGRA then convert to BGRA
             if (imageText->GetTexelFormat() != IMCodec::TexelFormat::I_B8_G8_R8_A8 && imageText->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 imageText = IMUtil::ImageUtil::Convert(imageText, IMCodec::TexelFormat::I_B8_G8_R8_A8);
         }

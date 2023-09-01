@@ -1,12 +1,15 @@
 #include "LabelManager.h"
 #include "EventManager.h"
+#include "FreeTypeWrapper/FreeTypeConnector.h"
 
 namespace OIV
 {
 
-    LabelManager::LabelManager()
+    
+    LabelManager::LabelManager(FreeType::FreeTypeConnector* freeType)
     {
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&LabelManager::OnMonitorChange, this,std::placeholders::_1));
+        fFreeType = freeType;
     }
 
     void LabelManager::OnMonitorChange(const EventManager::MonitorChangeEventParams& params)
@@ -48,7 +51,7 @@ namespace OIV
 
     OIVTextImageUniquePtr LabelManager::CreateTemplatedText()
     {
-        OIVTextImageUniquePtr text = std::make_unique<OIVTextImage>();
+        OIVTextImageUniquePtr text = std::make_unique<OIVTextImage>(fFreeType);
 
         text->SetPosition(LLUtils::PointF64::Zero);
         text->SetScale(LLUtils::PointF64::One);

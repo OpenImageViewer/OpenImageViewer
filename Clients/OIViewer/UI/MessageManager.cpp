@@ -131,7 +131,6 @@ namespace OIV
     void MessageManager::UpdateMessagesPosition()
     {
         bool needrefresh = false;
-        int curIndex = 0;
         int pos = fMarginTop;
         for (const auto& messageData : fMessages)
         {
@@ -141,7 +140,6 @@ namespace OIV
                 needrefresh |= true;
 
             pos += metrics.totalRows * metrics.rowHeight;
-            curIndex++;
         }
 
         if (needrefresh)

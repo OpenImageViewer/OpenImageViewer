@@ -25,8 +25,10 @@ namespace OIV
                 texelValue->SetVisible(fVisible);
                 texelValue->SetBackgroundColor(LLUtils::Color(0, 0, 0, 192));
                 texelValue->SetFontPath(LabelManager::sFixedFontPath);
+                texelValue->SetLineEndFixedWidth(true);
+                texelValue->SetTextRenderMode(FreeType::RenderMode::Antialiased);
                 texelValue->SetFontSize(11);
-                //texelValue->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
+                texelValue->SetTextColor({ 170,170,170,255 });
                 texelValue->SetOutlineWidth(0);
 				label = fMapLabels.emplace(labelName, texelValue).first;
 			}
