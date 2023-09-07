@@ -52,7 +52,7 @@ int mainFunction(int argc, const wchar_t** argv)
             RunApp(filePath);
         }
     }
-    else if (window == nullptr)
+    else
     {
         RunApp(filePath);
     }
