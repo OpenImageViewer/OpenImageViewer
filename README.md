@@ -1,72 +1,43 @@
 # Open Image Viewer
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/22d2c9bc0fa149fcaf0b84e009839fa9)](https://app.codacy.com/gh/OpenImageViewer/OpenImageViewer?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OpenImageViewer&utm_campaign=Badge_Grade_Dashboard)
-[![Build status](https://ci.appveyor.com/api/projects/status/yua3myv699sm3o17/branch/master?svg=true)](https://ci.appveyor.com/project/LiorL/openimageviewer/branch/master)
+[![Windows MSVC build](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml/badge.svg)](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml)
 
-**Open Image Viewer** is a hardware accelerated blazingly fast open code c++20 compliant cross-platform 'C' library and application for viewing and
-manipulating images.
+**Open Image Viewer** is a hardware accelerated blazingly fast open code c++20 compliant cross-platform application for **accurately** viewing and analyzing image files.  
 
-For more information visit our website: www.openimageviewer.com
+It provides accurate representation of the image being viewed, unlike the vast majority of the current viewers that shows the monitor color space data.  
+
+Emphasis on ergonomics and performance is thoroughly weighed to suit every type of user, the starting novice or the hardcore power user.
+
+Currenlty there's virtually no GUI, keyboard key bindings is used for fast workflow, press F1 to list all keybindings.
+
+For more information visit our [website at: www.openimageviewer.com](https://www.openimageviewer.com)  
+
+[A Word from the author](http://www.openimageviewer.com/#word)  
+[Highlights and features](http://www.openimageviewer.com/#features)  
 
 ![Selection rect demonstration with Open Image Viewer](https://i.ibb.co/NZXpb2W/cut.gif "Preview")
-
-The motivation for this project is to create an open code image viewer with great emphasis on ergonomics and performance for every type of user suitable for the starting novice or the hardcore power user.
-
-**Open Image Viewer** in its current form is a collection of 3 projects:
-
-1. Independent c++ Image codec library.
-2. C API image viewing engine.
-3. Image viewer - windows only, (linux, very soon)
-
-## Highlights
-
-* Supports potentially any image format, plugin based image codecs with FreeImage as fallback.
-* Fast initial image load.
-* Hardware accelerated by using OpenGL and Direct3D11.
-* Handles files up to 256 mega pixels (16 mega pixels per dimension).
-* State of the art selection rect.
-* Display sub images, such as DDS mipmaps.
-* On screen display of image pixel position and value, works also with all floating point types. 
-* Infinite panning, no need to ever lift the mouse by using low level API for capturing mouse events.
-* Custom pan/zoom limits - place any pixel of an image anywhere on the physical monitor.
-* Pixel grid.
-* Multi full screen - image spans across all monitors.
-* Support for image meta data, such as orientation.
-* The project is lightweight and using lightweight dependencies, no boost or other shenanigans.
-
-## Todo
-
-* Add compatibility with g++, Linux and MacOS.
-* Implement Metal, Vulkan and Direct3D12 renderers.
-* Add GPU support for Lanczos re-sampling.
-* Support for images larger than 256 mega pixels.
-* Implement more specialized codecs, thus decreasing further the dependency in freeimage.
-* Play animated images.
-* Suppport more types of meta data.
-
---------------------------
 
 ## Build your copy from source / Start developing
 
 ### Instructions
 
-1. **Clone the repository and update the submodules recursivly.**  
-
-2. **Use CMake to generate project files or open the root CMake file in visual studio as a CMake project.**
-
-3. **Compile and run.**
+1. Clone the repository and update the submodules recursivly. 
+2. Use CMake to generate project files or open the root CMake file in visual studio as a CMake project.
+3. Compile and run.
 
 ### Notes
 
-* IMCODEC_BUILD_CODEC_DDS and  IMCODEC_BUILD_CODEC_ICON are currently the only codec build flags that are enabled by default. For a full set of image format support, enable any of the the IMCODEC_BUILD_CODEC_* cmake options.
-* Only 64 bit is officialy supported.
+* PNG codec is disabled by deafult due to ci/cd issues
+* FreeImage codec is supplied in the official releases as a fallback but disabled by deafult due to its low performance, see below how to build the project with FreeImage
+* 64 bit is only officialy supported, though last checked 32 bit compiles and runs fluently
 
 #### Windows
 
 ##### Windows requirements
 
-* Windows Vista/7/8/8.1/10
-* Microsoft build tools 2019 or higher
+* Windows 7/8/8.1/10/11
+* Microsoft build tools 2022 or higher
   
 ##### When using Windows 7 SP1, make sure the following are installed
 
@@ -90,10 +61,6 @@ coming soon ...
 
 Name | Link
 ------------ | -------------
-***CodecJPG - libjpeg-turbo*** | <https://sourceforge.net/projects/libjpeg-turbo/>  
-***CodecPNG - libpng*** | <http://www.libpng.org/pub/png/libpng.html>  
-***CodecDDS - NVIDIA dds loader fork*** | <https://github.com/paroj/nv_dds>  
-***CodecPSD - libpsd fork*** | <https://github.com/TheNicker/libpsd>  
 ***CodecFreeImage*** | <http://freeimage.sourceforge.net/>
 --------------------------
 
