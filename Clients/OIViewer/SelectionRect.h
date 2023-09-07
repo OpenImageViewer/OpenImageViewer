@@ -38,9 +38,9 @@ namespace OIV
 
     private: // member fields
         Operation fOperation = Operation::NoOp;
-        LLUtils::RectI32 fSelectionRect;
-        LLUtils::PointI32 fSelectStartPoint;
-        LLUtils::PointI32 fSelectEndPoint;
+        LLUtils::RectI32 fSelectionRect{};
+        LLUtils::PointI32 fSelectStartPoint{};
+        LLUtils::PointI32 fSelectEndPoint{};
         LockMode fLockMode = LockMode::NoLock;
         SelectionRectChangedCallback fCallback;
     };
