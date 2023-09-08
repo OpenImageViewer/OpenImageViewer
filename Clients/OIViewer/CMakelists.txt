@@ -34,6 +34,12 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_i
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
 target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/include)
 target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
+
+#Add support for 4GB memory addressing for 32 bit application under Windows
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    target_link_options(${TargetName} PRIVATE /LARGEADDRESSAWARE)
+endif()
+
 target_link_libraries(${TargetName}
 
 #local libraries
