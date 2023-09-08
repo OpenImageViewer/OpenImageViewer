@@ -228,6 +228,7 @@ namespace OIV
         LLUtils::RectF64 ImageToClient(LLUtils::RectF64 clientRect) const;
         LLUtils::PointF64 ClientToImage(LLUtils::PointI32 clientPos) const;
         LLUtils::RectF64 ClientToImage(LLUtils::RectI32 clientRect) const;
+        LLUtils::RectI32 ClientToImageRounded(LLUtils::RectI32 clientRect) const;
         LLUtils::PointF64 GetCanvasCenter();
         void UpdateTexelPos();
         void AutoPlaceImage(bool forceCenter = false);
@@ -292,7 +293,6 @@ namespace OIV
         bool IsSubImagesVisible() const;
         void UpdateSelectionRectText();
         void OnImageReady(IMCodec::ImageSharedPtr image);
-
         LLUtils::PointI32 SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen);
 
         using netsettings_Create_func = void (*)(GuiCreateParams*);

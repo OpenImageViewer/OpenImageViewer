@@ -3108,10 +3108,15 @@ namespace OIV
         UpdateSelectionRectText();
     }
 
+    LLUtils::RectI32 TestApp::ClientToImageRounded(LLUtils::RectI32 clientRect) const
+    {
+        return static_cast<LLUtils::RectI32>(ClientToImage(clientRect).Round());
+    }
+
     void TestApp::SaveImageSpaceSelection()
     {
         if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
-            SetImageSpaceSelection(static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()).Round()));
+            SetImageSpaceSelection(ClientToImageRounded(fSelectionRect.GetSelectionRect()));
     }
 
     void TestApp::LoadImageSpaceSelection()
@@ -3588,8 +3593,8 @@ namespace OIV
 
     bool TestApp::CopyVisibleToClipBoard()
     {
-        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
-        auto cropped =  IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageRectInt);
+        LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+        auto cropped =  IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageSpaceSelection);
         bool result = false;
         if (cropped != nullptr)
         {
