@@ -235,15 +235,15 @@ namespace IMUtil
                 ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
                 imageItem->descriptor = sourceImage->GetDescriptor();
 
-                uint8_t targetPixelSize = GetTexelFormatSize(targetPixelFormat);
-                imageItem->data.Allocate(sourceImage->GetTotalPixels() * targetPixelSize);
+                uint8_t targetPixelSizeInBits = GetTexelFormatSize(targetPixelFormat);
+                imageItem->data.Allocate(sourceImage->GetTotalPixels() * targetPixelSizeInBits / CHAR_BIT);
 
                 std::byte* dest = imageItem->data.data();
                 //TODO: convert without normalization.
                 ImageSharedPtr normalizedImage = sourceImage->GetIsRowPitchNormalized() == true ? sourceImage : NormalizePitch(sourceImage);
 
                 imageItem->descriptor.texelFormatDecompressed = targetPixelFormat;
-                imageItem->descriptor.rowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSize / CHAR_BIT;
+                imageItem->descriptor.rowPitchInBytes = normalizedImage->GetRowPitchInTexels() * targetPixelSizeInBits / CHAR_BIT;
 
 
                 bool succcess = false;
@@ -265,7 +265,7 @@ namespace IMUtil
                         PixelUtil::Convert(converter->second
                             , &dest
                             , normalizedImage->GetBuffer()
-                            , targetPixelSize
+                            , targetPixelSizeInBits
                             , normalizedImage->GetTotalPixels());
 
                         succcess = true;
