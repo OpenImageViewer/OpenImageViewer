@@ -1237,6 +1237,11 @@ namespace OIV
             // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
             + L"." + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
+    #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
+                + OIV_TEXT(" | 64 bit")
+    #else 
+                + OIV_TEXT(" | 32 bit")
+    #endif
             + OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath())
 #endif			
 
