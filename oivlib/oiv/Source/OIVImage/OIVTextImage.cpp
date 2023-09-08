@@ -48,7 +48,6 @@ namespace OIV
     void OIVTextImage::UpdateTextMetrics()
     {
         using namespace FreeType;
-
         if (fDirtyFlags.test(DirtyFlags::Metrics))
         {
             fFreeType->MeasureText({ GetCreateParams() }, fCachedTextMetrics);

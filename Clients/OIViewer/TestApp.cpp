@@ -790,7 +790,7 @@ namespace OIV
         {
             if (IsOpenedImageIsAFile())
             {
-                LLUtils::PlatformUtility::CopyTextToClipBoard(GetOpenedFileName());
+                fClipboardHelper.SetClipboardText(GetOpenedFileName().c_str());
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
             }
         }
@@ -3476,7 +3476,7 @@ namespace OIV
     ClipboardDataType TestApp::PasteFromClipBoard()
     {
         ClipboardDataType clipboardType = ClipboardDataType::None;
-        const auto [formatType, buffer] = fClipboardHelper.GetClipboardData();
+        const auto& [formatType, buffer] = fClipboardHelper.GetClipboardData();
 
         if (formatType == CF_DIB || formatType == CF_DIBV5)
         {

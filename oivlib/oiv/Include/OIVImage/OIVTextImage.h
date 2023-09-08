@@ -170,13 +170,6 @@ namespace OIV
 #pragma endregion Text display
 
 #pragma region Text rendering
-
-
-
-        /*OIV_CMD_ImageProperties_Request fImageProperiesCurrent;
-        OIV_CMD_ImageProperties_Request fImageProperiesCached;*/
-
-        CreateTextParams fTextOptionsCached{};
         CreateTextParams fTextOptionsCurrent{};
         
     protected:
@@ -190,10 +183,9 @@ namespace OIV
                 if (textImage != nullptr)
                 {
                     SetUnderlyingImage(textImage);
-                    fDirtyFlags.clear(DirtyFlags::Bitmap);
                 }
+                fDirtyFlags.clear(DirtyFlags::Bitmap);
             }
-
         }
 
         void PerformPreRender() override 

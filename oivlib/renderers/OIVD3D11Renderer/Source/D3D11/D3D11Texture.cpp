@@ -2,10 +2,8 @@
 
 namespace OIV
 {
-    D3D11Texture::D3D11Texture(D3D11DeviceSharedPtr device, const CreateParams& createParams, const InitialBuffer* initialBuffer)
+    D3D11Texture::D3D11Texture(D3D11DeviceSharedPtr device, const CreateParams& createParams, const InitialBuffer* initialBuffer) : fDevice(device) , fCreateparams(createParams)
     {
-        fDevice = device;
-        fCreateparams = createParams;
         CreateTexture(initialBuffer);
         CreateShaderResourceView();
     }
@@ -70,24 +68,29 @@ namespace OIV
             subResourceData.pSysMem = initialBuffer->buffer;
             subResourceData.SysMemPitch = initialBuffer->rowPitchInBytes;
             subResourceDataForAPI = &subResourceData;
-        }
-        
-        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc
-            , generateMips ? nullptr : subResourceDataForAPI
-            , fTexture.ReleaseAndGetAddressOf())
-            , "Can not create texture");
-        
 
-        if (generateMips)
+
+            D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateTexture2D(&desc
+                , generateMips ? nullptr : subResourceDataForAPI
+                , fTexture.ReleaseAndGetAddressOf())
+                , "Can not create texture");
+
+
+            if (generateMips)
+            {
+                D3D11_BOX box;
+                box.back = 1;
+                box.front = 0;
+                box.left = 0;
+                box.top = 0;
+                box.right = desc.Width;
+                box.bottom = desc.Height;
+                fDevice->GetContext()->UpdateSubresource(fTexture.Get(), 0, &box, (void*)initialBuffer->buffer, initialBuffer->rowPitchInBytes, initialBuffer->rowPitchInBytes * desc.Height);
+            }
+        }
+        else
         {
-            D3D11_BOX box;
-            box.back = 1;
-            box.front = 0;
-            box.left = 0;
-            box.top = 0;
-            box.right = desc.Width;
-            box.bottom= desc.Height;
-            fDevice->GetContext()->UpdateSubresource(fTexture.Get(), 0, &box, (void*)initialBuffer->buffer,initialBuffer->rowPitchInBytes, initialBuffer->rowPitchInBytes * desc.Height);
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::BadParameters, "Texture buffer cannot be null");
         }
 
         OIV_D3D_SET_OBJECT_NAME(fTexture, "Texture2D");

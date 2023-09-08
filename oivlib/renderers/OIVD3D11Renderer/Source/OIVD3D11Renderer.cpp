@@ -3,9 +3,9 @@
 
 namespace OIV
 {
-    OIVD3D11Renderer::OIVD3D11Renderer()
+    OIVD3D11Renderer::OIVD3D11Renderer() : fD3D11Renderer(std::make_unique<D3D11Renderer>())
     {
-        fD3D11Renderer = std::make_unique<D3D11Renderer>();
+        
     }
 
     int OIVD3D11Renderer::SetSelectionRect(VisualSelectionRect selectionRect)

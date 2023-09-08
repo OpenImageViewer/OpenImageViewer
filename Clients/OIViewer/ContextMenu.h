@@ -16,9 +16,9 @@ namespace OIV
 	{
 	struct MenuItemData
 	{
-		uint32_t id;
-		MENUITEMINFO info;
-		T userData;
+		uint32_t id{};
+		MENUITEMINFO info{};
+		T userData{};
 		LLUtils::native_string_type itemDisplayName;
 	};
 
