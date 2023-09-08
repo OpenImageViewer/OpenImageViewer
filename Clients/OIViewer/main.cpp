@@ -21,7 +21,7 @@ std::wstring CompileFilePathFromArguments(int argc, const wchar_t** argv)
     return filePath;
 }
 
-void RunApp(std::wstring filePath)
+void RunApp(const std::wstring& filePath)
 {
     OIV::TestApp testApp;
     testApp.Init(filePath);
@@ -32,8 +32,6 @@ int mainFunction(int argc, const wchar_t** argv)
 {
     using namespace OIV;
     std::wstring filePath = CompileFilePathFromArguments(argc, argv);
-
-    HWND window = nullptr;
 
     if (filePath.empty() == false)
     {
@@ -63,10 +61,10 @@ int mainFunction(int argc, const wchar_t** argv)
 #ifdef WIN32
 
 int WinMain(
-         [[maybe_unused]] HINSTANCE hInstance,
-         [[maybe_unused]] HINSTANCE hPrevInstance,
-         [[maybe_unused]] LPSTR     lpCmdLine,
-         [[maybe_unused]] int       nCmdShow
+         [[maybe_unused]] _In_      HINSTANCE hInstance,
+         [[maybe_unused]] _In_opt_  HINSTANCE hPrevInstance,
+         [[maybe_unused]] _In_      LPSTR     lpCmdLine,
+         [[maybe_unused]] _In_      int       nCmdShow
 )
 {
     int nArgs;

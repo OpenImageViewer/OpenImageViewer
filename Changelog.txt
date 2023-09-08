@@ -1,4 +1,31 @@
 ==============================================================
+Open image viewer 0.18 - September 08, 2023
+==============================================================
+Added : support for 4GB memory addressing for 32 bit architecture
+Improved: stability
+Improved: performance by using better optimization flags
+Fixed: Warnings
+Added: platform independent fonts as preparation for cross-platform compilation
+Added: support for multi line user messages
+Changed : official releases now compiles in Clang-CL
+Improved: Image list visualization
+Added: support to change background color
+Added: option to save files to disk
+Fixed: support for DIBV5 clipboard format
+Added: snap selection rect to pixel grid
+Added: Asynchronous unique values (colors) counter for every multiple of 8 Bpp up to 128 Bpp
+Added: selection rect size text label
+Added: text rendering when pasting from clipboard
+Added: more information when displaying image info
+Added: original image channels info if different than decompressed channels
+Added: option to open folder of the active file
+Redesign image codec interface, added support for animated images and complex image file structures
+Added: option to sort by extension
+Added: option for choosing background color
+Added: predefined command to open containing folder
+Added: Sorting mode to application settings
+Added: Rocker gestures
+==============================================================
 Open image viewer 0.18RC1 - April 1 2022
 ==============================================================
 Added: support for NetSettings extension to change OIV settings at runtime

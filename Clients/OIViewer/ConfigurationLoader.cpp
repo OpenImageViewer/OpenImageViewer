@@ -81,7 +81,7 @@ namespace OIV
 				{
 					bool isObject = false;
 					std::string name;
-					json* child;
+					json* child{};
 					SettingEntryForParsing entry;
 				};
 

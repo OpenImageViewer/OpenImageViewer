@@ -45,7 +45,7 @@ namespace OIV
 
         private: // methods
             void HandleResize();
-            void ResizeStatusBar();
+            //void ResizeStatusBar();
             LRESULT HandleWindwMessage(const ::Win32::Event* evnt1);
             HWND DoCreateStatusBar(HWND hwndParent, uint32_t idStatus, HINSTANCE hinst, uint32_t cParts);
             void OnCreate();
@@ -53,11 +53,11 @@ namespace OIV
         private: // member fields
             Win32Window fCanvasWindow;
             HWND fHandleStatusBar = nullptr;
-            int fStatusWindowParts = 6;
+            //int fStatusWindowParts = 6;
             bool fShowStatusBar = true;
             bool fShowImageControl = false;
             CursorType fCurrentCursorType = CursorType::SystemDefault;
-            std::array<HCURSOR, static_cast<int>(CursorType::Count)> fCursors;
+            std::array<HCURSOR, static_cast<int>(CursorType::Count)> fCursors{};
             bool fCursorsInitialized = false;
             ImageControl fImageControl;
         };

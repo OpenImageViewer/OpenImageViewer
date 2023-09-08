@@ -381,17 +381,17 @@ LLUTILS_DISABLE_WARNING_POP
 
         struct TransformTexelsInfo
         {
-            size_t startRow;
-            size_t endRow;
-            size_t startCol;
-            size_t endCol;
-            size_t width;
-            size_t height;
-            const std::byte* srcBuffer;
-            std::byte* dstBuffer;
+            size_t startRow{};
+            size_t endRow{};
+            size_t startCol{};
+            size_t endCol{};
+            size_t width{};
+            size_t height{};
+            const std::byte* srcBuffer{};
+            std::byte* dstBuffer{};
             AxisAlignedResolvedTransformData resolvedTransformData;
-            size_t srcRowPitch;
-            size_t bytesPerTexel;
+            size_t srcRowPitch{};
+            size_t bytesPerTexel{};
         };
 
 

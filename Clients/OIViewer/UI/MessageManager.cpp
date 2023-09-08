@@ -174,6 +174,9 @@ namespace OIV
     {
         messageData.messageUniqueID = fMessageIDProvider.Acquire();
         messageData.message = fLabelManager->GetOrCreateTextLabel("userMessage" + std::to_string(messageData.messageUniqueID));
+        if (messageData.message == nullptr)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create user message.");
+
         messageData.message->SetBackgroundColor(LLUtils::Color(0));
         messageData.message->SetFontPath(LabelManager::sFontPath);
         messageData.message->SetFontSize(12);

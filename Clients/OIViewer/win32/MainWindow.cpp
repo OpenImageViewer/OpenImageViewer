@@ -97,41 +97,44 @@ namespace OIV
         }
 
 
-        void MainWindow::ResizeStatusBar()
-        {
-            if (fHandleStatusBar == nullptr)
-                return;
-            RECT rcClient;
-            HLOCAL hloc;
-            PINT paParts;
-            int i, nWidth;
-            if (GetClientRect(GetHandle(), &rcClient) == 0)
-                return;
+        //void MainWindow::ResizeStatusBar()
+        //{
+        //    if (fHandleStatusBar == nullptr)
+        //        return;
+        //    RECT rcClient;
+        //    HLOCAL hloc;
+        //    PINT paParts;
+        //    int i, nWidth;
+        //    if (GetClientRect(GetHandle(), &rcClient) == 0)
+        //        return;
 
 
-            SetWindowPos(fHandleStatusBar, nullptr, 0, 0, -1, -1, 0);
-            // Allocate an array for holding the right edge coordinates.
-            hloc = LocalAlloc(LHND, sizeof(int) * fStatusWindowParts);
-            paParts = (PINT)LocalLock(hloc);
+        //    SetWindowPos(fHandleStatusBar, nullptr, 0, 0, -1, -1, 0);
+        //    // Allocate an array for holding the right edge coordinates.
+        //    hloc = LocalAlloc(LHND, sizeof(int) * fStatusWindowParts);
+        //    if (hloc == nullptr)
+        //        LL_EXCEPTION(LLUtils::Exception::ErrorCode::SystemError, "Unable to allocate statusbar memory");
 
-            // Calculate the right edge coordinate for each part, and
-            // copy the coordinates to the array.
-            nWidth = rcClient.right / fStatusWindowParts;
-            int rightEdge = nWidth;
-            for (i = 0; i < fStatusWindowParts; i++)
-            {
-                paParts[i] = rightEdge;
-                rightEdge += nWidth;
-            }
+        //    paParts = reinterpret_cast<PINT>(LocalLock(hloc));
 
-            // Tell the status bar to create the window parts.
-            ::SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
-                paParts);
+        //    // Calculate the right edge coordinate for each part, and
+        //    // copy the coordinates to the array.
+        //    nWidth = rcClient.right / fStatusWindowParts;
+        //    int rightEdge = nWidth;
+        //    for (i = 0; i < fStatusWindowParts; i++)
+        //    {
+        //        paParts[i] = rightEdge;
+        //        rightEdge += nWidth;
+        //    }
 
-            // Free the array, and return.
-            LocalUnlock(hloc);
-            LocalFree(hloc);
-        }
+        //    // Tell the status bar to create the window parts.
+        //    ::SendMessage(fHandleStatusBar, SB_SETPARTS, (WPARAM)fStatusWindowParts, (LPARAM)
+        //        paParts);
+
+        //    // Free the array, and return.
+        //    LocalUnlock(hloc);
+        //    LocalFree(hloc);
+        //}
 
 
 
@@ -165,7 +168,7 @@ namespace OIV
                 ShowWindow(fHandleStatusBar, SW_SHOW);
                 GetWindowRect(fHandleStatusBar, &statusBarRect);
                 clientSize.cy -= statusBarRect.bottom - statusBarRect.top;
-                ResizeStatusBar();
+//                ResizeStatusBar();
             }
             else
             {

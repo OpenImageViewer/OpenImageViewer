@@ -50,7 +50,7 @@ public:
 
     struct ImageDesc
     {
-        uint32_t index;
+        uint32_t index{};
         std::wstring title;
         ::Win32::BitmapSharedPtr bitmap;
         ::Win32::BitmapSharedPtr mask;
@@ -249,7 +249,7 @@ private:
     int fSelected = -1;
     //First image index in display
     int fPos = 0;
-    HWND fTargetWindow;
+    HWND fTargetWindow{};
     std::vector<ImageDesc> fImages;
 };
 

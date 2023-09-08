@@ -56,7 +56,7 @@ namespace OIV
 
         void Create(const D3D11_SUBRESOURCE_DATA* initialData)
         {
-            if (fBufferDesc.BindFlags == D3D11_BIND_CONSTANT_BUFFER)
+            if ((fBufferDesc.BindFlags & D3D11_BIND_CONSTANT_BUFFER) == D3D11_BIND_CONSTANT_BUFFER)
                 fBufferDesc.ByteWidth =  LLUtils::Utility::Align(fBufferDesc.ByteWidth,static_cast<UINT>(16));
 
 
@@ -80,7 +80,7 @@ namespace OIV
     class D3D11BufferBound : public D3D11Buffer
     {
     private:
-        T fBufferData;
+        T fBufferData{};
 
     public:
         D3D11BufferBound(D3D11DeviceSharedPtr device, const D3D11_BUFFER_DESC& bufferDesc, const D3D11_SUBRESOURCE_DATA* initialData)
