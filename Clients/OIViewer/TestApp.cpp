@@ -138,12 +138,12 @@ namespace OIV
                 filterTypeChanged = true;
             }
         }
-        else if (type == "toggleFullScreen") // Toggle fullscreen
+        else if (type == "toggleFullScreen") // Toggle full screen
         {
 			ToggleFullScreen(false);
             fullscreenModeChanged = true;
         }
-        else if (type == "toggleMultiFullScreen") //Toggle multi fullscreen
+        else if (type == "toggleMultiFullScreen") //Toggle multi full screen
         {
 			ToggleFullScreen(true);
             fullscreenModeChanged = true;
@@ -796,17 +796,40 @@ namespace OIV
         }
         else if (cmd == "selectedArea")
         {
-            if (CopyVisibleToClipBoard())
+            OperationResult res = CopyVisibleToClipBoard();
+            if (res != OperationResult::Success)
+                result.resValue = std::wstring(L"Cannot copy to clipboard - ") + GetErrorString(res);
+            else 
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
-            else
-                result.resValue = L"Cannot copy to clipboard";
+            
         }
         else if (cmd == "cut")
         {
-            CutSelectedArea();
+            OperationResult res = CutSelectedArea();
+            if (res != OperationResult::Success)
+                result.resValue = std::wstring(L"Cannot cut selected area - ") + GetErrorString(res);
+            else
+                result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
     }
 
+    std::wstring TestApp::GetErrorString(OperationResult res) const
+    {
+        switch (res)
+        {
+            case OperationResult::NoDataFound:
+            return L"No Image loaded";
+            case OperationResult::Success:
+            return L"Success";
+            case OperationResult::NoSelection:
+                return L"No selection";
+            case OperationResult::UnkownError:
+            default:
+                return L"Unknown error";
+        }
+    }
+
+    
 
     void TestApp::CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
         CommandManager::CommandResult& result)
@@ -831,16 +854,19 @@ namespace OIV
         CommandManager::CommandResult& result)
     {
         using namespace std;
-
-        if (fImageState.GetOpenedImage() != nullptr)
+        const string cmd = request.args.GetArgValue("cmd");
+        if (cmd == "cropSelectedArea")
         {
+            OperationResult res = CropVisibleImage();
+            if (res != OperationResult::Success)
+                result.resValue = std::wstring(L"Cannot crop selected area - ") + GetErrorString(res);
+            else
+                result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
+        }
 
-            string cmd = request.args.GetArgValue("cmd");
-            if (cmd == "cropSelectedArea")
-            {
-                CropVisibleImage();
-            }
-            else if (cmd == "selectAll")
+        else if (cmd == "selectAll" )
+        {
+            if (fImageState.GetOpenedImage() != nullptr)
             {
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
                 using namespace LLUtils;
@@ -856,11 +882,12 @@ namespace OIV
    
                 fRefreshOperation.End();
             }
+            else
+            {
+                result.resValue = L"No image loaded";
+            }
         }
-        else
-        {
-            result.resValue = L"No image loaded";
-        }
+        
             
     }
 
@@ -3591,67 +3618,120 @@ namespace OIV
         return false;
     }
 
-    bool TestApp::CopyVisibleToClipBoard()
+    OperationResult TestApp::CopyVisibleToClipBoard()
     {
-        LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
-        auto cropped =  IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageSpaceSelection);
-        bool result = false;
-        if (cropped != nullptr)
+        OperationResult result = OperationResult::UnkownError;
+        if (IsImageOpen())
         {
-            //2. Flip the image vertically and convert it to BGRA for the clipboard.
-            auto flipped =  IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, cropped);
-            if (flipped != nullptr)
-                result = SetClipboardImage(flipped);
-        }
+            if (fSelectionRect.GetSelectionRect().IsEmpty())
+            {
+                result = OperationResult::NoSelection;
+            }
+            else
+            {
+                LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+                auto cropped = IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageSpaceSelection);
 
+                if (cropped != nullptr)
+                {
+                    //2. Flip the image vertically and convert it to BGRA for the clipboard.
+                    auto flipped = IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, cropped);
+                    if (flipped != nullptr && SetClipboardImage(flipped))
+                        result = OperationResult::Success;
+                }
+            }
+        }
+        else
+        {
+            result = OperationResult::NoDataFound;
+        }
         return result;
     }
 
-    void TestApp::CropVisibleImage()
+    OperationResult TestApp::CropVisibleImage()
     {
-        LLUtils::RectI32 imageRectInt = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
-
-        auto cropped = IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(), imageRectInt);
-        
-        if (cropped != nullptr)
+        OperationResult result = OperationResult::UnkownError;
+        if (IsImageOpen() == false)
         {
-            auto oivCropped = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib,cropped);
-            LoadOivImage(oivCropped);
-            CancelSelection();
+            result = OperationResult::NoDataFound;
         }
-    }
-
-    void TestApp::CutSelectedArea()
-    {
-        //Please note that currently this function works on the rasterized image, a more general solution is needed to work on a previous stage image.
-        
-        auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
-
-        LLUtils::RectI32 subImageRect = static_cast<LLUtils::RectI32>(ClientToImage(fSelectionRect.GetSelectionRect()));
-
-        const LLUtils::RectI32 imageRect = { { 0,0 } ,{ static_cast<int32_t> (rasterized->GetWidth())
-      , static_cast<int32_t> (rasterized->GetHeight()) } };
-
-        subImageRect = subImageRect.Intersection(imageRect);
-
-        if (subImageRect.IsEmpty() == false)
+        else
         {
-            SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
-
-            auto colorFilled = IMUtil::ImageUtil::FillColor(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), subImageRect, LLUtils::Color(0, 0, 0, 255));
-
-            
-
-            if (colorFilled != nullptr)
+            if (fSelectionRect.GetSelectionRect().IsEmpty())
             {
-                auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
-                auto lastState = fResetTransformationMode;
-                fResetTransformationMode = ResetTransformationMode::DoNothing;
-                LoadOivImage(oivColorFilled);
-                fResetTransformationMode = lastState;
-                CancelSelection();
+                result = OperationResult::NoSelection;
+            }
+            else
+            {
+
+                LLUtils::RectI32 imageRectInt = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+                auto cropped = IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(), imageRectInt);
+
+                if (cropped != nullptr)
+                {
+                    auto oivCropped = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, cropped);
+                    LoadOivImage(oivCropped);
+                    CancelSelection();
+                    result = OperationResult::Success;
+                }
             }
         }
+        return result;
+    }
+
+    OperationResult TestApp::CutSelectedArea()
+    {
+        OperationResult result = OperationResult::UnkownError;
+        //Please note that currently this function works on the rasterized image, a more general solution is needed to work on a previous stage image.
+        if (IsImageOpen() == false)
+        {
+            result = OperationResult::NoDataFound;
+        }
+        else
+        {
+            auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
+            if (fSelectionRect.GetSelectionRect().IsEmpty())
+            {
+                result = OperationResult::NoSelection;
+            }
+            else
+            {
+                LLUtils::RectI32 subImageRect = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+
+                const LLUtils::RectI32 imageRect = { { 0,0 } ,{ static_cast<int32_t> (rasterized->GetWidth())
+              , static_cast<int32_t> (rasterized->GetHeight()) } };
+
+                subImageRect = subImageRect.Intersection(imageRect);
+
+                if (subImageRect.IsEmpty() == false)
+                {
+                    SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
+                    auto& texelInfo = IMCodec::GetTexelInfo(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage()->GetOriginalTexelFormat());
+                    bool hasOpacityChannel = false;
+                    for (auto& channel : texelInfo.channles)
+                        if (channel.semantic == IMCodec::ChannelSemantic::Opacity)
+                        {
+                            hasOpacityChannel = true;
+                            break;
+                        }
+                    
+                    const auto fillColor = hasOpacityChannel ? LLUtils::Color(0, 0, 0, 0) : LLUtils::Color(0, 0, 0, 255);
+                    auto colorFilled = IMUtil::ImageUtil::FillColor(fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), subImageRect, fillColor);
+
+                    if (colorFilled != nullptr)
+                    {
+                        auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
+                        auto lastState = fResetTransformationMode;
+                        fResetTransformationMode = ResetTransformationMode::DoNothing;
+                        LoadOivImage(oivColorFilled);
+                        fResetTransformationMode = lastState;
+                        CancelSelection();
+                        result = OperationResult::Success;
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     void TestApp::AfterFirstFrameDisplayed()
