@@ -221,6 +221,9 @@ namespace OIV
 
             break;
         case Operation::CancelSelection:
+            fSelectionRect = {};
+            fSelectStartPoint={};
+            fSelectEndPoint={};
             fOperation = Operation::NoOp;
             fLockMode = LockMode::NoLock;
             NotifySelectionRectChanged(false);
