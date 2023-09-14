@@ -90,6 +90,14 @@ namespace OIV
         , WindowOnTop
     };
 
+    enum class OperationResult
+    {
+          Success
+        , NoDataFound
+        , NoSelection
+        , UnkownError
+    };
+
     //Assue Count exists and presenting the total number of values in an enum.
     template <typename T, typename UnderlyingType = typename std::underlying_type_t<T>>
     T GetNextEnumValue(T enumVal)
@@ -256,9 +264,10 @@ namespace OIV
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
         ClipboardDataType PasteFromClipBoard();
         bool SetClipboardImage(IMCodec::ImageSharedPtr image);
-        bool CopyVisibleToClipBoard();
-        void CropVisibleImage();
-        void CutSelectedArea();
+        OperationResult CropVisibleImage();
+        OperationResult CopyVisibleToClipBoard();
+        OperationResult CutSelectedArea();
+        std::wstring GetErrorString(OperationResult res) const;
         void AfterFirstFrameDisplayed();
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
