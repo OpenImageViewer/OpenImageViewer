@@ -85,9 +85,29 @@ public:
         {
             fSelected = selected;
             ImageSelectionChangeArgs args;
+
+            RECT rect;
+            GetClientRect(fTargetWindow, &rect);
+            auto height = rect.bottom - rect.top;
+            int maxEntries = height / fEntryHeight;
+            BOOL erase = FALSE;
+            if (fSelected < fPos)
+            {
+                fPos = fSelected;
+            }
+            else 
+            {
+                int posOffset = height % fEntryHeight == 0 ? 0 : 1;
+                if (fSelected - fPos > (maxEntries - posOffset))
+                fPos =  std::min(static_cast<int>( GetNumberOfElements()), fSelected - maxEntries + posOffset);
+                //might be the last position, erase the gap to the lowest part of the control.
+                erase = TRUE;
+            }
+
+
             args.imageIndex = selected;
             ImageSelectionChanged.Raise(args);
-            InvalidateRect(fTargetWindow, nullptr, FALSE);
+            InvalidateRect(fTargetWindow, nullptr, erase);
         }
     }
 
@@ -115,7 +135,7 @@ public:
         return (std::min)(numberOfMaxVisibleElements, GetNumberOfElements());
     }
 
-    size_t GetNumberOfElements()
+    size_t GetNumberOfElements() const
     {
         return fImages.size();
     }
