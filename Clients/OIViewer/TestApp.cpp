@@ -1521,17 +1521,31 @@ namespace OIV
             const uint16_t totalImages = static_cast<uint16_t>(mainImage->GetImage()->GetNumSubImages() + (isMainAnActualImage ? 1 : 0));
             //Add the first image.
             uint16_t currentImage = 0;
+            uint16_t largestIndex = -1;
+            uint32_t largestSize = 0;
             if (isMainAnActualImage)
                 AddImageToControl(mainImage->GetImage(), static_cast<uint16_t>(currentImage++), totalImages);
 
-            //add the rest of subimages.
+            if (mainImage->GetImage()->GetTotalPixels() > largestSize)
+            {
+                largestSize = mainImage->GetImage()->GetTotalPixels();
+                largestIndex = -1;
+            }
+
+
             for (uint16_t i = 0; i < numSubImages; i++)
             {
                 auto currentSubImage = mainImage->GetImage()->GetSubImage(i);
+                if (currentSubImage->GetTotalPixels() > largestSize)
+                {
+                    largestSize = currentSubImage->GetTotalPixels();
+                    largestIndex = i;
+                }
+                
                 AddImageToControl(currentSubImage, static_cast<uint16_t>(currentImage++), totalImages);
             }
             //Reset selected sub image when loading new set of subimages
-            fWindow.GetImageControl().GetImageList().SetSelected(-1);
+            fWindow.GetImageControl().GetImageList().SetSelected(fDisplayBiggestSubImageOnLoad == true ? largestIndex : -1);
             fWindow.GetImageControl().RefreshScrollInfo();
         }
         else
@@ -2746,6 +2760,11 @@ namespace OIV
             ApiGlobal::sPictureRenderer->SetBackgroundColor(1, LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(value)));
             fRefreshOperation.Queue();
         }
+        else if (key == L"imagesettings/biggestsubimage")
+        {
+            fDisplayBiggestSubImageOnLoad = ParseValue<Bool>(value);
+        }
+        
     }
 
     void TestApp::LoadSettings()
