@@ -379,6 +379,7 @@ namespace OIV
         bool fIsResamplingEnabled = false;
         bool fQueueImageInfoLoad = false;
         uint16_t fQuickBrowseDelay = 100;
+        bool fDisplayBiggestSubImageOnLoad = true;
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
         static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
