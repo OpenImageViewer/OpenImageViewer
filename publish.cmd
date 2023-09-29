@@ -42,6 +42,23 @@ set BinPath=%BuildPath%/bin
 set BuildOperation=Build
 rem Global build variables - END
 
+echo "Build timestamp..."
+pushd .
+cd %BuildPath%
+set BuildAbsPath=%CD%
+popd
+pushd .
+cd Utils
+call buildTimeStamp.cmd %BuildAbsPath%
+popd
+rem Change directory seperator from'/' to '\' for the timestamp command
+set timeStampPath=.\!BuildPath:~2!\timestamp.exe
+
+for /f "tokens=*" %%i in ('%timeStampPath%') do set TIMESTAMP=%%i
+
+set DATE_YYMMDD=%TIMESTAMP:~0,4%-%TIMESTAMP:~5,2%-%TIMESTAMP:~8,2%
+set DATE_YYMMDD_HH_mm_SS=%DATE_YYMMDD%_%TIMESTAMP:~11,2%-%TIMESTAMP:~14,2%-%TIMESTAMP:~17,2%
+
 set counter=0
 rem Get version from source code
 for /F "tokens=*" %%A in (%VersionPath%) do (
@@ -61,23 +78,6 @@ if [%OIV_OFFICIAL_RELEASE%] == [0] (
     set versionString=!versionStringShort!-!OIV_VERSION_REVISION!-Nightly
 )
 
-
-echo "Build timestamp..."
-pushd .
-cd %BuildPath%
-set BuildAbsPath=%CD%
-popd
-pushd .
-cd Utils
-call buildTimeStamp.cmd %BuildAbsPath%
-popd
-rem Change directory seperator from'/' to '\' for the timestamp command
-set timeStampPath=.\!BuildPath:~2!\timestamp.exe
-
-for /f "tokens=*" %%i in ('%timeStampPath%') do set TIMESTAMP=%%i
-
-set DATE_YYMMDD=%TIMESTAMP:~0,4%-%TIMESTAMP:~5,2%-%TIMESTAMP:~8,2%
-set DATE_YYMMDD_HH_mm_SS=%DATE_YYMMDD%_%TIMESTAMP:~11,2%-%TIMESTAMP:~14,2%-%TIMESTAMP:~17,2%
 echo ==============================================
 echo FOUND VERSION: !versionString!
 echo SHORT VERSION: !versionStringShort!
