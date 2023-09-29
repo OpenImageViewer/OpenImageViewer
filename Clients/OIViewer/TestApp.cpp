@@ -51,6 +51,7 @@
 #include "globals.h"
 #include "ConfigurationLoader.h"
 #include "Helpers/PixelHelper.h"
+#include "ExceptionHandler.h"
 
 #include "resource.h"
 
@@ -1069,7 +1070,10 @@ namespace OIV
     {
         if (fCountingColorsThread.joinable())
             fCountingColorsThread.join();
+
+        RemoveExceptionHandler();
     }
+
 
     TestApp::TestApp()
         : fRefreshTimer(std::bind(&TestApp::OnRefreshTimer, this))
@@ -1086,7 +1090,11 @@ namespace OIV
        // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
 
+        RegisterExceptionhandler();
+
         OIV_CMD_RegisterCallbacks_Request request;
+
+        
 
         request.OnException = [](OIV_Exception_Args args, void* userPointer)
         {
