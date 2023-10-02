@@ -85,12 +85,13 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zo>)    #Enhance Optimized Debugging
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/Zi>)    #seperate debug information
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwhole-program-vtables>)
-        
-        if (${CMAKE_CXX_COMPILER_VERSION} GREATER_EQUAL "16")
-            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fstrict-vtable-pointers>)    
-        endif()
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-flto>) #link time optimization code generation
+        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwhole-program-vtables>)
+        # fstrict-vtable-pointers and fstrict-enums don't seems to be supported in clang-cl 16
+        if (${CMAKE_CXX_COMPILER_VERSION} GREATER_EQUAL "16" AND NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fstrict-vtable-pointers>)    
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fstrict-enums>)
+        endif()
     endif()
 endif()
 
