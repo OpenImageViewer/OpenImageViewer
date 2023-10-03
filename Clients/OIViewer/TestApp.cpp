@@ -1529,7 +1529,7 @@ namespace OIV
             const uint16_t totalImages = static_cast<uint16_t>(mainImage->GetImage()->GetNumSubImages() + (isMainAnActualImage ? 1 : 0));
             //Add the first image.
             uint16_t currentImage = 0;
-            uint16_t largestIndex = -1;
+            int largestIndex = -1;
             uint32_t largestSize = 0;
             if (isMainAnActualImage)
                 AddImageToControl(mainImage->GetImage(), static_cast<uint16_t>(currentImage++), totalImages);
