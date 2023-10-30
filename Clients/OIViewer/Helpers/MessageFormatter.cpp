@@ -254,7 +254,7 @@ namespace OIV
                 || texelInfo.channles[i].semantic == ChannelSemantic::Monochrome
                 //|| texelInfo.channles[i].semantic == ChannelSemantic::Float
                 )
-                ss << '(' << FormatDataType(texelInfo.channles[i].ChannelDataType) << ')';
+                ss << '(' << FormatDataType(texelInfo.channles[i].channelDataType) << ')';
 
             ss << static_cast<int>(texelInfo.channles[i].width) << " ";
         }
