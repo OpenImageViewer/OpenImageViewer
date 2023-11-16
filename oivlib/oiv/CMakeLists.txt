@@ -3,6 +3,7 @@
 
  file(GLOB_RECURSE sourceFiles
      "./Source/*.h"
+     "./Include/*.h"
      "./Source/*.cpp"
  )
 
@@ -22,8 +23,7 @@ if ( ${OIV_BUILD_FREETYPE})
 endif()
 
 target_include_directories(${TargetName} PRIVATE ./Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Image/Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageLoader/Include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
 

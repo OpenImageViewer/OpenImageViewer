@@ -1,6 +1,7 @@
 #include "ImageState.h"
 #include "OIVCommands.h"
 #include "Helpers/OIVImageHelper.h"
+#include <ImageUtil/ImageUtil.h>
 
 namespace OIV
 {
@@ -82,7 +83,7 @@ namespace OIV
         fOpenedImage.reset();
     }
 
-    void ImageState::Transform(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
+    void ImageState::Transform(IMUtil::AxisAlignedRotation relativeRotation, IMUtil::AxisAlignedFlip flip)
     {
 
         // the two options to manage axes aligned transofrmation are either
@@ -92,38 +93,38 @@ namespace OIV
 
 
      
-        IMUtil::OIV_AxisAlignedTransform newTransform{};
+        IMUtil::AxisAlignedTransform newTransform{};
 
 
-        newTransform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>( flip) ^ fTransform.flip;
+        newTransform.flip = static_cast<IMUtil::AxisAlignedFlip>( flip) ^ fTransform.flip;
 
-        const bool isSingleAxisFlip = newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal || newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Vertical;
+        const bool isSingleAxisFlip = newTransform.flip == IMUtil::AxisAlignedFlip::Horizontal || newTransform.flip == IMUtil::AxisAlignedFlip::Vertical;
 
         const int rotationDirection = isSingleAxisFlip ? -1 : 1;
 
-        newTransform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>((4 + static_cast<int>(relativeRotation * rotationDirection) + static_cast<int>(fTransform.rotation)) % 4);
+        newTransform.rotation = static_cast<IMUtil::AxisAlignedRotation>((4 + static_cast<int>(relativeRotation * rotationDirection) + static_cast<int>(fTransform.rotation)) % 4);
 
         if (newTransform.flip != fTransform.flip || newTransform.rotation != fTransform.rotation)
         {
 
             // Use axis aligned transformations identities for better visual perception
 
-            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::None
-                && newTransform.flip == (IMUtil::OIV_AxisAlignedFlip::Horizontal | IMUtil::OIV_AxisAlignedFlip::Vertical))
-                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate180, IMUtil::OIV_AxisAlignedFlip::None };
+            if (newTransform.rotation == IMUtil::AxisAlignedRotation::None
+                && newTransform.flip == (IMUtil::AxisAlignedFlip::Horizontal | IMUtil::AxisAlignedFlip::Vertical))
+                newTransform = { IMUtil::AxisAlignedRotation::Rotate180, IMUtil::AxisAlignedFlip::None };
 
 
-            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate180
-                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Vertical)
-                newTransform = { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Horizontal };
+            if (newTransform.rotation == IMUtil::AxisAlignedRotation::Rotate180
+                && newTransform.flip == IMUtil::AxisAlignedFlip::Vertical)
+                newTransform = { IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Horizontal };
 
-            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate90CW
-                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal)
-                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate90CCW, IMUtil::OIV_AxisAlignedFlip::Vertical};
+            if (newTransform.rotation == IMUtil::AxisAlignedRotation::Rotate90CW
+                && newTransform.flip == IMUtil::AxisAlignedFlip::Horizontal)
+                newTransform = { IMUtil::AxisAlignedRotation::Rotate90CCW, IMUtil::AxisAlignedFlip::Vertical};
 
-            if (newTransform.rotation == IMUtil::OIV_AxisAlignedRotation::Rotate90CCW
-                && newTransform.flip == IMUtil::OIV_AxisAlignedFlip::Horizontal)
-                newTransform = { IMUtil::OIV_AxisAlignedRotation::Rotate90CW, IMUtil::OIV_AxisAlignedFlip::Vertical };
+            if (newTransform.rotation == IMUtil::AxisAlignedRotation::Rotate90CCW
+                && newTransform.flip == IMUtil::AxisAlignedFlip::Horizontal)
+                newTransform = { IMUtil::AxisAlignedRotation::Rotate90CW, IMUtil::AxisAlignedFlip::Vertical };
 
             fTransform = newTransform;
 
@@ -142,7 +143,7 @@ namespace OIV
 
     void ImageState::ResetUserState()
     {
-        fTransform = { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::None };
+        fTransform = { IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::None };
         fUseRainbowNormalization = false;
         SetDirtyStage(ImageChainStage::Deformed);
     }
@@ -280,7 +281,7 @@ namespace OIV
             return inputImage;
             break;
         case ImageChainStage::Deformed:
-            if (fTransform.rotation != IMUtil::OIV_AxisAlignedRotation::None || fTransform.flip != IMUtil::OIV_AxisAlignedFlip::None)
+            if (fTransform.rotation != IMUtil::AxisAlignedRotation::None || fTransform.flip != IMUtil::AxisAlignedFlip::None)
             {
                 auto deformed = IMUtil::ImageUtil::Transform(fTransform, inputImage->GetImage());
 

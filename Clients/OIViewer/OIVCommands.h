@@ -3,6 +3,7 @@
 #include <functions.h>
 #include <LLUtils/Rect.h>
 #include <LLUtils/Exception.h>
+#include <ImageUtil/AxisAlignedTransform.h>
 
 namespace OIV
 {
@@ -59,22 +60,24 @@ namespace OIV
             else return RC_InvalidHandle;
         }
 
-        static ResultCode TransformImage(ImageHandle handle, OIV_AxisAlignedRotation rotation, OIV_AxisAlignedFlip flip, ImageHandle& tranformedHandle)
+        static ResultCode TransformImage(ImageHandle handle, IMUtil::AxisAlignedRotation rotation, IMUtil::AxisAlignedFlip flip, ImageHandle& tranformedHandle)
         {
+            LL_EXCEPTION_NOT_IMPLEMENT("Not implemented");
+
             OIV_CMD_AxisAlignedTransform_Request request = {};
             OIV_CMD_AxisAlignedTransform_Response response= {};
             
             
-            request.handle = handle;
-            request.transform.rotation = rotation;
-            request.transform.flip= flip;
-            ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &response);
-            if (result == RC_Success)
-            {
-                tranformedHandle = response.handle;
-            }
+          //  request.handle = handle;
+          //  request.transform.rotation = rotation;
+          //  request.transform.flip= flip;
+         //   ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &response);
+          //  if (result == RC_Success)
+          //  {
+           //     tranformedHandle = response.handle;
+//}
 
-            return result;
+           // return result;
         }
 
         static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat,bool useRainbow, ImageHandle& converted)

@@ -2,7 +2,7 @@
 #include <array>
 #include "OIVImage/OIVBaseImage.h"
 #include "OIVImage/OIVFileImage.h"
-#include "../../oiv/Source/ImageUtil.h"
+#include <ImageUtil/AxisAlignedTransform.h>
 
 namespace OIV
 {
@@ -36,8 +36,8 @@ namespace OIV
 
         OIVBaseImageSharedPtr GetOpenedImage() const { return fOpenedImage; }
         bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
-        IMUtil::OIV_AxisAlignedRotation GetAxisAlignedRotation() const { return fTransform.rotation; }
-        IMUtil::OIV_AxisAlignedFlip GetAxisAlignedFlip() const { return fTransform.flip; }
+        IMUtil::AxisAlignedRotation GetAxisAlignedRotation() const { return fTransform.rotation; }
+        IMUtil::AxisAlignedFlip GetAxisAlignedFlip() const { return fTransform.flip; }
         
         LLUtils::PointF64       GetScale() const { return fScale; }
         LLUtils::PointF64       GetOffset() const { return fOffset; }
@@ -55,7 +55,7 @@ namespace OIV
         void SetUseRainbowNormalization(bool val);
         void SetOpenedImage(const OIVBaseImageSharedPtr& image);
         void ClearAll();
-        void Transform(OIV_AxisAlignedRotation relative_rotation, OIV_AxisAlignedFlip flip);
+        void Transform(IMUtil::AxisAlignedRotation relative_rotation, IMUtil::AxisAlignedFlip flip);
         void ResetUserState();
         void SetResample(bool resample);
         void Refresh();
@@ -72,7 +72,7 @@ namespace OIV
         const ImageChain& GetWorkingImageChain() const;
     private: // member fields
 
-        IMUtil::OIV_AxisAlignedTransform fTransform{ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::None };
+        IMUtil::AxisAlignedTransform fTransform{ IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::None };
         ImageChainStage fDirtyStage = ImageChainStage::Begin;
         ImageChain fCurrentImageChain;
         OIVBaseImageSharedPtr fOpenedImage;

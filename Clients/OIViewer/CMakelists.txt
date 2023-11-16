@@ -1,11 +1,18 @@
 #OIV library
 cmake_minimum_required(VERSION 3.8)
-
+include(common.cmake)
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
     "./*.h"
     "./*.cpp"
 )
+
+setCommonCompileParameters()
+getGitHash(${CMAKE_CURRENT_SOURCE_DIR} GIT_HASH_ID)
+getGitBranch(${CMAKE_CURRENT_SOURCE_DIR} GIT_BRANCH)
+getGitCommitDate(${CMAKE_CURRENT_SOURCE_DIR} GIT_COMMIT_DATE)
+
+add_compile_definitions(GIT_HASH_ID="${GIT_HASH_ID}" GIT_COMMIT_DATE="${GIT_COMMIT_DATE}" GIT_BRANCH="${GIT_BRANCH}")
 
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)
@@ -30,19 +37,16 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Inclu
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/Win32/Win32/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageCodec/include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
 target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/include)
 target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
 
-#Add support for 4GB memory addressing for 32 bit application under Windows
-if (${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-    target_link_options(${TargetName} PRIVATE /LARGEADDRESSAWARE)
-endif()
-
 target_link_libraries(${TargetName}
 
 #local libraries
+ImageUtil
 oiv
 Win32
 #system libraries

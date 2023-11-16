@@ -2,6 +2,7 @@
 #include "../OIVCommands.h"
 #include <unordered_set>
 #include <xxh3.h>
+#include <ImageUtil/ImageUtil.h>
 
 namespace OIV
 {

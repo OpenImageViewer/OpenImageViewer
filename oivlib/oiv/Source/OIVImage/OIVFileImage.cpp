@@ -2,12 +2,12 @@
 #include <LLUtils/FileMapping.h>
 #include <LLUtils/StringUtility.h>
 #include <defs.h>
-#include "../ImageUtil.h"
+#include <ImageUtil/ImageUtil.h>
 
 namespace OIV
 {
 
-	IMUtil::OIV_AxisAlignedTransform  ResolveExifRotation(unsigned short exifRotation)
+	IMUtil::AxisAlignedTransform  ResolveExifRotation(unsigned short exifRotation)
 	{
 		//  1 = Horizontal(normal)
 		//	2 = Mirror horizontal
@@ -20,7 +20,7 @@ namespace OIV
 
 		
 
-		IMUtil::OIV_AxisAlignedTransform transform{};
+		IMUtil::AxisAlignedTransform transform{};
 		switch (exifRotation)
 		{
 		case 1:
@@ -28,35 +28,35 @@ namespace OIV
 			break;
 		case 2:
 			//	2 = Mirror horizontal
-			transform.flip = IMUtil::OIV_AxisAlignedFlip::Horizontal;
+			transform.flip = IMUtil::AxisAlignedFlip::Horizontal;
 			break;
 		case 3:
 			//	3 = Rotate 180
-			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate180;
+			transform.rotation = IMUtil::AxisAlignedRotation::Rotate180;
 			break;
 		case 4:
 			//	4 = Mirror vertical
-			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
+			transform.flip = IMUtil::AxisAlignedFlip::Vertical;
 			break;
 		case 5:
 			//	5 = Mirror horizontal and rotate 270 CW
 			// In OIV as opoosed to EXIF, rotation is done first, then flip, so flip vertically instead of horizontally
-			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CCW;
-			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
+			transform.rotation = IMUtil::AxisAlignedRotation::Rotate90CCW;
+			transform.flip = IMUtil::AxisAlignedFlip::Vertical;
 			break;
 		case 6:
 			//	6 = Rotate 90 CW
-			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CW;
+			transform.rotation = IMUtil::AxisAlignedRotation::Rotate90CW;
 			break;
 		case 7:
 			//	7 = Mirror horizontal and rotate 90 CW.
 			// In OIV as opoosed to EXIF, rotation is done first, then flip, so flip vertically instead of horizontally.
-			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CW;
-			transform.flip = IMUtil::OIV_AxisAlignedFlip::Vertical;
+			transform.rotation = IMUtil::AxisAlignedRotation::Rotate90CW;
+			transform.flip = IMUtil::AxisAlignedFlip::Vertical;
 			break;
 		case 8:
 			//	8 = Rotate 270 CW
-			transform.rotation = IMUtil::OIV_AxisAlignedRotation::Rotate90CCW;
+			transform.rotation = IMUtil::AxisAlignedRotation::Rotate90CCW;
 			break;
 		default:
 			break;
@@ -66,8 +66,8 @@ namespace OIV
 
 	IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image, int exitOrientation)
 	{
-		//IMUtil::OIV_AxisAlignedTransform transform = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(exitOrientation));
-		//transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
+		//IMUtil::AxisAlignedTransform transform = static_cast<IMUtil::AxisAlignedRotation>(ResolveExifRotation(exitOrientation));
+		//transform.flip = IMUtil::AxisAlignedFlip::None;
 		return IMUtil::ImageUtil::Transform(ResolveExifRotation(exitOrientation), image);
 	}
 

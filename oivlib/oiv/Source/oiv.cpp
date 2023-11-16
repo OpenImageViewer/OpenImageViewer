@@ -3,7 +3,7 @@
 #include "Interfaces/IRenderer.h"
 #include "NullRenderer.h"
 
-#include "ImageUtil.h"
+#include <ImageUtil/ImageUtil.h>
 #include "Configuration.h"
 #include "FreeTypeHelper.h"
 #include <functions.h>
@@ -47,22 +47,23 @@ namespace OIV
         fRenderer->SetViewParams(fViewParams);
     }
 
-    OIV_AxisAlignedRotation OIV::ResolveExifRotation(unsigned short exifRotation) const
+    IMUtil::AxisAlignedRotation OIV::ResolveExifRotation(unsigned short exifRotation) const
     {
-        OIV_AxisAlignedRotation rotation;
+        using namespace IMUtil;
+        AxisAlignedRotation rotation;
             switch (exifRotation)
             {
             case 3:
-                rotation = AAT_Rotate180;
+                rotation = AxisAlignedRotation::Rotate180;
                 break;
             case 6:
-                rotation = AAT_Rotate90CW;
+                rotation = AxisAlignedRotation::Rotate90CW;
                 break;
             case 8:
-                rotation = AAT_Rotate90CCW;
+                rotation = AxisAlignedRotation::Rotate90CCW;
                 break;
             default:
-                rotation = AAT_None;
+                rotation = AxisAlignedRotation::None;
             }
             return rotation;
     }
@@ -196,9 +197,9 @@ namespace OIV
         imageItem->data.Allocate(bufferSize);
         imageItem->data.Write(loadRawRequest.buffer, 0, bufferSize);
 
-        IMUtil::OIV_AxisAlignedTransform transform{};
-        //transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(loadRawRequest.transformation);
-        transform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(loadRawRequest.transformation);
+        IMUtil::AxisAlignedTransform transform{};
+        //transform.rotation = static_cast<IMUtil::AxisAlignedRotation>(loadRawRequest.transformation);
+        transform.flip = static_cast<IMUtil::AxisAlignedFlip>(loadRawRequest.transformation);
 
         ImageSharedPtr image = std::make_shared<Image>(imageItem, ImageItemType::Unknown);
         image = IMUtil::ImageUtil::Transform(transform, image);
@@ -212,9 +213,9 @@ namespace OIV
     IMCodec::ImageSharedPtr OIV::ApplyExifRotation(IMCodec::ImageSharedPtr image) const
     {
         LL_EXCEPTION_NOT_IMPLEMENT("not implemented");
-        /*IMUtil::OIV_AxisAlignedTransform transform;
-        transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(ResolveExifRotation(image->Get GetMetaData().exifData.orientation));
-        transform.flip = IMUtil::OIV_AxisAlignedFlip::None;
+        /*IMUtil::AxisAlignedTransform transform;
+        transform.rotation = static_cast<IMUtil::AxisAlignedRotation>(ResolveExifRotation(image->Get GetMetaData().exifData.orientation));
+        transform.flip = IMUtil::AxisAlignedFlip::None;
         return IMUtil::ImageUtil::Transform(transform, image);*/
     }
 
@@ -567,9 +568,9 @@ namespace OIV
         IMCodec::ImageSharedPtr image = fImageManager.GetImage(request.handle);
         if (image != nullptr)
         {
-            IMUtil::OIV_AxisAlignedTransform transform;
-            transform.rotation = static_cast<IMUtil::OIV_AxisAlignedRotation>(request.transform.rotation);
-            transform.flip = static_cast<IMUtil::OIV_AxisAlignedFlip>(request.transform.flip);
+            IMUtil::AxisAlignedTransform transform;
+            transform.rotation = static_cast<IMUtil::AxisAlignedRotation>(request.transform.rotation);
+            transform.flip = static_cast<IMUtil::AxisAlignedFlip>(request.transform.flip);
             image = IMUtil::ImageUtil::Transform(transform,  image);
             response.handle = fImageManager.AddImage(image);
             return RC_Success;

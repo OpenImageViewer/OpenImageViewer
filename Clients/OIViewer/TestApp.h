@@ -260,7 +260,7 @@ namespace OIV
         bool IsOpenedImageIsAFile() const;
         void UpdateOpenedFileIndex();   
         void LoadFileInFolder(std::wstring filePath);
-        void TransformImage(OIV_AxisAlignedRotation transform, OIV_AxisAlignedFlip flip);
+        void TransformImage(IMUtil::AxisAlignedRotation transform, IMUtil::AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
         ClipboardDataType PasteFromClipBoard();
         bool SetClipboardImage(IMCodec::ImageSharedPtr image);

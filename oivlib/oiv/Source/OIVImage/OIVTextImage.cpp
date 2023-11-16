@@ -1,7 +1,7 @@
 #include <OIVImage/OIVTextImage.h>
 #include "../FreeTypeHelper.h"
 #include <defs.h>
-#include "../ImageUtil.h"
+#include <ImageUtil/ImageUtil.h>
 
 namespace OIV
 {

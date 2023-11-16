@@ -4,6 +4,7 @@
 #include "ImageManager.h"
 #include "Resampler.h"
 #include <set>
+#include <ImageUtil/AxisAlignedTransform.h>
 
 
 namespace OIV
@@ -50,7 +51,7 @@ namespace OIV
         IRendererSharedPtr CreateBestRenderer();
         bool IsImageDisplayed() const;
         void UpdateGpuParams();
-        OIV_AxisAlignedRotation ResolveExifRotation(unsigned short exifRotation) const;
+        IMUtil::AxisAlignedRotation ResolveExifRotation(unsigned short exifRotation) const;
         IMCodec::ImageSharedPtr ApplyExifRotation(IMCodec::ImageSharedPtr image) const;
         IMCodec::ImageSharedPtr GetDisplayImage() const;
         void RefreshRenderer();

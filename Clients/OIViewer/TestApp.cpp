@@ -52,6 +52,7 @@
 #include "ConfigurationLoader.h"
 #include "Helpers/PixelHelper.h"
 #include "ExceptionHandler.h"
+#include <ImageUtil/ImageUtil.h>
 
 #include "resource.h"
 
@@ -467,39 +468,39 @@ namespace OIV
 
     void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request, CommandManager::CommandResult& response)
     {
-        OIV_AxisAlignedRotation rotation = OIV_AxisAlignedRotation::AAT_None;
-        OIV_AxisAlignedFlip flip = OIV_AxisAlignedFlip::AAF_None;
+        IMUtil::AxisAlignedRotation rotation = IMUtil::AxisAlignedRotation::None;
+        IMUtil::AxisAlignedFlip flip = IMUtil::AxisAlignedFlip::None;
 
         std::string type = request.args.GetArgValue("type");
 
         if (false);
         else if (type == "hflip")
-            flip = OIV_AxisAlignedFlip::AAF_Horizontal;
+            flip = IMUtil::AxisAlignedFlip::Horizontal;
         else if (type == "vflip")
-            flip = OIV_AxisAlignedFlip::AAF_Vertical;
+            flip = IMUtil::AxisAlignedFlip::Vertical;
         else if (type == "rotatecw")
-            rotation = AAT_Rotate90CW;
+            rotation = IMUtil::AxisAlignedRotation::Rotate90CW; 
         else if (type == "rotateccw")
-            rotation = AAT_Rotate90CCW;
+            rotation = IMUtil::AxisAlignedRotation::Rotate90CCW;
 
 
-        if (rotation != OIV_AxisAlignedRotation::AAT_None || flip != OIV_AxisAlignedFlip::AAF_None)
+        if (rotation != IMUtil::AxisAlignedRotation::None || flip != IMUtil::AxisAlignedFlip::None)
         {
             TransformImage(rotation, flip);
 
             std::wstring rotation;
             switch (fImageState.GetAxisAlignedRotation())
             {
-            case IMUtil::OIV_AxisAlignedRotation::Rotate90CW:
+            case IMUtil::AxisAlignedRotation::Rotate90CW:
                 rotation = L"90 degrees clockwise";
                 break;
-            case IMUtil::OIV_AxisAlignedRotation::Rotate180:
+            case IMUtil::AxisAlignedRotation::Rotate180:
                 rotation = L"180 degrees";
                 break;
-            case IMUtil::OIV_AxisAlignedRotation::Rotate90CCW:
+            case IMUtil::AxisAlignedRotation::Rotate90CCW:
                 rotation = L"90 degrees counter clockwise";
                 break;
-            case IMUtil::OIV_AxisAlignedRotation::None:
+            case IMUtil::AxisAlignedRotation::None:
                 break;
             }
             if (rotation.empty() == false)
@@ -510,13 +511,13 @@ namespace OIV
 
             switch (fImageState.GetAxisAlignedFlip())
             {
-            case IMUtil::OIV_AxisAlignedFlip::Horizontal:
+            case IMUtil::AxisAlignedFlip::Horizontal:
                 flip = L"horizontal";
                 break;
-            case IMUtil::OIV_AxisAlignedFlip::Vertical:
+            case IMUtil::AxisAlignedFlip::Vertical:
                 flip = L"vertical";
                 break;
-            case IMUtil::OIV_AxisAlignedFlip::None:
+            case IMUtil::AxisAlignedFlip::None:
                 break;
             }
 
@@ -1264,14 +1265,14 @@ namespace OIV
 
     void TestApp::UpdateTitle()
     {
-        const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR)
+        const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR) 
 
 #ifdef OIV_RELEASE_SUFFIX
             + OIV_RELEASE_SUFFIX
 #endif
             // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
-            + L"." + LLUtils::StringUtility::ToWString(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
+            + L"." + std::wstring(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
     #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
                 + OIV_TEXT(" | 64 bit")
     #else 
@@ -1410,7 +1411,7 @@ namespace OIV
         auto bgraImage = IMUtil::ImageUtil::ConvertImageWithNormalization(image , IMCodec::TexelFormat::I_B8_G8_R8_A8, false);  
         
         // Flip vertically.
-        bgraImage = IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None,IMUtil::OIV_AxisAlignedFlip::Vertical }, bgraImage);
+        bgraImage = IMUtil::ImageUtil::Transform({ IMUtil::AxisAlignedRotation::None,IMUtil::AxisAlignedFlip::Vertical }, bgraImage);
 
         // Create 32 bit BGRA color image
         
@@ -3500,7 +3501,7 @@ namespace OIV
     }
 
     
-    void TestApp::TransformImage(OIV_AxisAlignedRotation relativeRotation, OIV_AxisAlignedFlip flip)
+    void TestApp::TransformImage(IMUtil::AxisAlignedRotation relativeRotation, IMUtil::AxisAlignedFlip flip)
     {
 	   fRefreshOperation.Begin();
        SetResamplingEnabled(false);
@@ -3521,7 +3522,7 @@ namespace OIV
         params.texelFormat = texelFormat;
         params.buffer = buffer;
        //TODO: uncouple vertical flip from 'LoadRaw'
-        ResultCode result = rawImage->Load(params, { IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical });
+        ResultCode result = rawImage->Load(params, { IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical });
 
         if (result == RC_Success)
             LoadOivImage(rawImage);
@@ -3570,7 +3571,7 @@ namespace OIV
             if (info->biCompression == BI_BITFIELDS) // no support for alpha channel, convert to BGR
                 image = IMUtil::ImageUtil::Convert(image,  IMCodec::TexelFormat::I_B8_G8_R8);
 
-            image = IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, image);
+            image = IMUtil::ImageUtil::Transform({ IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical }, image);
 
             std::shared_ptr<OIVBaseImage> rawImage = std::make_shared<OIVBaseImage>(ImageSource::Clipboard, image);
 
@@ -3662,7 +3663,7 @@ namespace OIV
                 if (cropped != nullptr)
                 {
                     //2. Flip the image vertically and convert it to BGRA for the clipboard.
-                    auto flipped = IMUtil::ImageUtil::Transform({ IMUtil::OIV_AxisAlignedRotation::None, IMUtil::OIV_AxisAlignedFlip::Vertical }, cropped);
+                    auto flipped = IMUtil::ImageUtil::Transform({ IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical }, cropped);
                     if (flipped != nullptr && SetClipboardImage(flipped))
                         result = OperationResult::Success;
                 }

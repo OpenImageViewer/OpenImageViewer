@@ -1,10 +1,10 @@
 #include <OIVImage/OIVRawImage.h>
-#include "../ImageUtil.h"
 #include <defs.h>
+#include <ImageUtil/ImageUtil.h>
 
 namespace OIV
 {
-    ResultCode OIVRawImage::Load(const RawBufferParams& loadParams, const IMUtil::OIV_AxisAlignedTransform& transform)
+    ResultCode OIVRawImage::Load(const RawBufferParams& loadParams, const IMUtil::AxisAlignedTransform& transform)
     {
         using namespace IMCodec;
         ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();

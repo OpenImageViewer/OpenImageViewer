@@ -1,7 +1,9 @@
 #pragma once
+
 #include "OIVBaseImage.h"
 #include "../defs.h"
-#include "../Source/ImageUtil.h"
+#include <ImageUtil/AxisAlignedTransform.h>
+
 namespace OIV
 {
     struct RawBufferParams
@@ -18,6 +20,6 @@ namespace OIV
     {
     public:
         OIVRawImage(ImageSource customImagesource) : OIVBaseImage(customImagesource) { }
-        ResultCode Load(const RawBufferParams& loadParams, const IMUtil::OIV_AxisAlignedTransform& transform);
+        ResultCode Load(const RawBufferParams& loadParams, const IMUtil::AxisAlignedTransform& transform);
     };
 }

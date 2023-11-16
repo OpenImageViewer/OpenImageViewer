@@ -1,8 +1,8 @@
 #pragma once
 #include <defs.h>
 #include <Image.h>
-#include "IRendererDefs.h"
-#include "IRenderable.h"
+#include <Interfaces/IRendererDefs.h>
+#include <Interfaces/IRenderable.h>
 
 namespace OIV
 {
