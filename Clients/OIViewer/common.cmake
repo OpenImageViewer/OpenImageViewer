@@ -10,7 +10,7 @@ function (setCommonCompileParameters)
 endfunction()
 
 function (getGitHash working_dir hash)
-    execute_process (COMMAND git rev-parse --short=8 head WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE hash_temp)
+    execute_process (COMMAND git rev-parse --short=8 HEAD WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE hash_temp)
     string(REPLACE \n "" hash_temp ${hash_temp})
     SET(${hash} ${hash_temp} PARENT_SCOPE)
 endfunction()
