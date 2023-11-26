@@ -1,13 +1,12 @@
 #OIV library
 cmake_minimum_required(VERSION 3.8)
-include(common.cmake)
+
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
     "./*.h"
     "./*.cpp"
 )
 
-setCommonCompileParameters()
 getGitHash(${CMAKE_CURRENT_SOURCE_DIR} GIT_HASH_ID)
 getGitBranch(${CMAKE_CURRENT_SOURCE_DIR} GIT_BRANCH)
 getGitCommitDate(${CMAKE_CURRENT_SOURCE_DIR} GIT_COMMIT_DATE)
