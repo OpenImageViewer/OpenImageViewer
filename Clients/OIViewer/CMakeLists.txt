@@ -36,11 +36,11 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/Win32/Win32/Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageCodec/include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageCodec/Include)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
-target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/include)
+target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Include)
 target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
 
 target_link_libraries(${TargetName}
@@ -69,7 +69,7 @@ set_target_properties(${TargetName} PROPERTIES LINK_FLAGS
 
 
 #Link resources file to the executable
-target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/resource.res)
+target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.res)
 
 
 #Copy own resources to the output dir 
