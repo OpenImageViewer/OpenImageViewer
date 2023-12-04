@@ -1,15 +1,12 @@
 #include "Resampler.h"
 #include <algorithm>
+#include <cmath>
 #include <LLUtils/PlatformUtility.h>
 #include <LLUtils/Exception.h>
-#include <intrin.h>
 #include <System.h>
-
 
 namespace OIV
 {
-
-
 	void Resampler::Init()
 	{
 		//Lazy initialize.
@@ -115,9 +112,6 @@ namespace OIV
 
 			created = true;
 		}
-
-
-
 
 		count = 0;
 		for (int i = 0; i < totalThreads; i++)
@@ -331,15 +325,10 @@ namespace OIV
 			, static_cast<uint8_t>((static_cast<size_t>(c0->a) + c1->a + c2->a + c3->a + c4->a + c5->a + c6->a + c7->a + c8->a) / totalPixels)
 		};
 
-
-
 #endif
-
-
 
 		return *reinterpret_cast<uint32_t*>(&c);
 	}
-
 
 	void  Resampler::ResampleThreadEntryPoint(ResampleTask* task)
 	{

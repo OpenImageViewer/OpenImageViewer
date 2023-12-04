@@ -9,11 +9,11 @@ namespace OIV
     class OIVFileImage : public OIVBaseImage
     {
     public:
-        const std::wstring& GetFileName() const;
-        OIVFileImage(const std::wstring& fileName);
+        const LLUtils::native_string_type& GetFileName() const;
+        OIVFileImage(const LLUtils::native_string_type& fileName);
         ResultCode Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags, IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params);
         ResultCode Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags);
     private:
-        const std::wstring fFileName;
+        const LLUtils::native_string_type fFileName;
     };
 }
