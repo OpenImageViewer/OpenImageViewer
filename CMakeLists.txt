@@ -134,7 +134,9 @@ add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
 
 include_directories(./Extensions)
 
-option(WIN32_LIB_BUILD_SAMPLES "build win32 samples" OFF)
-add_subdirectory(./External/Win32)
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    option(WIN32_LIB_BUILD_SAMPLES "build win32 samples" OFF)
+    add_subdirectory(./External/Win32)
+endif()
 add_subdirectory(oivlib)
 add_subdirectory(Clients/OIViewer)
