@@ -10,7 +10,6 @@
 #include <Version.h>
 #include "Interfaces/IRendererDefs.h"
 
-
 #if OIV_BUILD_RENDERER_D3D11 == 1
 #include <OIVD3D11RendererFactory.h>
 #endif
@@ -385,7 +384,6 @@ namespace OIV
 
     ResultCode OIV::GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse)
     {
-        
         IMCodec::ImageSharedPtr  image = GetImage(texel_request.handle);
         if (image != nullptr)
         {
@@ -396,7 +394,7 @@ namespace OIV
             {
                 texelresponse.type = (OIV_TexelFormat)image->GetTexelFormat();
                 OIV_Util_GetBPPFromTexelFormat(texelresponse.type, &texelresponse.size);
-                memcpy_s(texelresponse.buffer, OIV_CMD_TexelInfo_Buffer_Size, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size / CHAR_BIT);
+                memcpy(texelresponse.buffer, image->GetBufferAt(texel_request.x, texel_request.y), texelresponse.size / CHAR_BIT);
                     
                 return RC_Success;
             }

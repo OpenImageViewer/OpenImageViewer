@@ -181,10 +181,10 @@ typedef wchar_t OIVCHAR;
     struct OIV_Exception_Args
     {
         int errorCode;
-        const wchar_t* description;
-        const wchar_t* systemErrorMessage;
-        const wchar_t* callstack;
-        const wchar_t* functionName;
+        const LLUtils::native_char_type* description;
+        const LLUtils::native_char_type* systemErrorMessage;
+        const LLUtils::native_char_type* callstack;
+        const LLUtils::native_char_type* functionName;
     };
 
     struct OIV_CMD_RegisterCallbacks_Request

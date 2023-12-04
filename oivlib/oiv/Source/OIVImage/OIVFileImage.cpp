@@ -6,7 +6,6 @@
 
 namespace OIV
 {
-
 	IMUtil::AxisAlignedTransform  ResolveExifRotation(unsigned short exifRotation)
 	{
 		//  1 = Horizontal(normal)
@@ -17,8 +16,6 @@ namespace OIV
 		//	6 = Rotate 90 CW
 		//	7 = Mirror horizontal and rotate 90 CW
 		//	8 = Rotate 270 CW
-
-		
 
 		IMUtil::AxisAlignedTransform transform{};
 		switch (exifRotation)
@@ -72,9 +69,9 @@ namespace OIV
 	}
 
 
-    const std::wstring & OIVFileImage::GetFileName() const { return fFileName; }
+    const LLUtils::native_string_type& OIVFileImage::GetFileName() const { return fFileName; }
     
-	OIVFileImage::OIVFileImage(const std::wstring& fileName) : OIVBaseImage(ImageSource::File), fFileName(fileName) {}
+	OIVFileImage::OIVFileImage(const LLUtils::native_string_type& fileName) : OIVBaseImage(ImageSource::File), fFileName(fileName) {}
     
 	ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags)
 	{
