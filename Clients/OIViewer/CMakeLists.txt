@@ -72,36 +72,11 @@ target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.r
 
 
 #Copy own resources to the output dir 
-add_custom_command( TARGET ${TargetName}
-                   PRE_LINK
-                   COMMAND xcopy
-                   /Y 
-                   /D 
-                   /S 
-                   /I
-                   "\"${CMAKE_CURRENT_SOURCE_DIR}/Resources\""
-                   "\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/Resources\""
-
-                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                   COMMENT "Copying resources to output dir..."
-                   
-                   )
-                   
+ add_custom_command(TARGET ${TargetName} POST_BUILD
+     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 #Copy oiv library resources to the output dir 
-     add_custom_command(TARGET ${TargetName}
-                   POST_BUILD
-                   COMMAND xcopy
-                   /Y 
-                   /D 
-                   /S 
-                   /I
-                   "\"${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources\""
-                   "\"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/Resources\""
-
-                   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-                   COMMENT "Copying resources to output dir..."
-                   
-                   )
+add_custom_command(TARGET ${TargetName} POST_BUILD
+     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 
 #Embedd manifest 
      add_custom_command(TARGET ${TargetName}
