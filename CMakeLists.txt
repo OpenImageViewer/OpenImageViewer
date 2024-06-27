@@ -1,6 +1,36 @@
 #root CMake file
 cmake_minimum_required(VERSION 3.8)
 project(OpenImageViewer)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows" AND ${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
+	message("Cross compiling: Host: linux, Target: Windows")
+	set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+	set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM BOTH)
+	set(CMAKE_SYSTEM_PROCESSOR x86_64)
+	set(CMAKE_SYSTEM_VERSION 10)
+endif()
+
+ function (createSymLink target symlink)
+    cmake_path(GET symlink PARENT_PATH parentPath)
+    file(MAKE_DIRECTORY ${parentPath})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${target} ${symlink})
+ endfunction()
+
+
+ set(CASE_SENSITIVE_FIX_FOR_MINGW_PATH ${CMAKE_CURRENT_BINARY_DIR}/mingw-w64)
+ createSymLink(/usr/x86_64-w64-mingw32/include/windows.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/Windows.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/shlobj.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/ShlObj.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/dbghelp.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/DbgHelp.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/commctrl.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/CommCtrl.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/shellscalingapi.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/ShellScalingApi.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/psapi.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/Psapi.h)
+ createSymLink(/usr/x86_64-w64-mingw32/include/psapi.h ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include/Psapi.h)
+
+ include_directories(${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/Include)
+
+
 include (common.cmake)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
@@ -19,6 +49,12 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND MINGW)
+# MINGW defaults max SDK version to Windows server 2003 (0x0502) 
+# For supporting newer functionality, overriding is needed, otherwise code won't compile
+# override with Windows 10 (0x0A00) SDK version
+    add_compile_definitions(_WIN32_WINNT=0x0A00)
+endif()
 
 if (OIV_VERBOSE)
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -131,7 +167,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 setCommonCompileParameters()
 add_compile_definitions(UNICODE _UNICODE)
 add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
-
+include_directories(./External/LLUtils/Include)
 include_directories(./Extensions)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")

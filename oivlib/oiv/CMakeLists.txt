@@ -34,6 +34,9 @@ add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
 option(FREETYPE_WRAPPER_BUILD_SAMPLES "freetype build samples" OFF)
 
 add_subdirectory(${ExternalFolder}/FreeTypeWrapper/ ./external/FreeTypeWrapper)
+
+option(EASY_EXIF_BUILD_DEMO "build exif demo" OFF)
+
 add_subdirectory(${ExternalFolder}/easyexif ./external/easyexif)
 
 if (OIV_DISABLE_WARNINGS_EXTERNAL_LIBS)

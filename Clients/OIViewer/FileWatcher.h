@@ -84,7 +84,7 @@ public:
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Can not associate completion port with the directory.");
 
 
-            if (fFileWatchThread.native_handle() == nullptr)
+            if (fFileWatchThread.native_handle() == std::thread::native_handle_type{})
                 fFileWatchThread = std::thread(std::bind(&FileWatcher::CompletionPortStatusEntryPoint, this));
         }
 
@@ -145,7 +145,7 @@ public:
 
     void QueueShutdown()
     {
-        QueueUserAPC(QueueShutdownBackgroundThread, fFileWatchThread.native_handle(), (ULONG_PTR)this);
+        QueueUserAPC(QueueShutdownBackgroundThread, reinterpret_cast<HANDLE>(fFileWatchThread.native_handle()), (ULONG_PTR)this);
     }
 
     ~FileWatcher()

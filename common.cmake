@@ -1,13 +1,17 @@
 
 function (setCommonCompileParameters)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    #for MSVC and clang-cl 32 bit target don't use permissive code, disable min max macros and disable crt secure warnings
-    if (CMAKE_SIZEOF_VOID_P EQUAL 4 AND (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC"))
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/LARGEADDRESSAWARE>)
-    endif()
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        #for MSVC and clang-cl 32 bit target
+        if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+            add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/LARGEADDRESSAWARE>)
+        endif()
+    #use premissive code and opimized floating point model for MSVC and clang-cl 
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/permissive->) # Confrom to standards.
         add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/fp:fast>) # Enable non-standard optimized floating point model.
-        add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
+    endif()
+    #Disable crt secure, and minmax warnings
+    add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
 endif()
 endfunction()
 

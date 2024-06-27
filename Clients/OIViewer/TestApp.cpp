@@ -41,9 +41,9 @@
 #include "OIVCommands.h"
 #include "SelectionRect.h"
 
-#include "OIVImage\OIVFileImage.h"
-#include "OIVImage\OIVRawImage.h"
-#include "Helpers\OIVImageHelper.h"
+#include "OIVImage/OIVFileImage.h"
+#include "OIVImage/OIVRawImage.h"
+#include "Helpers/OIVImageHelper.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 

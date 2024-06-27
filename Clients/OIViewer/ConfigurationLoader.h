@@ -4,6 +4,7 @@
 #include <variant>
 #include <list>
 #include <map>
+#include <cstdint>
 namespace OIV
 {
 
