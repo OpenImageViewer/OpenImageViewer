@@ -73,7 +73,6 @@ int WinMain(
 }
 #endif
 
-
 int _tmain(int argc, const TCHAR** argv)
 {
     return mainFunction(argc, argv);

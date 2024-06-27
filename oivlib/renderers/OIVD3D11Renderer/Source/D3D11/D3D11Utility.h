@@ -1,4 +1,5 @@
 #pragma once
+#include <cfloat>
 #include <d3d11.h>
 #include <defs.h>
 #include <LLUtils/FileHelper.h>

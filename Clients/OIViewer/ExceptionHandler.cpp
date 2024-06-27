@@ -1,9 +1,12 @@
 #include <windows.h>
+//include <typeinfo> for successful compiling with minGW
+#include <typeinfo>
 #include <eh.h>
 #include <Psapi.h>
 #include <string>
 #include <sstream>
 #include <LLUtils/Exception.h>
+
 
 namespace OIV
 {

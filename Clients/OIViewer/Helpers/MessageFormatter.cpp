@@ -1,4 +1,6 @@
+#include <cmath>
 #include "MessageFormatter.h"
+
 namespace OIV
 {
     std::wstring MessageFormatter::FormatValueObject(const ValueObjectList& objects)
@@ -26,7 +28,6 @@ namespace OIV
             break;
         case 3:
             return std::get<std::wstring>(valueObject.valueObject);
-			break;
             break;
         }
 

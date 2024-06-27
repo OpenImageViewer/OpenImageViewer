@@ -25,7 +25,7 @@ namespace OIV
             return L"unknown";
         }
     }
-    
+
     std::wstring MessageHelper::CreateKeyBindingsMessage()
     {
         using namespace std;
@@ -51,8 +51,8 @@ namespace OIV
                     return element.commandGroupID == binding.GroupID;
                 });
 
-                if (it != commands.end())
-                    messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList{ {it->commandDisplayName} });
+            if (it != commands.end())
+                messageValues.emplace_back(binding.KeyCombinationName, MessageFormatter::ValueObjectList{ {it->commandDisplayName} });
         }
 
         return MessageFormatter::FormatMetaText(args);
@@ -63,18 +63,25 @@ namespace OIV
         auto fileTime = std::filesystem::last_write_time(filePath);
         std::chrono::system_clock::time_point systemTime;
         auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
+
+#ifdef  __GNUC__
+    systemTime = std::chrono::file_clock::to_sys(fileTime);
+#elif defined(WIN32) && !defined(__MINGW32__)
+        // In Windows 10 Creators Update, ICU was integrated into Windows, making the C APIs and data publicly accessible.
+        // Since Windows 10 Build 1703 Microsft had integrated ICU libraries into the Windows System which caused backwars compatabilty as the DLL is missing in older systems.
+        // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
         if (osVersion.major > 10 || (osVersion.major == 10 && osVersion.build >= 15063 /*Version 1703*/))
         {
-            // Not sure if it's a MS STL bug, but using clock_cast invokes initialization of timezones information
-            // which in turn invokes icu.dll, supported only since windows 10 1703.
-            // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
-            systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
+#endif
+            //systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
+#if !defined(__GNUC__) && defined(WIN32) && !defined(__MINGW32__)
         }
         else
         {
             auto ticks = fileTime.time_since_epoch().count() - std::filesystem::__std_fs_file_time_epoch_adjustment;
             systemTime = std::chrono::system_clock::time_point(std::chrono::system_clock::duration(ticks));
         }
+#endif
 
         auto in_time_t = std::chrono::system_clock::to_time_t(systemTime);
         std::wstringstream ss;
@@ -88,10 +95,10 @@ namespace OIV
         ss << std::put_time(&tmDest, OIV_TEXT("%Y-%m-%d %X"));
         return ss.str();
     }
-    
+
     std::wstring MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const OIVBaseImageSharedPtr& rasterized, IMCodec::ImageCodec& imageCodec)
     {
-        
+
         using namespace std;
         wstring message = MessageFormatter::DefaultHeaderColor + L"Image information\n";
 
@@ -120,13 +127,13 @@ namespace OIV
             messageValues.emplace_back("File date", MessageFormatter::ValueObjectList{ { GetFileTime(filePath) } });
             auto bitmapSize = rasterized->GetImage()->GetTotalSizeOfImageTexels();
             auto compressionRatio = static_cast<double>(bitmapSize) / static_cast<double>(fileSize);
-            messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ {L"1:"} ,{compressionRatio }  });
+            messageValues.emplace_back("Compression ratio", MessageFormatter::ValueObjectList{ {L"1:"} ,{compressionRatio } });
         }
-        
+
         const bool isAnimation = rasterized->GetImage()->GetItemType() == IMCodec::ImageItemType::Container
             && rasterized->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame;
 
-       
+
         if (isAnimation)
             messageValues.emplace_back("Num frames", MessageFormatter::ValueObjectList{ { rasterized->GetImage()->GetNumSubImages()} });
         else
@@ -134,7 +141,7 @@ namespace OIV
 
 
         auto frame = isAnimation ? rasterized->GetImage()->GetSubImage(0) : rasterized->GetImage();
-      
+
 
         messageValues.emplace_back("Width", MessageFormatter::ValueObjectList{ { frame->GetWidth()} ,{ "px" } });
         messageValues.emplace_back("Height", MessageFormatter::ValueObjectList{ {frame->GetHeight() }, {"px"} });
@@ -148,15 +155,15 @@ namespace OIV
 
 
         const auto& processData = frame->GetProcessData();
-        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(processData.processTime)} , {"ms" }  });
+        messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(processData.processTime)} , {"ms" } });
         messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ { rasterized->GetDisplayTime()} , {"ms"} });
         std::wstring pluginDescription = L"Unknown";
         IMCodec::PluginProperties properties;
         if (imageCodec.GetPluginInfo(processData.pluginUsed, properties) == IMCodec::ImageResult::Success)
             pluginDescription = properties.pluginDescription;
-        
+
         messageValues.emplace_back("Codec used", MessageFormatter::ValueObjectList{ {       pluginDescription   } });
-        
+
 
         auto uniqueValues = rasterized->GetNumUniqueColors();
         if (uniqueValues > -1)

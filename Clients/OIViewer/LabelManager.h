@@ -1,7 +1,7 @@
 #pragma once
 #include <defs.h>
 #include <map>
-#include <OIVImage\OIVTextImage.h>
+#include <OIVImage/OIVTextImage.h>
 #include "EventManager.h"
 namespace FreeType
 {
