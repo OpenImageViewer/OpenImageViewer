@@ -1,0 +1,134 @@
+# Base Formatting Style
+BasedOnStyle: LLVM  # Options: LLVM, Google, Chromium, Mozilla, WebKit, Microsoft, GNU
+
+# ------------------------------
+# Indentation & Whitespace
+# ------------------------------
+IndentWidth: 4                 # Number of spaces per indentation level
+TabWidth: 4                    # Number of spaces per tab
+UseTab: Never                  # Use spaces instead of tabs (Never, ForIndentation, ForContinuationAndIndentation, Always)
+ContinuationIndentWidth: 4      # Indentation for continued lines
+IndentExternBlock: AfterExternBlock # Indent `extern "C"` blocks
+EmptyLineBeforeAccessModifier: Always  # Enforce a blank line before `public:` or `private:`
+KeepEmptyLinesAtTheStartOfBlocks: false # Remove empty lines at the start of functions
+
+# ------------------------------
+# Braces & Blocks
+# ------------------------------
+BreakBeforeBraces: Allman       # Open braces on a new line (Options: Attach, Allman, GNU, Linux, Mozilla, Stroustrup, WebKit)
+
+AllowShortBlocksOnASingleLine: false  # Disallow `{}` blocks on a single line
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# ------------------------------
+# Pointers & References
+# ------------------------------
+PointerAlignment: Left          # Align pointer to type (`int *ptr;`) (Options: Left, Right, Middle)
+ReferenceAlignment: Left        # Align reference to type (`int &ref;`) (Options: Left, Right, Middle)
+DerivePointerAlignment: false   # Do not automatically determine pointer alignment
+
+# ------------------------------
+# Line Wrapping & Column Limits
+# ------------------------------
+ColumnLimit: 120                # Max characters per line
+PenaltyExcessCharacter: 100     # Penalty for exceeding column limit
+PenaltyReturnTypeOnItsOwnLine: 200  # Higher penalty to avoid return types on separate lines
+BreakConstructorInitializers: BeforeColon # Break constructor initializers before `:`
+PenaltyBreakBeforeFirstCallParameter: 50  # Avoid breaking after function name
+PenaltyBreakComment: 300         # Discourage breaking comments
+PenaltyBreakString: 100          # Discourage breaking long strings
+PenaltyBreakAssignment: 100      # Try to keep assignments on one line
+PenaltyIndentedWhitespace: 0     # No penalty for extra indentation
+IndentPPDirectives: BeforeHash
+
+# ------------------------------
+# Functions & Control Flow
+# ------------------------------
+AlwaysBreakTemplateDeclarations: Yes
+# BreakTemplateDeclarations: Yes # clang-19
+AlwaysBreakAfterReturnType: None  # Keep return type on the same line as function name
+BreakBeforeInheritanceComma: true # Break long inheritance lists before commas
+BreakBeforeTernaryOperators: true # Break before ternary `? :` operators
+AllowAllParametersOfDeclarationOnNextLine: false # Keep function parameters together
+AllowShortIfStatementsOnASingleLine: Never  # Force if statements to be multiline
+AllowShortLoopsOnASingleLine: false         # Force loops to be multiline
+AllowShortFunctionsOnASingleLine: Inline # Allow short functions only if inline
+
+# ------------------------------
+# Operator Formatting
+# ------------------------------
+BreakBeforeBinaryOperators: None   # Keep binary operators on the same line
+AlignOperands: true                # Align multi-line operands for readability
+SpaceAfterCStyleCast: true         # Add space after C-style cast `(int) x`
+SpacesInParentheses: false         # No spaces inside parentheses `( a + b )`
+SpacesInSquareBrackets: false      # No spaces inside array brackets
+SpacesBeforeTrailingComments: 2    # Enforce 2 spaces before `//` comments
+SpacesInAngles: false              # No spaces in template parameters `<int, float>`
+
+# ------------------------------
+# Includes Formatting
+# ------------------------------
+SortIncludes: false                 # Alphabetize `#include` statements
+# IncludeBlocks: Regroup              # Merge include categories (Preserve, Merge, Regroup)
+# IncludeCategories:
+#  - Regex: '^<.*\.h>'               # Standard C++ library headers first
+#    Priority: 1
+#  - Regex: '^"project/.*"'           # Project-specific includes
+#    Priority: 2
+#  - Regex: '^".*"'                   # Other local headers
+#    Priority: 3
+# IncludeIsMainRegex: '([-_](test|unittest))?$' # Identify the main include file
+
+# ------------------------------
+# Structs, Classes & Access Modifiers
+# ------------------------------
+AccessModifierOffset: -2            # Indent access specifiers `public:` under class
+AlignConsecutiveAssignments: false    # Align `=` for consecutive assignments
+AlignConsecutiveDeclarations: false   # Align `int a; float b;` for readability
+AlignTrailingComments: true          # Align comments for better readability
+EmptyLineAfterAccessModifier: Always # Ensure a blank line after `public:` or `private:`
+
+# ------------------------------
+# Namespaces
+# ------------------------------
+FixNamespaceComments: true  # Add `// namespace xyz` comments at the end of namespace blocks
+NamespaceIndentation: All # Indent inside namespaces (Options: None, Inner, All)
+
+# ------------------------------
+# Lambdas & Auto Formatting
+# ------------------------------
+LambdaBodyIndentation: Signature  #  Indents the body of the lambda one level after the lambda
+AllowAllArgumentsOnNextLine: false  # Keep function arguments together if possible
+AllowShortLambdasOnASingleLine: true
+
+# ------------------------------
+# Comment Formatting
+# ------------------------------
+ReflowComments: true                 # Reformat long comments
+
+# ------------------------------
+# Switch-Case Formatting
+# ------------------------------
+IndentCaseLabels: true                # Indent `case` inside `switch`
+AllowShortCaseLabelsOnASingleLine: false # Avoid one-line case labels
+
+# ------------------------------
+# Miscellaneous
+# ------------------------------
+UseCRLF: false                     # Use LF line endings (Unix-style)
+SortUsingDeclarations: true         # Alphabetize `using` declarations
+Cpp11BracedListStyle: true          # Format braced lists according to C++11
+Standard: Latest                    # Use the latest C++ standard formatting
+

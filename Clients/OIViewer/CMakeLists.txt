@@ -95,9 +95,20 @@ endif()
 target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.res)
 
 #Copy own resources to the output dir
- add_custom_command(TARGET ${TargetName} POST_BUILD
+add_custom_command(TARGET ${TargetName} POST_BUILD
      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 #Copy oiv library resources to the output dir
 add_custom_command(TARGET ${TargetName} POST_BUILD
      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 
+if (MINGW AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+     set(MINGW_ROOT /usr/x86_64-w64-mingw32)
+     add_custom_command(TARGET ${TargetName} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_ROOT}/lib/libgcc_s_seh-1.dll ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/)
+
+     add_custom_command(TARGET ${TargetName} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_ROOT}/lib/libstdc++-6.dll ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/)
+
+     add_custom_command(TARGET ${TargetName} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_ROOT}/bin/libwinpthread-1.dll ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/)
+endif()     
