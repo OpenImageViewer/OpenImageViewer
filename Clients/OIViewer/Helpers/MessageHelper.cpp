@@ -65,16 +65,14 @@ namespace OIV
         auto osVersion = LLUtils::PlatformUtility::GetOSVersion();
 
 #ifdef  __GNUC__
-    systemTime = std::chrono::file_clock::to_sys(fileTime);
+        systemTime = std::chrono::file_clock::to_sys(fileTime);
 #elif defined(WIN32) && !defined(__MINGW32__)
         // In Windows 10 Creators Update, ICU was integrated into Windows, making the C APIs and data publicly accessible.
         // Since Windows 10 Build 1703 Microsft had integrated ICU libraries into the Windows System which caused backwars compatabilty as the DLL is missing in older systems.
         // https://docs.microsoft.com/en-us/windows/win32/intl/international-components-for-unicode--icu-
         if (osVersion.major > 10 || (osVersion.major == 10 && osVersion.build >= 15063 /*Version 1703*/))
         {
-#endif
-            //systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
-#if !defined(__GNUC__) && defined(WIN32) && !defined(__MINGW32__)
+            systemTime = std::chrono::clock_cast<std::chrono::system_clock>(fileTime);
         }
         else
         {

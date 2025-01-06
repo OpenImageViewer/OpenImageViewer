@@ -1263,23 +1263,31 @@ namespace OIV
         return fWindow.GetHandle();
     }
 
+#define WIDEN2(x) L##x
+#define WIDEN(x) WIDEN2(x)
+
     void TestApp::UpdateTitle()
     {
-        const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR) 
+        const static std::wstring cachedVersionString = OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' + std::to_wstring(OIV_VERSION_MINOR) +
+            (OIV_VERSION_REVISION != 0 ? (std::wstring(L".") + std::to_wstring(OIV_VERSION_REVISION)) : std::wstring{})
 
-#ifdef OIV_RELEASE_SUFFIX
-            + OIV_RELEASE_SUFFIX
-#endif
+
             // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
-            + L"." + std::wstring(OIV_VERSION_REVISION) + L"." + std::to_wstring(OIV_VERSION_BUILD)
-    #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
-                + OIV_TEXT(" | 64 bit")
-    #else 
-                + OIV_TEXT(" | 32 bit")
+
+                + L"." + WIDEN(GIT_HASH_ID)
+                +  L"." + std::to_wstring(OIV_VERSION_BUILD)
+        #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
+                    + OIV_TEXT(" | 64 bit")
+        #else 
+                    + OIV_TEXT(" | 32 bit")
+        #endif
+                + OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath())
+#else
+    #ifdef OIV_RELEASE_SUFFIX
+                + OIV_RELEASE_SUFFIX
     #endif
-            + OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath())
-#endif			
+#endif		
 
             // If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
 #if OIV_OFFICIAL_BUILD == 0
