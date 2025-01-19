@@ -101,7 +101,7 @@ add_custom_command(TARGET ${TargetName} POST_BUILD
 add_custom_command(TARGET ${TargetName} POST_BUILD
      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 
-if (MINGW AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (NOT MINGW_POST_BUILD_DONT_COPY_BINARIES AND MINGW AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
      set(MINGW_ROOT /usr/x86_64-w64-mingw32)
      add_custom_command(TARGET ${TargetName} POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_ROOT}/lib/libgcc_s_seh-1.dll ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/)
