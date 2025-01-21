@@ -1804,7 +1804,7 @@ namespace OIV
             asyncResult = async(launch::async, [&]() ->bool
                 {
                     fInitialFile = std::make_shared<OIVFileImage>(filePath);
-                    return fInitialFile->Load(&fImageLoader, IMCodec::PluginTraverseMode::NoTraverse) == RC_Success;
+                    return fInitialFile->Load(&fImageLoader, IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType ) == RC_Success;
                 }
             );
         }
