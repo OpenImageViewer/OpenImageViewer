@@ -1,4 +1,17 @@
 ==============================================================
+Open image viewer 0.18.1 - February 20, 2025
+==============================================================
+Fixed: Initial image load if file extension doesn't match file format
+Fixed: crash on modern CPUs
+Added: MinGW cross compilation
+Added: cross platform directory copy command
+Fixed: crash when loading multi-image file
+Added: global exception handler
+Added: Option to select largest subimage when loading a multiimage file
+Fixed: reset of selected area when cancelling selection
+Fixed: Crashes when cutting or copying the selected area
+FIxed: Auto scroll to selected subimage so it'll be visible
+==============================================================
 Open image viewer 0.18 - September 08, 2023
 ==============================================================
 Added : support for 4GB memory addressing for 32 bit architecture
