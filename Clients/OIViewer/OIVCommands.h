@@ -9,14 +9,15 @@ namespace OIV
 {
     class OIVCommands
     {
-    public:
+      public:
+
         static inline CmdNull NullCommand;
-        //static const 
+        // static const
         static OIV_RECT_I ToOIVRect(const LLUtils::RectI32& rect)
         {
             LLUtils::RectI32::Point_Type topleft = rect.GetCorner(LLUtils::Corner::TopLeft);
             LLUtils::RectI32::Point_Type bottomRight = rect.GetCorner(LLUtils::Corner::BottomRight);
-            return{ topleft.x, topleft.y, bottomRight.x, bottomRight.y};
+            return {topleft.x, topleft.y, bottomRight.x, bottomRight.y};
         }
 
         template <class T, class U>
@@ -30,10 +31,8 @@ namespace OIV
             return ExecuteCommand(CommandExecute::CE_Refresh, &NullCommand, &NullCommand);
         }
 
-
         static ResultCode GetKnownFileTypes(std::string& o_fileTypes)
         {
-
             OIV_CMD_GetKnownFileTypes_Response res = {};
 
             ResultCode rc = RC_Success;
@@ -46,7 +45,6 @@ namespace OIV
                     o_fileTypes = res.knownFileTypes;
             }
             return rc;
-            
         }
 
         static ResultCode UnloadImage(ImageHandle handle)
@@ -57,30 +55,12 @@ namespace OIV
                 unloadRequest.handle = handle;
                 return ExecuteCommand(CommandExecute::OIV_CMD_UnloadFile, &unloadRequest, &NullCommand);
             }
-            else return RC_InvalidHandle;
+            else
+                return RC_InvalidHandle;
         }
 
-        static ResultCode TransformImage(ImageHandle handle, IMUtil::AxisAlignedRotation rotation, IMUtil::AxisAlignedFlip flip, ImageHandle& tranformedHandle)
-        {
-            LL_EXCEPTION_NOT_IMPLEMENT("Not implemented");
-
-            OIV_CMD_AxisAlignedTransform_Request request = {};
-            OIV_CMD_AxisAlignedTransform_Response response= {};
-            
-            
-          //  request.handle = handle;
-          //  request.transform.rotation = rotation;
-          //  request.transform.flip= flip;
-         //   ResultCode result = ExecuteCommand(CommandExecute::OIV_CMD_AxisAlignedTransform, &request, &response);
-          //  if (result == RC_Success)
-          //  {
-           //     tranformedHandle = response.handle;
-//}
-
-           // return result;
-        }
-
-        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat,bool useRainbow, ImageHandle& converted)
+        static ResultCode ConvertImage(ImageHandle handle, OIV_TexelFormat desiredTexelFormat, bool useRainbow,
+                                       ImageHandle& converted)
         {
             OIV_CMD_ConvertFormat_Request request = {};
             OIV_CMD_ConvertFormat_Response response = {};
@@ -91,10 +71,8 @@ namespace OIV
             if (result == RC_Success)
                 converted = response.handle;
 
-
             return result;
         }
-        
 
         static ResultCode CropImage(ImageHandle sourceImage, const LLUtils::RectI32& rect, ImageHandle& croppedHandle)
         {
@@ -104,7 +82,7 @@ namespace OIV
             requestCropImage.rect = ToOIVRect(rect);
             requestCropImage.imageHandle = sourceImage;
 
-            // 1. create a new cropped image 
+            // 1. create a new cropped image
             ResultCode result = ExecuteCommand(OIV_CMD_CropImage, &requestCropImage, &responseCropImage);
             croppedHandle = (result == RC_Success ? responseCropImage.imageHandle : ImageHandleNull);
             return result;
@@ -122,7 +100,7 @@ namespace OIV
 
         static void CancelSelectionRect()
         {
-            OIV_CMD_SetSelectionRect_Request request = { -1,-1,-1,-1 };
+            OIV_CMD_SetSelectionRect_Request request = {-1, -1, -1, -1};
             ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &NullCommand);
         }
         static void Init(HANDLE hwnd)
@@ -132,7 +110,6 @@ namespace OIV
             init.parentHandle = reinterpret_cast<std::size_t>(hwnd);
             if (ExecuteCommand(CommandExecute::CE_Init, &init, &NullCommand) != RC_Success)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable initialize OIV library");
-            
         }
     };
-}
+}  // namespace OIV
