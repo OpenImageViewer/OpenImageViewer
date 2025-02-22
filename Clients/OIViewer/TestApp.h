@@ -28,7 +28,6 @@
 #include <LInput/Win32/RawInput/RawInput.h>
 #include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
 
-
 #include "SelectionRect.h"
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
@@ -48,71 +47,70 @@
 #include <ImageLoader.h>
 #include <ImageCodec.h>
 
-
 namespace OIV
 {
     enum class ImageSizeType
     {
-          Original
-        , Transformed
-        , Visible
+        Original,
+        Transformed,
+        Visible
     };
 
-
-    //Determines whether to change zoom / pan when loading a new file
+    // Determines whether to change zoom / pan when loading a new file
     enum class ResetTransformationMode
     {
-          DoNothing = 0
-        , ResetAll = 1
-        , Count
+        DoNothing = 0,
+        ResetAll = 1,
+        Count
     };
 
     enum class DownscalingTechnique
     {
-           None
-         , HardwareMipmaps
-         , Software
-         , Count
+        None,
+        HardwareMipmaps,
+        Software,
+        Count
     };
 
     enum class ClipboardDataType
     {
-          None
-        , Image
-        , Text
+        None,
+        Image,
+        Text
     };
 
     enum class UserMessageGroups
     {
-          Default
-        , SuccessfulFileLoad
-        , FailedFileLoad
-        , WindowOnTop
+        Default,
+        SuccessfulFileLoad,
+        FailedFileLoad,
+        WindowOnTop
     };
 
     enum class OperationResult
     {
-          Success
-        , NoDataFound
-        , NoSelection
-        , UnkownError
+        Success,
+        NoDataFound,
+        NoSelection,
+        UnkownError
     };
 
-    //Assue Count exists and presenting the total number of values in an enum.
+    // Assue Count exists and presenting the total number of values in an enum.
     template <typename T, typename UnderlyingType = typename std::underlying_type_t<T>>
     T GetNextEnumValue(T enumVal)
     {
-     //   using UnderlyingType = std::underlying_type_t<T>;
-        return static_cast<T>((static_cast<UnderlyingType>(enumVal) + static_cast<UnderlyingType>(1)) % static_cast<UnderlyingType>(T::Count));
+        //   using UnderlyingType = std::underlying_type_t<T>;
+        return static_cast<T>((static_cast<UnderlyingType>(enumVal) + static_cast<UnderlyingType>(1)) %
+                              static_cast<UnderlyingType>(T::Count));
     }
-
-    
 
     class KeyDoubleTap
     {
         static constexpr int MaxDelayBetweenTaps = 320;
         std::chrono::high_resolution_clock::time_point fLastTap;
-    public:
+
+      public:
+
         std::function<void()> callback;
         void SetState(bool down)
         {
@@ -124,9 +122,9 @@ namespace OIV
                 high_resolution_clock::time_point now = high_resolution_clock::now();
                 if (std::chrono::duration_cast<milliseconds>(now - fLastTap).count() < MaxDelayBetweenTaps)
                 {
-                    //trigger double tap.
+                    // trigger double tap.
                     callback();
-                    //MessageBox(nullptr, L"12", L"12", MB_OK);
+                    // MessageBox(nullptr, L"12", L"12", MB_OK);
                     fLastTap = high_resolution_clock::time_point::min();
                 }
                 fLastTap = high_resolution_clock::now();
@@ -136,7 +134,8 @@ namespace OIV
 
     class TestApp
     {
-    public:
+      public:
+
         void OnLabelRefreshRequest();
         TestApp();
         ~TestApp();
@@ -145,7 +144,8 @@ namespace OIV
         static std::wstring GetAppDataFolder();
         static HWND FindTrayBarWindow();
 
-    private:// types
+      private:  // types
+
         using FileIndexType = LLUtils::ListWString::difference_type;
         using FileCountType = LLUtils::ListWString::size_type;
         struct CommandRequestIntenal
@@ -154,31 +154,32 @@ namespace OIV
             std::string args;
         };
 
-    private: //methods
+      private:  // methods
 
-		std::wstring GetLogFilePath();
-		void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack);
+        std::wstring GetLogFilePath();
+        void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack);
 #pragma region Win32 event handling
         bool handleKeyInput(const ::Win32::EventWinMessage* evnt);
-        LRESULT ClientWindwMessage(const ::Win32::Event * evnt1);
+        LRESULT ClientWindwMessage(const ::Win32::Event* evnt1);
         void SetTopMostUserMesage();
         void ProcessTopMost();
         void SetAppActive(bool active);
         bool GetAppActive() const;
 
         bool HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt);
-		void CloseApplication(bool closeToTray);
+        void CloseApplication(bool closeToTray);
         bool HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file);
         bool HandleMessages(const ::Win32::Event* evnt);
         bool HandleClientWindowMessages(const ::Win32::Event* evnt);
         double GetMinimumPixelSize();
-        
+
 #pragma endregion Win32 event handling
         void AddCommandsAndKeyBindings();
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
         void ProbeForMonitorChange();
         void PerformRefresh();
-        void SetUserMessage(const std::wstring& message, GroupID groupID = 0, MessageFlags groupFlags = MessageFlags::Interchangeable);
+        void SetUserMessage(const std::wstring& message, GroupID groupID = 0,
+                            MessageFlags groupFlags = MessageFlags::Interchangeable);
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
         bool ExecutePredefinedCommand(std::string command);
@@ -188,35 +189,40 @@ namespace OIV
         void CMD_ViewState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleKeyBindings(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_OpenFile(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
-        void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&,CommandManager::CommandResult&);
+        void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
         void CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_CopyToClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
-        void CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
-        void CMD_ImageManipulation(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
+                                    CommandManager::CommandResult& result);
+        void CMD_ImageManipulation(const CommandManager::CommandRequest& request,
+                                   CommandManager::CommandResult& result);
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
-        
-#pragma endregion //Commands
+
+#pragma endregion  // Commands
         void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
         void OnRefresh();
         void OnRefreshTimer();
         void OnPreserveSelectionRect();
         HWND GetWindowHandle() const;
         void UpdateTitle();
-        //bool JumpTo(FileIndexType fileIndex);
+        // bool JumpTo(FileIndexType fileIndex);
         bool JumpFiles(FileIndexType step);
-		void ToggleFullScreen(bool multiFullScreen);
+        void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
-        bool GetSlideShowEnabled() const {return fSlideShowEnabled;}
+        bool GetSlideShowEnabled() const
+        {
+            return fSlideShowEnabled;
+        }
         void SetFilterLevel(OIV_Filter_type filterType);
         OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
@@ -256,12 +262,13 @@ namespace OIV
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
         const std::wstring& GetOpenedFileName() const;
-		bool IsImageOpen() const;
+        bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
-        void UpdateOpenedFileIndex();   
+        void UpdateOpenedFileIndex();
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(IMUtil::AxisAlignedRotation transform, IMUtil::AxisAlignedFlip flip);
-        void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height,uint32_t rowPitch, IMCodec::TexelFormat texelFormat);
+        void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height, uint32_t rowPitch,
+                     IMCodec::TexelFormat texelFormat);
         ClipboardDataType PasteFromClipBoard();
         bool SetClipboardImage(IMCodec::ImageSharedPtr image);
         OperationResult CropVisibleImage();
@@ -274,18 +281,23 @@ namespace OIV
         void RefreshImage();
         void DisplayOpenedFileName();
         void UpdateExposure();
-        bool ToggleColorCorrection(); 
+        bool ToggleColorCorrection();
         void CancelSelection();
         void LoadSubImages();
         void AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
-        bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
-        void OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgs);// file change handler, runs in the main thread.
-        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs); // callback from file watcher
+        bool IsMainThread() const
+        {
+            return fMainThreadID == GetCurrentThreadId();
+        }
+        void OnFileChangedImpl(
+            FileWatcher::FileChangedEventArgs* fileChangedEventArgs);  // file change handler, runs in the main thread.
+        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
         void ProcessCurrentFileChanged();
         void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
-        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName, const std::wstring& filePath2);
+        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName,
+                            const std::wstring& filePath2);
         void WatchCurrentFolder();
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
@@ -313,11 +325,11 @@ namespace OIV
             bool created;
             netsettings_Create_func Create;
             netsettings_SetVisible_func SetVisible;
-            netsettings_SaveSettings_func  SaveSettings;
+            netsettings_SaveSettings_func SaveSettings;
         } settingsContext{};
-        
-		
-    private: // member fields
+
+      private:  // member fields
+
 #pragma region FrameLimiter
         static inline CmdNull NullCommand;
         const bool EnableFrameLimiter = true;
@@ -338,22 +350,21 @@ namespace OIV
         bool fReloadSettingsFileIfChanged = false;
         FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
-        std::wstring fListedFolder; // the current folder the the file list is taken from
+        std::wstring fListedFolder;  // the current folder the the file list is taken from
         int fCurrentFrame = 0;
         double fCurrentSequencerSpeed = 1.0;
         OIVBaseImageSharedPtr fCountingImageColor;
         std::atomic_bool fIsColorThreadRunning = false;
         std::thread fCountingColorsThread;
-        //FileCache fFileCache;
+        // FileCache fFileCache;
 
-        using MouseButtonType = LInput::MouseButton ;
+        using MouseButtonType = LInput::MouseButton;
         template <typename T>
-        using DeviceGroup = std::map < uint8_t, T>;
+        using DeviceGroup = std::map<uint8_t, T>;
 
-       
         using MouseButtonstate = LInput::ButtonsState<MouseButtonType, 8>;
         using MouseGroup = DeviceGroup<MouseButtonstate>;
-        
+
         MouseGroup fMouseDevicesState;
         LInput::RawInput fRawInput;
         void OnRawInput(const LInput::RawInput::RawInputEvent& evnt);
@@ -383,10 +394,11 @@ namespace OIV
 
         static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
         static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
-        FileIndexType  fCurrentFileIndex = FileIndexStart;
+        FileIndexType fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
-        LLUtils::PointI32 fDragStart { -1,-1 };
-        bool fIsTryToLoadInitialFile = false; // determines whether the current loaded file is the initial file being loaded at startup
+        LLUtils::PointI32 fDragStart{-1, -1};
+        bool fIsTryToLoadInitialFile =
+            false;  // determines whether the current loaded file is the initial file being loaded at startup
         bool fIsFirstFrameDisplayed = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
@@ -394,18 +406,21 @@ namespace OIV
         bool fImageInfoVisible = false;
         bool fIsActive = false;
         bool fRockerGestureActivate = false;
-        LLUtils::PointF64 fDPIadjustmentFactor { 1.0,1.0 };
+        LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
         IMCodec::ImageLoader fImageLoader;
-        
+
         //::Win32::ClipboardFormatType fRTFFormatID {};
         //::Win32::ClipboardFormatType fHTMLFormatID {};
 
         enum class DeletedFileRemovalMode
         {
-              None              = 0 << 0// Dont remove opened file if delted.
-            , DeletedInternally = 1 << 0// remove opened file only if deleted internally from OIV (default)
-            , DeletedExternally = 1 << 1// remove opened file only if deleted externally 
-            , Always            // always unload file if deleted.
+            None = 0 << 0  // Dont remove opened file if delted.
+            ,
+            DeletedInternally = 1 << 0  // remove opened file only if deleted internally from OIV (default)
+            ,
+            DeletedExternally = 1 << 1  // remove opened file only if deleted externally
+            ,
+            Always  // always unload file if deleted.
         };
         LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DeletedFileRemovalMode);
 
@@ -413,24 +428,27 @@ namespace OIV
 
         enum class MofifiedFileReloadMode
         {
-               None // Don't suggest auto reload of modified file.
-             , Confirmation // Display a message to confirm reload of modified file (default)
-             , AutoForeground  // Auto reload file only when application is active
-            ,  AutoBackground // Auto reload file always
+            None  // Don't suggest auto reload of modified file.
+            ,
+            Confirmation  // Display a message to confirm reload of modified file (default)
+            ,
+            AutoForeground  // Auto reload file only when application is active
+            ,
+            AutoBackground  // Auto reload file always
         };
 
         MofifiedFileReloadMode fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
 
         std::wstring fRequestedFileForRemoval;
-        LLUtils::PointF64 fImageMargins{ 0.75,0.75 };
+        LLUtils::PointF64 fImageMargins{0.75, 0.75};
         std::wstring DefaultTextKeyColorTag = L"<textcolor=#ff8930ff>";
         std::wstring DefaultTextValueColorTag = L"<textcolor=#7672ffff>";
         LLUtils::StopWatch fFileDisplayTimer;
-        MouseMultiClickHandler fMouseClickEventHandler{ 500,2 };
+        MouseMultiClickHandler fMouseClickEventHandler{500, 2};
         void OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args);
-        
+
         ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
-        const OIV_CMD_ColorExposure_Request DefaultColorCorrection = { 1.0,0.0,1.0,1.0,1.0 };
+        const OIV_CMD_ColorExposure_Request DefaultColorCorrection = {1.0, 0.0, 1.0, 1.0, 1.0};
         OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
         OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
         VirtualStatusBar fVirtualStatusBar;
@@ -439,7 +457,6 @@ namespace OIV
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
         ImageState fImageState;
-
 
         CommandManager fCommandManager;
         std::unique_ptr<FreeType::FreeTypeConnector> fFreeType;
@@ -463,16 +480,15 @@ namespace OIV
         void OnSettingChange(const std::wstring& key, const std::wstring& value);
         void LoadSettings();
         void SetResamplingEnabled(bool enable);
-        bool GetResamplingEnabled() const; 
+        bool GetResamplingEnabled() const;
         void QueueResampling();
         void SortFileList();
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
         std::shared_ptr<OIVFileImage> fInitialFile;
 
-		LLUtils::LogFile mLogFile{ GetLogFilePath(), true };
+        LLUtils::LogFile mLogFile{GetLogFilePath(), true};
 
-        
         struct BindingElement
         {
             std::string commandDescription;
@@ -500,7 +516,5 @@ namespace OIV
         ::Win32::Timer fContextMenuTimer;
         ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
-
-
     };
-}
+}  // namespace OIV
