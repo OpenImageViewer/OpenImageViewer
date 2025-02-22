@@ -46,14 +46,15 @@
 #include <NetSettings/GuiProvider.h>
 #include <ImageLoader.h>
 #include <ImageCodec.h>
+#include "win32/EventSync.h"
 
 namespace OIV
 {
     enum class ImageSizeType
     {
-        Original,
-        Transformed,
-        Visible
+        Original
+        ,Transformed
+        ,Visible
     };
 
     // Determines whether to change zoom / pan when loading a new file
@@ -219,10 +220,7 @@ namespace OIV
         void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
-        bool GetSlideShowEnabled() const
-        {
-            return fSlideShowEnabled;
-        }
+        bool GetSlideShowEnabled() const { return fSlideShowEnabled; }
         void SetFilterLevel(OIV_Filter_type filterType);
         OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
@@ -287,12 +285,9 @@ namespace OIV
         void AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
-        bool IsMainThread() const
-        {
-            return fMainThreadID == GetCurrentThreadId();
-        }
-        void OnFileChangedImpl(
-            FileWatcher::FileChangedEventArgs* fileChangedEventArgs);  // file change handler, runs in the main thread.
+        bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
+        void OnFileChangedImpl(const FileWatcher::FileChangedEventArgs*
+                                   fileChangedEventArgs);  // file change handler, runs in the main thread.
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
         void ProcessCurrentFileChanged();
         void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
@@ -315,6 +310,7 @@ namespace OIV
         void UpdateSelectionRectText();
         void OnImageReady(IMCodec::ImageSharedPtr image);
         LLUtils::PointI32 SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen);
+        void OnMessageFromBackgroundThread(const SharedData& sharedData);
 
         using netsettings_Create_func = void (*)(GuiCreateParams*);
         using netsettings_SetVisible_func = void (*)(bool);
@@ -397,8 +393,8 @@ namespace OIV
         FileIndexType fCurrentFileIndex = FileIndexStart;
         LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart{-1, -1};
-        bool fIsTryToLoadInitialFile =
-            false;  // determines whether the current loaded file is the initial file being loaded at startup
+        /// determines whether the current loaded file is the initial file being loaded at startup
+        bool fIsTryToLoadInitialFile = false;
         bool fIsFirstFrameDisplayed = false;
         bool fIsOffsetLocked = false;
         bool fIsLockFitToScreen = false;
@@ -408,7 +404,6 @@ namespace OIV
         bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
         IMCodec::ImageLoader fImageLoader;
-
         //::Win32::ClipboardFormatType fRTFFormatID {};
         //::Win32::ClipboardFormatType fHTMLFormatID {};
 
@@ -516,5 +511,6 @@ namespace OIV
         ::Win32::Timer fContextMenuTimer;
         ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
+        EventSync fEventSync;
     };
 }  // namespace OIV

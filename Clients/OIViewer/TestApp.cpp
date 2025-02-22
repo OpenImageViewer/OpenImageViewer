@@ -51,6 +51,7 @@
 #include "Helpers/PixelHelper.h"
 #include "ExceptionHandler.h"
 #include <ImageUtil/ImageUtil.h>
+#include "InterThreadMessages.h"
 
 #include "resource.h"
 
@@ -1093,7 +1094,8 @@ namespace OIV
           fSelectionRect(
               std::bind(&TestApp::OnSelectionRectChanged, this, std::placeholders::_1, std::placeholders::_2)),
           fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this)),
-          fFreeType(std::make_unique<FreeType::FreeTypeConnector>()), fLabelManager(fFreeType.get())
+          fFreeType(std::make_unique<FreeType::FreeTypeConnector>()), fLabelManager(fFreeType.get()),
+          fEventSync(std::bind(&TestApp::OnMessageFromBackgroundThread, this, std::placeholders::_1))
     //, fFileCache(&fImageLoader, std::bind(&TestApp::OnImageReady, this, std::placeholders::_1))
 
     {
@@ -2136,7 +2138,7 @@ namespace OIV
         }
     }
 
-    void TestApp::OnFileChangedImpl(FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
+    void TestApp::OnFileChangedImpl(const FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs = *fileChangedEventArgsPtr;
 
@@ -2189,8 +2191,9 @@ namespace OIV
 
     void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
     {
-        SendMessage(fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED,
-                    reinterpret_cast<WPARAM>(&fileChangedEventArgs), 0);
+        fEventSync.AddSharedData(static_cast<std::underlying_type_t<InterThreadMessages>>(
+                                     InterThreadMessages::FileChanged),
+                                 fileChangedEventArgs);
     }
 
     void TestApp::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
@@ -2903,9 +2906,61 @@ namespace OIV
         return isDefault;
     }
 
+    void TestApp::OnMessageFromBackgroundThread(const SharedData& sharedData)
+    {
+        switch (static_cast<InterThreadMessages>(sharedData.id))
+        {
+            case InterThreadMessages::FileChanged:
+            {
+                if (sharedData.data.has_value() == false)
+                    LL_EXCEPTION_UNEXPECTED_VALUE;
+
+                const FileWatcher::FileChangedEventArgs* fileChangedEventArgs =
+                    std::any_cast<FileWatcher::FileChangedEventArgs>(&(sharedData.data));
+
+                if (fileChangedEventArgs == nullptr)
+                    LL_EXCEPTION_UNEXPECTED_VALUE;
+
+                OnFileChangedImpl(fileChangedEventArgs);
+
+                break;
+            }
+            case InterThreadMessages::AutoScroll:
+                LL_EXCEPTION_NOT_IMPLEMENT("Auto scroll not implemented");
+            case InterThreadMessages::CountColors:
+                LL_EXCEPTION_NOT_IMPLEMENT("Count colors not implemented");
+            case InterThreadMessages::FirstFrameDisplayed:
+                LL_EXCEPTION_NOT_IMPLEMENT("First frame displayed not implemented");
+            case InterThreadMessages::LoadFileExternally:
+                LL_EXCEPTION_NOT_IMPLEMENT("Load file externally not implemented");
+            default:
+                break;
+        }
+    }
+
     void TestApp::Run()
     {
-        ::Win32::Win32Helper::MessageLoop();
+        bool shouldQuit = false;
+        while (!shouldQuit)
+        {
+            DWORD count = 1;
+            DWORD result = MsgWaitForMultipleObjects(count, &fEventSync.GetEventHandle(), FALSE, INFINITE, QS_ALLINPUT);
+
+            if (result < count)
+            {
+                fEventSync.ProcessData();
+            }
+            else if (result == WAIT_FAILED)
+            {
+                std::cerr << "Wait failed! Error: " << GetLastError() << std::endl;
+                break;
+            }
+            else
+            {
+                // Handle Windows messages
+                shouldQuit = ::Win32::Win32Helper::ProcessApplicationMessage();
+            }
+        }
     }
 
     bool TestApp::JumpFiles(FileIndexType step)
@@ -3743,8 +3798,8 @@ namespace OIV
     OperationResult TestApp::CutSelectedArea()
     {
         OperationResult result = OperationResult::UnkownError;
-        // Please note that currently this function works on the rasterized image, a more general solution is needed to
-        // work on a previous stage image.
+        // Please note that currently this function works on the rasterized image, a more general solution is needed
+        // to work on a previous stage image.
         if (IsImageOpen() == false)
         {
             result = OperationResult::NoDataFound;
@@ -3950,8 +4005,8 @@ namespace OIV
                 {
                     // Still the same image on display, assing number of colors and refresh ImageInfo
 
-                    // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't restart
-                    // for this image.
+                    // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't
+                    // restart for this image.
                     fCountingImageColor.reset();
                     fImageState.GetImage(ImageChainStage::SourceImage)
                         ->SetNumUniqueColors((int64_t) uMsg.lParam != UniqueColorsUninitialized - 1
