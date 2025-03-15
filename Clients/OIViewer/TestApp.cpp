@@ -2191,9 +2191,8 @@ namespace OIV
 
     void TestApp::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
     {
-        fEventSync.AddSharedData(static_cast<std::underlying_type_t<InterThreadMessages>>(
-                                     InterThreadMessages::FileChanged),
-                                 fileChangedEventArgs);
+        fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(InterThreadMessages::FileChanged),
+                           fileChangedEventArgs);
     }
 
     void TestApp::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
@@ -2906,15 +2905,43 @@ namespace OIV
         return isDefault;
     }
 
-    void TestApp::OnMessageFromBackgroundThread(const SharedData& sharedData)
+    void TestApp::OnCountingColorsCompleted(const CountColorsData& countColorsData)
     {
+        fIsColorThreadRunning = false;
+
+        if (fImageState.GetImage(ImageChainStage::SourceImage).get() ==
+            reinterpret_cast<OIVBaseImage*>(countColorsData.image))
+        {
+            // Still the same image on display, assing number of colors and refresh ImageInfo
+
+            // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't
+            // restart for this image.
+            fCountingImageColor.reset();
+            fImageState.GetImage(ImageChainStage::SourceImage)
+                ->SetNumUniqueColors(countColorsData.colorCount != UniqueColorsUninitialized - 1
+                                         ? countColorsData.colorCount
+                                         : UniqueColorsFailed);
+
+            if (GetImageInfoVisible() == true)
+                ShowImageInfo();
+        }
+        else
+        {
+            // If a different image on display Just count colors
+            if (GetImageInfoVisible() == true)
+                CountColorsAsync();
+        }
+    }
+
+    void TestApp::OnMessageFromBackgroundThread(const EventData& sharedData)
+    {
+        if (sharedData.data.has_value() == false)
+            LL_EXCEPTION_UNEXPECTED_VALUE;
+
         switch (static_cast<InterThreadMessages>(sharedData.id))
         {
             case InterThreadMessages::FileChanged:
             {
-                if (sharedData.data.has_value() == false)
-                    LL_EXCEPTION_UNEXPECTED_VALUE;
-
                 const FileWatcher::FileChangedEventArgs* fileChangedEventArgs =
                     std::any_cast<FileWatcher::FileChangedEventArgs>(&(sharedData.data));
 
@@ -2928,6 +2955,12 @@ namespace OIV
             case InterThreadMessages::AutoScroll:
                 LL_EXCEPTION_NOT_IMPLEMENT("Auto scroll not implemented");
             case InterThreadMessages::CountColors:
+            {
+                const auto& colorsDAta = std::any_cast<const CountColorsData&>(sharedData.data);
+                OnCountingColorsCompleted(colorsDAta);
+                break;
+            }
+
                 LL_EXCEPTION_NOT_IMPLEMENT("Count colors not implemented");
             case InterThreadMessages::FirstFrameDisplayed:
                 LL_EXCEPTION_NOT_IMPLEMENT("First frame displayed not implemented");
@@ -3996,34 +4029,7 @@ namespace OIV
             case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
                 OnFileChangedImpl(reinterpret_cast<FileWatcher::FileChangedEventArgs*>(uMsg.wParam));
                 break;
-            case Win32::UserMessage::PRIVATE_WM_COUNT_COLORS:
-            {
-                fIsColorThreadRunning = false;
 
-                if (fImageState.GetImage(ImageChainStage::SourceImage).get() ==
-                    reinterpret_cast<OIVBaseImage*>(uMsg.wParam))
-                {
-                    // Still the same image on display, assing number of colors and refresh ImageInfo
-
-                    // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't
-                    // restart for this image.
-                    fCountingImageColor.reset();
-                    fImageState.GetImage(ImageChainStage::SourceImage)
-                        ->SetNumUniqueColors((int64_t) uMsg.lParam != UniqueColorsUninitialized - 1
-                                                 ? (int64_t) uMsg.lParam
-                                                 : UniqueColorsFailed);
-
-                    if (GetImageInfoVisible() == true)
-                        ShowImageInfo();
-                }
-                else
-                {
-                    // If a different image on display Just count colors
-                    if (GetImageInfoVisible() == true)
-                        CountColorsAsync();
-                }
-            }
-            break;
             case WM_COPYDATA:
             {
                 COPYDATASTRUCT* cds = (COPYDATASTRUCT*) uMsg.lParam;
@@ -4256,13 +4262,14 @@ namespace OIV
 
                 fCountingImageColor = openedImage;
                 fCountingColorsThread = std::thread(
-                    [](OIVBaseImageSharedPtr image, HWND windowHandle) -> void
+                    [&](OIVBaseImageSharedPtr image) -> void
                     {
                         int64_t uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
-                        ::PostMessage(windowHandle, Win32::UserMessage::PRIVATE_WM_COUNT_COLORS, (WPARAM) image.get(),
-                                      (LPARAM) uniqueValues);
+                        fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(
+                                               InterThreadMessages::CountColors),
+                                           CountColorsData{image.get(), uniqueValues});
                     },
-                    fCountingImageColor, fWindow.GetHandle());
+                    fCountingImageColor);
             }
         }
     }
