@@ -47,14 +47,15 @@
 #include <ImageLoader.h>
 #include <ImageCodec.h>
 #include "win32/EventSync.h"
+#include "InterThreadMessages.h"
 
 namespace OIV
 {
     enum class ImageSizeType
     {
-        Original
-        ,Transformed
-        ,Visible
+        Original,
+        Transformed,
+        Visible
     };
 
     // Determines whether to change zoom / pan when loading a new file
@@ -310,7 +311,8 @@ namespace OIV
         void UpdateSelectionRectText();
         void OnImageReady(IMCodec::ImageSharedPtr image);
         LLUtils::PointI32 SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen);
-        void OnMessageFromBackgroundThread(const SharedData& sharedData);
+        void OnMessageFromBackgroundThread(const EventData& sharedData);
+        void OnCountingColorsCompleted(const CountColorsData& countColorsData);
 
         using netsettings_Create_func = void (*)(GuiCreateParams*);
         using netsettings_SetVisible_func = void (*)(bool);
