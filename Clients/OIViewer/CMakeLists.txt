@@ -1,5 +1,5 @@
 #OIV library
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 
 #TODO: change source files to be under Source folder
 file(GLOB_RECURSE sourceFiles
