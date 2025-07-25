@@ -34,3 +34,9 @@ function (getGitCommitDate working_dir commitDate)
     SET(${commitDate} ${temp} PARENT_SCOPE)
 endfunction()
 
+function (getGitRevCount working_dir revCount)
+    execute_process (COMMAND git rev-list HEAD --count WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE temp)
+    string(REPLACE \n "" temp ${temp})
+    SET(${revCount} ${temp} PARENT_SCOPE)
+endfunction()
+

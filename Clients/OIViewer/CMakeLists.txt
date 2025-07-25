@@ -10,8 +10,13 @@ file(GLOB_RECURSE sourceFiles
 getGitHash(${CMAKE_CURRENT_SOURCE_DIR} GIT_HASH_ID)
 getGitBranch(${CMAKE_CURRENT_SOURCE_DIR} GIT_BRANCH)
 getGitCommitDate(${CMAKE_CURRENT_SOURCE_DIR} GIT_COMMIT_DATE)
+getGitRevCount(${CMAKE_CURRENT_SOURCE_DIR} GIT_REV_COUNT)
+message("Git rev count: ${GIT_REV_COUNT}")
 
-add_compile_definitions(GIT_HASH_ID="${GIT_HASH_ID}" GIT_COMMIT_DATE="${GIT_COMMIT_DATE}" GIT_BRANCH="${GIT_BRANCH}")
+add_compile_definitions(GIT_HASH_ID="${GIT_HASH_ID}"
+GIT_COMMIT_DATE="${GIT_COMMIT_DATE}"
+GIT_BRANCH="${GIT_BRANCH}"
+OIV_VERSION_REVISION="${GIT_REV_COUNT}") 
 
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)
