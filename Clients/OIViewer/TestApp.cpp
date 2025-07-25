@@ -1284,13 +1284,13 @@ namespace OIV
 
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
-
     void TestApp::UpdateTitle()
     {
-        const static std::wstring cachedVersionString =
+        const static LLUtils::native_string_type cachedVersionString =
             OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' +
             std::to_wstring(OIV_VERSION_MINOR) +
-            (OIV_VERSION_REVISION != 0 ? (std::wstring(L".") + std::to_wstring(OIV_VERSION_REVISION)) : std::wstring{})
+            (OIV_VERSION_REVISION != 0 ? (std::wstring(L".") 
+            + LLUtils::StringUtility::ToNativeString( OIV_VERSION_REVISION)) : std::wstring{})
 
         // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0

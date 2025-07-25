@@ -66,6 +66,10 @@ if (OIV_VERSION_BUILD)
     add_compile_definitions(OIV_VERSION_BUILD=${OIV_VERSION_BUILD})
 endif()
 
+if (OIV_VERSION_REVISION)
+    add_compile_definitions(OIV_VERSION_REVISION=${OIV_VERSION_REVISION})
+endif()
+
 if (OIV_RELEASE_SUFFIX)
   add_compile_definitions(OIV_RELEASE_SUFFIX=${OIV_RELEASE_SUFFIX})
 endif()
