@@ -151,7 +151,7 @@ namespace OIV
         }
 
 
-        const auto& processData = frame->GetProcessData();
+        const auto& processData = fileImage->GetImage()->GetProcessData();
         messageValues.emplace_back("Load time", MessageFormatter::ValueObjectList{ {static_cast<long double>(processData.processTime)} , {"ms" } });
         messageValues.emplace_back("Display time", MessageFormatter::ValueObjectList{ { rasterized->GetDisplayTime()} , {"ms"} });
         std::wstring pluginDescription = L"Unknown";
