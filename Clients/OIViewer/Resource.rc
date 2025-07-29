@@ -1,18 +1,8 @@
-// Microsoft Visual C++ generated resource script.
-//
 #include "resource.h"
-#include "winuser.h"
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 2 resource.
-//
-#include "winres.h"
-/////////////////////////////////////////////////////////////////////////////
-//
-// Icon
-//
+// these are also defined in windows headers Windows.h
+#define RT_MANIFEST 24
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
@@ -28,4 +18,4 @@ IDI_APP_ICON ICON
 
 #endif
 
-1 RT_MANIFEST "OIViewerManifest.xml"
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "OIViewerManifest.xml"
