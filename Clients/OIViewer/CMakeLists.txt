@@ -19,7 +19,7 @@ OIV_VERSION_REVISION="${GIT_REV_COUNT}")
 
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)
-add_executable (${TargetName} ${sourceFiles})
+add_executable (${TargetName} WIN32 ${sourceFiles})
 
 #Build resources for embedding an Icon into the executable
 
@@ -35,9 +35,14 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND NOT MINGW)
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
           COMMENT "Compiling resources"
      )
-     target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
-     # Don't automotically create Manifest, it is defined in the resource file
-     target_link_options(${TargetName} PRIVATE "/MANIFEST:NO")
+     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+          target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS")
+          # Don't automotically create Manifest, it is defined in the resource file
+          target_link_options(${TargetName} PRIVATE "/MANIFEST:NO")
+     else()
+           
+     endif()
+     
 else()
      add_custom_command(TARGET ${TargetName}
           PRE_LINK
@@ -96,7 +101,12 @@ elseif(CLANG)
 endif()
 
 #Link resources file to the executable
-target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.res)
+# Currently when using Clang, Cmake adds to CMAKE_CXX_LINK_EXECUTABLE 'xlinker /Manifest:EMBDED' which cannot be overridden easily.
+# That causes duplicate manifests, the custom we are adding here and the deafult one.
+# A temporary fix — disable linking resources when using Clang on Windows.
+if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
+     target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.res)
+endif()
 
 #Copy own resources to the output dir
 add_custom_command(TARGET ${TargetName} POST_BUILD
