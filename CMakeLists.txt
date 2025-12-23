@@ -7,12 +7,6 @@ if (${CMAKE_CORSSCOMPILING})
     message("Cross compiling: Host: ${CMAKE_HOST_SYSTEM_NAME}, Target: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-if (MINGW)
-    #temporary compilation fix -  disable firibi and webp
-    option(FREETYPE_WRAPPER_BUILD_FRIBIDI "build fribidi" OFF)
-    option(IMCODEC_BUILD_CODEC_WEBP "Build Codec WEBP" FALSE)
-endif()
-
 include (common.cmake)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")

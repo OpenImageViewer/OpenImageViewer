@@ -1,0 +1,47 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "mingw-w64-base",
+            "description": "Build cross compile with fribidi off and some codecs",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "mingw-w64-x86_64.cmake"
+            }
+        }
+        ,
+        {
+          "name" : "mingw-w64-release",
+          "inherits":"mingw-w64-base",
+          "binaryDir": "${sourceDir}/build/mingw-w64/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+
+        },
+        {
+          "name" : "mingw-w64-debug",
+          "inherits":"mingw-w64-base",
+          "binaryDir": "${sourceDir}/build/mingw-w64/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "mingw-w64-debug-build",
+            "configurePreset": "mingw-w64-debug"
+        },
+        {
+            "name": "mingw-w64-release-build",
+            "configurePreset": "mingw-w64-release"
+        }
+    ]
+}
