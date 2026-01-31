@@ -95,7 +95,11 @@ SortIncludes: false                 # Alphabetize `#include` statements
 # Structs, Classes & Access Modifiers
 # ------------------------------
 AccessModifierOffset: -2            # Indent access specifiers `public:` under class
-AlignConsecutiveAssignments: false    # Align `=` for consecutive assignments
+AlignConsecutiveAssignments:    # Align `=` for consecutive assignments
+  Enabled: true          
+  AcrossEmptyLines: false
+  AcrossComments: false
+
 AlignConsecutiveDeclarations: false   # Align `int a; float b;` for readability
 AlignTrailingComments: true          # Align comments for better readability
 EmptyLineAfterAccessModifier: Always # Ensure a blank line after `public:` or `private:`
