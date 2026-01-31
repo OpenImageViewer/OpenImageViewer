@@ -11,6 +11,8 @@ include (common.cmake)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
+option(OIV_BUILD_CLIENT "Build client application" TRUE)
+option(OIV_BUILD_TESTS "Build tests application" TRUE)
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
 option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
 option(OIV_WARNING_LEVEL_EXTREME "Warning level extreme" FALSE)
@@ -139,13 +141,28 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin"
 #set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 setCommonCompileParameters()
 add_compile_definitions(UNICODE _UNICODE)
-add_definitions(-DLLUTILS_ENABLE_DEBUG_SYMBOLS=1)
-include_directories(./External/LLUtils/Include)
 include_directories(./Extensions)
+
+add_subdirectory(./External/LLUtils)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     option(WIN32_LIB_BUILD_SAMPLES "build win32 samples" OFF)
     add_subdirectory(./External/Win32)
 endif()
-add_subdirectory(oivlib)
-add_subdirectory(Clients/OIViewer)
+
+    add_subdirectory(oivshared)
+
+    option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
+    add_subdirectory(./External/ImageCodec)
+
+
+
+
+if(OIV_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
+if (OIV_BUILD_CLIENT)
+    add_subdirectory(oivlib)
+    add_subdirectory(Clients/OIViewer)
+endif()

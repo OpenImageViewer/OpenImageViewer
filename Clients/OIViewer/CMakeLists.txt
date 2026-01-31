@@ -61,7 +61,6 @@ else()
 endif()
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LLUtils/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/Win32/Win32/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageCodec/Include)
@@ -74,11 +73,12 @@ target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Include)
 target_link_libraries(${TargetName}
 
 #local libraries
+LLUtils::LLUtils
 ImageUtil
 oiv
+oivshared
 Win32
 #system libraries
-dbghelp.lib
 kernel32.lib
 user32.lib
 gdi32.lib
@@ -92,8 +92,24 @@ hid
 )
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC"))
-     set_target_properties(${TargetName} PROPERTIES LINK_FLAGS
-     "/DELAYLOAD:\"libpng16.dll\" /DELAYLOAD:\"FreeImage.dll\" /DELAYLOAD:\"D3DCompiler_47.dll\" /DELAYLOAD:\"turbojpeg.dll\" /DELAYLOAD:\"advapi32.dll\" /DELAYLOAD:\"SHELL32.dll\" /DELAYLOAD:\"MSIMG32.dll\" /DELAYLOAD:\"dbghelp.dll\" /DELAYLOAD:\"COMDLG32.dll\" /DELAYLOAD:\"Shcore.dll\" /DELAYLOAD:\"API-MS-WIN-SHCORE-SCALING-L1-1-1.DLL\"")
+     set(OIV_DELAYLOAD_DLLS
+          "/DELAYLOAD:\"libpng16.dll\""
+          "/DELAYLOAD:\"FreeImage.dll\""
+          "/DELAYLOAD:\"D3DCompiler_47.dll\""
+          "/DELAYLOAD:\"turbojpeg.dll\""
+          "/DELAYLOAD:\"advapi32.dll\""
+          "/DELAYLOAD:\"SHELL32.dll\""
+          "/DELAYLOAD:\"MSIMG32.dll\""
+          "/DELAYLOAD:\"COMDLG32.dll\""
+          "/DELAYLOAD:\"Shcore.dll\""
+          "/DELAYLOAD:\"API-MS-WIN-SHCORE-SCALING-L1-1-1.DLL\"")
+
+     if (LLUTILS_ENABLE_DEBUG_SYMBOLS)
+          list(APPEND OIV_DELAYLOAD_DLLS "/DELAYLOAD:\"dbghelp.dll\"")
+     endif()
+
+     string(JOIN " " OIV_DELAYLOAD_LINK_FLAGS ${OIV_DELAYLOAD_DLLS})
+     set_target_properties(${TargetName} PROPERTIES LINK_FLAGS "${OIV_DELAYLOAD_LINK_FLAGS}")
 elseif(MINGW)
      message(WARNING "Delay load for MINGW is yet to be implemented")
 elseif(CLANG)
