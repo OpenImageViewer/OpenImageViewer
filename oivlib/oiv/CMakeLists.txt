@@ -23,12 +23,9 @@ if ( ${OIV_BUILD_FREETYPE})
 endif()
 
 target_include_directories(${TargetName} PRIVATE ./Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/Include)
+
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
-
-option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
-add_subdirectory(${ExternalFolder}/ImageCodec ./external/ImageCodec)
 
 
 option(FREETYPE_WRAPPER_BUILD_SAMPLES "freetype build samples" OFF)
@@ -43,13 +40,16 @@ if (OIV_DISABLE_WARNINGS_EXTERNAL_LIBS)
     target_compile_definitions(easyexif PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
-target_link_libraries(${TargetName} 
+target_link_libraries(${TargetName}
+PUBLIC
+LLUtils::LLUtils
+ImageUtil
+PRIVATE
 #Local libraries
 ImageCodec
 easyexif
 FreeTypeWrapper
 OIVD3D11Renderer
-dbghelp
 delayimp
 
 #external dependencies

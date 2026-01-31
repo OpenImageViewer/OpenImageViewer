@@ -57,6 +57,22 @@
 
 namespace OIV
 {
+    namespace
+    {
+        struct FileIndexResidencyReadyData
+        {
+            std::wstring fileName;
+            IMCodec::ImageSharedPtr image;
+        };
+
+        struct FolderLoadResidencyReadyData
+        {
+            BrowseResidencyManager::FileListSnapshot snapshot;
+            std::wstring fileName;
+            IMCodec::ImageSharedPtr image;
+        };
+    }  // namespace
+
     void TestApp::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         if (IsImageOpen())
@@ -670,7 +686,6 @@ namespace OIV
         }
 
         SortFileList();
-        UpdateOpenedFileIndex();
 
         auto userMessage = LLUtils::StringUtility::ToWString(request.displayName);
 
@@ -926,17 +941,17 @@ namespace OIV
         using namespace std;
         const string amountStr = request.args.GetArgValue("amount");
         const string isSubImage = request.args.GetArgValue("subimage");
-        FileIndexType amount = amountStr == "start" ? FileIndexStart
-                               : amountStr == "end" ? FileIndexEnd
-                                                    : std::stoi(amountStr, nullptr);
+        FileList::index_type amount = amountStr == "start" ? FileList::IndexStart
+                                      : amountStr == "end" ? FileList::IndexEnd
+                                                           : std::stoi(amountStr, nullptr);
         if (isSubImage == "true")
         {
             auto& imageList = fWindow.GetImageControl().GetImageList();
             const auto numElements = imageList.GetNumberOfElements();
             if (numElements > 0)
             {
-                FileIndexType nextIndex = LLUtils::Math::Modulu<FileIndexType>(imageList.GetSelected() + amount,
-                                                                               numElements);
+                FileList::index_type nextIndex = LLUtils::Math::Modulu<FileList::index_type>(
+                    imageList.GetSelected() + amount, numElements);
                 imageList.SetSelected(static_cast<int>(nextIndex));
             }
         }
@@ -1081,6 +1096,8 @@ namespace OIV
 
     TestApp::~TestApp()
     {
+        fIsShuttingDown = true;
+
         if (fCountingColorsThread.joinable())
             fCountingColorsThread.join();
 
@@ -1096,9 +1113,35 @@ namespace OIV
           fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this)),
           fFreeType(std::make_unique<FreeType::FreeTypeConnector>()), fLabelManager(fFreeType.get()),
           fEventSync(std::bind(&TestApp::OnMessageFromBackgroundThread, this, std::placeholders::_1))
+
     //, fFileCache(&fImageLoader, std::bind(&TestApp::OnImageReady, this, std::placeholders::_1))
 
     {
+        fBrowseResidencyManager.emplace(
+            fImageResidency,
+            [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+            {
+                if (!fIsShuttingDown)
+                {
+                    fEventSync.AddData(
+                        static_cast<std::underlying_type_t<InterThreadMessages>>(
+                            InterThreadMessages::FileIndexResidencyReady),
+                        FileIndexResidencyReadyData{fileName, image});
+                }
+            },
+            [this](const BrowseResidencyManager::FileListSnapshot& snapshot,
+                   const std::wstring& fileName,
+                   IMCodec::ImageSharedPtr image)
+            {
+                if (!fIsShuttingDown)
+                {
+                    fEventSync.AddData(
+                        static_cast<std::underlying_type_t<InterThreadMessages>>(
+                            InterThreadMessages::FolderLoadResidencyReady),
+                        FolderLoadResidencyReadyData{snapshot, fileName, image});
+                }
+            });
+
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(
             std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
@@ -1284,13 +1327,15 @@ namespace OIV
 
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
+
     void TestApp::UpdateTitle()
     {
         const static LLUtils::native_string_type cachedVersionString =
             OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' +
             std::to_wstring(OIV_VERSION_MINOR) +
-            (OIV_VERSION_REVISION != 0 ? (std::wstring(L".") 
-            + LLUtils::StringUtility::ToNativeString( OIV_VERSION_REVISION)) : std::wstring{})
+            (OIV_VERSION_REVISION != 0
+                 ? (std::wstring(L".") + LLUtils::StringUtility::ToNativeString(OIV_VERSION_REVISION))
+                 : std::wstring{})
 
         // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
@@ -1325,8 +1370,9 @@ namespace OIV
                     std::wstringstream ss;
                     if (GetAppActive() == true)
                     {
-                        ss << (fCurrentFileIndex == FileIndexStart ? 0 : fCurrentFileIndex + 1) << L"/"
-                           << fListFiles.size() << L" | ";
+                        ss << (fFileList->GetCurrentIndex() == FileList::IndexStart ? 0
+                                                                                    : fFileList->GetCurrentIndex() + 1)
+                           << L"/" << fFileList->GetSize() << L" | ";
                     }
 
                     ss << decomposedPath.fileName << decomposedPath.extension << " @ "
@@ -1355,6 +1401,7 @@ namespace OIV
 
     void TestApp::UnloadOpenedImaged()
     {
+        fBrowseResidencyManager->InvalidateCurrent();
         fImageState.ClearAll();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
@@ -1406,23 +1453,6 @@ namespace OIV
             SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()),
                            static_cast<GroupID>(UserMessageGroups::SuccessfulFileLoad),
                            MessageFlags::Interchangeable | MessageFlags::Moveable);
-    }
-
-    void TestApp::WatchCurrentFolder()
-    {
-        if (GetOpenedFileName().empty() == false)
-        {
-            std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
-            if (absoluteFolderPath != fCurrentFolderWatched)
-            {
-                if (fCurrentFolderWatched.empty() == false)
-                    fFileWatcher.RemoveFolder(fCurrentFolderWatched);
-
-                fCurrentFolderWatched = absoluteFolderPath;
-
-                fOpenedFileFolderID = fFileWatcher.AddFolder(absoluteFolderPath);
-            }
-        }
     }
 
     void TestApp::AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
@@ -1593,12 +1623,16 @@ namespace OIV
     bool TestApp::LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
         std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
+        fBrowseResidencyManager->SetWorkingFolder(std::filesystem::path(normalizedPath).parent_path().wstring());
+        fBrowseResidencyManager->InvalidateCurrent();
+
         //  fFileCache.Add(normalizedPath);
 
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
 
-        IMCodec::Parameters params = {{L"canvasWidth", (int) fWindow.GetClientSize().cx},
-                                      {L"canvasHeight", (int) fWindow.GetClientSize().cy}};
+        IMCodec::Parameters params;
+        params.SetCustom(LLUTILS_TEXT("canvasWidth"), static_cast<int>(fWindow.GetClientSize().cx));
+        params.SetCustom(LLUTILS_TEXT("canvasHeight"), static_cast<int>(fWindow.GetClientSize().cy));
 
         ResultCode result = file->Load(&fImageLoader, loaderFlags, IMCodec::ImageLoadFlags::None, params);
 
@@ -1738,39 +1772,14 @@ namespace OIV
                fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File;
     }
 
-    void TestApp::UpdateOpenedFileIndex()
-    {
-        if (IsOpenedImageIsAFile())
-        {
-            LLUtils::ListWStringIterator it = std::find(fListFiles.begin(), fListFiles.end(), GetOpenedFileName());
-
-            if (it != fListFiles.end())
-                fCurrentFileIndex = std::distance(fListFiles.begin(), it);
-        }
-    }
-
     void TestApp::SortFileList()
     {
-        std::sort(fListFiles.begin(), fListFiles.end(), fFileSorter);
+        fFileList->Sort();
     }
 
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
-        using namespace std::filesystem;
-
-        const std::wstring absoluteFolderPath = path(absoluteFilePath).parent_path();
-
-        if (absoluteFolderPath != fListedFolder)
-        {
-            auto fileList = GetSupportedFileListInFolder(absoluteFolderPath);
-
-            // File is loaded from a different folder then the active one.
-            std::swap(fListFiles, fileList);
-            fCurrentFileIndex = FileIndexStart;
-            fListedFolder = absoluteFolderPath;
-        }
-
-        UpdateOpenedFileIndex();
+        fFileList->SetFolder(std::filesystem::path(absoluteFilePath).parent_path(), {});
     }
 
     void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
@@ -2008,27 +2017,21 @@ namespace OIV
             // Don't remove file, just update index
             if (shouldRemoveFile == false)
             {
-                if (fCurrentFileIndex > 0)
-                    fCurrentFileIndex--;
-                else if (fCurrentFileIndex == 0 && fListFiles.size() > 1)
-                    fCurrentFileIndex++;
+                // TODO: update title to have a ? sign in the file index, since it is gone.
             }
             else
             {
                 // Remove and unload the file
                 bool isFileLoaded = false;
-                if (fListFiles.size() == 1)
+                if (fFileList->GetSize() == 1)
                 {
-                    fCurrentFileIndex = FileIndexStart;
-                    isFileLoaded = JumpFiles(FileIndexStart);
+                    isFileLoaded = JumpFiles(FileList::IndexStart);
                 }
                 else
                 {
-                    fCurrentFileIndex -= 1;
                     isFileLoaded = JumpFiles(1);
                     if (isFileLoaded == false)
                     {
-                        fCurrentFileIndex += 1;
                         isFileLoaded = JumpFiles(-1);
                     }
                 }
@@ -2036,9 +2039,9 @@ namespace OIV
                 if (isFileLoaded == false)
                 {
                     // Could find a suitable file to load, unload current file and reset index
+                    // TODO: add user message that no more files are available.
                     UnloadOpenedImaged();
                     ShowWelcomeMessage();
-                    fCurrentFileIndex = FileIndexStart;
                 }
             }
 
@@ -2046,103 +2049,15 @@ namespace OIV
         }
         else
         {
-            // File has been added to the current folder, indices have changed - update current file index
-            auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(),
-                                                  fFileSorter);
-            fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
         }
         UpdateTitle();
-    }
-
-    void TestApp::UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& filePath,
-                                 const std::wstring& filePath2)
-    {
-        switch (fileOp)
-        {
-            case FileWatcher::FileChangedOp::Add:
-            {
-                // Add file to list only if it's a known file type
-                std::wstring extension = LLUtils::StringUtility::ToLower(
-                    std::filesystem::path(filePath).extension().wstring());
-                std::wstring_view sv(extension);
-                if (sv.empty() == false)
-                    sv = sv.substr(1);
-
-                if (fKnownFileTypesSet.contains(sv.data()))
-                {
-                    // TODO: add file sorted
-                    auto itAddedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath, fFileSorter);
-
-                    if (itAddedFile != fListFiles.end() && *itAddedFile == filePath)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Trying to add an existing file");
-
-                    fListFiles.insert(itAddedFile, filePath);
-
-                    // File has been added to the current folder, indices have changed - update current file index
-                    auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(),
-                                                          fFileSorter);
-                    fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
-
-                    UpdateTitle();
-                }
-            }
-            break;
-
-            case FileWatcher::FileChangedOp::Remove:
-            {
-                auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
-                if (it != fListFiles.end())
-                {
-                    auto fileNameToRemove = *it;
-                    fListFiles.erase(it);
-                    ProcessRemovalOfOpenedFile(fileNameToRemove);
-                }
-            }
-            break;
-            case FileWatcher::FileChangedOp::Rename:
-            {
-                auto it = std::find(fListFiles.begin(), fListFiles.end(), filePath);
-                if (it != fListFiles.end())
-                {
-                    auto fileNameToRemove = *it;
-                    fListFiles.erase(it);
-                    auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2, fFileSorter);
-                    fListFiles.insert(itRenamedFile, filePath2);
-
-                    if (filePath == GetOpenedFileName())
-                    {
-                        UnloadOpenedImaged();
-                        LoadFile(filePath2, IMCodec::PluginTraverseMode::NoTraverse);
-                    }
-                    else
-                    {
-                        // File has been added to the current folder, indices have changed - update current file index
-                        auto itCurrentFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), GetOpenedFileName(),
-                                                              fFileSorter);
-                        fCurrentFileIndex = std::distance(fListFiles.begin(), itCurrentFile);
-                        UpdateTitle();
-                    }
-                }
-                else
-                {
-                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Invalid file removal request");
-                }
-            }
-
-            break;
-
-            case FileWatcher::FileChangedOp::Modified:
-            case FileWatcher::FileChangedOp::None:
-            case FileWatcher::FileChangedOp::WatchedFolderRemoved:
-                break;
-        }
     }
 
     void TestApp::OnFileChangedImpl(const FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs = *fileChangedEventArgsPtr;
 
-        if (fileChangedEventArgs.folderID == fOpenedFileFolderID)
+        if (fileChangedEventArgs.folderID == fFileList->GetFolderID())
         {
             std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
             std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
@@ -2156,17 +2071,15 @@ namespace OIV
                 case FileWatcher::FileChangedOp::None:
                     break;
                 case FileWatcher::FileChangedOp::Add:
-                    UpdateFileList(fileChangedEventArgs.fileOp, changedFileName, std::wstring());
+
                     break;
                 case FileWatcher::FileChangedOp::Remove:
-                    UpdateFileList(fileChangedEventArgs.fileOp, changedFileName, std::wstring());
                     break;
                 case FileWatcher::FileChangedOp::Modified:
                     if (absoluteFilePath == changedFileName)
                         ProcessCurrentFileChanged();
                     break;
                 case FileWatcher::FileChangedOp::Rename:
-                    UpdateFileList(FileWatcher::FileChangedOp::Rename, changedFileName, changedFileName2);
                     if (absoluteFilePath == changedFileName2)
                         ProcessCurrentFileChanged();
                     break;
@@ -2482,9 +2395,49 @@ namespace OIV
         if (IsOpenedImageIsAFile())
         {
             LoadFileInFolder(GetOpenedFileName());
-            WatchCurrentFolder();
         }
     }
+
+    void TestApp::OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+    {
+        if (image == nullptr)
+            return;
+
+        if (fFileList == nullptr || !fFileList->IsIndexValid(fFileList->GetCurrentIndex()) ||
+            fFileList->GetCurrentItemName() != fileName)
+        {
+            return;
+        }
+
+        std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(fileName, std::move(image));
+        LoadOivImage(file);
+    }
+
+    void TestApp::OnFolderLoadResidencyReady(const BrowseResidencyManager::FileListSnapshot& snapshot,
+                                             const std::wstring& fileName,
+                                             IMCodec::ImageSharedPtr image)
+    {
+        if (image == nullptr)
+            return;
+
+        (void) image;
+
+        auto fileListCopy = snapshot.files;
+        fFileList->SetFolder(snapshot.folderPath, std::move(fileListCopy));
+
+        const auto previousIndex = fFileList->GetCurrentIndex();
+        fFileList->SetCurrentIndexByElementName(fileName);
+
+        if (previousIndex == fFileList->GetCurrentIndex())
+            OnFileIndexChanged(fFileList->GetCurrentIndex(), fFileList->GetCurrentIndex());
+    }
+
+    void TestApp::OnFileIndexChanged(FileList::index_type current, FileList::index_type previous)
+    {
+        (void) current;
+        fBrowseResidencyManager->OnCurrentIndexChanged(fFileList->CreateSnapshot(), previous);
+    }
+
     void TestApp::PostInitOperations()
     {
         LLUtils::Logger::GetSingleton().AddLogTarget(&mLogFile);
@@ -2498,9 +2451,8 @@ namespace OIV
             {
                 SetSlideShowEnabled(false);
 
-                bool foundFile = JumpFiles(1) ||
-                                 ((fCurrentFileIndex == std::distance(fListFiles.begin(), fListFiles.end()) - 1) &&
-                                  JumpFiles(FileIndexStart));
+                bool foundFile = JumpFiles(1) || ((fFileList->GetCurrentIndex() == fFileList->GetSize() - 1) &&
+                                                  JumpFiles(FileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
             });
@@ -2604,6 +2556,14 @@ namespace OIV
         fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
 
         // If a file has been succesfuly loaded, index all the file in the folder
+
+        // IFileListProvider* fileListProvider, FileWatcher* fileWatcher, FileSorter fileSorter,
+        //          FileListStringSetType knownnFileTypesSet, FileListStringType knownFileTypes
+
+        fFileList = std::make_unique<FileList>(this, &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes,
+                                               std::bind(&TestApp::OnFileIndexChanged, this, std::placeholders::_1,
+                                                         std::placeholders::_2));
+
         ProcessLoadedDirectory();
         UpdateTitle();
 
@@ -2952,6 +2912,19 @@ namespace OIV
 
                 break;
             }
+            case InterThreadMessages::FileIndexResidencyReady:
+            {
+                const auto& fileIndexResidencyReadyData = std::any_cast<const FileIndexResidencyReadyData&>(sharedData.data);
+                OnFileIndexResidencyReady(fileIndexResidencyReadyData.fileName, fileIndexResidencyReadyData.image);
+                break;
+            }
+            case InterThreadMessages::FolderLoadResidencyReady:
+            {
+                const auto& folderLoadResidencyReadyData = std::any_cast<const FolderLoadResidencyReadyData&>(sharedData.data);
+                OnFolderLoadResidencyReady(folderLoadResidencyReadyData.snapshot, folderLoadResidencyReadyData.fileName,
+                                           folderLoadResidencyReadyData.image);
+                break;
+            }
             case InterThreadMessages::AutoScroll:
                 LL_EXCEPTION_NOT_IMPLEMENT("Auto scroll not implemented");
             case InterThreadMessages::CountColors:
@@ -2996,55 +2969,19 @@ namespace OIV
         }
     }
 
-    bool TestApp::JumpFiles(FileIndexType step)
+    bool TestApp::JumpFiles(FileList::index_type step)
     {
-        if (fListFiles.empty())
+        auto initialIndex = fFileList->GetCurrentIndex();
+        auto targetIndex = fFileList->IsMarkerIndex(step) ? step : initialIndex + step;
+        auto res = fFileList->SetCurrentIndex(targetIndex);
+
+        if (res == ResultCode::RC_EmptyData)
             return false;
 
-        FileCountType totalFiles = fListFiles.size();
-        FileIndexType fileIndex = fCurrentFileIndex;
+        if (res == ResultCode::RC_OutOfRange)
+            res = fFileList->SetCurrentIndex(step > 0 ? FileList::IndexStart : FileList::IndexEnd);
 
-        int sign;
-        if (step == FileIndexEnd)
-        {
-            // Last
-            fileIndex = static_cast<int32_t>(fListFiles.size());
-            sign = -1;
-        }
-        else if (step == FileIndexStart)
-        {
-            // first
-            fileIndex = -1;
-            sign = 1;
-        }
-        else
-        {
-            sign = step > 0 ? 1 : -1;
-        }
-
-        bool isLoaded = false;
-        LLUtils::ListWStringIterator it;
-
-        do
-        {
-            fileIndex += sign;
-
-            if (fileIndex < 0 || fileIndex >= static_cast<FileIndexType>(totalFiles) || fileIndex == fCurrentFileIndex)
-                break;
-
-            it = fListFiles.begin();
-            std::advance(it, fileIndex);
-        }
-
-        while ((isLoaded = LoadFile(*it, IMCodec::PluginTraverseMode::AnyPlugin |
-                                             IMCodec::PluginTraverseMode::OnlyKnownFileType)) == false);
-
-        if (isLoaded)
-        {
-            assert(fileIndex >= 0 && fileIndex < static_cast<FileIndexType>(totalFiles));
-            fCurrentFileIndex = fileIndex;
-        }
-        return isLoaded;
+        return res == ResultCode::RC_Success;
     }
 
     void TestApp::ToggleFullScreen(bool multiFullScreen)
@@ -3967,7 +3904,7 @@ namespace OIV
         {
             if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
             {
-                LoadFile(requestedFile, IMCodec::PluginTraverseMode::NoTraverse);
+                fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
             }
             else
             {
@@ -3977,7 +3914,7 @@ namespace OIV
                 switch (mbResult)
                 {
                     case IDYES:
-                        LoadFile(GetOpenedFileName(), IMCodec::PluginTraverseMode::NoTraverse);
+                        fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
                         break;
                     case IDNO:
                         break;
@@ -3991,7 +3928,7 @@ namespace OIV
         switch (fMofifiedFileReloadMode)
         {
             case MofifiedFileReloadMode::AutoBackground:
-                LoadFile(GetOpenedFileName(), IMCodec::PluginTraverseMode::NoTraverse);  // Load file immediatly
+                fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
                 break;
             case MofifiedFileReloadMode::AutoForeground:
             case MofifiedFileReloadMode::Confirmation:  // implicitly foreground
@@ -4115,50 +4052,20 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be closed.");
     }
 
-    LLUtils::ListWString TestApp::GetSupportedFileListInFolder(const std::wstring& folderPath)
-    {
-        LLUtils::ListWString fileList;
-        if (std::filesystem::is_directory(folderPath))
-        {
-            LLUtils::FileSystemHelper::FindFiles(fileList, folderPath, fKnownFileTypes, false, false);
-            std::sort(fileList.begin(), fileList.end(), fFileSorter);
-        }
-        else
-        {
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Not a folder");
-        }
-
-        return fileList;
-    }
-
     bool TestApp::LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
         bool success = false;
         if (std::filesystem::is_directory(filePath))
         {
-            auto fileList = GetSupportedFileListInFolder(filePath);
-            size_t i;
-            std::shared_ptr<OIVFileImage> file;
-            ResultCode result = ResultCode::RC_NotInitialized;
-
+            auto fileList = fFileList->GetSupportedFileListInFolder(filePath);
             if (fileList.empty() == false)
             {
-                // Traverse file list untill a file has been successfully loaded
-                for (i = 0; i < fileList.size(); i++)
-                {
-                    file = std::make_shared<OIVFileImage>(fileList.at(i));
-                    result = file->Load(&fImageLoader, IMCodec::PluginTraverseMode::NoTraverse);
-                    if (result == RC_Success)
-                        break;
-                }
-            }
-
-            if (result == RC_Success)
-            {
-                std::swap(fListFiles, fileList);
-                fCurrentFileIndex = i;
-                fListedFolder = filePath;
-                LoadOivImage(file);
+                const auto normalizedFolderPath = std::filesystem::path(filePath).lexically_normal().wstring();
+                fBrowseResidencyManager->RequestFolderLoadResidency(
+                    BrowseResidencyManager::FileListSnapshot{
+                        normalizedFolderPath,
+                        fileList,
+                        BrowseResidencyManager::FileListSnapshot::IndexStart});
                 success = true;
             }
         }
@@ -4361,6 +4268,13 @@ namespace OIV
                 fRefreshOperation.End();
             }
         }
+    }
+
+    // IFileListWatcher
+
+    FileListStringType TestApp::GetActiveFileName()
+    {
+        return GetOpenedFileName();
     }
 
 }  // namespace OIV

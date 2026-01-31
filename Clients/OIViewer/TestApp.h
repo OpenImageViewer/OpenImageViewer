@@ -20,7 +20,7 @@
 #include "RecursiveDelayOp.h"
 #include "AdaptiveMotion.h"
 #include "CommandManager.h"
-#include "FileSorter.h"
+#include "FileMangement/FileSorter.h"
 
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Buttons/ButtonStates.h>
@@ -31,14 +31,13 @@
 #include "SelectionRect.h"
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
-#include "FileSystem/FileCache.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
-
 #include "ContextMenu.h"
-#include "FileWatcher.h"
+#include "FileMangement/FileWatcher.h"
+#include <oivshared/BrowseResidencyManager.h>
 
 #include "MouseMultiClickHandler.h"
 #include "UI/MessageManager.h"
@@ -46,9 +45,12 @@
 #include <NetSettings/GuiProvider.h>
 #include <ImageLoader.h>
 #include <ImageCodec.h>
+#include <optional>
+#include <vector>
 #include "win32/EventSync.h"
 #include "InterThreadMessages.h"
-
+#include "FileMangement/FileList.h"
+#include <oivshared/ImageResidency.h>
 namespace OIV
 {
     enum class ImageSizeType
@@ -134,7 +136,7 @@ namespace OIV
         }
     };
 
-    class TestApp
+    class TestApp : public IFileListProvider
     {
       public:
 
@@ -148,8 +150,6 @@ namespace OIV
 
       private:  // types
 
-        using FileIndexType = LLUtils::ListWString::difference_type;
-        using FileCountType = LLUtils::ListWString::size_type;
         struct CommandRequestIntenal
         {
             std::string commandName;
@@ -217,7 +217,7 @@ namespace OIV
         HWND GetWindowHandle() const;
         void UpdateTitle();
         // bool JumpTo(FileIndexType fileIndex);
-        bool JumpFiles(FileIndexType step);
+        bool JumpFiles(FileList::index_type step);
         void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
@@ -254,8 +254,6 @@ namespace OIV
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
         bool LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags);
         bool LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode);
-
-        LLUtils::ListWString GetSupportedFileListInFolder(const std::wstring& folderPath);
         void LoadOivImage(OIVBaseImageSharedPtr oivImage);
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
@@ -263,7 +261,6 @@ namespace OIV
         const std::wstring& GetOpenedFileName() const;
         bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
-        void UpdateOpenedFileIndex();
         void LoadFileInFolder(std::wstring filePath);
         void TransformImage(IMUtil::AxisAlignedRotation transform, IMUtil::AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height, uint32_t rowPitch,
@@ -290,11 +287,15 @@ namespace OIV
         void OnFileChangedImpl(const FileWatcher::FileChangedEventArgs*
                                    fileChangedEventArgs);  // file change handler, runs in the main thread.
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
+        void OnFileIndexChanged(FileList::index_type current, FileList::index_type previous);
+        void OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image);
+        void OnFolderLoadResidencyReady(const BrowseResidencyManager::FileListSnapshot& snapshot,
+                                        const std::wstring& fileName,
+                                        IMCodec::ImageSharedPtr image);
+
         void ProcessCurrentFileChanged();
         void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
-        void UpdateFileList(FileWatcher::FileChangedOp fileOp, const std::wstring& fileName,
-                            const std::wstring& filePath2);
-        void WatchCurrentFolder();
+
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
         void ShowImageInfo();
@@ -346,9 +347,7 @@ namespace OIV
         uint32_t fSlideShowIntervalms = 3000;
         bool fSlideShowEnabled = false;
         bool fReloadSettingsFileIfChanged = false;
-        FileWatcher::FolderID fOpenedFileFolderID = 0;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
-        std::wstring fListedFolder;  // the current folder the the file list is taken from
         int fCurrentFrame = 0;
         double fCurrentSequencerSpeed = 1.0;
         OIVBaseImageSharedPtr fCountingImageColor;
@@ -390,10 +389,6 @@ namespace OIV
         uint16_t fQuickBrowseDelay = 100;
         bool fDisplayBiggestSubImageOnLoad = true;
 
-        static constexpr FileIndexType FileIndexEnd = std::numeric_limits<FileIndexType>::max();
-        static constexpr FileIndexType FileIndexStart = std::numeric_limits<FileIndexType>::min();
-        FileIndexType fCurrentFileIndex = FileIndexStart;
-        LLUtils::ListWString fListFiles;
         LLUtils::PointI32 fDragStart{-1, -1};
         /// determines whether the current loaded file is the initial file being loaded at startup
         bool fIsTryToLoadInitialFile = false;
@@ -514,5 +509,13 @@ namespace OIV
         ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
         EventSync fEventSync;
+        std::unique_ptr<FileList> fFileList;
+        std::atomic_bool fIsShuttingDown = false;
+        std::optional<BrowseResidencyManager> fBrowseResidencyManager;
+        ImageResidency fImageResidency;
+
+        // FileListProvider
+        virtual FileListStringType GetActiveFileName() override;
+        
     };
 }  // namespace OIV

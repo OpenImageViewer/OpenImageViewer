@@ -8,8 +8,9 @@ file(GLOB_RECURSE sourceFiles
 
 set(TargetName OIVD3D11Renderer)
 add_library (${TargetName} ${sourceFiles} )
-target_link_libraries(${TargetName} 
-dbghelp.lib
+target_link_libraries(${TargetName}
+PRIVATE
+LLUtils::LLUtils
 dxgi.lib
 d3dcompiler.lib
 d3d11.lib

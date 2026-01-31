@@ -3,6 +3,7 @@
 #include <LLUtils/StringUtility.h>
 #include <defs.h>
 #include <ImageUtil/ImageUtil.h>
+#include <utility>
 
 namespace OIV
 {
@@ -72,6 +73,10 @@ namespace OIV
     const LLUtils::native_string_type& OIVFileImage::GetFileName() const { return fFileName; }
     
 	OIVFileImage::OIVFileImage(const LLUtils::native_string_type& fileName) : OIVBaseImage(ImageSource::File), fFileName(fileName) {}
+	OIVFileImage::OIVFileImage(const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
+        : OIVBaseImage(ImageSource::File, std::move(image)), fFileName(fileName)
+    {
+    }
     
 	ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags)
 	{

@@ -5,6 +5,8 @@ namespace OIV
     enum class InterThreadMessages : uint16_t
     {
         FileChanged,
+        FileIndexResidencyReady,
+        FolderLoadResidencyReady,
         AutoScroll,
         FirstFrameDisplayed,
         LoadFileExternally,
