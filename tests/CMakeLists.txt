@@ -20,5 +20,8 @@ target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared Ima
 if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:CONSOLE")
     target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup")
+elseif(MINGW)
+    set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
 endif()
            
