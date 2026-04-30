@@ -33,12 +33,18 @@
 #include "LabelManager.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
+#include "MouseCaptureState.h"
 #include "Helpers/OIVImageHelper.h"
 #include "ImageState.h"
 #include "ContextMenu.h"
 #include "FileMangement/FileWatcher.h"
+#include <oivappcore/AppSettingsPolicy.h>
+#include <oivappcore/FileReloadPolicy.h>
 #include <oivappcore/FileSessionController.h>
+#include <oivappcore/FileRemovalPolicy.h>
 #include <oivappcore/ImageLoadController.h>
+#include <oivappcore/SlideshowPolicy.h>
+#include <oivappcore/ViewerPresentationPolicy.h>
 #include <oivshared/ViewTransformController.h>
 
 #include "MouseMultiClickHandler.h"
@@ -89,14 +95,6 @@ namespace OIV
         SuccessfulFileLoad,
         FailedFileLoad,
         WindowOnTop
-    };
-
-    enum class OperationResult
-    {
-        Success,
-        NoDataFound,
-        NoSelection,
-        UnkownError
     };
 
     // Assue Count exists and presenting the total number of values in an enum.
@@ -194,7 +192,6 @@ namespace OIV
         void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
-        double PerformColorOp(double& gamma, const std::string& cs, const std::string& val);
         void CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_CopyToClipboard(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
@@ -221,7 +218,7 @@ namespace OIV
         void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
-        bool GetSlideShowEnabled() const { return fSlideShowEnabled; }
+        bool GetSlideShowEnabled() const { return fSlideshowPolicy.IsEnabled(); }
         void SetFilterLevel(OIV_Filter_type filterType);
         OIV_Filter_type GetFilterType() const;
         void ToggleGrid();
@@ -271,7 +268,6 @@ namespace OIV
         OperationResult CropVisibleImage();
         OperationResult CopyVisibleToClipBoard();
         OperationResult CutSelectedArea();
-        std::wstring GetErrorString(OperationResult res) const;
         void AfterFirstFrameDisplayed();
         void UnloadOpenedImaged();
         void DeleteOpenedFile(bool permanently);
@@ -304,6 +300,7 @@ namespace OIV
         bool GetImageInfoVisible() const;
         void ProcessLoadedDirectory();
         void PerformReloadFile(const std::wstring& requestedFile);
+        void HandleReloadAction(ReloadAction action, const std::wstring& requestedFile);
         void ShowSettings();
         static void NetSettingsCallback_(ItemChangedArgs* callback);
         void NetSettingsCallback(ItemChangedArgs* callback);
@@ -344,8 +341,7 @@ namespace OIV
         RecursiveDelayedOp fPreserveImageSpaceSelection;
         double fMaxPixelSize = 30.0;
         double fMinImageSize = 150.0;
-        uint32_t fSlideShowIntervalms = 3000;
-        bool fSlideShowEnabled = false;
+        SlideshowPolicy fSlideshowPolicy;
         bool fReloadSettingsFileIfChanged = false;
         FileWatcher::FolderID fCOnfigurationFolderID = 0;
         int fCurrentFrame = 0;
@@ -368,7 +364,7 @@ namespace OIV
         void OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent);
         void OnMouseInput(const LInput::RawInput::RawInputEventMouse& mouseInput);
 
-        std::array<bool, LInput::RawInput::MaxMouseButtons> fCapturedMouseButtons{};
+        MouseCaptureState fMouseCaptureState;
 
         bool fIsGridEnabled = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
@@ -389,7 +385,6 @@ namespace OIV
         uint16_t fQuickBrowseDelay = 100;
         bool fDisplayBiggestSubImageOnLoad = true;
 
-        LLUtils::PointI32 fDragStart{-1, -1};
         /// determines whether the current loaded file is the initial file being loaded at startup
         bool fIsTryToLoadInitialFile = false;
         bool fIsFirstFrameDisplayed = false;
@@ -405,34 +400,10 @@ namespace OIV
         //::Win32::ClipboardFormatType fRTFFormatID {};
         //::Win32::ClipboardFormatType fHTMLFormatID {};
 
-        enum class DeletedFileRemovalMode
-        {
-            None = 0 << 0  // Dont remove opened file if delted.
-            ,
-            DeletedInternally = 1 << 0  // remove opened file only if deleted internally from OIV (default)
-            ,
-            DeletedExternally = 1 << 1  // remove opened file only if deleted externally
-            ,
-            Always  // always unload file if deleted.
-        };
-        LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DeletedFileRemovalMode);
-
         DeletedFileRemovalMode fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
 
-        enum class MofifiedFileReloadMode
-        {
-            None  // Don't suggest auto reload of modified file.
-            ,
-            Confirmation  // Display a message to confirm reload of modified file (default)
-            ,
-            AutoForeground  // Auto reload file only when application is active
-            ,
-            AutoBackground  // Auto reload file always
-        };
-
-        MofifiedFileReloadMode fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
-
         std::wstring fRequestedFileForRemoval;
+        FileReloadPolicy fFileReloadPolicy;
         LLUtils::PointF64 fImageMargins{0.75, 0.75};
         std::wstring DefaultTextKeyColorTag = L"<textcolor=#ff8930ff>";
         std::wstring DefaultTextValueColorTag = L"<textcolor=#7672ffff>";
@@ -458,7 +429,6 @@ namespace OIV
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
         FileWatcher fFileWatcher;
         std::wstring fCurrentFolderWatched;
-        std::wstring fPendingReloadFileName;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
         ::Win32::FileDialogFilterBuilder fOpenComDlgFilters;
@@ -489,14 +459,6 @@ namespace OIV
             std::string arguments;
         };
         LInput::KeyBindings<BindingElement> fKeyBindings;
-
-        struct CommandDesc
-        {
-            std::string description;
-            std::string command;
-            std::string arguments;
-            std::string keybindings;
-        };
 
         struct MenuItemData
         {

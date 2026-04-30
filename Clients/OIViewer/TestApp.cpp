@@ -1,4 +1,3 @@
-#include <limits>
 #include <iomanip>
 #include <filesystem>
 #include <thread>
@@ -33,8 +32,10 @@
 #include <LLUtils/Rect.h>
 
 #include "Helpers/OIVHelper.h"
+#include "Helpers/ClipboardSetup.h"
 #include "Helpers/MessageHelper.h"
-#include "Helpers/PhotoshopFinder.h"
+#include "Helpers/ShellIntegrationHelper.h"
+#include "Helpers/ShellCommandHandler.h"
 
 #include "win32/UserMessages.h"
 #include "OIVCommands.h"
@@ -49,8 +50,25 @@
 #include "ContextMenu.h"
 #include "globals.h"
 #include "ConfigurationLoader.h"
+#include "CommandRegistry.h"
 #include "Helpers/PixelHelper.h"
 #include "ExceptionHandler.h"
+#include <oivappcore/ColorCountPolicy.h>
+#include <oivappcore/ColorCorrectionCommandPolicy.h>
+#include <oivappcore/FileChangePolicy.h>
+#include <oivappcore/FrameLimiterPolicy.h>
+#include <oivappcore/ImageEditPolicy.h>
+#include <oivappcore/ImageFormatCatalogPolicy.h>
+#include <oivappcore/ImageLoadPresentationPolicy.h>
+#include <oivappcore/ImageTransformCommandPolicy.h>
+#include <oivappcore/InputGesturePolicy.h>
+#include <oivappcore/SelectionWorkflowPolicy.h>
+#include <oivappcore/SequencerPolicy.h>
+#include <oivappcore/SortCommandPolicy.h>
+#include <oivappcore/SubImagePolicy.h>
+#include <oivappcore/ViewActionController.h>
+#include <oivappcore/ViewCommandPolicy.h>
+#include <oivappcore/ViewerPresentationPolicy.h>
 #include <ImageUtil/ImageUtil.h>
 #include "InterThreadMessages.h"
 
@@ -78,23 +96,9 @@ namespace OIV
     {
         if (IsImageOpen())
         {
-            using namespace LLUtils;
-            using namespace std;
-
-            string cxStr = request.args.GetArgValue("cx");
-            string cyStr = request.args.GetArgValue("cy");
-            double val = std::atof(request.args.GetArgValue("val").c_str());
-
-            int32_t cx = cxStr.empty() ? -1 : std::atoi(cxStr.c_str());
-            int32_t cy = cyStr.empty() ? -1 : std::atoi(cyStr.c_str());
-
-            ZoomInternal(val, cx, cy);
-
-            wstringstream ss;
-            ss << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>(" << fixed << setprecision(2) << GetScale() * 100.0
-               << "%)";
-
-            result.resValue = ss.str();
+            const ZoomCommand command = ViewCommandPolicy::ParseZoom(request.args);
+            ZoomInternal(command.amount, command.centerX, command.centerY);
+            result.resValue = ViewCommandPolicy::FormatZoomResult(GetScale());
         }
     }
 
@@ -492,72 +496,15 @@ namespace OIV
     void TestApp::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request,
                                            CommandManager::CommandResult& response)
     {
-        IMUtil::AxisAlignedRotation rotation = IMUtil::AxisAlignedRotation::None;
-        IMUtil::AxisAlignedFlip flip = IMUtil::AxisAlignedFlip::None;
+        const AxisAlignedTransformCommand command =
+            ImageTransformCommandPolicy::ParseAxisAlignedTransform(request.args);
 
-        std::string type = request.args.GetArgValue("type");
-
-        if (false)
-            ;
-        else if (type == "hflip")
-            flip = IMUtil::AxisAlignedFlip::Horizontal;
-        else if (type == "vflip")
-            flip = IMUtil::AxisAlignedFlip::Vertical;
-        else if (type == "rotatecw")
-            rotation = IMUtil::AxisAlignedRotation::Rotate90CW;
-        else if (type == "rotateccw")
-            rotation = IMUtil::AxisAlignedRotation::Rotate90CCW;
-
-        if (rotation != IMUtil::AxisAlignedRotation::None || flip != IMUtil::AxisAlignedFlip::None)
+        if (command.HasTransform())
         {
-            TransformImage(rotation, flip);
-
-            std::wstring rotation;
-            switch (fImageState.GetAxisAlignedRotation())
-            {
-                case IMUtil::AxisAlignedRotation::Rotate90CW:
-                    rotation = L"90 degrees clockwise";
-                    break;
-                case IMUtil::AxisAlignedRotation::Rotate180:
-                    rotation = L"180 degrees";
-                    break;
-                case IMUtil::AxisAlignedRotation::Rotate90CCW:
-                    rotation = L"90 degrees counter clockwise";
-                    break;
-                case IMUtil::AxisAlignedRotation::None:
-                    break;
-            }
-            if (rotation.empty() == false)
-                response.resValue += std::wstring(L"Rotation <textcolor=#7672ff>(") + rotation + L')';
-
-            std::wstring flip;
-
-            switch (fImageState.GetAxisAlignedFlip())
-            {
-                case IMUtil::AxisAlignedFlip::Horizontal:
-                    flip = L"horizontal";
-                    break;
-                case IMUtil::AxisAlignedFlip::Vertical:
-                    flip = L"vertical";
-                    break;
-                case IMUtil::AxisAlignedFlip::None:
-                    break;
-            }
-
-            if (flip.empty() == false)
-            {
-                if (rotation.empty() == false)
-                    response.resValue += L'\n';
-
-                response.resValue += std::wstring(L"<textcolor=#ff8930>Flip <textcolor=#7672ff>(") + flip + L')';
-            }
-
-            if (flip.empty() == true && rotation.empty() == true)
-            {
-                response.resValue = L"No transformation";
-            }
-
-            // response.resValue = LLUtils::StringUtility::ToWString(request.description);
+            TransformImage(command.rotation, command.flip);
+            response.resValue = ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
+                fImageState.GetAxisAlignedRotation(),
+                fImageState.GetAxisAlignedFlip());
         }
     }
 
@@ -576,149 +523,65 @@ namespace OIV
     void TestApp::CMD_SetWindowSize(const CommandManager::CommandRequest& request,
                                     CommandManager::CommandResult& result)
     {
-        using namespace LLUtils;
-        using namespace std;
-        string size_type = request.args.GetArgValue("size_type");
+        const auto& workArea = fCurrentMonitorProperties.monitorInfo.rcWork;
+        const WindowSizeDecision decision = ViewCommandPolicy::DecideWindowSize(
+            request.args,
+            fWindow.GetWindowSize(),
+            fWindow.GetPosition(),
+            {workArea.left, workArea.top, workArea.right, workArea.bottom});
 
-        if (size_type == "fullscreen")
+        switch (decision.mode)
         {
-            fWindow.SetFullScreenState(::Win32::FullSceenState::SingleScreen);
+            case WindowSizeMode::Fullscreen:
+                fWindow.SetFullScreenState(::Win32::FullSceenState::SingleScreen);
+                break;
+            case WindowSizeMode::MultiFullscreen:
+                fWindow.SetFullScreenState(::Win32::FullSceenState::MultiScreen);
+                break;
+            case WindowSizeMode::Windowed:
+                if (fWindow.GetFullScreenState() != ::Win32::FullSceenState::Windowed)
+                    fWindow.SetFullScreenState(::Win32::FullSceenState::Windowed);
+
+                if (decision.position != fWindow.GetPosition())
+                    fWindow.SetPosition(decision.position.x, decision.position.y);
+
+                fWindow.SetSize(decision.size.x, decision.size.y);
+                break;
+            case WindowSizeMode::None:
+                break;
         }
-        else if (size_type == "multifullscreen")
-        {
-            fWindow.SetFullScreenState(::Win32::FullSceenState::MultiScreen);
-        }
-        else
-        {
-            if (fWindow.GetFullScreenState() != ::Win32::FullSceenState::Windowed)
-                fWindow.SetFullScreenState(::Win32::FullSceenState::Windowed);
-            string widthStr = request.args.GetArgValue("width");
-            string heightStr = request.args.GetArgValue("height");
 
-            double width = std::stod(widthStr);
-            double height = std::stod(heightStr);
-
-            const int workingAreaWidth = fCurrentMonitorProperties.monitorInfo.rcWork.right -
-                                         fCurrentMonitorProperties.monitorInfo.rcWork.left;
-            const int workingAreaHeight = fCurrentMonitorProperties.monitorInfo.rcWork.bottom -
-                                          fCurrentMonitorProperties.monitorInfo.rcWork.top;
-
-            int finalWidth;
-            int finalHeight;
-
-            if (size_type == "absolute")
-            {
-                finalWidth = static_cast<int>(std::round(width));
-                finalHeight = static_cast<int>(std::round(height));
-            }
-
-            else if (size_type == "relative")
-            {
-                int workingAreaWidth = fCurrentMonitorProperties.monitorInfo.rcWork.right -
-                                       fCurrentMonitorProperties.monitorInfo.rcWork.left;
-                int workingAreaHeight = fCurrentMonitorProperties.monitorInfo.rcWork.bottom -
-                                        fCurrentMonitorProperties.monitorInfo.rcWork.top;
-                double realtiveWidth = width * workingAreaWidth / 100.0;
-                double realtiveHeight = height * workingAreaHeight / 100.0;
-
-                finalWidth = static_cast<int>(std::round(realtiveWidth));
-                finalHeight = static_cast<int>(std::round(realtiveHeight));
-            }
-
-            finalWidth = std::min(workingAreaWidth, finalWidth);
-            finalHeight = std::min(workingAreaHeight, finalHeight);
-
-            auto windowNewSize = PointI32{finalWidth, finalHeight};
-            auto windowCurrentSize = fWindow.GetWindowSize();
-            auto currentPos = fWindow.GetPosition();
-            auto displacedPos = currentPos - (windowNewSize - windowCurrentSize) / 2;
-
-            displacedPos.x = std::clamp<int32_t>(displacedPos.x, fCurrentMonitorProperties.monitorInfo.rcWork.left,
-                                                 fCurrentMonitorProperties.monitorInfo.rcWork.right - windowNewSize.x);
-
-            displacedPos.y = std::clamp<int32_t>(displacedPos.y, fCurrentMonitorProperties.monitorInfo.rcWork.top,
-                                                 fCurrentMonitorProperties.monitorInfo.rcWork.bottom - windowNewSize.y);
-
-            if (displacedPos != currentPos)
-                fWindow.SetPosition(displacedPos.x, displacedPos.y);
-
-            fWindow.SetSize(finalWidth, finalHeight);
-        }
         result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
     }
 
     void TestApp::CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        using namespace LLUtils;
-        using namespace std;
-        string sort_type = request.args.GetArgValue("type");
+        const SortCommandDecision decision = SortCommandPolicy::Decide(request.args, fFileSorter.GetSortType());
 
-        bool reverseDirection = false;
-        if (sort_type == "name")
+        if (decision.valid)
         {
-            if (fFileSorter.GetSortType() == FileSorter::SortType::Name)
-                reverseDirection = true;
+            if (decision.reverseDirection)
+                fFileSorter.SetActiveSortDirection(SortCommandPolicy::Reverse(fFileSorter.GetActiveSortDirection()));
             else
-                fFileSorter.SetSortType(FileSorter::SortType::Name);
-        }
-
-        else if (sort_type == "date")
-        {
-            if (fFileSorter.GetSortType() == FileSorter::SortType::Date)
-                reverseDirection = true;
-            else
-                fFileSorter.SetSortType(FileSorter::SortType::Date);
-        }
-
-        else if (sort_type == "extension")
-        {
-            if (fFileSorter.GetSortType() == FileSorter::SortType::Extension)
-                reverseDirection = true;
-            else
-                fFileSorter.SetSortType(FileSorter::SortType::Extension);
-        }
-
-        if (reverseDirection)
-        {
-            fFileSorter.SetActiveSortDirection(fFileSorter.GetActiveSortDirection() ==
-                                                       FileSorter::SortDirection::Ascending
-                                                   ? FileSorter::SortDirection::Descending
-                                                   : FileSorter::SortDirection::Ascending);
+                fFileSorter.SetSortType(decision.sortType);
         }
 
         SortFileList();
-
-        auto userMessage = LLUtils::StringUtility::ToWString(request.displayName);
-
-        userMessage += std::wstring(L" [") +
-                       (fFileSorter.GetActiveSortDirection() == FileSorter::SortDirection::Ascending ? L"Ascending"
-                                                                                                     : L"Descending") +
-                       L"]";
-
-        result.resValue = userMessage;
+        result.resValue = SortCommandPolicy::FormatSortResult(request.displayName, fFileSorter.GetActiveSortDirection());
     }
 
     void TestApp::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        using namespace LLUtils;
-        using namespace std;
-        string command = request.args.GetArgValue("cmd");
         auto openedImage = fImageState.GetOpenedImage();
         if (openedImage != nullptr &&
             openedImage->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
         {
-            if (command == "changespeed")
+            if (SequencerPolicy::IsChangeSpeedCommand(request.args))
             {
-                auto amount = request.args.GetArgValue("amount");
-                double amountVal = std::stod(amount, nullptr) / 100.0;
-
-                fCurrentSequencerSpeed *= 1 + amountVal;
-
-                wstringstream ss;
-                ss << "<textcolor=#ff8930>" << L"Animation speed" << L"<textcolor=#7672ff> (" << fixed
-                   << setprecision(2) << fCurrentSequencerSpeed * 100 << "%)";
-
-                result.resValue = ss.str();
+                fCurrentSequencerSpeed = SequencerPolicy::ApplySpeedChange(
+                    fCurrentSequencerSpeed,
+                    SequencerPolicy::ParseSpeedChangePercent(request.args));
+                result.resValue = SequencerPolicy::FormatSpeed(fCurrentSequencerSpeed);
             }
         }
     }
@@ -740,70 +603,63 @@ namespace OIV
     void TestApp::CMD_ColorCorrection(const CommandManager::CommandRequest& request,
                                       CommandManager::CommandResult& result)
     {
-        using namespace std;
-        string type = request.args.GetArgValue("type");
-        string op = request.args.GetArgValue("op");
-        ;
-        string val = request.args.GetArgValue("val");
-        ;
+        const ColorCorrectionCommand command = ColorCorrectionCommandPolicy::Parse(request.args);
+        if (command.IsValid() == false)
+            return;
 
-        bool validValue = true;
-        double newValue;
-
-        if (type == "gamma")
-            newValue = PerformColorOp(fColorExposure.gamma, op, val);
-        else if (type == "exposure")
-            newValue = PerformColorOp(fColorExposure.exposure, op, val);
-        else if (type == "offset")
-            newValue = PerformColorOp(fColorExposure.offset, op, val);
-        else if (type == "saturation")
-            newValue = PerformColorOp(fColorExposure.saturation, op, val);
-        else if (type == "contrast")
-            newValue = PerformColorOp(fColorExposure.contrast, op, val);
-        else
+        double* value = nullptr;
+        switch (command.channel)
         {
-            validValue = false;
+            case ColorCorrectionChannel::Gamma:
+                value = &fColorExposure.gamma;
+                break;
+            case ColorCorrectionChannel::Exposure:
+                value = &fColorExposure.exposure;
+                break;
+            case ColorCorrectionChannel::Offset:
+                value = &fColorExposure.offset;
+                break;
+            case ColorCorrectionChannel::Saturation:
+                value = &fColorExposure.saturation;
+                break;
+            case ColorCorrectionChannel::Contrast:
+                value = &fColorExposure.contrast;
+                break;
+            case ColorCorrectionChannel::None:
+                break;
         }
-        if (validValue == true)
-        {
-            std::wstringstream ss;
 
-            ss << L"<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(type) << L"<textcolor=#7672ff>" << " "
-               << LLUtils::StringUtility::ToWString(op) << L" " << LLUtils::StringUtility::ToWString(val);
+        if (value == nullptr)
+            return;
 
-            if (op == "increase" || op == "decrease")
-                ss << "%";
-
-            ss << "<textcolor=#00ff00> (" << std::fixed << std::setprecision(0) << newValue * 100 << "%)";
-            result.resValue = ss.str();
-            UpdateExposure();
-        }
+        *value = ColorCorrectionCommandPolicy::Apply(*value, command.operation, command.value);
+        result.resValue = ColorCorrectionCommandPolicy::FormatResult(command, *value);
+        UpdateExposure();
     }
 
     void TestApp::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        using namespace std;
-        string direction = request.args.GetArgValue("direction");
-        string amount = request.args.GetArgValue("amount");
-        ;
+        const PanCommand command = ViewCommandPolicy::ParsePan(request.args);
 
-        double amountVal = std::stod(amount, nullptr);
+        switch (command.direction)
+        {
+            case PanDirection::Up:
+                Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(command.amount)));
+                break;
+            case PanDirection::Down:
+                Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(-command.amount)));
+                break;
+            case PanDirection::Left:
+                Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(command.amount), 0));
+                break;
+            case PanDirection::Right:
+                Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-command.amount), 0));
+                break;
+            case PanDirection::None:
+                break;
+        }
 
-        if (direction == "up")
-            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(amountVal)));
-        else if (direction == "down")
-            Pan(LLUtils::PointF64(0, fAdaptivePanUpDown.Add(-amountVal)));
-        else if (direction == "left")
-            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(amountVal), 0));
-        else if (direction == "right")
-            Pan(LLUtils::PointF64(fAdaptivePanLeftRight.Add(-amountVal), 0));
-
-        std::wstringstream ss;
-
-        ss << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(request.displayName) << "<textcolor=#7672ff>"
-           << " (" << amountVal << " pixels)";
-
-        result.resValue = ss.str();
+        result.resValue = ViewCommandPolicy::FormatPanResult(request.displayName, command.amount);
     }
 
     void TestApp::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
@@ -824,7 +680,7 @@ namespace OIV
         {
             OperationResult res = CopyVisibleToClipBoard();
             if (res != OperationResult::Success)
-                result.resValue = std::wstring(L"Cannot copy to clipboard - ") + GetErrorString(res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot copy to clipboard", res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
@@ -832,25 +688,9 @@ namespace OIV
         {
             OperationResult res = CutSelectedArea();
             if (res != OperationResult::Success)
-                result.resValue = std::wstring(L"Cannot cut selected area - ") + GetErrorString(res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot cut selected area", res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
-        }
-    }
-
-    std::wstring TestApp::GetErrorString(OperationResult res) const
-    {
-        switch (res)
-        {
-            case OperationResult::NoDataFound:
-                return L"No Image loaded";
-            case OperationResult::Success:
-                return L"Success";
-            case OperationResult::NoSelection:
-                return L"No selection";
-            case OperationResult::UnkownError:
-            default:
-                return L"Unknown error";
         }
     }
 
@@ -880,7 +720,7 @@ namespace OIV
         {
             OperationResult res = CropVisibleImage();
             if (res != OperationResult::Success)
-                result.resValue = std::wstring(L"Cannot crop selected area - ") + GetErrorString(res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot crop selected area", res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
@@ -917,107 +757,49 @@ namespace OIV
 
     void TestApp::CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        using namespace std;
-        string cmd = request.args.GetArgValue("cmd");
+        switch (ViewCommandPolicy::ParsePlacement(request.args))
+        {
+            case PlacementAction::OriginalSize:
+                SetOriginalSize();
+                break;
+            case PlacementAction::FitToScreen:
+                FitToClientAreaAndCenter();
+                break;
+            case PlacementAction::Center:
+                Center();
+                break;
+            case PlacementAction::None:
+                break;
+        }
 
-        if (cmd == "originalSize")
-            SetOriginalSize();
-        else if (cmd == "fitToScreen")
-            FitToClientAreaAndCenter();
-        else if (cmd == "center")
-            Center();
-
-        wstringstream ss;
-
-        ss << "<textcolor=#00ff00>"
-           << LLUtils::StringUtility::ToWString(
-                  request.displayName);  // << "<textcolor=#7672ff>" << " (" << amountVal << " pixels)";
-
-        result.resValue = ss.str();
+        result.resValue = ViewCommandPolicy::FormatPlacementResult(request.displayName);
     }
 
     void TestApp::CMD_Navigate(const CommandManager::CommandRequest& request,
                                [[maybe_unused]] CommandManager::CommandResult& result)
     {
-        using namespace std;
-        const string amountStr = request.args.GetArgValue("amount");
-        const string isSubImage = request.args.GetArgValue("subimage");
-        FileList::index_type amount = amountStr == "start" ? FileList::IndexStart
-                                      : amountStr == "end" ? FileList::IndexEnd
-                                                           : std::stoi(amountStr, nullptr);
-        if (isSubImage == "true")
+        const NavigationCommand command = ViewCommandPolicy::ParseNavigation(request.args);
+        if (command.subImage)
         {
             auto& imageList = fWindow.GetImageControl().GetImageList();
             const auto numElements = imageList.GetNumberOfElements();
             if (numElements > 0)
             {
-                FileList::index_type nextIndex = LLUtils::Math::Modulu<FileList::index_type>(
-                    imageList.GetSelected() + amount, numElements);
-                imageList.SetSelected(static_cast<int>(nextIndex));
+                imageList.SetSelected(static_cast<int>(ViewCommandPolicy::NextSubImageIndex(
+                    imageList.GetSelected(),
+                    command.amount,
+                    numElements)));
             }
         }
         else
         {
-            JumpFiles(amount);
+            JumpFiles(command.amount);
         }
     }
 
     void TestApp::CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        using namespace std;
-        string cmd = request.args.GetArgValue("cmd");
-        result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
-
-        if (cmd == "newWindow")
-        {
-            using namespace LLUtils;
-            // Open new window
-            ShellExecute(nullptr, L"open", StringUtility::ToNativeString(PlatformUtility::GetExePath()).c_str(),
-                         GetOpenedFileName().c_str(), nullptr, SW_SHOWDEFAULT);
-        }
-        else if (cmd == "openPhotoshop")
-        {
-            std::wstring photoshopApplicationPath = PhotoShopFinder::FindPhotoShop();
-            if (photoshopApplicationPath.empty() == false)
-                ShellExecute(nullptr, L"open", photoshopApplicationPath.c_str(), GetOpenedFileName().c_str(), nullptr,
-                             SW_SHOWDEFAULT);
-        }
-        else if (cmd == "openWithGoogleMaps")
-        {
-            auto openedIMage = fImageState.GetOpenedImage();
-            if (openedIMage != nullptr)
-            {
-                auto image = openedIMage->GetImage();
-                if (image != nullptr &&
-                    openedIMage->GetMetaData()->exifData.latitude != std::numeric_limits<double>::max())
-                {
-                    std::wstringstream ss;
-                    const auto& exifData = openedIMage->GetMetaData()->exifData;
-
-                    ss << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude
-                       << ",1000m/data=!3m1!1e3";
-
-                    auto str = ss.str();
-                    ShellExecute(nullptr, L"open", ss.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
-                }
-                else
-                {
-                    result.resValue = L"No geo location data found";
-                }
-            }
-        }
-        else if (cmd == "containingFolder")
-        {
-            if (GetOpenedFileName().empty() == false)
-                ::Win32::Win32Helper::BrowseToFile(GetOpenedFileName());
-        }
-        else if (cmd == "openWith")
-        {
-            if (GetOpenedFileName().empty() == false)
-                ShellExecute(nullptr, L"open",
-                             LLUtils::StringUtility::ToNativeString(request.args.GetArgValue("app")).c_str(),
-                             GetOpenedFileName().c_str(), nullptr, SW_SHOWDEFAULT);
-        }
+        result.resValue = ShellCommandHandler::Execute(request, GetOpenedFileName(), fImageState.GetOpenedImage());
     }
 
     template <typename T>
@@ -1149,56 +931,30 @@ namespace OIV
 
     void TestApp::AddCommandsAndKeyBindings()
     {
-        auto commandGroups = ConfigurationLoader::LoadCommandGroups();
-        auto keyBindings = ConfigurationLoader::LoadKeyBindings();
-
-        for (const auto& commandGroup : commandGroups)
-        {
-            fCommandManager.AddCommandGroup({commandGroup.commandGroupID, commandGroup.commandDisplayName,
-                                             commandGroup.commandName, commandGroup.arguments});
-        }
-
-        for (const auto& keyBindings : keyBindings)
-        {
-            fKeyBindings.AddBinding(LInput::KeyCombination::FromString(keyBindings.KeyCombinationName),
-                                    {keyBindings.GroupID, std::string(), std::string()});
-        }
         using namespace std;
         using namespace placeholders;
 
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_color_correction", std::bind(&TestApp::CMD_ColorCorrection, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_view_state", std::bind(&TestApp::CMD_ViewState, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command(
-            "cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_toggle_keybindings",
-                                                           std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command(
-            "cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_open_file", std::bind(&TestApp::CMD_OpenFile, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_zoom", std::bind(&TestApp::CMD_Zoom, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_pan", std::bind(&TestApp::CMD_Pan, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_placement", std::bind(&TestApp::CMD_Placement, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_copyToClipboard", std::bind(&TestApp::CMD_CopyToClipboard, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_pasteFromClipboard",
-                                                           std::bind(&TestApp::CMD_PasteFromClipboard, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_imageManipulation", std::bind(&TestApp::CMD_ImageManipulation, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)));
-        fCommandManager.AddCommand(CommandManager::Command("cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_set_window_size", std::bind(&TestApp::CMD_SetWindowSize, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_sort_files", std::bind(&TestApp::CMD_SortFiles, this, _1, _2)));
-        fCommandManager.AddCommand(
-            CommandManager::Command("cmd_sequencer", std::bind(&TestApp::CMD_Sequencer, this, _1, _2)));
+        CommandRegistry::AddConfiguredCommandsAndKeyBindings(fCommandManager, fKeyBindings);
+        CommandRegistry::AddCommandCallbacks(
+            fCommandManager,
+            {{"cmd_color_correction", std::bind(&TestApp::CMD_ColorCorrection, this, _1, _2)},
+             {"cmd_view_state", std::bind(&TestApp::CMD_ViewState, this, _1, _2)},
+             {"cmd_toggle_correction", std::bind(&TestApp::CMD_ToggleColorCorrection, this, _1, _2)},
+             {"cmd_toggle_keybindings", std::bind(&TestApp::CMD_ToggleKeyBindings, this, _1, _2)},
+             {"cmd_axis_aligned_transform", std::bind(&TestApp::CMD_AxisAlignedTransform, this, _1, _2)},
+             {"cmd_open_file", std::bind(&TestApp::CMD_OpenFile, this, _1, _2)},
+             {"cmd_zoom", std::bind(&TestApp::CMD_Zoom, this, _1, _2)},
+             {"cmd_pan", std::bind(&TestApp::CMD_Pan, this, _1, _2)},
+             {"cmd_placement", std::bind(&TestApp::CMD_Placement, this, _1, _2)},
+             {"cmd_copyToClipboard", std::bind(&TestApp::CMD_CopyToClipboard, this, _1, _2)},
+             {"cmd_pasteFromClipboard", std::bind(&TestApp::CMD_PasteFromClipboard, this, _1, _2)},
+             {"cmd_imageManipulation", std::bind(&TestApp::CMD_ImageManipulation, this, _1, _2)},
+             {"cmd_navigate", std::bind(&TestApp::CMD_Navigate, this, _1, _2)},
+             {"cmd_shell", std::bind(&TestApp::CMD_Shell, this, _1, _2)},
+             {"cmd_delete_file", std::bind(&TestApp::CMD_DeleteFile, this, _1, _2)},
+             {"cmd_set_window_size", std::bind(&TestApp::CMD_SetWindowSize, this, _1, _2)},
+             {"cmd_sort_files", std::bind(&TestApp::CMD_SortFiles, this, _1, _2)},
+             {"cmd_sequencer", std::bind(&TestApp::CMD_Sequencer, this, _1, _2)}});
     }
 
     void TestApp::OnLabelRefreshRequest()
@@ -1233,38 +989,35 @@ namespace OIV
 
     void TestApp::PerformRefresh()
     {
+        using namespace std::chrono;
+
         if (EnableFrameLimiter == true)
         {
-            using namespace std::chrono;
-
             ProbeForMonitorChange();
-            high_resolution_clock::time_point now = high_resolution_clock::now();
-            auto windowTimeInMicroSeconds = 1'000'000'000 / fRefreshRateTimes1000;
-            auto microsecSinceLastRefresh = duration_cast<microseconds>(now - fLastRefreshTime).count();
+        }
 
-            if (microsecSinceLastRefresh > windowTimeInMicroSeconds)
-            {
-                fRefreshTimer.Enable(false);
-                // Refresh immediately
+        const high_resolution_clock::time_point now = high_resolution_clock::now();
+        const auto decision = FrameLimiterPolicy::Decide(
+            EnableFrameLimiter,
+            fRefreshTimer.GetEnabled(),
+            duration_cast<microseconds>(now - fLastRefreshTime).count(),
+            fRefreshRateTimes1000);
+
+        switch (decision.action)
+        {
+            case FrameRefreshAction::RefreshNow:
+                if (EnableFrameLimiter == true)
+                    fRefreshTimer.Enable(false);
+
                 OIVCommands::Refresh();
                 fLastRefreshTime = now;
-                // Clear last image chain if exists, this operation is deffered to this moment to display the new image
-                // faster.
-            }
-            else
-            {
-                // Don't refresh now, restrat refresh timer
-                if (fRefreshTimer.GetEnabled() == false)
-                {
-                    fRefreshTimer.SetDueTime(
-                        static_cast<DWORD>((windowTimeInMicroSeconds - microsecSinceLastRefresh) / 1000));
-                    fRefreshTimer.Enable(true);
-                }
-            }
-        }
-        else
-        {
-            OIVCommands::Refresh();
+                break;
+            case FrameRefreshAction::ScheduleRefresh:
+                fRefreshTimer.SetDueTime(static_cast<DWORD>(decision.delayMs));
+                fRefreshTimer.Enable(true);
+                break;
+            case FrameRefreshAction::None:
+                break;
         }
     }
 
@@ -1339,41 +1092,32 @@ namespace OIV
         std::wstring title;
         if (fImageState.GetOpenedImage() != nullptr)
         {
-            switch (fImageState.GetOpenedImage()->GetImageSource())
+            const ImageSource imageSource = fImageState.GetOpenedImage()->GetImageSource();
+            if (imageSource == ImageSource::File)
             {
-                case ImageSource::File:
+                auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
+                bool includeIndex = false;
+                size_t displayIndex = 0;
+                size_t fileCount = 0;
+                if (GetAppActive() == true && fFileSessionController != nullptr)
                 {
-                    auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
-                    std::wstringstream ss;
-                    if (GetAppActive() == true && fFileSessionController != nullptr)
-                    {
-                        const auto& fileList = fFileSessionController->GetFileList();
-                        ss << (fileList.GetCurrentIndex() == FileList::IndexStart ? 0 : fileList.GetCurrentIndex() + 1)
-                           << L"/" << fileList.GetSize() << L" | ";
-                    }
-
-                    ss << decomposedPath.fileName << decomposedPath.extension << " @ "
-                       << std::wstring_view(decomposedPath.parentPath.data(), decomposedPath.parentPath.length() - 1);
-
-                    title = ss.str() + L" - ";
+                    const auto& fileList = fFileSessionController->GetFileList();
+                    includeIndex = true;
+                    displayIndex = fileList.GetCurrentIndex() == FileList::IndexStart ? 0 : fileList.GetCurrentIndex() + 1;
+                    fileCount = fileList.GetSize();
                 }
-                break;
-                case ImageSource::ClipboardText:
-                    title = L"Clipboard text - ";
-                    break;
-                case ImageSource::Clipboard:
-                    title = L"Clipboard image - ";
-                    break;
-                case ImageSource::GeneratedByLib:
-                    title = L"Internal image - ";
-                    break;
-                default:
-                    title = L"Unknown image source - ";
-                    break;
+
+                title = ViewerPresentationPolicy::FormatFileTitlePrefix(decomposedPath.fileName,
+                                                                         decomposedPath.extension,
+                                                                         decomposedPath.parentPath,
+                                                                         includeIndex,
+                                                                         displayIndex,
+                                                                         fileCount);
             }
+            else
+                title = ViewerPresentationPolicy::FormatNonFileTitlePrefix(imageSource);
         }
-        title += cachedVersionString;
-        fWindow.SetTitle(title);
+        fWindow.SetTitle(ViewerPresentationPolicy::FormatTitle(title, cachedVersionString));
     }
 
     void TestApp::UnloadOpenedImaged()
@@ -1428,7 +1172,8 @@ namespace OIV
     void TestApp::DisplayOpenedFileName()
     {
         if (IsOpenedImageIsAFile())
-            SetUserMessage(L"File: " + MessageFormatter::FormatFilePath(GetOpenedFileName()),
+            SetUserMessage(ViewerPresentationPolicy::FormatOpenedFileMessage(
+                               MessageFormatter::FormatFilePath(GetOpenedFileName())),
                            static_cast<GroupID>(UserMessageGroups::SuccessfulFileLoad),
                            MessageFlags::Interchangeable | MessageFlags::Moveable);
     }
@@ -1544,8 +1289,8 @@ namespace OIV
         if (fImageState.GetOpenedImage() != nullptr)
         {
             const auto mainImage = fImageState.GetOpenedImage()->GetImage();
-            return mainImage != nullptr && mainImage->GetSubImageGroupType() != ImageItemType::AnimationFrame &&
-                   mainImage->GetNumSubImages() > 0;
+            return mainImage != nullptr &&
+                   SubImagePolicy::IsVisible(mainImage->GetSubImageGroupType(), mainImage->GetNumSubImages());
         }
         else
         {
@@ -1560,36 +1305,30 @@ namespace OIV
         auto numSubImages = mainImage->GetImage()->GetNumSubImages();
         if (IsSubImagesVisible())
         {
-            const auto isMainAnActualImage = mainImage->GetImage()->GetItemType() != ImageItemType::Container;
-            const uint16_t totalImages = static_cast<uint16_t>(mainImage->GetImage()->GetNumSubImages() +
-                                                               (isMainAnActualImage ? 1 : 0));
+            const auto isMainAnActualImage = SubImagePolicy::IncludeMainImage(mainImage->GetImage()->GetItemType());
+            const uint16_t totalImages =
+                SubImagePolicy::TotalDisplayedImages(mainImage->GetImage()->GetNumSubImages(), isMainAnActualImage);
             // Add the first image.
             uint16_t currentImage = 0;
-            int largestIndex = -1;
-            uint32_t largestSize = 0;
             if (isMainAnActualImage)
                 AddImageToControl(mainImage->GetImage(), static_cast<uint16_t>(currentImage++), totalImages);
 
-            if (mainImage->GetImage()->GetTotalPixels() > largestSize)
-            {
-                largestSize = mainImage->GetImage()->GetTotalPixels();
-                largestIndex = -1;
-            }
-
+            std::vector<uint64_t> subImagePixels;
+            subImagePixels.reserve(numSubImages);
             for (uint16_t i = 0; i < numSubImages; i++)
             {
                 auto currentSubImage = mainImage->GetImage()->GetSubImage(i);
-                if (currentSubImage->GetTotalPixels() > largestSize)
-                {
-                    largestSize = currentSubImage->GetTotalPixels();
-                    largestIndex = i;
-                }
-
+                subImagePixels.push_back(currentSubImage->GetTotalPixels());
                 AddImageToControl(currentSubImage, static_cast<uint16_t>(currentImage++), totalImages);
             }
             // Reset selected sub image when loading new set of subimages
-            fWindow.GetImageControl().GetImageList().SetSelected(fDisplayBiggestSubImageOnLoad == true ? largestIndex
-                                                                                                       : -1);
+            const int selectionIndex =
+                fDisplayBiggestSubImageOnLoad
+                    ? SubImagePolicy::InitialSelectionIndex(isMainAnActualImage,
+                                                            mainImage->GetImage()->GetTotalPixels(),
+                                                            subImagePixels)
+                    : SubImagePolicy::MainImageIndex;
+            fWindow.GetImageControl().GetImageList().SetSelected(selectionIndex);
             fWindow.GetImageControl().RefreshScrollInfo();
         }
         else
@@ -1609,40 +1348,19 @@ namespace OIV
 
     bool TestApp::ProcessImageLoadResult(const ImageLoadResult& loadResult)
     {
-        if (loadResult.status == ImageLoadStatus::FolderLoadQueued)
-            return true;
-
-        if (loadResult.status == ImageLoadStatus::NoSupportedFiles)
-            return false;
-
         auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) + L"<textcolor=#ff8930>";
+        const ImageLoadPresentation presentation =
+            ImageLoadPresentationPolicy::Decide(loadResult, formattedFilePath);
 
-        using namespace std::string_literals;
-        switch (loadResult.status)
-        {
-            case ImageLoadStatus::Loaded:
-                LoadOivImage(loadResult.image);
-                break;
-            case ImageLoadStatus::TooLarge:
-                SetUserMessage(L"Can not load the file: "s + formattedFilePath +
-                                   L", image dimensions are more than 16384: ",
-                               static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
-                break;
-            case ImageLoadStatus::UnsupportedFormat:
-                SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", image format is not supported"s,
-                               static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
-                break;
-            case ImageLoadStatus::FolderLoadQueued:
-            case ImageLoadStatus::NoSupportedFiles:
-                break;
-            case ImageLoadStatus::UnknownError:
-            default:
-                SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", unkown error"s,
-                               static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
-                break;
-        }
+        if (presentation.shouldLoadImage)
+            LoadOivImage(loadResult.image);
 
-        return loadResult.DecodeSucceeded();
+        if (presentation.shouldShowMessage)
+            SetUserMessage(presentation.message,
+                           static_cast<GroupID>(UserMessageGroups::FailedFileLoad),
+                           MessageFlags::Persistent);
+
+        return presentation.succeeded;
     }
 
     void TestApp::LoadOivImage(OIVBaseImageSharedPtr oivImage)
@@ -1765,20 +1483,10 @@ namespace OIV
     {
         Pan(panAmount);
 
-        Win32::MainWindow::CursorType cursorType = Win32::MainWindow::CursorType::SystemDefault;
-
-        if (panAmount == LLUtils::PointF64::Zero)
-        {
-            cursorType = Win32::MainWindow::CursorType::SizeAll;
-        }
-        else
-        {
-            double deg = LLUtils::Math::ToDegrees(atan2(-panAmount.y, panAmount.x)) + 180.0;
-            const int numDirections = 8;
-            const int step = 360 / numDirections;
-            int index = (static_cast<int>(deg) + step / 2) % 360 / step;
-            cursorType = static_cast<Win32::MainWindow::CursorType>(index + 2);
-        }
+        const PanCursorHint cursorHint = InputGesturePolicy::CursorHintForPan(panAmount);
+        const Win32::MainWindow::CursorType cursorType =
+            cursorHint.sizeAll ? Win32::MainWindow::CursorType::SizeAll
+                               : static_cast<Win32::MainWindow::CursorType>(cursorHint.directionIndex + 2);
         fWindow.SetCursorType(cursorType);
     }
 
@@ -1892,15 +1600,12 @@ namespace OIV
                 auto currentImage = fImageState.GetOpenedImage()->GetImage()->GetSubImage(fCurrentFrame);
                 fImageState.SetImageChainRoot(
                     std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
-                auto nextFrame = (fCurrentFrame + 1) % fImageState.GetOpenedImage()->GetImage()->GetNumSubImages();
 
-                // When Animation data is not found, set minimum frame delay to 5 milliseconds.
-                constexpr uint32_t MinFrameDelay = 5u;
-                fSequencerTimer.SetInterval(std::max(
-                    1u, static_cast<uint32_t>(static_cast<double>(std::max(
-                                                  MinFrameDelay, currentImage->GetAnimationData().delayMilliseconds)) /
-                                              fCurrentSequencerSpeed)));
-                fCurrentFrame = nextFrame;
+                fSequencerTimer.SetInterval(SequencerPolicy::FrameIntervalMs(
+                    currentImage->GetAnimationData().delayMilliseconds,
+                    fCurrentSequencerSpeed));
+                fCurrentFrame = SequencerPolicy::NextFrame(fCurrentFrame,
+                                                           fImageState.GetOpenedImage()->GetImage()->GetNumSubImages());
                 RefreshImage();
             });
 
@@ -1946,15 +1651,15 @@ namespace OIV
         using namespace IMCodec;
         auto openedImage = fImageState.GetOpenedImage()->GetImage();
 
-        const auto isMainAnActualImage = openedImage->GetItemType() != ImageItemType::Container;
+        const auto isMainAnActualImage = SubImagePolicy::IncludeMainImage(openedImage->GetItemType());
+        const auto actualIndex = SubImagePolicy::ActualImageIndexFromDisplayIndex(index, isMainAnActualImage);
 
-        if (index == 0 && isMainAnActualImage)
+        if (actualIndex == SubImagePolicy::MainImageIndex)
         {
             return openedImage;
         }
         else
         {
-            const auto actualIndex = isMainAnActualImage == true ? std::max(0, index - 1) : index;
             return openedImage->GetSubImage(actualIndex);
         }
     }
@@ -1982,103 +1687,76 @@ namespace OIV
 
     void TestApp::ProcessRemovalOfOpenedFile(const std::wstring& fileName)
     {
-        if (fileName == GetOpenedFileName())
+        const bool removeInternalDeletes =
+            (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedInternally) ==
+            DeletedFileRemovalMode::DeletedInternally;
+        const bool removeExternalDeletes =
+            (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) ==
+            DeletedFileRemovalMode::DeletedExternally;
+        const size_t fileCount =
+            fFileSessionController != nullptr ? fFileSessionController->GetFileList().GetSize() : 0;
+
+        const auto action = FileRemovalPolicy::Decide(GetOpenedFileName(),
+                                                      fileName,
+                                                      fRequestedFileForRemoval,
+                                                      removeInternalDeletes,
+                                                      removeExternalDeletes,
+                                                      fileCount);
+        if (action != RemovedFileAction::Ignore)
         {
-            const bool internally = fRequestedFileForRemoval == GetOpenedFileName();
+            bool firstJumpSucceeded = false;
+            bool fallbackJumpSucceeded = false;
 
-            bool shouldRemoveFile = (internally == true &&
-                                     (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedInternally) ==
-                                         DeletedFileRemovalMode::DeletedInternally) ||
-                                    (internally == false &&
-                                     (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) ==
-                                         DeletedFileRemovalMode::DeletedExternally);
-
-            // Don't remove file, just update index
-            if (shouldRemoveFile == false)
+            if (action == RemovedFileAction::TryStart)
             {
-                // TODO: update title to have a ? sign in the file index, since it is gone.
+                firstJumpSucceeded = JumpFiles(FileList::IndexStart);
             }
-            else
+            else if (action == RemovedFileAction::TryNextThenPrevious)
             {
-                // Remove and unload the file
-                bool isFileLoaded = false;
-                if (fFileSessionController != nullptr && fFileSessionController->GetFileList().GetSize() == 1)
-                {
-                    isFileLoaded = JumpFiles(FileList::IndexStart);
-                }
-                else
-                {
-                    isFileLoaded = JumpFiles(1);
-                    if (isFileLoaded == false)
-                    {
-                        isFileLoaded = JumpFiles(-1);
-                    }
-                }
+                firstJumpSucceeded = JumpFiles(1);
+                if (!firstJumpSucceeded)
+                    fallbackJumpSucceeded = JumpFiles(-1);
+            }
 
-                if (isFileLoaded == false)
-                {
-                    // Could find a suitable file to load, unload current file and reset index
-                    // TODO: add user message that no more files are available.
-                    UnloadOpenedImaged();
-                    ShowWelcomeMessage();
-                }
+            if (FileRemovalPolicy::ShouldUnloadAfterJumps(action, firstJumpSucceeded, fallbackJumpSucceeded))
+            {
+                UnloadOpenedImaged();
+                ShowWelcomeMessage();
             }
 
             fRequestedFileForRemoval = {};
         }
-        else
-        {
-        }
+
         UpdateTitle();
     }
 
     void TestApp::OnFileChangedImpl(const FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs = *fileChangedEventArgsPtr;
+        const bool hasActiveFolder = fFileSessionController != nullptr;
+        const auto activeFolderID =
+            hasActiveFolder ? fFileSessionController->GetFileList().GetFolderID() : IFileWatcher::FolderID{};
 
-        if (fFileSessionController != nullptr &&
-            fileChangedEventArgs.folderID == fFileSessionController->GetFileList().GetFolderID())
+        switch (FileChangePolicy::Decide(fileChangedEventArgs,
+                                         hasActiveFolder,
+                                         activeFolderID,
+                                         fCOnfigurationFolderID,
+                                         std::filesystem::path(GetOpenedFileName()).wstring()))
         {
-            std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
-            std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
-            std::wstring changedFileName =
-                (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring();
-            std::wstring changedFileName2 =
-                (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).wstring();
-
-            switch (fileChangedEventArgs.fileOp)
-            {
-                case FileWatcher::FileChangedOp::None:
-                    break;
-                case FileWatcher::FileChangedOp::Add:
-
-                    break;
-                case FileWatcher::FileChangedOp::Remove:
-                    break;
-                case FileWatcher::FileChangedOp::Modified:
-                    if (absoluteFilePath == changedFileName)
-                        ProcessCurrentFileChanged();
-                    break;
-                case FileWatcher::FileChangedOp::Rename:
-                    if (absoluteFilePath == changedFileName2)
-                        ProcessCurrentFileChanged();
-                    break;
-
-                case FileWatcher::FileChangedOp::WatchedFolderRemoved:
-                    fCurrentFolderWatched.clear();
-                    break;
-            }
-        }
-        else if (fileChangedEventArgs.folderID == fCOnfigurationFolderID)
-        {
-            if (fileChangedEventArgs.fileName == L"Settings.json")
-            {
+            case FileChangeAction::CurrentFileChanged:
+                ProcessCurrentFileChanged();
+                break;
+            case FileChangeAction::ClearWatchedFolder:
+                fCurrentFolderWatched.clear();
+                break;
+            case FileChangeAction::ReloadSettings:
                 LoadSettings();
-            }
-        }
-        else
-        {
-            LL_EXCEPTION_UNEXPECTED_VALUE;
+                break;
+            case FileChangeAction::Ignore:
+                break;
+            case FileChangeAction::UnexpectedFolder:
+                LL_EXCEPTION_UNEXPECTED_VALUE;
+                break;
         }
     }
 
@@ -2133,7 +1811,7 @@ namespace OIV
         const auto& mouseState = fMouseDevicesState.find(btnEvent.parent->GetID())->second;
         const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
         const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
-        const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
+        const bool IsRightCatured = fMouseCaptureState.IsCaptured(MouseButtonType::Right);
 
         if (btnEvent.button == MouseButton::Left)
         {
@@ -2183,8 +1861,8 @@ namespace OIV
             }
             else
             {
-                if (fCapturedMouseButtons.at(static_cast<size_t>(MouseButton::Back)) == false &&
-                    fCapturedMouseButtons.at(static_cast<size_t>(MouseButton::Forward)) == false)
+                if (fMouseCaptureState.IsCaptured(MouseButton::Back) == false &&
+                    fMouseCaptureState.IsCaptured(MouseButton::Forward) == false)
                     fTimerNavigation.SetInterval(0);
             }
         }
@@ -2219,8 +1897,8 @@ namespace OIV
         const bool IsLeftDown = mouseState.GetButtonState(MouseButtonType::Left) == ButtonState::Down;
         const bool IsRightDown = mouseState.GetButtonState(MouseButtonType::Right) == ButtonState::Down;
 
-        const bool IsRightCatured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Right)) == true;
-        const bool IsLeftCaptured = fCapturedMouseButtons.at(static_cast<size_t>(MouseButtonType::Left)) == true;
+        const bool IsRightCatured = fMouseCaptureState.IsCaptured(MouseButtonType::Right);
+        const bool IsLeftCaptured = fMouseCaptureState.IsCaptured(MouseButtonType::Left);
         // const bool IsRightDown = mouseState.GetButtonState(MouseState::Button::Right) == MouseState::State::Down;
         // const bool IsLeftReleased = evnt->GetButtonEvent(MouseState::Button::Left) == MouseState::EventType::Released;
 
@@ -2322,10 +2000,9 @@ namespace OIV
                     static_cast<decltype(fMouseDevicesState)::mapped_type::underlying_button_type>(i),
                     mouseEvent.buttonState[i]);
 
-                if (mouseEvent.buttonState[i] == ButtonState::Down && fWindow.IsUnderMouseCursor())
-                    fCapturedMouseButtons[static_cast<size_t>(i)] = true;
-                else if (mouseEvent.buttonState[i] == ButtonState::Up)
-                    fCapturedMouseButtons[static_cast<size_t>(i)] = false;
+                fMouseCaptureState.Update(static_cast<MouseButton>(i),
+                                           mouseEvent.buttonState[i],
+                                           fWindow.IsUnderMouseCursor());
 
                 fMouseClickEventHandler.SetButtonState(static_cast<MouseButton>(i), mouseEvent.buttonState[i]);
             }
@@ -2423,8 +2100,9 @@ namespace OIV
                     return;
 
                 const auto& fileList = fFileSessionController->GetFileList();
-                bool foundFile = JumpFiles(1) || ((fileList.GetCurrentIndex() == fileList.GetSize() - 1) &&
-                                                  JumpFiles(FileList::IndexStart));
+                bool foundFile = JumpFiles(1) ||
+                                 (fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(), fileList.GetSize()) &&
+                                  JumpFiles(FileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
             });
@@ -2437,93 +2115,25 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
-        auto codecsInfo = fImageLoader.GetImageCodec().GetPluginsInfo();
+        const ImageFormatCatalog imageFormatCatalog =
+            ImageFormatCatalogPolicy::Build(fImageLoader.GetImageCodec().GetPluginsInfo());
 
-        // Build known image extension set and open/save dialog filters
         ::Win32::FileDialogFilterBuilder::ListFileDialogFilters readFilters;
         ::Win32::FileDialogFilterBuilder::ListFileDialogFilters writeFilters;
 
-        readFilters.push_back({L"All files (*.*)", {{L"*.*"}}});
+        for (const ImageFormatFilter& filter : imageFormatCatalog.readFilters)
+            readFilters.push_back({filter.description, filter.extensions});
 
-        readFilters.push_back({L"All supported image formats", {}});
+        for (const ImageFormatFilter& filter : imageFormatCatalog.writeFilters)
+            writeFilters.push_back({filter.description, filter.extensions});
 
-        auto allFormatsIdx = readFilters.size() - 1;
-
-        for (const auto& codecInfo : codecsInfo)
-        {
-            for (const auto& extensionCollection : codecInfo.extensionCollection)
-            {
-                if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Decode) ==
-                    IMCodec::CodecCapabilities::Decode)  // Can the codec decode data
-                {
-                    // Prepare read filters for Open file Dialog, and Prepare known file types data structure
-                    readFilters.push_back({});
-                    auto& readFilter = readFilters.back();
-
-                    std::wstring readDialogDescription;
-                    for (const auto& extension : extensionCollection.listExtensions)
-                    {
-                        readDialogDescription += LLUtils::StringUtility::ToUpper(extension) + L'/';
-                        auto lowercaseExtension = LLUtils::StringUtility::ToLower(extension);
-                        fKnownFileTypesSet.insert(lowercaseExtension);
-                        readFilter.extensions.push_back(L"*." + lowercaseExtension);
-                        readFilters.at(allFormatsIdx).extensions.push_back(L"*." + lowercaseExtension);
-                    }
-
-                    if (readDialogDescription.empty() == false)
-                        readDialogDescription.erase(readDialogDescription.length() - 1, 1);
-
-                    readFilter.description = readDialogDescription + L" - " + extensionCollection.description;
-                }
-
-                if ((codecInfo.capabilities & IMCodec::CodecCapabilities::Encode) ==
-                        IMCodec::CodecCapabilities::Encode &&
-                    (codecInfo.capabilities & IMCodec::CodecCapabilities::BulkCodec) !=
-                        IMCodec::CodecCapabilities::BulkCodec)  // Make sure it isn't a bulk codec
-
-                {
-                    // Prepare write filter for Save file Dialog
-                    writeFilters.push_back({});
-                    auto& writeFilter = writeFilters.back();
-
-                    std::wstring saveDialogDescription;
-                    for (const auto& extension : extensionCollection.listExtensions)
-                    {
-                        saveDialogDescription += LLUtils::StringUtility::ToUpper(extension) + L'/';
-                        auto lowercaseExtension = LLUtils::StringUtility::ToLower(extension);
-                        if (writeFilter.extensions.empty())  // Add only the primary format.
-                            writeFilter.extensions.push_back(L"*." + lowercaseExtension);
-
-                        if (lowercaseExtension == L"png")
-                            fDefaultSaveFileFormatIndex = static_cast<int16_t>(writeFilters.size());
-                    }
-
-                    if (saveDialogDescription.empty() == false)
-                        saveDialogDescription.erase(saveDialogDescription.length() - 1, 1);
-
-                    writeFilter.description = saveDialogDescription + L" - " + extensionCollection.description;
-                }
-            }
-        }
-
-        if (fDefaultSaveFileFormatIndex == -1)
-            fDefaultSaveFileFormatIndex = 0;
+        fKnownFileTypesSet = imageFormatCatalog.knownFileTypesSet;
+        fKnownFileTypes = imageFormatCatalog.knownFileTypes;
+        fDefaultSaveFileExtension = imageFormatCatalog.defaultSaveFileExtension;
+        fDefaultSaveFileFormatIndex = imageFormatCatalog.defaultSaveFileFormatIndex;
 
         fOpenComDlgFilters = {readFilters};
         fSaveComDlgFilters = {writeFilters};
-
-        std::wstringstream ss;
-
-        for (const auto& knownExtension : fKnownFileTypesSet)
-            ss << knownExtension << L';';
-
-        if (ss.rdbuf()->in_avail() > 0)
-        {
-            ss.seekp(-1, std::ios_base::end);
-            ss << L'\0';
-        }
-
-        fKnownFileTypes = ss.str();
 
         fFileWatcher.FileChangedEvent.Add(std::bind(&TestApp::OnFileChanged, this, std::placeholders::_1));
 
@@ -2629,143 +2239,76 @@ namespace OIV
             UpdateTitle();
         }
 
-        // Register clipboard format by PRIORITY
-        fClipboardHelper.RegisterFormat(CF_DIBV5);
-        fClipboardHelper.RegisterFormat(CF_DIB);
-        /*fHTMLFormatID = fClipboardHelper.RegisterFormat(L"HTML Format");
-        fRTFFormatID = fClipboardHelper.RegisterFormat(L"Rich Text Format");*/
-        fClipboardHelper.RegisterFormat(CF_UNICODETEXT);
-        fClipboardHelper.RegisterFormat(CF_TEXT);
-    }
-
-    template <typename value_type>
-    value_type ParseValue(const std::wstring& value)
-    {
-        using Integral = ConfigurationLoader::Integral;
-        using Float = ConfigurationLoader::Float;
-        using Bool = ConfigurationLoader::Bool;
-
-        if constexpr (std::is_same_v<value_type, Integral>)
-            return std::stoll(value);
-        else if constexpr (std::is_same_v<value_type, Float>)
-            return std::stod(value);
-        else if constexpr (std::is_same_v<value_type, Bool>)
-            return value == L"true" ? true : false;
-        else
-            static_assert("not implemented");
+        ClipboardSetup::RegisterDefaultFormats(fClipboardHelper);
     }
 
     void TestApp::OnSettingChange(const std::wstring& key, const std::wstring& value)
     {
-        using Integral = ConfigurationLoader::Integral;
-        using Float = ConfigurationLoader::Float;
-        using Bool = ConfigurationLoader::Bool;
+        const AppSettingsPolicy::Action action = AppSettingsPolicy::ParseAction(key, value);
 
-        if (key == L"viewsettings/maxzoom")
+        switch (action.type)
         {
-            auto val = ParseValue<Float>(value);
-            fMaxPixelSize = val;
-        }
-        else if (key == L"viewsettings/imagemargins/x")
-            fImageMargins.x = ParseValue<Float>(value);
-        else if (key == L"viewsettings/imagemargins/y")
-            fImageMargins.y = ParseValue<Float>(value);
-        else if (key == L"viewsettings/minimagesize")
-            fMinImageSize = ParseValue<Float>(value);
-        else if (key == L"viewsettings/slideshowinterval")
-            fSlideShowIntervalms = static_cast<uint32_t>(ParseValue<Integral>(value));
-        else if (key == L"viewsettings/quickbrowsedelay")
-            fQuickBrowseDelay = static_cast<uint16_t>(ParseValue<Integral>(value));
-
-        // Auto scroll
-
-        else if (key == L"autoscroll/deadzoneradius")
-            fAutoScroll->SetDeadZoneRadius(static_cast<int32_t>(ParseValue<Integral>(value)));
-        else if (key == L"autoscroll/speedfactorin")
-            fAutoScroll->SetSpeedFactorIn(ParseValue<Float>(value));
-        else if (key == L"autoscroll/speedfactorout")
-            fAutoScroll->SetSpeedFactorOut(ParseValue<Float>(value));
-        else if (key == L"autoscroll/speedfactorrange")
-            fAutoScroll->SetSpeedFactorRange(static_cast<int32_t>(ParseValue<Integral>(value)));
-        else if (key == L"autoscroll/maxspeed")
-            fAutoScroll->SetMaxSpeed(static_cast<int32_t>(ParseValue<Integral>(value)));
-
-        // deleted file removal mode
-
-        else if (key == L"filesystem/deletedfileremovalmode")
-        {
-            std::wstring fileRemovalModeStr = value;
-
-            if (fileRemovalModeStr == L"always")
-                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally |
-                                          DeletedFileRemovalMode::DeletedInternally;
-            else if (fileRemovalModeStr == L"externally")
-                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedExternally;
-            else if (fileRemovalModeStr == L"internally")
-                fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
-            else if (fileRemovalModeStr == L"none")
-                fDeletedFileRemovalMode = DeletedFileRemovalMode::None;
-        }
-        // modified file reload mode
-        else if (key == L"filesystem/modifiedfilereloadmode")
-        {
-            std::wstring modifiedFileReloadModeStr = value;
-            if (modifiedFileReloadModeStr == L"none")
-                fMofifiedFileReloadMode = MofifiedFileReloadMode::None;
-            else if (modifiedFileReloadModeStr == L"confirmation")
-                fMofifiedFileReloadMode = MofifiedFileReloadMode::Confirmation;
-            else if (modifiedFileReloadModeStr == L"autoforeground")
-                fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoForeground;
-            else if (modifiedFileReloadModeStr == L"autobackground")
-                fMofifiedFileReloadMode = MofifiedFileReloadMode::AutoBackground;
-        }
-        else if (key == L"system/reloadsettingsfileifchanged")
-        {
-            fReloadSettingsFileIfChanged = ParseValue<Bool>(value);
-        }
-        else if (key == L"files/defaultsortmode")
-        {
-            if (value == L"name")
-                fFileSorter.SetSortType(FileSorter::SortType::Name);
-            else if (value == L"date")
-                fFileSorter.SetSortType(FileSorter::SortType::Date);
-            else if (value == L"extension")
-                fFileSorter.SetSortType(FileSorter::SortType::Extension);
-        }
-        else if (key == L"files/sortbynamedirection")
-            fFileSorter.SetSortDirection(FileSorter::SortType::Name, value == L"ascending"
-                                                                         ? FileSorter::SortDirection::Ascending
-                                                                         : FileSorter::SortDirection::Descending);
-        else if (key == L"files/sortbydatedirection")
-            fFileSorter.SetSortDirection(FileSorter::SortType::Date, value == L"ascending"
-                                                                         ? FileSorter::SortDirection::Ascending
-                                                                         : FileSorter::SortDirection::Descending);
-        else if (key == L"files/sortbyextensiondirection")
-            fFileSorter.SetSortDirection(FileSorter::SortType::Extension, value == L"ascending"
-                                                                              ? FileSorter::SortDirection::Ascending
-                                                                              : FileSorter::SortDirection::Descending);
-
-        else if (key == L"displaysettings/backgroundcolor1")
-        {
-            // auto argb = ;
-            // LLUtils::Color backgroundColor1 = { argb.channels[0], argb.channels[1] ,argb.channels[2] ,
-            // argb.channels[3] };
-            ApiGlobal::sPictureRenderer->SetBackgroundColor(0, LLUtils::Color::FromString(
-                                                                   LLUtils::StringUtility::ToAString(value)));
-            fRefreshOperation.Queue();
-        }
-        else if (key == L"displaysettings/backgroundcolor2")
-        {
-            /*auto argb = ;
-            LLUtils::Color backgroundColor2 = { argb.channels[1], argb.channels[2] ,argb.channels[3] , argb.channels[0]
-            };*/
-            ApiGlobal::sPictureRenderer->SetBackgroundColor(1, LLUtils::Color::FromString(
-                                                                   LLUtils::StringUtility::ToAString(value)));
-            fRefreshOperation.Queue();
-        }
-        else if (key == L"imagesettings/biggestsubimage")
-        {
-            fDisplayBiggestSubImageOnLoad = ParseValue<Bool>(value);
+            case AppSettingsPolicy::ActionType::MaxZoom:
+                fMaxPixelSize = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ImageMarginX:
+                fImageMargins.x = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ImageMarginY:
+                fImageMargins.y = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::MinImageSize:
+                fMinImageSize = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::SlideshowInterval:
+                fSlideshowPolicy.SetIntervalMs(static_cast<uint32_t>(action.integralValue));
+                if (fSlideshowPolicy.IsEnabled())
+                    fTimerSlideShow.SetInterval(fSlideshowPolicy.GetTimerIntervalMs());
+                break;
+            case AppSettingsPolicy::ActionType::QuickBrowseDelay:
+                fQuickBrowseDelay = static_cast<uint16_t>(action.integralValue);
+                break;
+            case AppSettingsPolicy::ActionType::AutoScrollDeadZoneRadius:
+                fAutoScroll->SetDeadZoneRadius(static_cast<int32_t>(action.integralValue));
+                break;
+            case AppSettingsPolicy::ActionType::AutoScrollSpeedFactorIn:
+                fAutoScroll->SetSpeedFactorIn(action.floatValue);
+                break;
+            case AppSettingsPolicy::ActionType::AutoScrollSpeedFactorOut:
+                fAutoScroll->SetSpeedFactorOut(action.floatValue);
+                break;
+            case AppSettingsPolicy::ActionType::AutoScrollSpeedFactorRange:
+                fAutoScroll->SetSpeedFactorRange(static_cast<int32_t>(action.integralValue));
+                break;
+            case AppSettingsPolicy::ActionType::AutoScrollMaxSpeed:
+                fAutoScroll->SetMaxSpeed(static_cast<int32_t>(action.integralValue));
+                break;
+            case AppSettingsPolicy::ActionType::DeletedFileRemovalMode:
+                fDeletedFileRemovalMode = action.deletedFileRemovalMode;
+                break;
+            case AppSettingsPolicy::ActionType::FileReloadMode:
+                fFileReloadPolicy.SetMode(action.fileReloadMode);
+                break;
+            case AppSettingsPolicy::ActionType::ReloadSettingsFileIfChanged:
+                fReloadSettingsFileIfChanged = action.boolValue;
+                break;
+            case AppSettingsPolicy::ActionType::DefaultSortMode:
+                fFileSorter.SetSortType(action.sortType);
+                break;
+            case AppSettingsPolicy::ActionType::SortDirection:
+                fFileSorter.SetSortDirection(action.sortType, action.sortDirection);
+                break;
+            case AppSettingsPolicy::ActionType::BackgroundColor:
+                ApiGlobal::sPictureRenderer->SetBackgroundColor(
+                    action.backgroundColorIndex,
+                    LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(action.textValue)));
+                fRefreshOperation.Queue();
+                break;
+            case AppSettingsPolicy::ActionType::BiggestSubImageOnLoad:
+                fDisplayBiggestSubImageOnLoad = action.boolValue;
+                break;
+            case AppSettingsPolicy::ActionType::None:
+                break;
         }
     }
 
@@ -2796,21 +2339,16 @@ namespace OIV
             case NotificationIconGroup::NotificationIconAction::ContextMenu:
             {
                 auto rect = fNotificationIcons.GetIconRect(fNotificationIconID);
-                auto bottomLeft = rect.GetCorner(LLUtils::Corner::TopRight);
-                bottomLeft.x += rect.GetWidth() / 2;
-                bottomLeft.y += rect.GetHeight() / 2;
+                auto bottomLeft = ShellIntegrationHelper::TrayContextMenuPosition(rect);
 
                 fWindow.SetForground();
                 auto chosenItem = fNotificationContextMenu->Show(bottomLeft.x, bottomLeft.y, AlignmentHorizontal::Right,
                                                                  AlignmentVertical::Bottom);
                 if (chosenItem != nullptr)
                 {
-                    using namespace std::string_literals;
                     CommandRequestIntenal request;
                     request.commandName = "cmd_view_state";
-                    request.args = "type="s + LLUtils::StringUtility::ToLower(
-                                                  LLUtils::StringUtility::ConvertString<decltype(request.commandName)>(
-                                                      chosenItem->itemDisplayName));
+                    request.args = ShellIntegrationHelper::ViewCommandArgsFromTrayItem(chosenItem->itemDisplayName);
                     ExecuteCommandInternal(request);
                 }
             }
@@ -2819,20 +2357,6 @@ namespace OIV
                 LL_EXCEPTION_UNEXPECTED_VALUE;
                 break;
         }
-    }
-
-    double TestApp::PerformColorOp(double& gamma, const std::string& op, const std::string& val)
-    {
-        double value = std::atof(val.c_str());
-        if (op == "increase")
-            gamma *= (1 + value / 100.0);
-        else if (op == "decrease")
-            gamma *= 1 / (1 + value / 100.0);
-        else if (op == "add")
-            gamma += value;
-        else if (op == "subtract")
-            gamma -= value;
-        return gamma;
     }
 
     OIV_Filter_type TestApp::GetFilterType() const
@@ -2868,27 +2392,31 @@ namespace OIV
     {
         fIsColorThreadRunning = false;
 
-        if (fImageState.GetImage(ImageChainStage::SourceImage).get() ==
-            reinterpret_cast<OIVBaseImage*>(countColorsData.image))
+        switch (ColorCountPolicy::DecideCompletion(countColorsData.image,
+                                                   fImageState.GetImage(ImageChainStage::SourceImage).get(),
+                                                   GetImageInfoVisible()))
         {
-            // Still the same image on display, assing number of colors and refresh ImageInfo
+            case ColorCountCompletionAction::ApplyToCurrentImage:
+                // Still the same image on display, assing number of colors and refresh ImageInfo
 
-            // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't
-            // restart for this image.
-            fCountingImageColor.reset();
-            fImageState.GetImage(ImageChainStage::SourceImage)
-                ->SetNumUniqueColors(countColorsData.colorCount != UniqueColorsUninitialized - 1
-                                         ? countColorsData.colorCount
-                                         : UniqueColorsFailed);
+                // if counting unique colors has failed, assign UniqueColorsFailed, so counting colors won't
+                // restart for this image.
+                fCountingImageColor.reset();
+                fImageState.GetImage(ImageChainStage::SourceImage)
+                    ->SetNumUniqueColors(ColorCountPolicy::NormalizeCountResult(
+                        countColorsData.colorCount,
+                        UniqueColorsUninitialized - 1,
+                        UniqueColorsFailed));
 
-            if (GetImageInfoVisible() == true)
-                ShowImageInfo();
-        }
-        else
-        {
-            // If a different image on display Just count colors
-            if (GetImageInfoVisible() == true)
+                if (GetImageInfoVisible() == true)
+                    ShowImageInfo();
+                break;
+            case ColorCountCompletionAction::CountVisibleImage:
+                // If a different image on display Just count colors
                 CountColorsAsync();
+                break;
+            case ColorCountCompletionAction::Ignore:
+                break;
         }
     }
 
@@ -2993,17 +2521,10 @@ namespace OIV
 
     void TestApp::SetSlideShowEnabled(bool enabled)
     {
-        if (fSlideShowEnabled != enabled)
+        if (fSlideshowPolicy.IsEnabled() != enabled)
         {
-            fSlideShowEnabled = enabled;
-            if (fSlideShowEnabled == true)
-            {
-                fTimerSlideShow.SetInterval(fSlideShowIntervalms);
-            }
-            else
-            {
-                fTimerSlideShow.SetInterval(0);
-            }
+            fSlideshowPolicy.SetEnabled(enabled);
+            fTimerSlideShow.SetInterval(fSlideshowPolicy.GetTimerIntervalMs());
         }
     }
 
@@ -3086,8 +2607,7 @@ namespace OIV
     void TestApp::ZoomInternal(double amount, int zoomX, int zoomY)
     {
         const double adaptiveAmount = fAdaptiveZoom.Add(amount);
-        const double adjustedAmount = adaptiveAmount > 0 ? GetScale() * (1 + adaptiveAmount)
-                                                         : GetScale() / (1 - adaptiveAmount);
+        const double adjustedAmount = ViewActionController::RelativeZoom(GetScale(), adaptiveAmount);
         SetZoomInternal(adjustedAmount, zoomX, zoomY);
     }
 
@@ -3133,8 +2653,7 @@ namespace OIV
     void TestApp::UpdateSelectionRectText()
     {
         OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
-        auto selectionSizeStr = std::to_wstring(fImageSpaceSelection.GetWidth()) + L" X " +
-                                std::to_wstring(fImageSpaceSelection.GetHeight());
+        auto selectionSizeStr = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
 
         if (selectionSizeText == nullptr)
         {
@@ -3153,53 +2672,25 @@ namespace OIV
             selectionSizeText->SetOpacity(1.0);
         }
 
-        auto selectionRectPosition = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::TopLeft);
         // text already exists, just make visible.
         selectionSizeText->SetVisible(true);
         selectionSizeText->SetText(selectionSizeStr);
         selectionSizeText->Create();
 
-        int32_t posX = selectionRectPosition.x + fSelectionRect.GetSelectionRect().GetWidth() / 2 -
-                       selectionSizeText->GetImage()->GetWidth() / 2;
-        int32_t posY = selectionRectPosition.y - selectionSizeText->GetImage()->GetHeight();
+        const auto labelPosition = SelectionWorkflowPolicy::PlaceSelectionLabel(
+            fSelectionRect.GetSelectionRect(),
+            {static_cast<int32_t>(selectionSizeText->GetImage()->GetWidth()),
+             static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight())},
+            static_cast<LLUtils::PointI32>(fWindow.GetClientSize()));
 
-        const auto selectinTopLeft = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::TopLeft);
-        const auto selectinBottomRight = fSelectionRect.GetSelectionRect().GetCorner(LLUtils::Corner::BottomRight);
-        const auto clientSize = static_cast<LLUtils::PointI32>(fWindow.GetClientSize());
-
-        // if vetical position is above client area, place text below selection rect
-        if (posY < 0)
-            posY = selectinBottomRight.y;
-
-        // if vertical position is below client area, place text inside the rectangle
-        if (posY + static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight()) >= clientSize.y)
-            posY = std::max(0, selectionRectPosition.y);
-
-        // if horizontal position is far right
-
-        if (posX + static_cast<int32_t>(selectionSizeText->GetImage()->GetWidth()) >= clientSize.x)
-        {
-            posX = selectionRectPosition.x - selectionSizeText->GetImage()->GetWidth();
-            posY = selectinTopLeft.y + (selectinBottomRight.y - selectinTopLeft.y) / 2;
-        }
-
-        if (posX < 0)
-        {
-            posX = selectinBottomRight.x;
-            posY = selectinTopLeft.y + (selectinBottomRight.y - selectinTopLeft.y) / 2;
-        }
-
-        selectionSizeText->SetPosition({static_cast<double>(posX), static_cast<double>(posY)});
+        selectionSizeText->SetPosition(static_cast<LLUtils::PointF64>(labelPosition));
     }
 
     void TestApp::OnImageReady(IMCodec::ImageSharedPtr image) {}
 
     LLUtils::PointI32 TestApp::SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen)
     {
-        using namespace LLUtils;
-        auto imageSpacePoint = static_cast<LLUtils::PointI32>(ClientToImage(pointOnScreen).Round());
-        auto snappedscreenSpacePoint = ImageToClient(static_cast<LLUtils::PointF64>(imageSpacePoint));
-        return static_cast<PointI32>(snappedscreenSpacePoint.Round());
+        return SelectionWorkflowPolicy::SnapToImagePixels(pointOnScreen, GetScale(), GetOffset());
     }
 
     void TestApp::SetImageSpaceSelection(const LLUtils::RectI32& rect)
@@ -3215,7 +2706,7 @@ namespace OIV
 
     void TestApp::SaveImageSpaceSelection()
     {
-        if (fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+        if (SelectionWorkflowPolicy::ShouldSaveImageSpaceSelection(fSelectionRect.GetOperation()))
             SetImageSpaceSelection(ClientToImageRounded(fSelectionRect.GetSelectionRect()));
     }
 
@@ -3242,9 +2733,7 @@ namespace OIV
 
     double TestApp::GetMinimumPixelSize()
     {
-        using namespace LLUtils;
-        PointF64 minimumZoom = fMinImageSize / GetImageSize(ImageSizeType::Transformed);
-        return std::min(std::max(minimumZoom.x, minimumZoom.y), 1.0);
+        return ViewActionController::MinimumPixelSize(fMinImageSize, GetImageSize(ImageSizeType::Transformed));
     }
 
     void TestApp::QueueResampling()
@@ -3287,7 +2776,10 @@ namespace OIV
         if (fIsLockFitToScreen == false)
         {
             // We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            zoomValue = std::clamp(zoomValue, GetMinimumPixelSize(), fMaxPixelSize);
+            zoomValue = ViewActionController::ResolveZoomValue(zoomValue,
+                                                               fIsLockFitToScreen,
+                                                               GetMinimumPixelSize(),
+                                                               fMaxPixelSize);
         }
 
         if (zoomValue != fImageState.GetScale().x)
@@ -3295,17 +2787,8 @@ namespace OIV
             // Save image selection before view change
             fPreserveImageSpaceSelection.Begin();
 
-            PointI32 clientZoomPoint = {clientX, clientY};
-
-            if (clientZoomPoint.x < 0 || clientZoomPoint.y < 0)
-            {
-                const PointI32 canvasCenter = static_cast<PointI32>(GetCanvasCenter());
-                if (clientZoomPoint.x < 0)
-                    clientZoomPoint.x = canvasCenter.x;
-
-                if (clientZoomPoint.y < 0)
-                    clientZoomPoint.y = canvasCenter.y;
-            }
+            const PointI32 clientZoomPoint =
+                ViewActionController::ResolveZoomPoint({clientX, clientY}, GetCanvasCenter());
 
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
             PointF64 offset = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
@@ -3319,7 +2802,8 @@ namespace OIV
             RefreshImage();
 
             // preserve offset lock (image centering) if zoom is realtive to the center of the image
-            SetOffset(GetOffset() + offset, clientX == -1 && clientY == -1);
+            SetOffset(GetOffset() + offset,
+                      ViewActionController::ShouldPreserveOffsetLockForZoom(clientX, clientY));
             fPreserveImageSpaceSelection.End();
 
             fRefreshOperation.End();
@@ -3418,9 +2902,9 @@ namespace OIV
     void TestApp::AutoPlaceImage(bool forceCenter)
     {
         fRefreshOperation.Begin();
-        if (fIsLockFitToScreen == true && fIsOffsetLocked)
+        if (ViewActionController::ShouldFitToScreenOnAutoPlace(fIsLockFitToScreen, fIsOffsetLocked))
             FitToClientAreaAndCenter();
-        else if (fIsOffsetLocked == true || forceCenter == true)
+        else if (ViewActionController::ShouldCenterOnAutoPlace(fIsLockFitToScreen, fIsOffsetLocked, forceCenter))
             Center();
         fRefreshOperation.End();
     }
@@ -3658,62 +3142,46 @@ namespace OIV
 
     OperationResult TestApp::CopyVisibleToClipBoard()
     {
-        OperationResult result = OperationResult::UnkownError;
-        if (IsImageOpen())
+        OperationResult result = ImageEditPolicy::ValidateSelectionOperation(
+            IsImageOpen(),
+            fSelectionRect.GetSelectionRect().IsEmpty());
+        if (result == OperationResult::Success)
         {
-            if (fSelectionRect.GetSelectionRect().IsEmpty())
-            {
-                result = OperationResult::NoSelection;
-            }
-            else
-            {
-                LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
-                auto cropped = IMUtil::ImageUtil::CropImage(
-                    fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageSpaceSelection);
+            result = OperationResult::UnkownError;
+            LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+            auto cropped = IMUtil::ImageUtil::CropImage(
+                fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), imageSpaceSelection);
 
-                if (cropped != nullptr)
-                {
-                    // 2. Flip the image vertically and convert it to BGRA for the clipboard.
-                    auto flipped = IMUtil::ImageUtil::Transform(
-                        {IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical}, cropped);
-                    if (flipped != nullptr && SetClipboardImage(flipped))
-                        result = OperationResult::Success;
-                }
+            if (cropped != nullptr)
+            {
+                // 2. Flip the image vertically and convert it to BGRA for the clipboard.
+                auto flipped = IMUtil::ImageUtil::Transform(
+                    {IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical}, cropped);
+                if (flipped != nullptr && SetClipboardImage(flipped))
+                    result = OperationResult::Success;
             }
-        }
-        else
-        {
-            result = OperationResult::NoDataFound;
         }
         return result;
     }
 
     OperationResult TestApp::CropVisibleImage()
     {
-        OperationResult result = OperationResult::UnkownError;
-        if (IsImageOpen() == false)
+        OperationResult result = ImageEditPolicy::ValidateSelectionOperation(
+            IsImageOpen(),
+            fSelectionRect.GetSelectionRect().IsEmpty());
+        if (result == OperationResult::Success)
         {
-            result = OperationResult::NoDataFound;
-        }
-        else
-        {
-            if (fSelectionRect.GetSelectionRect().IsEmpty())
-            {
-                result = OperationResult::NoSelection;
-            }
-            else
-            {
-                LLUtils::RectI32 imageRectInt = ClientToImageRounded(fSelectionRect.GetSelectionRect());
-                auto cropped = IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(),
-                                                            imageRectInt);
+            result = OperationResult::UnkownError;
+            LLUtils::RectI32 imageRectInt = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+            auto cropped = IMUtil::ImageUtil::CropImage(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(),
+                                                        imageRectInt);
 
-                if (cropped != nullptr)
-                {
-                    auto oivCropped = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, cropped);
-                    LoadOivImage(oivCropped);
-                    CancelSelection();
-                    result = OperationResult::Success;
-                }
+            if (cropped != nullptr)
+            {
+                auto oivCropped = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, cropped);
+                LoadOivImage(oivCropped);
+                CancelSelection();
+                result = OperationResult::Success;
             }
         }
         return result;
@@ -3721,58 +3189,49 @@ namespace OIV
 
     OperationResult TestApp::CutSelectedArea()
     {
-        OperationResult result = OperationResult::UnkownError;
         // Please note that currently this function works on the rasterized image, a more general solution is needed
         // to work on a previous stage image.
-        if (IsImageOpen() == false)
+        OperationResult result = ImageEditPolicy::ValidateSelectionOperation(
+            IsImageOpen(),
+            fSelectionRect.GetSelectionRect().IsEmpty());
+        if (result == OperationResult::Success)
         {
-            result = OperationResult::NoDataFound;
-        }
-        else
-        {
+            result = OperationResult::UnkownError;
             auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
-            if (fSelectionRect.GetSelectionRect().IsEmpty())
+            LLUtils::RectI32 subImageRect = ClientToImageRounded(fSelectionRect.GetSelectionRect());
+
+            const LLUtils::RectI32 imageRect = {{0, 0},
+                                                {static_cast<int32_t>(rasterized->GetWidth()),
+                                                 static_cast<int32_t>(rasterized->GetHeight())}};
+
+            subImageRect = subImageRect.Intersection(imageRect);
+
+            if (subImageRect.IsEmpty() == false)
             {
-                result = OperationResult::NoSelection;
-            }
-            else
-            {
-                LLUtils::RectI32 subImageRect = ClientToImageRounded(fSelectionRect.GetSelectionRect());
-
-                const LLUtils::RectI32 imageRect = {{0, 0},
-                                                    {static_cast<int32_t>(rasterized->GetWidth()),
-                                                     static_cast<int32_t>(rasterized->GetHeight())}};
-
-                subImageRect = subImageRect.Intersection(imageRect);
-
-                if (subImageRect.IsEmpty() == false)
-                {
-                    SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
-                    auto& texelInfo = IMCodec::GetTexelInfo(
-                        fImageState.GetImage(ImageChainStage::Rasterized)->GetImage()->GetOriginalTexelFormat());
-                    bool hasOpacityChannel = false;
-                    for (auto& channel : texelInfo.channles)
-                        if (channel.semantic == IMCodec::ChannelSemantic::Opacity)
-                        {
-                            hasOpacityChannel = true;
-                            break;
-                        }
-
-                    const auto fillColor = hasOpacityChannel ? LLUtils::Color(0, 0, 0, 0)
-                                                             : LLUtils::Color(0, 0, 0, 255);
-                    auto colorFilled = IMUtil::ImageUtil::FillColor(
-                        fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), subImageRect, fillColor);
-
-                    if (colorFilled != nullptr)
+                SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
+                auto& texelInfo = IMCodec::GetTexelInfo(
+                    fImageState.GetImage(ImageChainStage::Rasterized)->GetImage()->GetOriginalTexelFormat());
+                bool hasOpacityChannel = false;
+                for (auto& channel : texelInfo.channles)
+                    if (channel.semantic == IMCodec::ChannelSemantic::Opacity)
                     {
-                        auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
-                        auto lastState = fResetTransformationMode;
-                        fResetTransformationMode = ResetTransformationMode::DoNothing;
-                        LoadOivImage(oivColorFilled);
-                        fResetTransformationMode = lastState;
-                        CancelSelection();
-                        result = OperationResult::Success;
+                        hasOpacityChannel = true;
+                        break;
                     }
+
+                const auto fillColor = hasOpacityChannel ? LLUtils::Color(0, 0, 0, 0) : LLUtils::Color(0, 0, 0, 255);
+                auto colorFilled = IMUtil::ImageUtil::FillColor(
+                    fImageState.GetImage(ImageChainStage::Rasterized)->GetImage(), subImageRect, fillColor);
+
+                if (colorFilled != nullptr)
+                {
+                    auto oivColorFilled = std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, colorFilled);
+                    auto lastState = fResetTransformationMode;
+                    fResetTransformationMode = ResetTransformationMode::DoNothing;
+                    LoadOivImage(oivColorFilled);
+                    fResetTransformationMode = lastState;
+                    CancelSelection();
+                    result = OperationResult::Success;
                 }
             }
         }
@@ -3807,8 +3266,8 @@ namespace OIV
 
     void TestApp::SetTopMostUserMesage()
     {
-        std::wstring message = L"Top most ending in..." + std::to_wstring(fTopMostCounter);
-        SetUserMessage(message, static_cast<GroupID>(UserMessageGroups::WindowOnTop),
+        SetUserMessage(ViewerPresentationPolicy::FormatTopMostMessage(fTopMostCounter),
+                       static_cast<GroupID>(UserMessageGroups::WindowOnTop),
                        MessageFlags::Interchangeable | MessageFlags::ManualRemove);
     }
 
@@ -3822,11 +3281,9 @@ namespace OIV
         if (active != fIsActive)
         {
             fIsActive = active;
-            if (fIsActive == true && fPendingReloadFileName.empty() == false &&
-                fPendingReloadFileName == GetOpenedFileName())
+            if (fIsActive == true && fFileReloadPolicy.HasPendingReloadFor(GetOpenedFileName()))
             {
-                PerformReloadFile(fPendingReloadFileName);
-                fPendingReloadFileName = {};
+                PerformReloadFile(GetOpenedFileName());
             }
             else
             {
@@ -3854,49 +3311,27 @@ namespace OIV
 
     void TestApp::PerformReloadFile(const std::wstring& requestedFile)
     {
-        if (fPendingReloadFileName == requestedFile)
+        HandleReloadAction(fFileReloadPolicy.OnPendingReloadRequested(requestedFile), requestedFile);
+    }
+
+    void TestApp::HandleReloadAction(ReloadAction action, const std::wstring& requestedFile)
+    {
+        if (action == ReloadAction::AskUser)
         {
-            if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
-            {
-                if (fFileSessionController != nullptr)
-                    fFileSessionController->RequestCurrentFileReload();
-            }
-            else
-            {
-                using namespace std::string_literals;
-                int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + requestedFile).c_str(),
-                                          L"File is changed outside of OIV", MB_YESNO);
-                switch (mbResult)
-                {
-                    case IDYES:
-                        if (fFileSessionController != nullptr)
-                            fFileSessionController->RequestCurrentFileReload();
-                        break;
-                    case IDNO:
-                        break;
-                }
-            }
+            using namespace std::string_literals;
+            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + requestedFile).c_str(),
+                                      L"File is changed outside of OIV", MB_YESNO);
+            action = fFileReloadPolicy.ConfirmReload(mbResult == IDYES);
         }
+
+        if (action == ReloadAction::RequestNow && fFileSessionController != nullptr)
+            fFileSessionController->RequestCurrentFileReload();
     }
 
     void TestApp::ProcessCurrentFileChanged()
     {
-        switch (fMofifiedFileReloadMode)
-        {
-            case MofifiedFileReloadMode::AutoBackground:
-                if (fFileSessionController != nullptr)
-                    fFileSessionController->RequestCurrentFileReload();
-                break;
-            case MofifiedFileReloadMode::AutoForeground:
-            case MofifiedFileReloadMode::Confirmation:  // implicitly foreground
-                if (GetAppActive())
-                    PerformReloadFile(GetOpenedFileName());
-                else
-                    fPendingReloadFileName = GetOpenedFileName();
-                break;
-            case MofifiedFileReloadMode::None:  // do nothing
-                break;
-        }
+        HandleReloadAction(fFileReloadPolicy.OnCurrentFileChanged(GetOpenedFileName(), GetAppActive()),
+                           GetOpenedFileName());
     }
 
     bool TestApp::HandleWinMessageEvent(const ::Win32::EventWinMessage* evnt)
