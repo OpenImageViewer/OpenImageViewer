@@ -25,6 +25,6 @@
 [submodule "External/Win32"]
 	path = External/Win32
 	url = https://github.com/TheNicker/Win32.git
-[submodule "external/catch2"]
-	path = external/catch2
+[submodule "External/catch2"]
+	path = External/catch2
 	url = https://github.com/catchorg/Catch2.git
