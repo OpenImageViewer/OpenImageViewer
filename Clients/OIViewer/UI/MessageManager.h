@@ -76,7 +76,7 @@ namespace OIV
         ::Win32::Timer fTimerHideUserMessage;
         ::Win32::Timer fFadeTimer;
         RequestRefreshCallbackType fRefreshCallback;
-        RecrusiveDelayedOp fRefreshRequest;
+        RecursiveDelayedOp fRefreshRequest;
         int32_t fMaxMessageWidth{};
         int32_t fMarginLeft = 20;
         int32_t fMarginTop = 20;

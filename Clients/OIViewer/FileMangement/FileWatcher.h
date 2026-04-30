@@ -4,11 +4,12 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include <oivappcore/IFileWatcher.h>
 #include <LLUtils/Event.h>
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/Exception.h>
 
-class FileWatcher
+class FileWatcher : public OIV::IFileWatcher
 {
 private:
     struct FolderData;
@@ -16,27 +17,19 @@ private:
 
 public:
     using UniqueIDProvider = LLUtils::UniqueIdProvider<uint16_t>;
-    using FolderID = UniqueIDProvider::underlying_type;
-    enum class FileChangedOp { None, Add, Remove, Modified, Rename, WatchedFolderRemoved };
-    struct FileChangedEventArgs
-    {
-        FolderID folderID;
-        FileChangedOp fileOp;
-        std::wstring folder;
-        std::wstring fileName;
-        std::wstring fileName2;
-    };
-
-    using OnFileChangedEventArgsEvent = LLUtils::Event<void(FileChangedEventArgs)>;
+    using FolderID = OIV::IFileWatcher::FolderID;
+    using FileChangedOp = OIV::IFileWatcher::FileChangedOp;
+    using FileChangedEventArgs = OIV::IFileWatcher::FileChangedEventArgs;
+    using OnFileChangedEventArgsEvent = OIV::IFileWatcher::OnFileChangedEventArgsEvent;
 
     OnFileChangedEventArgsEvent FileChangedEvent;
 
-    bool IsFolderRegistered(const std::wstring& folder) const
+    bool IsFolderRegistered(const std::wstring& folder) const override
     {
         return fMapFolderID.find(folder) != fMapFolderID.end();
     }
 
-    FolderID AddFolder(const std::wstring& folder)
+    FolderID AddFolder(const std::wstring& folder) override
     {
         std::lock_guard<std::mutex> Lock(fDataMutex);
 
@@ -109,7 +102,7 @@ public:
         fUniqueIDProvider.Reset();
     }
 
-    void RemoveFolder(FolderID folderID)
+    void RemoveFolder(FolderID folderID) override
     {
         auto itData = fMapIDData.find(folderID);
         if (itData == fMapIDData.end())
@@ -124,7 +117,7 @@ public:
         fMapIDData.erase(itData);
     }
 
-    void RemoveFolder(const std::wstring& folder)
+    void RemoveFolder(const std::wstring& folder) override
     {
         std::lock_guard<std::mutex> Lock(fDataMutex);
         auto it = fMapFolderID.find(folder);
@@ -136,6 +129,11 @@ public:
 
 
 
+    }
+
+    OnFileChangedEventArgsEvent& GetFileChangedEvent() override
+    {
+        return FileChangedEvent;
     }
 
     static VOID CALLBACK QueueShutdownBackgroundThread(ULONG_PTR dwParam)

@@ -37,7 +37,9 @@
 #include "ImageState.h"
 #include "ContextMenu.h"
 #include "FileMangement/FileWatcher.h"
-#include <oivshared/BrowseResidencyManager.h>
+#include <oivappcore/FileSessionController.h>
+#include <oivappcore/ImageLoadController.h>
+#include <oivshared/ViewTransformController.h>
 
 #include "MouseMultiClickHandler.h"
 #include "UI/MessageManager.h"
@@ -45,11 +47,9 @@
 #include <NetSettings/GuiProvider.h>
 #include <ImageLoader.h>
 #include <ImageCodec.h>
-#include <optional>
 #include <vector>
 #include "win32/EventSync.h"
 #include "InterThreadMessages.h"
-#include "FileMangement/FileList.h"
 #include <oivshared/ImageResidency.h>
 namespace OIV
 {
@@ -254,6 +254,7 @@ namespace OIV
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
         bool LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags);
         bool LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode);
+        bool ProcessImageLoadResult(const ImageLoadResult& loadResult);
         void LoadOivImage(OIVBaseImageSharedPtr oivImage);
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
@@ -287,7 +288,6 @@ namespace OIV
         void OnFileChangedImpl(const FileWatcher::FileChangedEventArgs*
                                    fileChangedEventArgs);  // file change handler, runs in the main thread.
         void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
-        void OnFileIndexChanged(FileList::index_type current, FileList::index_type previous);
         void OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image);
         void OnFolderLoadResidencyReady(const BrowseResidencyManager::FileListSnapshot& snapshot,
                                         const std::wstring& fileName,
@@ -340,8 +340,8 @@ namespace OIV
 #pragma endregion FrameLimiter
         Win32::MainWindow fWindow;
         AutoScrollUniquePtr fAutoScroll;
-        RecrusiveDelayedOp fRefreshOperation;
-        RecrusiveDelayedOp fPreserveImageSpaceSelection;
+        RecursiveDelayedOp fRefreshOperation;
+        RecursiveDelayedOp fPreserveImageSpaceSelection;
         double fMaxPixelSize = 30.0;
         double fMinImageSize = 150.0;
         uint32_t fSlideShowIntervalms = 3000;
@@ -401,6 +401,7 @@ namespace OIV
         bool fRockerGestureActivate = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
         IMCodec::ImageLoader fImageLoader;
+        std::unique_ptr<ImageLoadController> fImageLoadController;
         //::Win32::ClipboardFormatType fRTFFormatID {};
         //::Win32::ClipboardFormatType fHTMLFormatID {};
 
@@ -509,10 +510,9 @@ namespace OIV
         ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
         EventSync fEventSync;
-        std::unique_ptr<FileList> fFileList;
         std::atomic_bool fIsShuttingDown = false;
-        std::optional<BrowseResidencyManager> fBrowseResidencyManager;
         ImageResidency fImageResidency;
+        std::unique_ptr<FileSessionController> fFileSessionController;
 
         // FileListProvider
         virtual FileListStringType GetActiveFileName() override;

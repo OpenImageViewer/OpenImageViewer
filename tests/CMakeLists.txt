@@ -15,7 +15,7 @@ add_executable (${TargetName} ${sourceFiles})
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/catch2/src)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../oivlib/oiv/Include)
-target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared ImageCodec)
+target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared oivappcore ImageCodec)
 
 if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:CONSOLE")

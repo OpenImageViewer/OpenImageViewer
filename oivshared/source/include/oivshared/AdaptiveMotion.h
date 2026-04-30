@@ -1,0 +1,70 @@
+#pragma once
+#include <LLUtils/StopWatch.h>
+
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <utility>
+
+namespace OIV
+{
+    class AdaptiveMotion
+    {
+        LLUtils::StopWatch stopwatch;
+        std::function<double()> fElapsedSecondsProvider;
+        double fStep;
+        double fAccelerationFactor;
+        double fDeclerationFactor;
+        double fTime = 0.0;
+
+    public:
+        AdaptiveMotion(double baseStep = 1.0, double acceleration = 1.0, double deceleration = 1.0)
+        {
+            fStep = baseStep;
+            fAccelerationFactor = acceleration;
+            fDeclerationFactor = deceleration;
+        }
+
+        AdaptiveMotion(double baseStep,
+                       double acceleration,
+                       double deceleration,
+                       std::function<double()> elapsedSecondsProvider)
+        {
+            fStep = baseStep;
+            fAccelerationFactor = acceleration;
+            fDeclerationFactor = deceleration;
+            fElapsedSecondsProvider = std::move(elapsedSecondsProvider);
+        }
+
+        double Add(double amount)
+        {
+            using namespace LLUtils;
+            const double DeltaDirection = Math::Sign(amount);
+            fTime -= GetElapsedSeconds() * DeltaDirection * fDeclerationFactor;
+            stopwatch.Start();
+            fTime = DeltaDirection > 0 ? std::max(fTime, 0.0) : std::min(fTime, 0.0);
+            fTime += amount  * fStep;
+            return GetVelocity(fTime);
+        }
+
+    private:
+        double GetAcceleration() const
+        {
+            return fAccelerationFactor;
+        }
+
+        double GetElapsedSeconds()
+        {
+            if (fElapsedSecondsProvider)
+                return fElapsedSecondsProvider();
+
+            return stopwatch.GetElapsedTimeReal(LLUtils::StopWatch::Seconds);
+        }
+
+        double GetVelocity(double time) const
+        {
+            //Velocity = Acceleration * Time^2
+            return  std::abs(GetAcceleration() * time * time) * LLUtils::Math::Sign(time);
+        }
+    };
+}

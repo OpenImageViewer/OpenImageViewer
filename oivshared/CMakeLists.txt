@@ -12,6 +12,5 @@ add_library (${TargetName} STATIC ${sourceFiles})
 
 target_include_directories(${TargetName} PUBLIC ./source/include)
 target_include_directories(${TargetName} PRIVATE ./source/src)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/catch2/src)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
 target_link_libraries(${TargetName} PUBLIC LLUtils::LLUtils ImageCodec)
-target_link_libraries(${TargetName} PRIVATE Catch2::Catch2)

@@ -68,6 +68,7 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Im
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
 target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Include)
+target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Source)
 
 
 target_link_libraries(${TargetName}
@@ -76,6 +77,7 @@ target_link_libraries(${TargetName}
 LLUtils::LLUtils
 ImageUtil
 oiv
+oivappcore
 oivshared
 Win32
 #system libraries

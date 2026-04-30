@@ -155,14 +155,15 @@ endif()
     option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
     add_subdirectory(./External/ImageCodec)
 
-
-
+if (OIV_BUILD_CLIENT OR OIV_BUILD_TESTS)
+    add_subdirectory(oivlib)
+    add_subdirectory(oivappcore)
+endif()
 
 if(OIV_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
 if (OIV_BUILD_CLIENT)
-    add_subdirectory(oivlib)
     add_subdirectory(Clients/OIViewer)
 endif()

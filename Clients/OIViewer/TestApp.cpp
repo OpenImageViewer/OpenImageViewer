@@ -11,6 +11,7 @@
 #include <Version.h>
 
 #include <functions.h>
+#include <ApiGlobal.h>
 #include <Win32/Win32Window.h>
 #include <Win32/Win32Helper.h>
 #include <Win32/MonitorInfo.h>
@@ -1112,36 +1113,12 @@ namespace OIV
               std::bind(&TestApp::OnSelectionRectChanged, this, std::placeholders::_1, std::placeholders::_2)),
           fVirtualStatusBar(&fLabelManager, std::bind(&TestApp::OnLabelRefreshRequest, this)),
           fFreeType(std::make_unique<FreeType::FreeTypeConnector>()), fLabelManager(fFreeType.get()),
+          fImageLoadController(std::make_unique<ImageLoadController>(std::make_unique<OIVImageFileLoader>(fImageLoader))),
           fEventSync(std::bind(&TestApp::OnMessageFromBackgroundThread, this, std::placeholders::_1))
 
     //, fFileCache(&fImageLoader, std::bind(&TestApp::OnImageReady, this, std::placeholders::_1))
 
     {
-        fBrowseResidencyManager.emplace(
-            fImageResidency,
-            [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
-            {
-                if (!fIsShuttingDown)
-                {
-                    fEventSync.AddData(
-                        static_cast<std::underlying_type_t<InterThreadMessages>>(
-                            InterThreadMessages::FileIndexResidencyReady),
-                        FileIndexResidencyReadyData{fileName, image});
-                }
-            },
-            [this](const BrowseResidencyManager::FileListSnapshot& snapshot,
-                   const std::wstring& fileName,
-                   IMCodec::ImageSharedPtr image)
-            {
-                if (!fIsShuttingDown)
-                {
-                    fEventSync.AddData(
-                        static_cast<std::underlying_type_t<InterThreadMessages>>(
-                            InterThreadMessages::FolderLoadResidencyReady),
-                        FolderLoadResidencyReadyData{snapshot, fileName, image});
-                }
-            });
-
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(
             std::bind(&TestApp::OnMonitorChanged, this, std::placeholders::_1));
@@ -1368,11 +1345,11 @@ namespace OIV
                 {
                     auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
                     std::wstringstream ss;
-                    if (GetAppActive() == true)
+                    if (GetAppActive() == true && fFileSessionController != nullptr)
                     {
-                        ss << (fFileList->GetCurrentIndex() == FileList::IndexStart ? 0
-                                                                                    : fFileList->GetCurrentIndex() + 1)
-                           << L"/" << fFileList->GetSize() << L" | ";
+                        const auto& fileList = fFileSessionController->GetFileList();
+                        ss << (fileList.GetCurrentIndex() == FileList::IndexStart ? 0 : fileList.GetCurrentIndex() + 1)
+                           << L"/" << fileList.GetSize() << L" | ";
                     }
 
                     ss << decomposedPath.fileName << decomposedPath.extension << " @ "
@@ -1401,7 +1378,8 @@ namespace OIV
 
     void TestApp::UnloadOpenedImaged()
     {
-        fBrowseResidencyManager->InvalidateCurrent();
+        if (fFileSessionController != nullptr)
+            fFileSessionController->InvalidateCurrent();
         fImageState.ClearAll();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
@@ -1622,50 +1600,49 @@ namespace OIV
 
     bool TestApp::LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
-        std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
-        fBrowseResidencyManager->SetWorkingFolder(std::filesystem::path(normalizedPath).parent_path().wstring());
-        fBrowseResidencyManager->InvalidateCurrent();
+        const auto clientSize = fWindow.GetClientSize();
+        return ProcessImageLoadResult(fImageLoadController->LoadFile(
+            filePath,
+            loaderFlags,
+            ImageLoadContext{static_cast<int>(clientSize.cx), static_cast<int>(clientSize.cy)}));
+    }
 
-        //  fFileCache.Add(normalizedPath);
+    bool TestApp::ProcessImageLoadResult(const ImageLoadResult& loadResult)
+    {
+        if (loadResult.status == ImageLoadStatus::FolderLoadQueued)
+            return true;
 
-        std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(normalizedPath);
+        if (loadResult.status == ImageLoadStatus::NoSupportedFiles)
+            return false;
 
-        IMCodec::Parameters params;
-        params.SetCustom(LLUTILS_TEXT("canvasWidth"), static_cast<int>(fWindow.GetClientSize().cx));
-        params.SetCustom(LLUTILS_TEXT("canvasHeight"), static_cast<int>(fWindow.GetClientSize().cy));
-
-        ResultCode result = file->Load(&fImageLoader, loaderFlags, IMCodec::ImageLoadFlags::None, params);
-
-        auto formattedFilePath = MessageFormatter::FormatFilePath(file->GetFileName()) + L"<textcolor=#ff8930>";
+        auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) + L"<textcolor=#ff8930>";
 
         using namespace std::string_literals;
-        switch (result)
+        switch (loadResult.status)
         {
-            case ResultCode::RC_Success:
-            {
-                if (file->GetImage()->GetWidth() <= 16384 && file->GetImage()->GetHeight() <= 16384)
-                {
-                    LoadOivImage(file);
-                }
-                else
-                {
-                    using namespace std::string_literals;
-                    SetUserMessage(L"Can not load the file: "s + formattedFilePath +
-                                       L", image dimensions are more than 16384: ",
-                                   static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
-                }
-            }
-
-            break;
-            case ResultCode::RC_FileNotSupported:
+            case ImageLoadStatus::Loaded:
+                LoadOivImage(loadResult.image);
+                break;
+            case ImageLoadStatus::TooLarge:
+                SetUserMessage(L"Can not load the file: "s + formattedFilePath +
+                                   L", image dimensions are more than 16384: ",
+                               static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
+                break;
+            case ImageLoadStatus::UnsupportedFormat:
                 SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", image format is not supported"s,
                                static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
                 break;
+            case ImageLoadStatus::FolderLoadQueued:
+            case ImageLoadStatus::NoSupportedFiles:
+                break;
+            case ImageLoadStatus::UnknownError:
             default:
                 SetUserMessage(L"Can not load the file: "s + formattedFilePath + L", unkown error"s,
                                static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
+                break;
         }
-        return result == RC_Success;
+
+        return loadResult.DecodeSucceeded();
     }
 
     void TestApp::LoadOivImage(OIVBaseImageSharedPtr oivImage)
@@ -1774,12 +1751,14 @@ namespace OIV
 
     void TestApp::SortFileList()
     {
-        fFileList->Sort();
+        if (fFileSessionController != nullptr)
+            fFileSessionController->SortFileList();
     }
 
     void TestApp::LoadFileInFolder(std::wstring absoluteFilePath)
     {
-        fFileList->SetFolder(std::filesystem::path(absoluteFilePath).parent_path(), {});
+        if (fFileSessionController != nullptr)
+            fFileSessionController->LoadFileInFolder(absoluteFilePath);
     }
 
     void TestApp::OnScroll(const LLUtils::PointF64& panAmount)
@@ -2023,7 +2002,7 @@ namespace OIV
             {
                 // Remove and unload the file
                 bool isFileLoaded = false;
-                if (fFileList->GetSize() == 1)
+                if (fFileSessionController != nullptr && fFileSessionController->GetFileList().GetSize() == 1)
                 {
                     isFileLoaded = JumpFiles(FileList::IndexStart);
                 }
@@ -2057,7 +2036,8 @@ namespace OIV
     {
         auto fileChangedEventArgs = *fileChangedEventArgsPtr;
 
-        if (fileChangedEventArgs.folderID == fFileList->GetFolderID())
+        if (fFileSessionController != nullptr &&
+            fileChangedEventArgs.folderID == fFileSessionController->GetFileList().GetFolderID())
         {
             std::wstring absoluteFilePath = std::filesystem::path(GetOpenedFileName());
             std::wstring absoluteFolderPath = std::filesystem::path(GetOpenedFileName()).parent_path();
@@ -2403,8 +2383,7 @@ namespace OIV
         if (image == nullptr)
             return;
 
-        if (fFileList == nullptr || !fFileList->IsIndexValid(fFileList->GetCurrentIndex()) ||
-            fFileList->GetCurrentItemName() != fileName)
+        if (fFileSessionController == nullptr || !fFileSessionController->IsCurrentFile(fileName))
         {
             return;
         }
@@ -2420,22 +2399,11 @@ namespace OIV
         if (image == nullptr)
             return;
 
-        (void) image;
-
-        auto fileListCopy = snapshot.files;
-        fFileList->SetFolder(snapshot.folderPath, std::move(fileListCopy));
-
-        const auto previousIndex = fFileList->GetCurrentIndex();
-        fFileList->SetCurrentIndexByElementName(fileName);
-
-        if (previousIndex == fFileList->GetCurrentIndex())
-            OnFileIndexChanged(fFileList->GetCurrentIndex(), fFileList->GetCurrentIndex());
-    }
-
-    void TestApp::OnFileIndexChanged(FileList::index_type current, FileList::index_type previous)
-    {
-        (void) current;
-        fBrowseResidencyManager->OnCurrentIndexChanged(fFileList->CreateSnapshot(), previous);
+        if (fFileSessionController == nullptr ||
+            !fFileSessionController->OnFolderLoadResidencyReady(snapshot, fileName, image))
+        {
+            return;
+        }
     }
 
     void TestApp::PostInitOperations()
@@ -2451,7 +2419,11 @@ namespace OIV
             {
                 SetSlideShowEnabled(false);
 
-                bool foundFile = JumpFiles(1) || ((fFileList->GetCurrentIndex() == fFileList->GetSize() - 1) &&
+                if (fFileSessionController == nullptr)
+                    return;
+
+                const auto& fileList = fFileSessionController->GetFileList();
+                bool foundFile = JumpFiles(1) || ((fileList.GetCurrentIndex() == fileList.GetSize() - 1) &&
                                                   JumpFiles(FileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
@@ -2560,9 +2532,36 @@ namespace OIV
         // IFileListProvider* fileListProvider, FileWatcher* fileWatcher, FileSorter fileSorter,
         //          FileListStringSetType knownnFileTypesSet, FileListStringType knownFileTypes
 
-        fFileList = std::make_unique<FileList>(this, &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes,
-                                               std::bind(&TestApp::OnFileIndexChanged, this, std::placeholders::_1,
-                                                         std::placeholders::_2));
+        fFileSessionController = std::make_unique<FileSessionController>(
+            this,
+            &fFileWatcher,
+            &fFileSorter,
+            fKnownFileTypesSet,
+            fKnownFileTypes,
+            fImageResidency,
+            [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+            {
+                if (!fIsShuttingDown)
+                {
+                    fEventSync.AddData(
+                        static_cast<std::underlying_type_t<InterThreadMessages>>(
+                            InterThreadMessages::FileIndexResidencyReady),
+                        FileIndexResidencyReadyData{fileName, image});
+                }
+            },
+            [this](const BrowseResidencyManager::FileListSnapshot& snapshot,
+                   const std::wstring& fileName,
+                   IMCodec::ImageSharedPtr image)
+            {
+                if (!fIsShuttingDown)
+                {
+                    fEventSync.AddData(
+                        static_cast<std::underlying_type_t<InterThreadMessages>>(
+                            InterThreadMessages::FolderLoadResidencyReady),
+                        FolderLoadResidencyReadyData{snapshot, fileName, image});
+                }
+            });
+        fImageLoadController->SetFileSessionController(fFileSessionController.get());
 
         ProcessLoadedDirectory();
         UpdateTitle();
@@ -2971,17 +2970,7 @@ namespace OIV
 
     bool TestApp::JumpFiles(FileList::index_type step)
     {
-        auto initialIndex = fFileList->GetCurrentIndex();
-        auto targetIndex = fFileList->IsMarkerIndex(step) ? step : initialIndex + step;
-        auto res = fFileList->SetCurrentIndex(targetIndex);
-
-        if (res == ResultCode::RC_EmptyData)
-            return false;
-
-        if (res == ResultCode::RC_OutOfRange)
-            res = fFileList->SetCurrentIndex(step > 0 ? FileList::IndexStart : FileList::IndexEnd);
-
-        return res == ResultCode::RC_Success;
+        return fFileSessionController != nullptr && fFileSessionController->JumpFiles(step);
     }
 
     void TestApp::ToggleFullScreen(bool multiFullScreen)
@@ -3110,8 +3099,8 @@ namespace OIV
             SIZE clientSize = fWindow.GetCanvasSize();
             if (clientSize.cx > 0 && clientSize.cy > 0)  // window might minimized.
             {
-                PointF64 ratio = PointF64(clientSize.cx, clientSize.cy) / GetImageSize(ImageSizeType::Transformed);
-                double zoom = std::min(ratio.x, ratio.y);
+                const double zoom = ViewTransformController::FitScale(PointF64(clientSize.cx, clientSize.cy),
+                                                                       GetImageSize(ImageSizeType::Transformed));
                 fRefreshOperation.Begin();
                 fIsLockFitToScreen = true;
                 SetZoomInternal(zoom, -1, -1, true);
@@ -3319,8 +3308,7 @@ namespace OIV
             }
 
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
-            PointF64 offset = (imageZoomPoint / GetImageSize(ImageSizeType::Original)) * (GetScale() - zoomValue) *
-                              GetImageSize(ImageSizeType::Original);
+            PointF64 offset = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
 
             QueueResampling();
 
@@ -3371,28 +3359,22 @@ namespace OIV
 
     LLUtils::PointF64 TestApp::ImageToClient(LLUtils::PointF64 imagepos) const
     {
-        using namespace LLUtils;
-        return imagepos * GetScale() + GetOffset();
+        return ViewTransformController::ImageToClient(imagepos, GetScale(), GetOffset());
     }
 
     LLUtils::RectF64 TestApp::ImageToClient(LLUtils::RectF64 clientRect) const
     {
-        using namespace LLUtils;
-        return {ImageToClient(clientRect.GetCorner(Corner::TopLeft)),
-                ImageToClient(clientRect.GetCorner(Corner::BottomRight))};
+        return ViewTransformController::ImageToClient(clientRect, GetScale(), GetOffset());
     }
 
     LLUtils::PointF64 TestApp::ClientToImage(LLUtils::PointI32 clientPos) const
     {
-        using namespace LLUtils;
-        return (static_cast<PointF64>(clientPos) - GetOffset()) / GetScale();
+        return ViewTransformController::ClientToImage(static_cast<LLUtils::PointF64>(clientPos), GetScale(), GetOffset());
     }
 
     LLUtils::RectF64 TestApp::ClientToImage(LLUtils::RectI32 clientRect) const
     {
-        using namespace LLUtils;
-        return {ClientToImage(clientRect.GetCorner(Corner::TopLeft)),
-                ClientToImage(clientRect.GetCorner(Corner::BottomRight))};
+        return ViewTransformController::ClientToImage(static_cast<LLUtils::RectF64>(clientRect), GetScale(), GetOffset());
     }
 
     void TestApp::UpdateTexelPos()
@@ -3500,7 +3482,8 @@ namespace OIV
         {
             fRefreshOperation.Begin();
             using namespace LLUtils;
-            PointF64 offset = GetCanvasCenter() - GetImageSize(ImageSizeType::Visible) / 2;
+            PointF64 offset =
+                ViewTransformController::CenterOffset(GetCanvasCenter(), GetImageSize(ImageSizeType::Visible));
             // Lock offset when centering
             fIsOffsetLocked = true;
             SetOffset(offset, true);
@@ -3508,42 +3491,13 @@ namespace OIV
         }
     }
 
-    double CalculateOffset(double clientSize, double imageSize, double offset, double margin)
-    {
-        double fixedOffset = offset;
-        if (imageSize > clientSize)
-        {
-            if (offset > 0)
-                fixedOffset = std::min<double>(clientSize * margin, offset);
-
-            else if (offset < 0)
-                fixedOffset = std::max<double>(-imageSize + (clientSize * (1 - margin)), offset);
-        }
-        else
-        {
-            if (offset < 0)
-            {
-                fixedOffset = std::max<double>(-imageSize * margin, offset);
-            }
-
-            else if (offset > 0)
-            {
-                fixedOffset = std::min<double>(clientSize - imageSize * (1 - margin), offset);
-            }
-        }
-        return fixedOffset;
-    }
-
     LLUtils::PointF64 TestApp::ResolveOffset(const LLUtils::PointF64& point)
     {
         using namespace LLUtils;
-        PointF64 imageSize = GetImageSize(ImageSizeType::Visible);
-        PointF64 clientSize = fWindow.GetCanvasSize();
-        PointF64 offset = static_cast<PointF64>(point);
-
-        offset.x = CalculateOffset(clientSize.x, imageSize.x, offset.x, fImageMargins.x);
-        offset.y = CalculateOffset(clientSize.y, imageSize.y, offset.y, fImageMargins.y);
-        return offset;
+        return ViewTransformController::ResolveOffset(point,
+                                                      static_cast<PointF64>(fWindow.GetCanvasSize()),
+                                                      GetImageSize(ImageSizeType::Visible),
+                                                      fImageMargins);
     }
 
     void TestApp::TransformImage(IMUtil::AxisAlignedRotation relativeRotation, IMUtil::AxisAlignedFlip flip)
@@ -3904,7 +3858,8 @@ namespace OIV
         {
             if (fMofifiedFileReloadMode != MofifiedFileReloadMode::Confirmation)
             {
-                fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
+                if (fFileSessionController != nullptr)
+                    fFileSessionController->RequestCurrentFileReload();
             }
             else
             {
@@ -3914,7 +3869,8 @@ namespace OIV
                 switch (mbResult)
                 {
                     case IDYES:
-                        fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
+                        if (fFileSessionController != nullptr)
+                            fFileSessionController->RequestCurrentFileReload();
                         break;
                     case IDNO:
                         break;
@@ -3928,7 +3884,8 @@ namespace OIV
         switch (fMofifiedFileReloadMode)
         {
             case MofifiedFileReloadMode::AutoBackground:
-                fBrowseResidencyManager->OnCurrentFileReloadRequested(fFileList->CreateSnapshot());
+                if (fFileSessionController != nullptr)
+                    fFileSessionController->RequestCurrentFileReload();
                 break;
             case MofifiedFileReloadMode::AutoForeground:
             case MofifiedFileReloadMode::Confirmation:  // implicitly foreground
@@ -4054,29 +4011,11 @@ namespace OIV
 
     bool TestApp::LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
-        bool success = false;
-        if (std::filesystem::is_directory(filePath))
-        {
-            auto fileList = fFileList->GetSupportedFileListInFolder(filePath);
-            if (fileList.empty() == false)
-            {
-                const auto normalizedFolderPath = std::filesystem::path(filePath).lexically_normal().wstring();
-                fBrowseResidencyManager->RequestFolderLoadResidency(
-                    BrowseResidencyManager::FileListSnapshot{
-                        normalizedFolderPath,
-                        fileList,
-                        BrowseResidencyManager::FileListSnapshot::IndexStart});
-                success = true;
-            }
-        }
-
-        else
-        {
-            if (LoadFile(filePath, traverseMode))
-                success = true;
-        }
-
-        return success;
+        const auto clientSize = fWindow.GetClientSize();
+        return ProcessImageLoadResult(fImageLoadController->LoadFileOrFolder(
+            filePath,
+            traverseMode,
+            ImageLoadContext{static_cast<int>(clientSize.cx), static_cast<int>(clientSize.cy)}));
     }
 
     bool TestApp::HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file)
