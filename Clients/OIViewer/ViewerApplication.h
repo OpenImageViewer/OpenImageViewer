@@ -17,10 +17,10 @@
 #include "win32/MainWindow.h"
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
-#include "RecursiveDelayOp.h"
-#include "AdaptiveMotion.h"
-#include "CommandManager.h"
-#include "FileMangement/FileSorter.h"
+#include "CommandController.h"
+#include <oivshared/AdaptiveMotion.h>
+#include <oivshared/FileSorter.h>
+#include <oivshared/RecursiveDelayOp.h>
 
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Buttons/ButtonStates.h>
@@ -28,21 +28,24 @@
 #include <LInput/Win32/RawInput/RawInput.h>
 #include <LInput/Buttons/Extensions/ButtonsStdExtension.h>
 
-#include "SelectionRect.h"
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "MouseCaptureState.h"
-#include "Helpers/OIVImageHelper.h"
-#include "ImageState.h"
 #include "ContextMenu.h"
 #include "FileMangement/FileWatcher.h"
+#include "ViewerRenderPort.h"
 #include <oivappcore/AppSettingsPolicy.h>
+#include <oivappcore/FileList.h>
 #include <oivappcore/FileReloadPolicy.h>
 #include <oivappcore/FileSessionController.h>
 #include <oivappcore/FileRemovalPolicy.h>
+#include <oivappcore/IFileListProvider.h>
 #include <oivappcore/ImageLoadController.h>
+#include <oivappcore/ImageState.h>
+#include <oivappcore/OIVImageHelper.h>
+#include <oivappcore/SelectionRect.h>
 #include <oivappcore/SlideshowPolicy.h>
 #include <oivappcore/ViewerPresentationPolicy.h>
 #include <oivshared/ViewTransformController.h>
@@ -134,13 +137,13 @@ namespace OIV
         }
     };
 
-    class TestApp : public IFileListProvider
+    class ViewerApplication : public IFileListProvider
     {
       public:
 
         void OnLabelRefreshRequest();
-        TestApp();
-        ~TestApp();
+        ViewerApplication();
+        ~ViewerApplication();
         void Init(std::wstring filePath);
         void Run();
         static std::wstring GetAppDataFolder();
@@ -327,7 +330,6 @@ namespace OIV
       private:  // member fields
 
 #pragma region FrameLimiter
-        static inline CmdNull NullCommand;
         const bool EnableFrameLimiter = true;
         std::chrono::high_resolution_clock::time_point fLastRefreshTime;
         ::Win32::HighPrecisionTimer fRefreshTimer;
@@ -422,7 +424,8 @@ namespace OIV
         AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
         ImageState fImageState;
 
-        CommandManager fCommandManager;
+        CommandController fCommandController;
+        OivRenderGateway fRenderGateway;
         std::unique_ptr<FreeType::FreeTypeConnector> fFreeType;
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;

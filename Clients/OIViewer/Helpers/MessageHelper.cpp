@@ -1,6 +1,6 @@
 #include "MessageHelper.h"
 #include "MessageFormatter.h"
-#include "PixelHelper.h"
+#include <oivshared/PixelHelper.h>
 #include  <OIVImage/OIVFileImage.h>
 #include "../ConfigurationLoader.h"
 #include "UnitsHelper.h"

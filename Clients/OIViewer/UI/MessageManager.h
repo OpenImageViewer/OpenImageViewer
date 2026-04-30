@@ -1,11 +1,11 @@
 #pragma once
 #include <list>
 #include "../LabelManager.h"
-#include "../RecursiveDelayOp.h"
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/EnumClassBitwise.h>
 #include <LLUtils/StopWatch.h>
 #include <Win32/Timer.h>
+#include <oivshared/RecursiveDelayOp.h>
 
 namespace OIV
 {

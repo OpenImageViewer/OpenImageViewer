@@ -3,7 +3,7 @@
 #include <shellapi.h>
 #endif
 
-#include "TestApp.h"
+#include "ViewerApplication.h"
 #include "./win32/UserMessages.h"
 
 
@@ -23,9 +23,9 @@ std::wstring CompileFilePathFromArguments(int argc, const wchar_t** argv)
 
 void RunApp(const std::wstring& filePath)
 {
-    OIV::TestApp testApp;
-    testApp.Init(filePath);
-    testApp.Run();
+    OIV::ViewerApplication viewerApplication;
+    viewerApplication.Init(filePath);
+    viewerApplication.Run();
 }
 
 int mainFunction(int argc, const wchar_t** argv)
@@ -35,7 +35,7 @@ int mainFunction(int argc, const wchar_t** argv)
 
     if (filePath.empty() == false)
     {
-        HWND window = TestApp::FindTrayBarWindow();
+        HWND window = ViewerApplication::FindTrayBarWindow();
         if (window != nullptr)
         {
             filePath = LLUtils::FileSystemHelper::ResolveFullPath(filePath);

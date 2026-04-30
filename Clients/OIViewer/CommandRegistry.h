@@ -1,10 +1,11 @@
 #pragma once
 
-#include "CommandManager.h"
 #include "ConfigurationLoader.h"
 
 #include <LInput/Keys/KeyBindings.h>
 #include <LInput/Keys/KeyCombination.h>
+
+#include <oivappcore/CommandManager.h>
 
 #include <string>
 #include <vector>
