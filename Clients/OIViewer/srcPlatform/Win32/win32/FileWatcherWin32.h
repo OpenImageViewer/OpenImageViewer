@@ -9,7 +9,12 @@
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/Exception.h>
 
-class FileWatcher : public OIV::IFileWatcher
+namespace OIV
+{
+namespace Win32
+{
+
+class FileWatcherWin32 : public OIV::IFileWatcher
 {
 private:
     struct FolderData;
@@ -78,7 +83,7 @@ public:
 
 
             if (fFileWatchThread.native_handle() == std::thread::native_handle_type{})
-                fFileWatchThread = std::thread(std::bind(&FileWatcher::CompletionPortStatusEntryPoint, this));
+                fFileWatchThread = std::thread(std::bind(&FileWatcherWin32::CompletionPortStatusEntryPoint, this));
         }
 
         return folderID;
@@ -138,7 +143,7 @@ public:
 
     static VOID CALLBACK QueueShutdownBackgroundThread(ULONG_PTR dwParam)
     {
-        reinterpret_cast<FileWatcher*>(dwParam)->fQueueShutdownBackgroundThread = true;
+        reinterpret_cast<FileWatcherWin32*>(dwParam)->fQueueShutdownBackgroundThread = true;
     }
 
     void QueueShutdown()
@@ -146,7 +151,7 @@ public:
         QueueUserAPC(QueueShutdownBackgroundThread, reinterpret_cast<HANDLE>(fFileWatchThread.native_handle()), (ULONG_PTR)this);
     }
 
-    ~FileWatcher()
+    ~FileWatcherWin32()
     {
         RemoveAll();
         if (fFileWatchThread.joinable())
@@ -339,3 +344,5 @@ private:
     bool fQueueShutdownBackgroundThread = false;
 };
 
+}  // namespace Win32
+}  // namespace OIV

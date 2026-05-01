@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <vector>
 #include <filesystem>
-#include "../External/WinReg.hpp"
+#include <WinReg.hpp>
 
 
 namespace OIV

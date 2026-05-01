@@ -34,7 +34,7 @@
 #include "MonitorProvider.h"
 #include "MouseCaptureState.h"
 #include "ContextMenu.h"
-#include "FileMangement/FileWatcher.h"
+#include "win32/FileWatcherWin32.h"
 #include "ViewerRenderPort.h"
 #include <oivappcore/AppSettingsPolicy.h>
 #include <oivappcore/FileList.h>
@@ -284,9 +284,9 @@ namespace OIV
         void OnContextMenuTimer();
         void SetDownScalingTechnique(DownscalingTechnique technique);
         bool IsMainThread() const { return fMainThreadID == GetCurrentThreadId(); }
-        void OnFileChangedImpl(const FileWatcher::FileChangedEventArgs*
+        void OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs*
                                    fileChangedEventArgs);  // file change handler, runs in the main thread.
-        void OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
+        void OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
         void OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image);
         void OnFolderLoadResidencyReady(const BrowseResidencyManager::FileListSnapshot& snapshot,
                                         const std::wstring& fileName,
@@ -345,7 +345,7 @@ namespace OIV
         double fMinImageSize = 150.0;
         SlideshowPolicy fSlideshowPolicy;
         bool fReloadSettingsFileIfChanged = false;
-        FileWatcher::FolderID fCOnfigurationFolderID = 0;
+        IFileWatcher::FolderID fCOnfigurationFolderID = 0;
         int fCurrentFrame = 0;
         double fCurrentSequencerSpeed = 1.0;
         OIVBaseImageSharedPtr fCountingImageColor;
@@ -430,7 +430,7 @@ namespace OIV
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
-        FileWatcher fFileWatcher;
+        Win32::FileWatcherWin32 fFileWatcher;
         std::wstring fCurrentFolderWatched;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;

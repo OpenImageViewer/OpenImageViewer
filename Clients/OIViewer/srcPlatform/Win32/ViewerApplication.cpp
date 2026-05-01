@@ -332,7 +332,7 @@ namespace OIV
 
         // If a file has been succesfuly loaded, index all the file in the folder
 
-        // IFileListProvider* fileListProvider, FileWatcher* fileWatcher, FileSorter fileSorter,
+        // IFileListProvider* fileListProvider, IFileWatcher* fileWatcher, FileSorter fileSorter,
         //          FileListStringSetType knownnFileTypesSet, FileListStringType knownFileTypes
 
         fFileSessionController = std::make_unique<FileSessionController>(

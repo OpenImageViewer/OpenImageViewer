@@ -500,7 +500,7 @@ namespace OIV
         UpdateTitle();
     }
 
-    void ViewerApplication::OnFileChangedImpl(const FileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
+    void ViewerApplication::OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs = *fileChangedEventArgsPtr;
         const bool hasActiveFolder = fFileSessionController != nullptr;
@@ -530,7 +530,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::OnFileChanged(FileWatcher::FileChangedEventArgs fileChangedEventArgs)
+    void ViewerApplication::OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs)
     {
         fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(InterThreadMessages::FileChanged),
                            fileChangedEventArgs);
@@ -613,8 +613,8 @@ namespace OIV
         {
             case InterThreadMessages::FileChanged:
             {
-                const FileWatcher::FileChangedEventArgs* fileChangedEventArgs =
-                    std::any_cast<FileWatcher::FileChangedEventArgs>(&(sharedData.data));
+                const IFileWatcher::FileChangedEventArgs* fileChangedEventArgs =
+                    std::any_cast<IFileWatcher::FileChangedEventArgs>(&(sharedData.data));
 
                 if (fileChangedEventArgs == nullptr)
                     LL_EXCEPTION_UNEXPECTED_VALUE;

@@ -476,7 +476,7 @@ namespace OIV
                 fAutoScroll->PerformAutoScroll();
                 break;
             case Win32::UserMessage::PRIVATE_WM_NOTIFY_FILE_CHANGED:
-                OnFileChangedImpl(reinterpret_cast<FileWatcher::FileChangedEventArgs*>(uMsg.wParam));
+                OnFileChangedImpl(reinterpret_cast<IFileWatcher::FileChangedEventArgs*>(uMsg.wParam));
                 break;
 
             case WM_COPYDATA:
