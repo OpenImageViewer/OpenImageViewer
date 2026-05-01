@@ -2,13 +2,13 @@
 cmake_minimum_required(VERSION 3.11)
 
 file(GLOB_RECURSE OIVIEWER_COMMON_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.cpp"
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srcPlatform/Win32")
+     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Win32")
      include(FetchContent)
      FetchContent_Declare(
           winreg
@@ -93,7 +93,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      )
      target_link_options(${TargetName} PRIVATE "-mwindows")
 endif()
-target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Src)
 target_include_directories(${TargetName} PRIVATE ${OIVIEWER_PLATFORM_DIR})
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
@@ -102,8 +102,8 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Im
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
-target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Include)
-target_include_directories(${TargetName} PRIVATE ../../oivlib/oiv/Source)
+target_include_directories(${TargetName} PRIVATE ../../OIVLib/OIV/Include)
+target_include_directories(${TargetName} PRIVATE ../../OIVLib/OIV/Source)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      target_include_directories(${TargetName} PRIVATE ${winreg_SOURCE_DIR}/WinReg)
@@ -177,7 +177,7 @@ add_custom_command(TARGET ${TargetName} POST_BUILD
      COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 #Copy oiv library resources to the output dir
 add_custom_command(TARGET ${TargetName} POST_BUILD
-     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../oivlib/oiv/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
+     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/../../OIVLib/OIV/Resources ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/Resources)
 
 if (NOT MINGW_POST_BUILD_DONT_COPY_BINARIES AND MINGW AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
      set(MINGW_ROOT /usr/x86_64-w64-mingw32)

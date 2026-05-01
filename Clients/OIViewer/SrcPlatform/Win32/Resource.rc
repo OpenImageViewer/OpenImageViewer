@@ -1,0 +1,21 @@
+#include "Resource.h"
+
+// these are also defined in windows headers Windows.h
+#define RT_MANIFEST 24
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_APP_ICON ICON
+#if OIV_OFFICIAL_BUILD == 1 
+    "../../AppIcons/OIVIcon.ico" //Official program icon
+#else
+    #if OIV_BUILD_TYPE == 0
+        "../../AppIcons/OIVIconDebug.ico" //Debug program icon
+    #elif OIV_BUILD_TYPE == 1
+        "../../AppIcons/OIVIconRelease.ico" //Release program icon
+    #endif
+
+#endif
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "OIViewerManifest.xml"

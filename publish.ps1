@@ -72,7 +72,7 @@ function Run-OIVBuild {
     $SevenZipPath     = "C:/Program Files/7-Zip/7z.exe"
     $GitPath          = "C:/Program Files/Git/bin"
     $DependenciesPath = "$RootDir/oiv/Dependencies"
-    $VersionHeader    = Join-PathForward $RootDir "oivlib/oiv/Include/Version.h"
+    $VersionHeader    = Join-PathForward $RootDir "OIVLib/OIV/Include/Version.h"
     $GitDir           = Join-PathForward $RootDir ".git"
     $BuildDir         = Join-PathForward $RootDir "publish"
     $BinDir           = Join-PathForward $BuildDir "bin"

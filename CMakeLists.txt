@@ -150,18 +150,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_subdirectory(./External/Win32)
 endif()
 
-    add_subdirectory(oivshared)
+    add_subdirectory(OIVShared)
 
     option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
     add_subdirectory(./External/ImageCodec)
 
 if (OIV_BUILD_CLIENT OR OIV_BUILD_TESTS)
-    add_subdirectory(oivlib)
-    add_subdirectory(oivappcore)
+    add_subdirectory(OIVLib)
+    add_subdirectory(OIVAppCore)
 endif()
 
 if(OIV_BUILD_TESTS)
-    add_subdirectory(tests)
+    add_subdirectory(Tests)
 endif()
 
 if (OIV_BUILD_CLIENT)
