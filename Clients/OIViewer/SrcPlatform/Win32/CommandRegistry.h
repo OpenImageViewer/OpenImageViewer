@@ -8,19 +8,12 @@
 #include <OIVAppCore/CommandManager.h>
 
 #include <string>
-#include <vector>
 
 namespace OIV
 {
     class CommandRegistry
     {
       public:
-        struct CommandRegistration
-        {
-            std::string name;
-            CommandManager::CommandCallback callback;
-        };
-
         template <typename BindingElement>
         static void AddConfiguredCommandsAndKeyBindings(CommandManager& commandManager,
                                                         LInput::KeyBindings<BindingElement>& keyBindings)
@@ -38,15 +31,6 @@ namespace OIV
             {
                 keyBindings.AddBinding(LInput::KeyCombination::FromString(keyBinding.KeyCombinationName),
                                        {keyBinding.GroupID, std::string(), std::string()});
-            }
-        }
-
-        static void AddCommandCallbacks(CommandManager& commandManager,
-                                        const std::vector<CommandRegistration>& registrations)
-        {
-            for (const auto& registration : registrations)
-            {
-                commandManager.AddCommand(CommandManager::Command(registration.name, registration.callback));
             }
         }
     };

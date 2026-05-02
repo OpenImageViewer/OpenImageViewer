@@ -17,7 +17,7 @@
 #include "win32/MainWindow.h"
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
-#include "CommandController.h"
+#include <OIVAppCore/CommandController.h>
 #include <OIVShared/AdaptiveMotion.h>
 #include <OIVShared/FileSorter.h>
 #include <OIVShared/RecursiveDelayOp.h>

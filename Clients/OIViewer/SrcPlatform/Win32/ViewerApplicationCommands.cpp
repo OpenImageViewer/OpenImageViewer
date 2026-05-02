@@ -712,7 +712,7 @@ namespace OIV
         using namespace std;
         using namespace placeholders;
 
-        fCommandController.AddConfiguredCommandsAndKeyBindings(fKeyBindings);
+        CommandRegistry::AddConfiguredCommandsAndKeyBindings(fCommandController.GetCommandManager(), fKeyBindings);
         fCommandController.AddCommandCallbacks(
             {{"cmd_color_correction", std::bind(&ViewerApplication::CMD_ColorCorrection, this, _1, _2)},
              {"cmd_view_state", std::bind(&ViewerApplication::CMD_ViewState, this, _1, _2)},

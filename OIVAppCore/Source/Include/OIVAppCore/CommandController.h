@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CommandRegistry.h"
+#include <OIVAppCore/CommandManager.h>
 
 #include <functional>
 #include <string>
@@ -12,6 +12,12 @@ namespace OIV
     class CommandController
     {
       public:
+        struct CommandRegistration
+        {
+            std::string name;
+            CommandManager::CommandCallback callback;
+        };
+
         using CommandResultSink = std::function<void(const std::wstring&)>;
 
         explicit CommandController(CommandResultSink resultSink = {})
@@ -19,20 +25,22 @@ namespace OIV
         {
         }
 
+        CommandManager& GetCommandManager()
+        {
+            return fCommandManager;
+        }
+
         void SetResultSink(CommandResultSink resultSink)
         {
             fResultSink = std::move(resultSink);
         }
 
-        template <typename BindingElement>
-        void AddConfiguredCommandsAndKeyBindings(LInput::KeyBindings<BindingElement>& keyBindings)
+        void AddCommandCallbacks(const std::vector<CommandRegistration>& registrations)
         {
-            CommandRegistry::AddConfiguredCommandsAndKeyBindings(fCommandManager, keyBindings);
-        }
-
-        void AddCommandCallbacks(const std::vector<CommandRegistry::CommandRegistration>& registrations)
-        {
-            CommandRegistry::AddCommandCallbacks(fCommandManager, registrations);
+            for (const CommandRegistration& registration : registrations)
+            {
+                fCommandManager.AddCommand(CommandManager::Command(registration.name, registration.callback));
+            }
         }
 
         bool ExecutePredefinedCommand(const std::string& commandGroupID)

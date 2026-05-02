@@ -3,6 +3,7 @@
 #include <OIVAppCore/AppSettingsPolicy.h>
 #include <OIVAppCore/ColorCountPolicy.h>
 #include <OIVAppCore/CommandManager.h>
+#include <OIVAppCore/CommandController.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 #include <OIVAppCore/FileChangePolicy.h>
 #include <OIVAppCore/FileList.h>
@@ -12,6 +13,7 @@
 #include <OIVAppCore/FrameLimiterPolicy.h>
 #include <OIVAppCore/ImageEditPolicy.h>
 #include <OIVAppCore/ImageFormatCatalogPolicy.h>
+#include <OIVAppCore/ImageInfoPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 #include <OIVAppCore/ImageLoadController.h>
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
@@ -31,12 +33,17 @@
 #include <OIVShared/FileSorter.h>
 #include <OIVShared/ImageResidency.h>
 #include <OIVShared/RecursiveDelayOp.h>
+#include <OIVShared/UnitFormatter.h>
 
 #include <Image.h>
+#include <IImageCodec.h>
 #include <ImageItem.h>
 #include <LLUtils/StringUtility.h>
+#include <OIVImage/OIVFileImage.h>
 
+#include <algorithm>
 #include <atomic>
+#include <climits>
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -103,6 +110,80 @@ namespace
         imageItem->descriptor.width = width;
         imageItem->descriptor.height = height;
         return std::make_shared<IMCodec::Image>(imageItem, IMCodec::ImageItemType::Unknown);
+    }
+
+    IMCodec::ImageSharedPtr CreateFormattedTestImage(uint32_t width = 1,
+                                                     uint32_t height = 1,
+                                                     IMCodec::TexelFormat format = IMCodec::TexelFormat::I_R8_G8_B8_A8)
+    {
+        auto imageItem = std::make_shared<IMCodec::ImageItem>();
+        imageItem->itemType = IMCodec::ImageItemType::Image;
+        imageItem->descriptor.width = width;
+        imageItem->descriptor.height = height;
+        imageItem->descriptor.texelFormatDecompressed = format;
+        imageItem->descriptor.texelFormatStorage = format;
+        imageItem->descriptor.rowPitchInBytes = width * IMCodec::GetTexelFormatSize(format) / CHAR_BIT;
+        return std::make_shared<IMCodec::Image>(imageItem, IMCodec::ImageItemType::Unknown);
+    }
+
+    class FakeImageCodec : public IMCodec::IImageCodec
+    {
+      public:
+        IMCodec::ImageResult Decode(const std::byte*,
+                                    std::size_t,
+                                    const IMCodec::PluginID&,
+                                    IMCodec::ImageLoadFlags,
+                                    const IMCodec::Parameters&,
+                                    IMCodec::ImageSharedPtr&) override
+        {
+            return IMCodec::ImageResult::NotImplemented;
+        }
+
+        IMCodec::ImageResult Encode(const IMCodec::ImageSharedPtr,
+                                    const IMCodec::PluginID&,
+                                    const IMCodec::Parameters&,
+                                    LLUtils::Buffer&) override
+        {
+            return IMCodec::ImageResult::NotImplemented;
+        }
+
+        IMCodec::ImageResult GetEncoderParameters(const IMCodec::PluginID&,
+                                                  IMCodec::ListParameterDescriptors&) override
+        {
+            return IMCodec::ImageResult::NotImplemented;
+        }
+
+        IMCodec::ImageResult InstallPlugin(IMCodec::IImagePlugin*) override
+        {
+            return IMCodec::ImageResult::NotImplemented;
+        }
+
+        IMCodec::ImageResult InstallPlugin(const std::wstring&) override
+        {
+            return IMCodec::ImageResult::NotImplemented;
+        }
+
+        IMCodec::ImageResult GetPluginInfo(const IMCodec::PluginID&, IMCodec::PluginProperties& pluginProperties) override
+        {
+            pluginProperties.pluginDescription = pluginDescription;
+            return pluginInfoResult;
+        }
+
+        std::vector<IMCodec::PluginProperties> GetPluginsInfo() override
+        {
+            return {};
+        }
+
+        IMCodec::ImageResult pluginInfoResult = IMCodec::ImageResult::Success;
+        LLUtils::native_string_type pluginDescription = LLUTILS_TEXT("Fake codec");
+    };
+
+    const OIV::ImageInfoPresentationPolicy::ImageInfoRow* FindRow(
+        const OIV::ImageInfoPresentationPolicy::ImageInfoRows& rows,
+        const std::string& key)
+    {
+        auto it = std::find_if(rows.begin(), rows.end(), [&](const auto& row) { return row.key == key; });
+        return it == rows.end() ? nullptr : &*it;
     }
 
     class CountingResidencyProcessor : public OIV::RequestProcessorType
@@ -201,6 +282,12 @@ TEST_CASE("AdaptiveMotion can use deterministic elapsed time", "[AppCore][Shared
     REQUIRE(motion.Add(1.0) == Catch::Approx(9.0));
 }
 
+TEST_CASE("UnitFormatter formats binary and decimal units", "[Shared]")
+{
+    REQUIRE(OIV::UnitFormatter::FormatUnit(2048, OIV::UnitType::BinaryDataShort, 1, 0) == L"2.0KB");
+    REQUIRE(OIV::UnitFormatter::FormatUnit(1500, OIV::UnitType::Distance, 2, 0) == L"1.50 meters");
+}
+
 TEST_CASE("CommandManager dispatches predefined command groups", "[AppCore]")
 {
     OIV::CommandManager manager;
@@ -218,6 +305,24 @@ TEST_CASE("CommandManager dispatches predefined command groups", "[AppCore]")
     REQUIRE(manager.ExecuteCommand(manager.GetCommandRequestGroup("OpenImage"), result));
     REQUIRE(executed);
     REQUIRE(result.resValue == L"image.png");
+}
+
+TEST_CASE("CommandController dispatches commands and forwards results", "[AppCore]")
+{
+    std::wstring forwardedResult;
+    OIV::CommandController controller([&](const std::wstring& result) { forwardedResult = result; });
+
+    controller.AddCommandCallbacks(
+        {{"open", [](const OIV::CommandManager::CommandRequest& request, OIV::CommandManager::CommandResult& result)
+          {
+              result.resValue = LLUtils::StringUtility::ToWString(request.args.GetArgValue("path"));
+          }}});
+
+    controller.GetCommandManager().AddCommandGroup({"OpenImage", "Open image", "open", "path=image.png"});
+
+    REQUIRE(controller.ExecutePredefinedCommand("OpenImage"));
+    REQUIRE(forwardedResult == L"image.png");
+    REQUIRE_FALSE(controller.ExecutePredefinedCommand("MissingCommand"));
 }
 
 TEST_CASE("ViewCommandPolicy parses view command arguments", "[AppCore]")
@@ -819,6 +924,89 @@ TEST_CASE("ImageFormatCatalogPolicy defaults save filter index without PNG", "[A
     REQUIRE(catalog.writeFilters.size() == 1);
     REQUIRE(catalog.writeFilters[0].extensions == std::vector<std::wstring>{L"*.jpg"});
     REQUIRE(catalog.defaultSaveFileFormatIndex == 0);
+}
+
+TEST_CASE("ImageInfoPresentationPolicy builds file image rows", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-image-info-policy-test");
+    const auto filePath = folder / L"image.bin";
+    TouchFile(filePath);
+
+    IMCodec::ImageSharedPtr image = CreateFormattedTestImage(16, 8);
+    image->GetImageItem()->processData.processTime = 12.5;
+
+    auto fileImage = std::make_shared<OIV::OIVFileImage>(filePath.wstring(), image);
+    fileImage->SetDisplayTime(3.25);
+    fileImage->SetNumUniqueColors(7);
+
+    auto metaData = std::make_shared<IMCodec::ItemMetaData>();
+    metaData->exifData.latitude = 1.25;
+    metaData->exifData.make = "CameraBrand";
+    fileImage->SetMetaData(metaData);
+
+    FakeImageCodec codec;
+    const auto rows = OIV::ImageInfoPresentationPolicy::Build(fileImage, fileImage, codec);
+
+    const auto* filePathRow = FindRow(rows, "File path");
+    REQUIRE(filePathRow != nullptr);
+    REQUIRE(filePathRow->values.at(0).text == filePath.wstring());
+
+    const auto* fileSizeRow = FindRow(rows, "File size");
+    REQUIRE(fileSizeRow != nullptr);
+    REQUIRE(fileSizeRow->values.at(0).text == L"4 bytes");
+
+    const auto* widthRow = FindRow(rows, "Width");
+    REQUIRE(widthRow != nullptr);
+    REQUIRE(widthRow->values.at(0).text == L"16");
+    REQUIRE(widthRow->values.at(1).text == L"px");
+
+    const auto* channelsRow = FindRow(rows, "channels info");
+    REQUIRE(channelsRow != nullptr);
+    REQUIRE(channelsRow->values.at(0).text == L"R:8 G:8 B:8 A:8");
+
+    const auto* codecRow = FindRow(rows, "Codec used");
+    REQUIRE(codecRow != nullptr);
+    REQUIRE(codecRow->values.at(0).text == L"Fake codec");
+
+    const auto* latitudeRow = FindRow(rows, "Latitude");
+    REQUIRE(latitudeRow != nullptr);
+    REQUIRE(latitudeRow->values.at(0).text == L"1.250000");
+
+    const auto* manufacturerRow = FindRow(rows, "Manufacturer");
+    REQUIRE(manufacturerRow != nullptr);
+    REQUIRE(manufacturerRow->values.at(0).text == L"CameraBrand");
+}
+
+TEST_CASE("ImageInfoPresentationPolicy handles generated animation images", "[AppCore]")
+{
+    auto containerItem = std::make_shared<IMCodec::ImageItem>();
+    containerItem->itemType = IMCodec::ImageItemType::Container;
+    containerItem->descriptor.width = 4;
+    containerItem->descriptor.height = 4;
+    containerItem->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+    containerItem->descriptor.texelFormatStorage = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+    containerItem->descriptor.rowPitchInBytes = 16;
+
+    IMCodec::ImageSharedPtr container = std::make_shared<IMCodec::Image>(
+        containerItem,
+        IMCodec::ImageItemType::AnimationFrame);
+    container->SetSubImage(0, CreateFormattedTestImage(4, 2));
+
+    auto image = std::make_shared<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib, container);
+    FakeImageCodec codec;
+    const auto rows = OIV::ImageInfoPresentationPolicy::Build(image, image, codec);
+
+    const auto* sourceRow = FindRow(rows, "Source");
+    REQUIRE(sourceRow != nullptr);
+    REQUIRE(sourceRow->values.at(0).text == L"auto generated");
+
+    const auto* frameRow = FindRow(rows, "Num frames");
+    REQUIRE(frameRow != nullptr);
+    REQUIRE(frameRow->values.at(0).text == L"1");
+
+    const auto* heightRow = FindRow(rows, "Height");
+    REQUIRE(heightRow != nullptr);
+    REQUIRE(heightRow->values.at(0).text == L"2");
 }
 
 TEST_CASE("FileSorter orders files by name and extension", "[AppCore][Shared]")
