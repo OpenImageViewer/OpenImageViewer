@@ -93,7 +93,6 @@ target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/Im
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ImageCodec/ImageUtil/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/single_include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
-target_include_directories(${TargetName} PRIVATE ../../OIVLib/OIV/Include)
 target_include_directories(${TargetName} PRIVATE ../../OIVLib/OIV/Source)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")

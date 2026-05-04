@@ -14,7 +14,7 @@
 #include <Win32/Clipboard.h>
 #include <Win32/FileDialog.h>
 
-#include "win32/MainWindow.h"
+#include "Win32/MainWindow.h"
 #include "AutoScroll.h"
 #include "ImageDescriptor.h"
 #include <OIVAppCore/CommandController.h>
@@ -34,7 +34,7 @@
 #include "MonitorProvider.h"
 #include "MouseCaptureState.h"
 #include "ContextMenu.h"
-#include "win32/FileWatcherWin32.h"
+#include "Win32/FileWatcherWin32.h"
 #include "ViewerRenderPort.h"
 #include <OIVAppCore/AppSettingsPolicy.h>
 #include <OIVAppCore/FileList.h>
@@ -57,7 +57,7 @@
 #include <ImageLoader.h>
 #include <ImageCodec.h>
 #include <vector>
-#include "win32/EventSync.h"
+#include "Win32/EventSync.h"
 #include "InterThreadMessages.h"
 #include <OIVShared/ImageResidency.h>
 namespace OIV

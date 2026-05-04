@@ -1,14 +1,23 @@
 #root CMake file
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.25)
 
 project(OpenImageViewer)
 
-if (${CMAKE_CORSSCOMPILING})
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # CMake 4.3 recognizes cxx_std_26 for MSVC but does not yet provide a
+    # CXX26 flag mapping. MSVC exposes the preview through /std:c++latest.
+    set(CMAKE_CXX26_STANDARD_COMPILE_OPTION "/std:c++latest")
+    set(CMAKE_CXX26_EXTENSION_COMPILE_OPTION "/std:c++latest")
+    set(CMAKE_CXX_STANDARD_LATEST 26)
+endif()
+
+if (CMAKE_CROSSCOMPILING)
     message("Cross compiling: Host: ${CMAKE_HOST_SYSTEM_NAME}, Target: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 include (common.cmake)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 option(OIV_BUILD_CLIENT "Build client application" TRUE)

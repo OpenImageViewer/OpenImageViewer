@@ -37,7 +37,7 @@
 #include "Helpers/ShellIntegrationHelper.h"
 #include "Helpers/ShellCommandHandler.h"
 
-#include "win32/UserMessages.h"
+#include "Win32/UserMessages.h"
 #include "OIVCommands.h"
 
 #include "OIVImage/OIVFileImage.h"

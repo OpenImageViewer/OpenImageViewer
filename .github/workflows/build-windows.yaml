@@ -1,4 +1,4 @@
-name: Windows Build
+name: Build all
 
 on:
   push:
@@ -11,44 +11,62 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-linux:
+  build-linux-mingw64:
     runs-on: ubuntu-latest
+    
+    # Run all steps inside your specified Docker container
+    container:
+      image: ghcr.io/openimageviewer/openimageviewer/oiv-builder-arch:latest
+      # If your image is private, GitHub automatically handles the login 
+      # credentials for its own registry, so no extra login step is needed!
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     strategy:
-      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: true
+
     steps:
-    - uses: actions/checkout@v3
+    # Step 1: Clone the repository into the default workspace path
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-    - name: Install Dependencies
+    # Step 2: Fix dubious ownership completely by trusting all paths inside the runner container
+    - name: Configure Git Safe Directories
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential mingw-w64
+        git config --global --add safe.directory '*'
 
+    # Step 3: Git submodule updates now run safely without ownership blocks
     - name: Git update submodules 
       run: |
         git submodule update --init --recursive --depth 1
 
+    # Step 4: Define our relative build output folder path (Using $GITHUB_WORKSPACE env variable)
     - name: Set reusable strings
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "build-output-dir=$GITHUB_WORKSPACE/build" >> "$GITHUB_OUTPUT"
 
+    # Step 5: Configure CMake directly in the workspace using container-native paths
     - name: Configure CMake
       run: >
         cmake 
-        -S ${{ github.workspace }} 
-        -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/mingw-w64-x86_64.cmake
+        -G Ninja
+        -S "$GITHUB_WORKSPACE" 
+        -B "${{ steps.strings.outputs.build-output-dir }}"
+        -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/mingw-w64-x86_64.cmake"
         -DIMCODEC_BUILD_CODEC_WEBP=OFF
         -DFREETYPE_WRAPPER_BUILD_FRIBIDI=OFF
         -DMINGW_POST_BUILD_DONT_COPY_BINARIES=ON
 
+    # Step 6: Compile the project
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} -- -j$(nproc)
+      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" -- -j$(nproc)
   build-windows:
-    runs-on: windows-latest
-    needs: build-linux
+    runs-on: windows-2025-vs2026
+    needs: build-linux-mingw64
+    
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: true

@@ -4,7 +4,7 @@
 #endif
 
 #include "ViewerApplication.h"
-#include "./win32/UserMessages.h"
+#include "./Win32/UserMessages.h"
 
 
 std::wstring CompileFilePathFromArguments(int argc, const wchar_t** argv)

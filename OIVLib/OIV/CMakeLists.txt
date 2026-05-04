@@ -22,10 +22,13 @@ if ( ${OIV_BUILD_FREETYPE})
 	target_compile_definitions(${TargetName} PRIVATE OIV_BUILD_FREETYPE=1)
 endif()
 
-target_include_directories(${TargetName} PRIVATE ./Include)
-
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/easyexif)
+target_include_directories(${TargetName}
+    PUBLIC
+        ./Include
+        ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include
+    PRIVATE
+        ${ExternalFolder}/easyexif
+)
 
 
 option(FREETYPE_WRAPPER_BUILD_SAMPLES "freetype build samples" OFF)
@@ -44,9 +47,9 @@ target_link_libraries(${TargetName}
 PUBLIC
 LLUtils::LLUtils
 ImageUtil
+ImageCodec
 PRIVATE
 #Local libraries
-ImageCodec
 easyexif
 FreeTypeWrapper
 OIVD3D11Renderer

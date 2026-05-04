@@ -1,5 +1,5 @@
 #include "AutoScroll.h"
-#include "win32/UserMessages.h"
+#include "Win32/UserMessages.h"
 #include <Win32/Win32Helper.h>
 
 
