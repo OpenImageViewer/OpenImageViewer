@@ -1,0 +1,4 @@
+interface:
+  display_name: "OIV Code Writer"
+  short_description: "Write OIViewer C++ with repo rules"
+  default_prompt: "Use $oiv-code-writer to write, refactor, or review concise, readable OIViewer C++ while following the repo module boundaries, formatting, and test rules."
