@@ -1,11 +1,5 @@
 #OIV library
-cmake_minimum_required(VERSION 3.11)
-
-file(GLOB_RECURSE OIVIEWER_COMMON_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Src/*.cpp"
-)
+cmake_minimum_required(VERSION 3.14)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Win32")
@@ -15,10 +9,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
           GIT_REPOSITORY https://github.com/GiovanniDicanio/WinReg.git
           GIT_TAG v6.4.0
      )
+     FetchContent_MakeAvailable(winreg)
      FetchContent_GetProperties(winreg)
-     if(NOT winreg_POPULATED)
-          FetchContent_Populate(winreg)
-     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
      message(FATAL_ERROR "OIViewer Linux backend is not implemented yet. Configure with -DOIV_BUILD_CLIENT=OFF.")
 else()
@@ -45,7 +37,6 @@ set(ExternalFolder ../../External)
 set(TargetName OIViewer)
 add_executable(${TargetName})
 target_sources(${TargetName} PRIVATE
-     ${OIVIEWER_COMMON_SOURCES}
      ${OIVIEWER_PLATFORM_SOURCES}
 )
 

@@ -1,5 +1,5 @@
 
-file(GLOB_RECURSE sourceFiles
+file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.h"
     "./Source/*.cpp"
 )
@@ -13,9 +13,11 @@ add_subdirectory(${ExternalFolder}/catch2 ./external/catch2)
 
 add_executable (${TargetName} ${sourceFiles})
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/catch2/src)
+target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/include)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../OIVLib/OIV/Include)
-target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared oivappcore ImageCodec)
+target_compile_definitions(${TargetName} PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
+target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared oivappcore ImageCodec tiff)
 
 if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:CONSOLE")

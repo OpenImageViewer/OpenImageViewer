@@ -1,0 +1,397 @@
+{
+  "schema": 1,
+  "requiredMagick": {
+    "display": "ImageMagick 7.1.2-19 Q8 x64",
+    "version": [7, 1, 2, 19],
+    "formats": ["BMP", "DDS", "GIF", "ICO", "JPEG", "PNG", "PSD", "TIFF", "WEBP"]
+  },
+  "variables": {
+    "seed": "314159",
+    "baseSize": "319x241"
+  },
+  "sources": [
+    {
+      "id": "source",
+      "output": "work/source-rgba.png",
+      "kind": "complexBaseImage"
+    }
+  ],
+  "commands": [
+    {
+      "id": "frame",
+      "forEach": {
+        "frame": [
+          {"index": "0", "rollX": "0", "rollY": "0", "x": "38", "y": "34", "x2": "55"},
+          {"index": "1", "rollX": "13", "rollY": "7", "x": "82", "y": "62", "x2": "99"},
+          {"index": "2", "rollX": "26", "rollY": "14", "x": "126", "y": "90", "x2": "143"},
+          {"index": "3", "rollX": "39", "rollY": "21", "x": "170", "y": "118", "x2": "187"}
+        ]
+      },
+      "output": "work/frame-{index}.png",
+      "args": [
+        "{source}", "-roll", "+{rollX}+{rollY}", "-fill", "rgba(255,255,255,0.70)", "-draw",
+        "circle {x},{y} {x2},{y}", "-fill", "black", "-pointsize", "18", "-draw",
+        "text 22,218 'F{index}'", "{out}"
+      ],
+      "testImage": false
+    },
+    {
+      "id": "png-rgba",
+      "format": "png",
+      "variant": "rgba",
+      "output": "png-rgba.png",
+      "args": ["{source}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "png-rgb",
+      "format": "png",
+      "variant": "rgb",
+      "output": "png-rgb.png",
+      "args": ["{source}", "-alpha", "off", "PNG24:{out}"],
+      "testImage": true
+    },
+    {
+      "id": "png-gray",
+      "format": "png",
+      "variant": "gray",
+      "output": "png-gray.png",
+      "args": ["{source}", "-colorspace", "Gray", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "png-indexed",
+      "format": "png",
+      "variant": "indexed",
+      "output": "png-indexed.png",
+      "args": ["{source}", "-colors", "64", "PNG8:{out}"],
+      "testImage": true
+    },
+    {
+      "id": "png-interlaced",
+      "format": "png",
+      "variant": "interlaced",
+      "output": "png-interlaced.png",
+      "args": ["{source}", "-interlace", "PNG", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "png-16bit",
+      "format": "png",
+      "variant": "16bit",
+      "output": "png-16bit.png",
+      "args": ["{source}", "-depth", "16", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "jpg-baseline",
+      "format": "jpg",
+      "variant": "baseline",
+      "output": "jpg-baseline.jpg",
+      "args": ["{source}", "-alpha", "remove", "-background", "white", "-quality", "92", "-interlace", "none", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "jpg-progressive",
+      "format": "jpg",
+      "variant": "progressive",
+      "output": "jpg-progressive.jpg",
+      "args": ["{source}", "-alpha", "remove", "-background", "white", "-quality", "88", "-interlace", "Plane", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "jpg-gray",
+      "format": "jpg",
+      "variant": "gray",
+      "output": "jpg-gray.jpeg",
+      "args": ["{source}", "-alpha", "remove", "-colorspace", "Gray", "-quality", "90", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "jpg-quality-low",
+      "format": "jpg",
+      "variant": "quality-low",
+      "output": "jpg-quality-low.jpg",
+      "args": ["{source}", "-alpha", "remove", "-background", "white", "-quality", "28", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "jpg-quality-high",
+      "format": "jpg",
+      "variant": "quality-high",
+      "output": "jpg-quality-high.jpeg",
+      "args": ["{source}", "-alpha", "remove", "-background", "white", "-quality", "98", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "bmp-24bit",
+      "format": "bmp",
+      "variant": "24bit",
+      "output": "bmp-24bit.bmp",
+      "args": ["{source}", "-alpha", "off", "-type", "TrueColor", "BMP3:{out}"],
+      "testImage": true
+    },
+    {
+      "id": "bmp-32bit-alpha",
+      "format": "bmp",
+      "variant": "32bit-alpha",
+      "output": "bmp-32bit-alpha.bmp",
+      "args": ["{source}", "-define", "bmp:format=bmp4", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "bmp-8bit-indexed",
+      "format": "bmp",
+      "variant": "8bit-indexed",
+      "output": "bmp-8bit-indexed.bmp",
+      "args": ["{source}", "-colors", "128", "-type", "Palette", "-compress", "none", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "gif-single",
+      "format": "gif",
+      "variant": "single",
+      "output": "gif-single.gif",
+      "args": ["{source}", "-colors", "128", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "gif-animated",
+      "format": "gif",
+      "variant": "animated",
+      "output": "gif-animated.gif",
+      "args": ["-delay", "8", "-loop", "0", "{frame:*}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "tiff-rgb",
+      "format": "tiff",
+      "variant": "rgb",
+      "output": "tiff-rgb.tiff",
+      "args": ["{source}", "-alpha", "off", "{out}"],
+      "expectedTexelFormat": "I_R8_G8_B8",
+      "testImage": true
+    },
+    {
+      "id": "tiff-rgba",
+      "format": "tiff",
+      "variant": "rgba",
+      "output": "tiff-rgba.tif",
+      "args": ["{source}", "{out}"],
+      "expectedTexelFormat": "I_R8_G8_B8_A8",
+      "testImage": true
+    },
+    {
+      "id": "tiff-gray-no-alpha",
+      "format": "tiff",
+      "variant": "gray-no-alpha",
+      "output": "tiff-gray-no-alpha.tiff",
+      "args": ["{source}", "-alpha", "off", "-colorspace", "Gray", "{out}"],
+      "expectedTexelFormat": "I_X8",
+      "testImage": true
+    },
+    {
+      "id": "tiff-gray",
+      "format": "tiff",
+      "variant": "gray",
+      "output": "tiff-gray.tiff",
+      "args": ["{source}", "-colorspace", "Gray", "{out}"],
+      "expectedSubImageTexelFormats": ["I_X8", "I_X1"],
+      "testImage": true
+    },
+    {
+      "id": "tiff-rgb-16bit",
+      "format": "tiff",
+      "variant": "rgb-16bit",
+      "output": "tiff-rgb-16bit.tiff",
+      "args": ["{source}", "-alpha", "off", "-depth", "16", "{out}"],
+      "expectedTexelFormat": "I_R16_G16_B16",
+      "testImage": true
+    },
+    {
+      "id": "tiff-rgba-16bit",
+      "format": "tiff",
+      "variant": "rgba-16bit",
+      "output": "tiff-rgba-16bit.tiff",
+      "args": ["{source}", "-depth", "16", "{out}"],
+      "expectedTexelFormat": "I_R16_G16_B16_A16",
+      "testImage": true
+    },
+    {
+      "id": "tiff-gray-16bit",
+      "format": "tiff",
+      "variant": "gray-16bit",
+      "output": "tiff-gray-16bit.tiff",
+      "args": ["{source}", "-alpha", "off", "-colorspace", "Gray", "-depth", "16", "{out}"],
+      "expectedTexelFormat": "I_X16",
+      "testImage": true
+    },
+    {
+      "id": "tiff-gray-float32",
+      "format": "tiff",
+      "variant": "gray-float32",
+      "output": "tiff-gray-float32.tiff",
+      "args": ["{source}", "-alpha", "off", "-colorspace", "Gray", "-define", "quantum:format=floating-point", "-depth", "32", "{out}"],
+      "expectedTexelFormat": "F_X32",
+      "testImage": true
+    },
+    {
+      "id": "tiff-lzw",
+      "format": "tiff",
+      "variant": "lzw",
+      "output": "tiff-lzw.tif",
+      "args": ["{source}", "-compress", "LZW", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "tiff-deflate",
+      "format": "tiff",
+      "variant": "deflate",
+      "output": "tiff-deflate.tiff",
+      "args": ["{source}", "-compress", "Zip", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "tiff-tiled",
+      "format": "tiff",
+      "variant": "tiled",
+      "output": "tiff-tiled.tiff",
+      "args": ["{source}", "-define", "tiff:tile-geometry=64x64", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "tiff-multipage",
+      "format": "tiff",
+      "variant": "multipage",
+      "output": "tiff-multipage.tif",
+      "args": ["{frame:*}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "webp-lossless",
+      "format": "webp",
+      "variant": "lossless",
+      "output": "webp-lossless.webp",
+      "args": ["{source}", "-define", "webp:lossless=true", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "webp-lossy",
+      "format": "webp",
+      "variant": "lossy",
+      "output": "webp-lossy.webp",
+      "args": ["{source}", "-quality", "72", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "webp-alpha",
+      "format": "webp",
+      "variant": "alpha",
+      "output": "webp-alpha.webp",
+      "args": ["{source}", "-define", "webp:lossless=false", "-quality", "84", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "webp-animated",
+      "format": "webp",
+      "variant": "animated",
+      "output": "webp-animated.webp",
+      "args": ["-delay", "8", "-loop", "0", "{frame:*}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "ico-frame",
+      "forEach": {
+        "icon": [
+          {"size": "16", "sizeMinusOne": "15", "pointSize": "8", "textY": "9"},
+          {"size": "24", "sizeMinusOne": "23", "pointSize": "8", "textY": "12"},
+          {"size": "32", "sizeMinusOne": "31", "pointSize": "8", "textY": "16"},
+          {"size": "48", "sizeMinusOne": "47", "pointSize": "12", "textY": "24"},
+          {"size": "64", "sizeMinusOne": "63", "pointSize": "16", "textY": "32"},
+          {"size": "128", "sizeMinusOne": "127", "pointSize": "32", "textY": "64"}
+        ]
+      },
+      "output": "work/ico-frame-{size}.png",
+      "args": [
+        "{source}", "-resize", "{size}x{size}!", "-fill", "rgba(0,0,0,0.50)", "-draw",
+        "rectangle 0,0 {sizeMinusOne},8", "-fill", "white", "-pointsize", "{pointSize}", "-draw",
+        "text 2,{textY} '{size}'", "{out}"
+      ],
+      "testImage": false
+    },
+    {
+      "id": "ico-multi-image",
+      "format": "ico",
+      "variant": "multi-image",
+      "output": "ico-multi-image.ico",
+      "args": ["{ico-frame:*}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "dds",
+      "format": "dds",
+      "variant": "{variant}",
+      "forEach": {
+        "dds": [
+          {"variant": "npot-37x23-uncompressed", "size": "37x23", "compression": "none", "mipmaps": "0"},
+          {"variant": "npot-113x71-uncompressed-mip", "size": "113x71", "compression": "none", "mipmaps": "1"},
+          {"variant": "npot-257x129-dxt1", "size": "257x129", "compression": "dxt1", "mipmaps": "1"},
+          {"variant": "npot-257x129-dxt5", "size": "257x129", "compression": "dxt5", "mipmaps": "1"}
+        ]
+      },
+      "output": "dds-{variant}.dds",
+      "args": ["{source}", "-resize", "{size}!", "-define", "dds:compression={compression}", "-define", "dds:mipmaps={mipmaps}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "psd-flat-rgb",
+      "format": "psd",
+      "variant": "flat-rgb",
+      "output": "psd-flat-rgb.psd",
+      "args": ["{source}", "-alpha", "remove", "-background", "white", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "psd-alpha",
+      "format": "psd",
+      "variant": "alpha",
+      "output": "psd-alpha.psd",
+      "args": ["{source}", "{out}"],
+      "testImage": true
+    },
+    {
+      "id": "psd-multi-image",
+      "format": "psd",
+      "variant": "multi-image",
+      "output": "psd-multi-image.psd",
+      "args": ["{frame:*}", "{out}"],
+      "testImage": true
+    }
+  ],
+  "badFiles": [
+    {
+      "format": "bad",
+      "variant": "invalid-png-bytes",
+      "output": "zz-bad-invalid-png.png",
+      "text": "this is not a png file"
+    },
+    {
+      "format": "bad",
+      "variant": "truncated-jpg-header",
+      "output": "zz-bad-truncated-jpg.jpg",
+      "text": "not a jpeg file even though the extension is jpg"
+    },
+    {
+      "format": "bad",
+      "variant": "invalid-webp-bytes",
+      "output": "zz-bad-invalid-webp.webp",
+      "hex": "5249464612000000574542506e6f7420656e6f7567682064617461"
+    },
+    {
+      "format": "bad",
+      "variant": "truncated-dds-header",
+      "output": "zz-bad-truncated-dds.dds",
+      "text": "DDS "
+    }
+  ]
+}
