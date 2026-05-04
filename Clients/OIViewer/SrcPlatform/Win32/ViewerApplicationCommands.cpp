@@ -75,22 +75,6 @@
 
 namespace OIV
 {
-    namespace
-    {
-        struct FileIndexResidencyReadyData
-        {
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-
-        struct FolderLoadResidencyReadyData
-        {
-            BrowseResidencyManager::FileListSnapshot snapshot;
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-    }  // namespace
-
     void ViewerApplication::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         if (IsImageOpen())

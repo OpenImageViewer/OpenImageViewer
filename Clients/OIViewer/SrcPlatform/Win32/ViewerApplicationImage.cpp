@@ -75,22 +75,6 @@
 
 namespace OIV
 {
-    namespace
-    {
-        struct FileIndexResidencyReadyData
-        {
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-
-        struct FolderLoadResidencyReadyData
-        {
-            BrowseResidencyManager::FileListSnapshot snapshot;
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-    }  // namespace
-
     void ViewerApplication::UnloadOpenedImaged()
     {
         if (fFileSessionController != nullptr)
@@ -303,6 +287,12 @@ namespace OIV
 
     bool ViewerApplication::ProcessImageLoadResult(const ImageLoadResult& loadResult)
     {
+        if (loadResult.status == ImageLoadStatus::FolderLoadQueued)
+            return true;
+
+        if (loadResult.status == ImageLoadStatus::NoSupportedFiles)
+            return false;
+
         auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) + L"<textcolor=#ff8930>";
         const ImageLoadPresentation presentation =
             ImageLoadPresentationPolicy::Decide(loadResult, formattedFilePath);
@@ -555,6 +545,11 @@ namespace OIV
         }
 
         std::shared_ptr<OIVFileImage> file = std::make_shared<OIVFileImage>(fileName, std::move(image));
+        IMCodec::ItemMetaDataSharedPtr metaData;
+        if (fImageLoader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success && metaData != nullptr)
+        {
+            file->SetMetaData(metaData);
+        }
         LoadOivImage(file);
     }
 

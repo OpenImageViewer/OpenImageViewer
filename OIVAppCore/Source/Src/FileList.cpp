@@ -13,7 +13,8 @@ namespace OIV
           fKnownFileTypesSet(knownFileTypesSet), fKnownFileTypes(knownfileTypes)
           , fOnFileIndexChangedCallback(callback)
     {
-        fFileWatcher->GetFileChangedEvent().Add(std::bind(&FileList::OnFileChanged, this, std::placeholders::_1));
+        fFileChangedConnection = fFileWatcher->GetFileChangedEvent().Connect(
+            [this](IFileWatcher::FileChangedEventArgs fileChangedEventArgs) { OnFileChanged(fileChangedEventArgs); });
     }
 
     void FileList::Sort()

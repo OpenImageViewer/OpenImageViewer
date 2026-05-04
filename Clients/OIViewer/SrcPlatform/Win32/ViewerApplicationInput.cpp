@@ -75,22 +75,6 @@
 
 namespace OIV
 {
-    namespace
-    {
-        struct FileIndexResidencyReadyData
-        {
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-
-        struct FolderLoadResidencyReadyData
-        {
-            BrowseResidencyManager::FileListSnapshot snapshot;
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-    }  // namespace
-
     void ViewerApplication::OnMouseEvent(const LInput::ButtonStdExtension<MouseButtonType>::ButtonEvent& btnEvent)
     {
         using namespace LInput;
@@ -326,9 +310,9 @@ namespace OIV
                     static_cast<decltype(fMouseDevicesState)::mapped_type::underlying_button_type>(i),
                     mouseEvent.buttonState[i]);
 
-                fMouseCaptureState.Update(static_cast<MouseButton>(i),
-                                           mouseEvent.buttonState[i],
-                                           fWindow.IsUnderMouseCursor());
+                const bool mouseUnderWindow =
+                    mouseEvent.buttonState[i] == ButtonState::Down && fWindow.IsUnderMouseCursor();
+                fMouseCaptureState.Update(static_cast<MouseButton>(i), mouseEvent.buttonState[i], mouseUnderWindow);
 
                 fMouseClickEventHandler.SetButtonState(static_cast<MouseButton>(i), mouseEvent.buttonState[i]);
             }

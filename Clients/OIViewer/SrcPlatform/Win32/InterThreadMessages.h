@@ -1,5 +1,11 @@
 #pragma once
+
+#include <Image.h>
+#include <OIVShared/BrowseResidencyManager.h>
+
 #include <cstdint>
+#include <string>
+
 namespace OIV
 {
     enum class InterThreadMessages : uint16_t
@@ -11,6 +17,19 @@ namespace OIV
         FirstFrameDisplayed,
         LoadFileExternally,
         CountColors
+    };
+
+    struct FileIndexResidencyReadyData
+    {
+        std::wstring fileName;
+        IMCodec::ImageSharedPtr image;
+    };
+
+    struct FolderLoadResidencyReadyData
+    {
+        BrowseResidencyManager::FileListSnapshot snapshot;
+        std::wstring fileName;
+        IMCodec::ImageSharedPtr image;
     };
 
     struct CountColorsData

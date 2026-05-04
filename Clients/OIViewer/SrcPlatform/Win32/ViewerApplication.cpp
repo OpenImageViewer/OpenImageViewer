@@ -75,22 +75,6 @@
 
 namespace OIV
 {
-    namespace
-    {
-        struct FileIndexResidencyReadyData
-        {
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-
-        struct FolderLoadResidencyReadyData
-        {
-            BrowseResidencyManager::FileListSnapshot snapshot;
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-    }  // namespace
-
     std::wstring ViewerApplication::GetAppDataFolder()
     {
         return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/";

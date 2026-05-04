@@ -75,22 +75,6 @@
 
 namespace OIV
 {
-    namespace
-    {
-        struct FileIndexResidencyReadyData
-        {
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-
-        struct FolderLoadResidencyReadyData
-        {
-            BrowseResidencyManager::FileListSnapshot snapshot;
-            std::wstring fileName;
-            IMCodec::ImageSharedPtr image;
-        };
-    }  // namespace
-
     void ViewerApplication::SetImageInfoVisible(bool visible)
     {
         if (visible != fImageInfoVisible)
@@ -273,23 +257,25 @@ namespace OIV
 
         RegisterExceptionhandler();
 
-        OIV_CMD_RegisterCallbacks_Request request;
-
-        request.OnException = [](OIV_Exception_Args args, void* userPointer)
-        {
-            using namespace std;
-            // Convert from C to C++
-            LLUtils::Exception::EventArgs localArgs;
-            localArgs.errorCode = static_cast<LLUtils::Exception::ErrorCode>(args.errorCode);
-            localArgs.functionName = args.functionName;
-
-            localArgs.description = args.description;
-            localArgs.systemErrorMessage = args.systemErrorMessage;
-            reinterpret_cast<ViewerApplication*>(userPointer)->HandleException(true, localArgs, args.callstack);
-        };
-        request.userPointer = this;
-
-        fRenderGateway.RegisterCallbacks(request);
+        // OIV library exception forwarding is disabled because LLUtils::Exception::OnException is global.
+        // Registering this callback logs the same crash once through the library bridge and once through the viewer.
+        // OIV_CMD_RegisterCallbacks_Request request;
+        //
+        // request.OnException = [](OIV_Exception_Args args, void* userPointer)
+        // {
+        //     using namespace std;
+        //     // Convert from C to C++
+        //     LLUtils::Exception::EventArgs localArgs;
+        //     localArgs.errorCode = static_cast<LLUtils::Exception::ErrorCode>(args.errorCode);
+        //     localArgs.functionName = args.functionName;
+        //
+        //     localArgs.description = args.description;
+        //     localArgs.systemErrorMessage = args.systemErrorMessage;
+        //     reinterpret_cast<ViewerApplication*>(userPointer)->HandleException(true, localArgs, args.callstack);
+        // };
+        // request.userPointer = this;
+        //
+        // fRenderGateway.RegisterCallbacks(request);
 
         LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
                                             { HandleException(false, args, {}); });

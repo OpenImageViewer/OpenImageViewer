@@ -38,19 +38,23 @@ namespace OIV
         }
         else if (command == "openWithGoogleMaps")
         {
-            if (openedImage != nullptr && openedImage->GetImage() != nullptr &&
-                openedImage->GetMetaData()->exifData.latitude != std::numeric_limits<double>::max())
+            if (openedImage != nullptr)
             {
-                const auto& exifData = openedImage->GetMetaData()->exifData;
-                std::wstringstream stream;
-                stream << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude
-                       << ",1000m/data=!3m1!1e3";
+                if (openedImage->GetImage() != nullptr &&
+                   openedImage->GetMetaData() != nullptr &&
+                    openedImage->GetMetaData()->exifData.latitude != std::numeric_limits<double>::max())
+                {
+                    const auto& exifData = openedImage->GetMetaData()->exifData;
+                    std::wstringstream stream;
+                    stream << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude
+                           << ",300m/data=!3m1!1e3";
 
-                ShellExecute(nullptr, L"open", stream.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
-            }
-            else
-            {
-                result = L"No geo location data found";
+                    ShellExecute(nullptr, L"open", stream.str().c_str(), nullptr, nullptr, SW_SHOWDEFAULT);
+                }
+                else
+                {
+                    result = L"No geo location data found";
+                }
             }
         }
         else if (command == "containingFolder")

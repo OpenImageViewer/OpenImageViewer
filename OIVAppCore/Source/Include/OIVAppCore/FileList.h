@@ -71,6 +71,7 @@ namespace OIV
         string_type fCurrentFolder;
         IFileWatcher::FolderID fFolderID{};
         IFileWatcher* fFileWatcher{};
+        IFileWatcher::OnFileChangedEventArgsEvent::Connection fFileChangedConnection;
         FileSorter* fFileSorter;
         hashset_type fKnownFileTypesSet;
         string_type fKnownFileTypes;
