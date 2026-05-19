@@ -73,7 +73,7 @@ namespace OIV
     enum class ResetTransformationMode
     {
         DoNothing = 0,
-        ResetAll = 1,
+        ResetAll  = 1,
         Count
     };
 
@@ -288,9 +288,6 @@ namespace OIV
                                    fileChangedEventArgs);  // file change handler, runs in the main thread.
         void OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
         void OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image);
-        void OnFolderLoadResidencyReady(const BrowseResidencyManager::FileListSnapshot& snapshot,
-                                        const std::wstring& fileName,
-                                        IMCodec::ImageSharedPtr image);
 
         void ProcessCurrentFileChanged();
         void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
@@ -315,8 +312,8 @@ namespace OIV
         void OnMessageFromBackgroundThread(const EventData& sharedData);
         void OnCountingColorsCompleted(const CountColorsData& countColorsData);
 
-        using netsettings_Create_func = void (*)(GuiCreateParams*);
-        using netsettings_SetVisible_func = void (*)(bool);
+        using netsettings_Create_func       = void (*)(GuiCreateParams*);
+        using netsettings_SetVisible_func   = void (*)(bool);
         using netsettings_SaveSettings_func = void (*)();
 
         struct SettingsContext
@@ -344,10 +341,10 @@ namespace OIV
         double fMaxPixelSize = 30.0;
         double fMinImageSize = 150.0;
         SlideshowPolicy fSlideshowPolicy;
-        bool fReloadSettingsFileIfChanged = false;
+        bool fReloadSettingsFileIfChanged             = false;
         IFileWatcher::FolderID fCOnfigurationFolderID = 0;
-        int fCurrentFrame = 0;
-        double fCurrentSequencerSpeed = 1.0;
+        int fCurrentFrame                             = 0;
+        double fCurrentSequencerSpeed                 = 1.0;
         OIVBaseImageSharedPtr fCountingImageColor;
         std::atomic_bool fIsColorThreadRunning = false;
         std::thread fCountingColorsThread;
@@ -358,7 +355,7 @@ namespace OIV
         using DeviceGroup = std::map<uint8_t, T>;
 
         using MouseButtonstate = LInput::ButtonsState<MouseButtonType, 8>;
-        using MouseGroup = DeviceGroup<MouseButtonstate>;
+        using MouseGroup       = DeviceGroup<MouseButtonstate>;
 
         MouseGroup fMouseDevicesState;
         LInput::RawInput fRawInput;
@@ -368,12 +365,12 @@ namespace OIV
 
         MouseCaptureState fMouseCaptureState;
 
-        bool fIsGridEnabled = false;
+        bool fIsGridEnabled                         = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
         OIVBaseImageSharedPtr fAutoScrollAnchor;
         DWORD fMainThreadID = GetCurrentThreadId();
         SelectionRect fSelectionRect;
-        uint32_t fQueueResamplingDelay = 50;
+        uint32_t fQueueResamplingDelay        = 50;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
         ::Win32::Timer fTimerTopMostRetention;
         ::Win32::Timer fTimerSlideShow;
@@ -382,20 +379,20 @@ namespace OIV
         int fTopMostCounter = 0;
         ::Win32::Timer fTimerNoActiveZoom;
         ::Win32::Timer fTimerNavigation;
-        bool fIsResamplingEnabled = false;
-        bool fQueueImageInfoLoad = false;
-        uint16_t fQuickBrowseDelay = 100;
+        bool fIsResamplingEnabled          = false;
+        bool fQueueImageInfoLoad           = false;
+        uint16_t fQuickBrowseDelay         = 100;
         bool fDisplayBiggestSubImageOnLoad = true;
 
         /// determines whether the current loaded file is the initial file being loaded at startup
         bool fIsTryToLoadInitialFile = false;
-        bool fIsFirstFrameDisplayed = false;
-        bool fIsOffsetLocked = false;
-        bool fIsLockFitToScreen = false;
-        bool fShowBorders = true;
-        bool fImageInfoVisible = false;
-        bool fIsActive = false;
-        bool fRockerGestureActivate = false;
+        bool fIsFirstFrameDisplayed  = false;
+        bool fIsOffsetLocked         = false;
+        bool fIsLockFitToScreen      = false;
+        bool fShowBorders            = true;
+        bool fImageInfoVisible       = false;
+        bool fIsActive               = false;
+        bool fRockerGestureActivate  = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
         IMCodec::ImageLoader fImageLoader;
         std::unique_ptr<ImageLoadController> fImageLoadController;
@@ -407,21 +404,21 @@ namespace OIV
         std::wstring fRequestedFileForRemoval;
         FileReloadPolicy fFileReloadPolicy;
         LLUtils::PointF64 fImageMargins{0.75, 0.75};
-        std::wstring DefaultTextKeyColorTag = L"<textcolor=#ff8930ff>";
+        std::wstring DefaultTextKeyColorTag   = L"<textcolor=#ff8930ff>";
         std::wstring DefaultTextValueColorTag = L"<textcolor=#7672ffff>";
         LLUtils::StopWatch fFileDisplayTimer;
         MouseMultiClickHandler fMouseClickEventHandler{500, 2};
         void OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args);
 
-        ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
+        ResetTransformationMode fResetTransformationMode           = ResetTransformationMode::ResetAll;
         const OIV_CMD_ColorExposure_Request DefaultColorCorrection = {1.0, 0.0, 1.0, 1.0, 1.0};
-        OIV_CMD_ColorExposure_Request fColorExposure = DefaultColorCorrection;
-        OIV_CMD_ColorExposure_Request fLastColorExposure = fColorExposure;
+        OIV_CMD_ColorExposure_Request fColorExposure               = DefaultColorCorrection;
+        OIV_CMD_ColorExposure_Request fLastColorExposure           = fColorExposure;
         VirtualStatusBar fVirtualStatusBar;
 
-        AdaptiveMotion fAdaptiveZoom = AdaptiveMotion(1.0, 0.6, 1.0);
+        AdaptiveMotion fAdaptiveZoom         = AdaptiveMotion(1.0, 0.6, 1.0);
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
-        AdaptiveMotion fAdaptivePanUpDown = AdaptiveMotion(1.6, 1.0, 5.2);
+        AdaptiveMotion fAdaptivePanUpDown    = AdaptiveMotion(1.6, 1.0, 5.2);
         ImageState fImageState;
 
         CommandController fCommandController;
@@ -437,7 +434,7 @@ namespace OIV
         ::Win32::FileDialogFilterBuilder fOpenComDlgFilters;
         ::Win32::FileDialogFilterBuilder fSaveComDlgFilters;
         std::wstring fDefaultSaveFileExtension = L"png";
-        int16_t fDefaultSaveFileFormatIndex = -1;
+        int16_t fDefaultSaveFileFormatIndex    = -1;
         std::wstring fPendingFolderLoad;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;
@@ -481,6 +478,5 @@ namespace OIV
 
         // FileListProvider
         virtual FileListStringType GetActiveFileName() override;
-        
     };
 }  // namespace OIV

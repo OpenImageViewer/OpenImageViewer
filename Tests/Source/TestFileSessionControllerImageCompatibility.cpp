@@ -105,6 +105,17 @@ namespace
                                });
         }
 
+        bool WaitForFailed(const std::wstring& fileName, std::chrono::milliseconds timeout = std::chrono::seconds(60))
+        {
+            std::unique_lock lock(mutex);
+            return cv.wait_for(lock, timeout,
+                               [&]
+                               {
+                                   return std::ranges::any_of(loadedFiles, [&](const LoadedEvent& event)
+                                                              { return event.fileName == fileName && !event.hasImage; });
+                               });
+        }
+
         bool WaitForLoadedCount(std::size_t count, std::chrono::milliseconds timeout)
         {
             std::unique_lock lock(mutex);
@@ -259,7 +270,20 @@ namespace
                       observer.MarkLoaded(fileName, image != nullptr);
                   },
                   [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&,
-                     IMCodec::ImageSharedPtr) {})
+                     IMCodec::ImageSharedPtr) {},
+                  [this](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+                  {
+                      const auto result = controller.OnCandidateResidencyReady(completion);
+                      if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+                      {
+                          activeProvider.SetActiveFileName(result.fileName);
+                          observer.MarkLoaded(result.fileName, true);
+                      }
+                      else if (result.action == OIV::FileSessionController::CandidateCompletionAction::ShowFailure)
+                      {
+                          observer.MarkLoaded(result.fileName, false);
+                      }
+                  })
         {
             activeProvider.SetActiveFileName(initialFile);
         }
@@ -306,14 +330,12 @@ TEST_CASE("FileSessionController sequentially browses ImageMagick generated file
     for (std::size_t i = 1; i < files.size(); ++i)
     {
         REQUIRE(fixture.controller.JumpFiles(1));
-        REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[i]);
         releaseAndWaitForCurrent(files[i]);
     }
 
     for (std::size_t i = files.size() - 1; i > 0; --i)
     {
         REQUIRE(fixture.controller.JumpFiles(-1));
-        REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[i - 1]);
         releaseAndWaitForCurrent(files[i - 1]);
     }
 }
@@ -327,29 +349,25 @@ TEST_CASE("FileSessionController ignores stale pending loads during rapid ImageM
 
     fixture.LoadFolder();
     fixture.controller.RequestCurrentFileReload();
-
-    REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[2]);
-
     REQUIRE(fixture.processor->WaitForStarted(files[0]));
+    fixture.processor->Release(files[0]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    fixture.observer.Clear();
+
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[0]);
+
     REQUIRE(fixture.processor->WaitForStarted(files[1]));
-    REQUIRE(fixture.processor->WaitForStarted(files[2]));
 
     fixture.observer.Clear();
-    fixture.processor->Release(files[0]);
     fixture.processor->Release(files[1]);
 
-    REQUIRE(fixture.processor->WaitForCompleted(files[0]));
     REQUIRE(fixture.processor->WaitForCompleted(files[1]));
-    REQUIRE(fixture.observer.WaitForNoLoaded(std::chrono::milliseconds(250)));
-
-    fixture.processor->Release(files[2]);
-    REQUIRE(fixture.observer.WaitForLoaded(files[2]));
+    REQUIRE(fixture.observer.WaitForLoaded(files[1]));
     REQUIRE(fixture.observer.CountLoaded(files[0]) == 0);
-    REQUIRE(fixture.observer.CountLoaded(files[1]) == 0);
-    REQUIRE(fixture.observer.CountLoaded(files[2]) == 1);
-    REQUIRE(fixture.controller.IsCurrentFile(files[2]));
+    REQUIRE(fixture.observer.CountLoaded(files[1]) == 1);
+    REQUIRE(fixture.controller.IsCurrentFile(files[1]));
 }
 
 TEST_CASE("FileSessionController ignores stale forward load after rapid backward ImageMagick browsing",
@@ -361,26 +379,33 @@ TEST_CASE("FileSessionController ignores stale forward load after rapid backward
 
     fixture.LoadFolder();
     fixture.controller.RequestCurrentFileReload();
+    REQUIRE(fixture.processor->WaitForStarted(files[0]));
+    fixture.processor->Release(files[0]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    fixture.observer.Clear();
 
     REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[2]);
-    REQUIRE(fixture.controller.JumpFiles(-1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[1]);
+    REQUIRE(fixture.processor->WaitForStarted(files[1]));
+    fixture.processor->Release(files[1]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[1]));
+    REQUIRE(fixture.controller.IsCurrentFile(files[1]));
+    fixture.observer.Clear();
 
+    REQUIRE(fixture.controller.JumpFiles(1));
     REQUIRE(fixture.processor->WaitForStarted(files[1]));
     REQUIRE(fixture.processor->WaitForStarted(files[2]));
+    fixture.observer.Clear();
+    REQUIRE(fixture.controller.JumpFiles(-1));
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    REQUIRE(fixture.controller.IsCurrentFile(files[0]));
 
     fixture.observer.Clear();
     fixture.processor->Release(files[2]);
     REQUIRE(fixture.processor->WaitForCompleted(files[2]));
     REQUIRE(fixture.observer.WaitForNoLoaded(std::chrono::milliseconds(250)));
 
-    fixture.processor->Release(files[1]);
-    REQUIRE(fixture.observer.WaitForLoaded(files[1]));
     REQUIRE(fixture.observer.CountLoaded(files[2]) == 0);
-    REQUIRE(fixture.observer.CountLoaded(files[1]) == 1);
-    REQUIRE(fixture.controller.IsCurrentFile(files[1]));
+    REQUIRE(fixture.controller.IsCurrentFile(files[0]));
 }
 
 TEST_CASE("FileSessionController recovers after browsing to a bad ImageMagick generated file",
@@ -400,16 +425,11 @@ TEST_CASE("FileSessionController recovers after browsing to a bad ImageMagick ge
     fixture.observer.Clear();
 
     REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == badFile);
+    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == validFile);
     REQUIRE(fixture.processor->WaitForStarted(badFile));
 
-    fixture.processor->Release(badFile);
+    fixture.processor->ReleaseAll();
     REQUIRE(fixture.processor->WaitForCompleted(badFile));
-    REQUIRE(fixture.observer.WaitForNoLoaded(std::chrono::milliseconds(250)));
-    REQUIRE(fixture.controller.IsCurrentFile(badFile));
-
-    REQUIRE(fixture.controller.JumpFiles(-1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == validFile);
-    REQUIRE(fixture.observer.WaitForLoaded(validFile));
+    REQUIRE(fixture.observer.WaitForFailed(badFile));
     REQUIRE(fixture.controller.IsCurrentFile(validFile));
 }

@@ -100,12 +100,12 @@ namespace OIV
         using namespace placeholders;
 
         wstring filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
-        filePath = std::filesystem::path(filePath).lexically_normal();
+        filePath         = std::filesystem::path(filePath).lexically_normal();
 
         const bool isDirectory = std::filesystem::is_directory(filePath);
 
         const bool isInitialFileProvided = filePath.empty() == false && isDirectory == false;
-        const bool isInitialFileExists = isInitialFileProvided && filesystem::exists(filePath);
+        const bool isInitialFileExists   = isInitialFileProvided && filesystem::exists(filePath);
 
         if (isDirectory)
             fPendingFolderLoad = filePath;
@@ -149,7 +149,7 @@ namespace OIV
 
         AutoScroll::CreateParams params = {fWindow.GetHandle(), Win32::UserMessage::PRIVATE_WN_AUTO_SCROLL,
                                            std::bind(&ViewerApplication::OnScroll, this, std::placeholders::_1)};
-        fAutoScroll = std::make_unique<AutoScroll>(params);
+        fAutoScroll                     = std::make_unique<AutoScroll>(params);
 
         fWindow.AddEventListener(std::bind(&ViewerApplication::HandleMessages, this, _1));
         fWindow.GetCanvasWindow().AddEventListener(std::bind(&ViewerApplication::HandleClientWindowMessages, this, _1));
@@ -198,8 +198,7 @@ namespace OIV
                     std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
 
                 fSequencerTimer.SetInterval(SequencerPolicy::FrameIntervalMs(
-                    currentImage->GetAnimationData().delayMilliseconds,
-                    fCurrentSequencerSpeed));
+                    currentImage->GetAnimationData().delayMilliseconds, fCurrentSequencerSpeed));
                 fCurrentFrame = SequencerPolicy::NextFrame(fCurrentFrame,
                                                            fImageState.GetOpenedImage()->GetImage()->GetNumSubImages());
                 RefreshImage();
@@ -248,7 +247,7 @@ namespace OIV
         auto openedImage = fImageState.GetOpenedImage()->GetImage();
 
         const auto isMainAnActualImage = SubImagePolicy::IncludeMainImage(openedImage->GetItemType());
-        const auto actualIndex = SubImagePolicy::ActualImageIndexFromDisplayIndex(index, isMainAnActualImage);
+        const auto actualIndex         = SubImagePolicy::ActualImageIndexFromDisplayIndex(index, isMainAnActualImage);
 
         if (actualIndex == SubImagePolicy::MainImageIndex)
         {
@@ -277,9 +276,9 @@ namespace OIV
                     return;
 
                 const auto& fileList = fFileSessionController->GetFileList();
-                bool foundFile = JumpFiles(1) ||
-                                 (fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(), fileList.GetSize()) &&
-                                  JumpFiles(FileList::IndexStart));
+                bool foundFile       = JumpFiles(1) ||
+                                       (fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(), fileList.GetSize()) &&
+                                        JumpFiles(FileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
             });
@@ -292,8 +291,8 @@ namespace OIV
             fTimerTopMostRetention.SetInterval(1000);
         };
 
-        const ImageFormatCatalog imageFormatCatalog =
-            ImageFormatCatalogPolicy::Build(fImageLoader.GetImageCodec().GetPluginsInfo());
+        const ImageFormatCatalog imageFormatCatalog = ImageFormatCatalogPolicy::Build(
+            fImageLoader.GetImageCodec().GetPluginsInfo());
 
         ::Win32::FileDialogFilterBuilder::ListFileDialogFilters readFilters;
         ::Win32::FileDialogFilterBuilder::ListFileDialogFilters writeFilters;
@@ -304,9 +303,9 @@ namespace OIV
         for (const ImageFormatFilter& filter : imageFormatCatalog.writeFilters)
             writeFilters.push_back({filter.description, filter.extensions});
 
-        fKnownFileTypesSet = imageFormatCatalog.knownFileTypesSet;
-        fKnownFileTypes = imageFormatCatalog.knownFileTypes;
-        fDefaultSaveFileExtension = imageFormatCatalog.defaultSaveFileExtension;
+        fKnownFileTypesSet          = imageFormatCatalog.knownFileTypesSet;
+        fKnownFileTypes             = imageFormatCatalog.knownFileTypes;
+        fDefaultSaveFileExtension   = imageFormatCatalog.defaultSaveFileExtension;
         fDefaultSaveFileFormatIndex = imageFormatCatalog.defaultSaveFileFormatIndex;
 
         fOpenComDlgFilters = {readFilters};
@@ -320,32 +319,24 @@ namespace OIV
         //          FileListStringSetType knownnFileTypesSet, FileListStringType knownFileTypes
 
         fFileSessionController = std::make_unique<FileSessionController>(
-            this,
-            &fFileWatcher,
-            &fFileSorter,
-            fKnownFileTypesSet,
-            fKnownFileTypes,
-            fImageResidency,
+            this, &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes, fImageResidency,
             [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
             {
                 if (!fIsShuttingDown)
                 {
-                    fEventSync.AddData(
-                        static_cast<std::underlying_type_t<InterThreadMessages>>(
-                            InterThreadMessages::FileIndexResidencyReady),
-                        FileIndexResidencyReadyData{fileName, image});
+                    fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(
+                                           InterThreadMessages::FileIndexResidencyReady),
+                                       FileIndexResidencyReadyData{fileName, image});
                 }
             },
-            [this](const BrowseResidencyManager::FileListSnapshot& snapshot,
-                   const std::wstring& fileName,
-                   IMCodec::ImageSharedPtr image)
+            [](const BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+            [this](const FileSessionController::CandidateResidencyCompletion& completion)
             {
                 if (!fIsShuttingDown)
                 {
-                    fEventSync.AddData(
-                        static_cast<std::underlying_type_t<InterThreadMessages>>(
-                            InterThreadMessages::FolderLoadResidencyReady),
-                        FolderLoadResidencyReadyData{snapshot, fileName, image});
+                    fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(
+                                           InterThreadMessages::CandidateResidencyReady),
+                                       CandidateResidencyReadyData{completion});
                 }
             });
         fImageLoadController->SetFileSessionController(fFileSessionController.get());
@@ -424,7 +415,7 @@ namespace OIV
         bool shouldQuit = false;
         while (!shouldQuit)
         {
-            DWORD count = 1;
+            DWORD count  = 1;
             DWORD result = MsgWaitForMultipleObjects(count, &fEventSync.GetEventHandle(), FALSE, INFINITE, QS_ALLINPUT);
 
             if (result < count)
@@ -491,12 +482,14 @@ namespace OIV
 
     LLUtils::PointF64 ViewerApplication::ClientToImage(LLUtils::PointI32 clientPos) const
     {
-        return ViewTransformController::ClientToImage(static_cast<LLUtils::PointF64>(clientPos), GetScale(), GetOffset());
+        return ViewTransformController::ClientToImage(static_cast<LLUtils::PointF64>(clientPos), GetScale(),
+                                                      GetOffset());
     }
 
     LLUtils::RectF64 ViewerApplication::ClientToImage(LLUtils::RectI32 clientRect) const
     {
-        return ViewTransformController::ClientToImage(static_cast<LLUtils::RectF64>(clientRect), GetScale(), GetOffset());
+        return ViewTransformController::ClientToImage(static_cast<LLUtils::RectF64>(clientRect), GetScale(),
+                                                      GetOffset());
     }
 
     LLUtils::PointF64 ViewerApplication::GetCanvasCenter()
@@ -516,8 +509,8 @@ namespace OIV
             RECT boundingArea = ::Win32::MonitorInfo::GetSingleton().getBoundingMonitorArea();
 
             using point_type = PointF64::point_type;
-            auto leftDelta = primaryMonitorCoords.left - boundingArea.left;
-            auto topDelta = primaryMonitorCoords.top - boundingArea.top;
+            auto leftDelta   = primaryMonitorCoords.left - boundingArea.left;
+            auto topDelta    = primaryMonitorCoords.top - boundingArea.top;
 
             const LLUtils::PointF64 primaryScreenOffset = LLUtils::PointF64(static_cast<point_type>(leftDelta),
                                                                             static_cast<point_type>(topDelta));
@@ -534,10 +527,8 @@ namespace OIV
     LLUtils::PointF64 ViewerApplication::ResolveOffset(const LLUtils::PointF64& point)
     {
         using namespace LLUtils;
-        return ViewTransformController::ResolveOffset(point,
-                                                      static_cast<PointF64>(fWindow.GetCanvasSize()),
-                                                      GetImageSize(ImageSizeType::Visible),
-                                                      fImageMargins);
+        return ViewTransformController::ResolveOffset(point, static_cast<PointF64>(fWindow.GetCanvasSize()),
+                                                      GetImageSize(ImageSizeType::Visible), fImageMargins);
     }
 
 }  // namespace OIV

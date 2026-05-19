@@ -19,14 +19,14 @@ namespace OIV
     {
       public:
 
-        using string_type = FileListStringType;
-        using list_string_type = LLUtils::ListString<string_type>;
-        using hashset_type = std::set<string_type>;
-        using index_type = list_string_type::difference_type;
-        using size_type = list_string_type::size_type;
+        using string_type                    = FileListStringType;
+        using list_string_type               = LLUtils::ListString<string_type>;
+        using hashset_type                   = std::set<string_type>;
+        using index_type                     = list_string_type::difference_type;
+        using size_type                      = list_string_type::size_type;
         using OnFileIndexChangedCallbackType = std::function<void(index_type current, index_type previous)>;
 
-        static constexpr auto IndexEnd = std::numeric_limits<index_type>::max();
+        static constexpr auto IndexEnd   = std::numeric_limits<index_type>::max();
         static constexpr auto IndexStart = std::numeric_limits<index_type>::min();
 
         struct Snapshot
@@ -37,7 +37,8 @@ namespace OIV
         };
 
         FileList(IFileListProvider* fileListProvider, IFileWatcher* fileWatcher, FileSorter* fileSorter,
-                 const hashset_type& knownFileTypesSet, string_type knownfileTypes, OnFileIndexChangedCallbackType callback);
+                 const hashset_type& knownFileTypesSet, string_type knownfileTypes,
+                 OnFileIndexChangedCallbackType callback);
 
         index_type GetCurrentIndex() const;
         ResultCode SetCurrentIndex(index_type index);
@@ -50,7 +51,7 @@ namespace OIV
         IFileWatcher::FolderID GetFolderID() const;
         size_t GetSize() const;
         Snapshot CreateSnapshot() const;
-        void SetCurrentIndexByElementName(const string_type& element);
+        ResultCode SetCurrentIndexByElementName(const string_type& element);
         string_type GetElementNameFromIndex(index_type index) const;
         void Sort();
         list_string_type GetSupportedFileListInFolder(const string_type& folderPath);

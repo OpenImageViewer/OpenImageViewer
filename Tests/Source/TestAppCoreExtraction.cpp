@@ -44,10 +44,15 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <climits>
+#include <condition_variable>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
+#include <set>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace
@@ -55,10 +60,8 @@ namespace
     class FakeFileWatcher : public OIV::IFileWatcher
     {
       public:
-        bool IsFolderRegistered(const std::wstring& folder) const override
-        {
-            return fFolder == folder;
-        }
+
+        bool IsFolderRegistered(const std::wstring& folder) const override { return fFolder == folder; }
 
         FolderID AddFolder(const std::wstring& folder) override
         {
@@ -78,17 +81,16 @@ namespace
                 fFolder.clear();
         }
 
-        OnFileChangedEventArgsEvent& GetFileChangedEvent() override
-        {
-            return fEvent;
-        }
+        OnFileChangedEventArgsEvent& GetFileChangedEvent() override { return fEvent; }
 
-        void Raise(FileChangedOp op, const std::wstring& folder, const std::wstring& fileName, const std::wstring& fileName2 = {})
+        void Raise(FileChangedOp op, const std::wstring& folder, const std::wstring& fileName,
+                   const std::wstring& fileName2 = {})
         {
             fEvent.Raise(FileChangedEventArgs{fFolderID, op, folder, fileName, fileName2});
         }
 
       private:
+
         FolderID fFolderID = 7;
         std::wstring fFolder;
         OnFileChangedEventArgsEvent fEvent;
@@ -97,60 +99,51 @@ namespace
     class ActiveFileProvider : public OIV::IFileListProvider
     {
       public:
-        OIV::FileListStringType GetActiveFileName() override
-        {
-            return activeFile;
-        }
+
+        OIV::FileListStringType GetActiveFileName() override { return activeFile; }
 
         OIV::FileListStringType activeFile;
     };
 
     IMCodec::ImageSharedPtr CreateTestImage(uint32_t width = 1, uint32_t height = 1)
     {
-        auto imageItem = std::make_shared<IMCodec::ImageItem>();
-        imageItem->itemType = IMCodec::ImageItemType::Image;
-        imageItem->descriptor.width = width;
+        auto imageItem               = std::make_shared<IMCodec::ImageItem>();
+        imageItem->itemType          = IMCodec::ImageItemType::Image;
+        imageItem->descriptor.width  = width;
         imageItem->descriptor.height = height;
         return std::make_shared<IMCodec::Image>(imageItem, IMCodec::ImageItemType::Unknown);
     }
 
-    IMCodec::ImageSharedPtr CreateFormattedTestImage(uint32_t width = 1,
-                                                     uint32_t height = 1,
+    IMCodec::ImageSharedPtr CreateFormattedTestImage(uint32_t width = 1, uint32_t height = 1,
                                                      IMCodec::TexelFormat format = IMCodec::TexelFormat::I_R8_G8_B8_A8)
     {
-        auto imageItem = std::make_shared<IMCodec::ImageItem>();
-        imageItem->itemType = IMCodec::ImageItemType::Image;
-        imageItem->descriptor.width = width;
-        imageItem->descriptor.height = height;
+        auto imageItem                                = std::make_shared<IMCodec::ImageItem>();
+        imageItem->itemType                           = IMCodec::ImageItemType::Image;
+        imageItem->descriptor.width                   = width;
+        imageItem->descriptor.height                  = height;
         imageItem->descriptor.texelFormatDecompressed = format;
-        imageItem->descriptor.texelFormatStorage = format;
-        imageItem->descriptor.rowPitchInBytes = width * IMCodec::GetTexelFormatSize(format) / CHAR_BIT;
+        imageItem->descriptor.texelFormatStorage      = format;
+        imageItem->descriptor.rowPitchInBytes         = width * IMCodec::GetTexelFormatSize(format) / CHAR_BIT;
         return std::make_shared<IMCodec::Image>(imageItem, IMCodec::ImageItemType::Unknown);
     }
 
     class FakeImageCodec : public IMCodec::IImageCodec
     {
       public:
-        IMCodec::ImageResult Decode(const std::byte*,
-                                    std::size_t,
-                                    const IMCodec::PluginID&,
-                                    IMCodec::ImageLoadFlags,
-                                    const IMCodec::Parameters&,
-                                    IMCodec::ImageSharedPtr&) override
+
+        IMCodec::ImageResult Decode(const std::byte*, std::size_t, const IMCodec::PluginID&, IMCodec::ImageLoadFlags,
+                                    const IMCodec::Parameters&, IMCodec::ImageSharedPtr&) override
         {
             return IMCodec::ImageResult::NotImplemented;
         }
 
-        IMCodec::ImageResult Encode(const IMCodec::ImageSharedPtr,
-                                    const IMCodec::PluginID&,
-                                    const IMCodec::Parameters&,
+        IMCodec::ImageResult Encode(const IMCodec::ImageSharedPtr, const IMCodec::PluginID&, const IMCodec::Parameters&,
                                     LLUtils::Buffer&) override
         {
             return IMCodec::ImageResult::NotImplemented;
         }
 
-        IMCodec::ImageResult GetEncoderParameters(const IMCodec::PluginID&,
-                                                  IMCodec::ListParameterDescriptors&) override
+        IMCodec::ImageResult GetEncoderParameters(const IMCodec::PluginID&, IMCodec::ListParameterDescriptors&) override
         {
             return IMCodec::ImageResult::NotImplemented;
         }
@@ -165,24 +158,21 @@ namespace
             return IMCodec::ImageResult::NotImplemented;
         }
 
-        IMCodec::ImageResult GetPluginInfo(const IMCodec::PluginID&, IMCodec::PluginProperties& pluginProperties) override
+        IMCodec::ImageResult GetPluginInfo(const IMCodec::PluginID&,
+                                           IMCodec::PluginProperties& pluginProperties) override
         {
             pluginProperties.pluginDescription = pluginDescription;
             return pluginInfoResult;
         }
 
-        std::vector<IMCodec::PluginProperties> GetPluginsInfo() override
-        {
-            return {};
-        }
+        std::vector<IMCodec::PluginProperties> GetPluginsInfo() override { return {}; }
 
-        IMCodec::ImageResult pluginInfoResult = IMCodec::ImageResult::Success;
+        IMCodec::ImageResult pluginInfoResult         = IMCodec::ImageResult::Success;
         LLUtils::native_string_type pluginDescription = LLUTILS_TEXT("Fake codec");
     };
 
     const OIV::ImageInfoPresentationPolicy::ImageInfoRow* FindRow(
-        const OIV::ImageInfoPresentationPolicy::ImageInfoRows& rows,
-        const std::string& key)
+        const OIV::ImageInfoPresentationPolicy::ImageInfoRows& rows, const std::string& key)
     {
         auto it = std::find_if(rows.begin(), rows.end(), [&](const auto& row) { return row.key == key; });
         return it == rows.end() ? nullptr : &*it;
@@ -191,6 +181,7 @@ namespace
     class CountingResidencyProcessor : public OIV::RequestProcessorType
     {
       public:
+
         bool ProcessResidencyRequest(const OIV::ImageResidencyKey&, OIV::ImageResidencyValue& outValue) override
         {
             ++fCallCount;
@@ -198,12 +189,38 @@ namespace
             return true;
         }
 
-        int GetCallCount() const
-        {
-            return fCallCount;
-        }
+        int GetCallCount() const { return fCallCount; }
 
       private:
+
+        std::atomic<int> fCallCount = 0;
+    };
+
+    class SelectiveResidencyProcessor : public OIV::RequestProcessorType
+    {
+      public:
+
+        explicit SelectiveResidencyProcessor(std::set<std::wstring> successfulFiles)
+            : fSuccessfulFiles(std::move(successfulFiles))
+        {
+        }
+
+        bool ProcessResidencyRequest(const OIV::ImageResidencyKey& key, OIV::ImageResidencyValue& outValue) override
+        {
+            ++fCallCount;
+            const auto& fileName = std::get<0>(key);
+            if (fSuccessfulFiles.contains(fileName) == false)
+                return false;
+
+            outValue = CreateTestImage();
+            return true;
+        }
+
+        int GetCallCount() const { return fCallCount; }
+
+      private:
+
+        std::set<std::wstring> fSuccessfulFiles;
         std::atomic<int> fCallCount = 0;
     };
 
@@ -221,8 +238,7 @@ namespace
         file << "test";
     }
 
-    IMCodec::PluginProperties CreatePlugin(IMCodec::CodecCapabilities capabilities,
-                                           const std::wstring& description,
+    IMCodec::PluginProperties CreatePlugin(IMCodec::CodecCapabilities capabilities, const std::wstring& description,
                                            std::initializer_list<std::wstring> extensions)
     {
         IMCodec::PluginProperties plugin;
@@ -234,26 +250,28 @@ namespace
     class FakeImageFileLoader : public OIV::IImageFileLoader
     {
       public:
+
         OIV::ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath,
                                           IMCodec::PluginTraverseMode traverseMode,
                                           const OIV::ImageLoadContext& context) override
         {
-            lastPath = normalizedFilePath;
+            lastPath         = normalizedFilePath;
             lastTraverseMode = traverseMode;
-            lastContext = context;
+            lastContext      = context;
 
-            return OIV::ImageFileLoadResult{
-                resultCode,
-                image != nullptr ? std::make_shared<OIV::OIVFileImage>(normalizedFilePath, image) : nullptr};
+            return OIV::ImageFileLoadResult{resultCode,
+                                            image != nullptr
+                                                ? std::make_shared<OIV::OIVFileImage>(normalizedFilePath, image)
+                                                : nullptr};
         }
 
-        ResultCode resultCode = ResultCode::RC_Success;
+        ResultCode resultCode         = ResultCode::RC_Success;
         IMCodec::ImageSharedPtr image = CreateTestImage();
         std::wstring lastPath;
         IMCodec::PluginTraverseMode lastTraverseMode = IMCodec::PluginTraverseMode::NoTraverse;
         OIV::ImageLoadContext lastContext;
     };
-}
+}  // namespace
 
 TEST_CASE("RecursiveDelayedOp delays callbacks until the outer operation ends", "[AppCore][Shared]")
 {
@@ -296,8 +314,10 @@ TEST_CASE("CommandManager dispatches predefined command groups", "[AppCore]")
     bool executed = false;
 
     manager.AddCommand(OIV::CommandManager::Command(
-        "open", [&](const OIV::CommandManager::CommandRequest& request, OIV::CommandManager::CommandResult& result) {
-            executed = true;
+        "open",
+        [&](const OIV::CommandManager::CommandRequest& request, OIV::CommandManager::CommandResult& result)
+        {
+            executed        = true;
             result.resValue = LLUtils::StringUtility::ToWString(request.args.GetArgValue("path"));
         }));
 
@@ -316,9 +336,7 @@ TEST_CASE("CommandController dispatches commands and forwards results", "[AppCor
 
     controller.AddCommandCallbacks(
         {{"open", [](const OIV::CommandManager::CommandRequest& request, OIV::CommandManager::CommandResult& result)
-          {
-              result.resValue = LLUtils::StringUtility::ToWString(request.args.GetArgValue("path"));
-          }}});
+          { result.resValue = LLUtils::StringUtility::ToWString(request.args.GetArgValue("path")); }}});
 
     controller.GetCommandManager().AddCommandGroup({"OpenImage", "Open image", "open", "path=image.png"});
 
@@ -335,63 +353,55 @@ TEST_CASE("ViewCommandPolicy parses view command arguments", "[AppCore]")
     REQUIRE(zoom.centerX == 10);
     REQUIRE(zoom.centerY == 20);
 
-    const auto centeredZoom =
-        OIV::ViewCommandPolicy::ParseZoom(OIV::CommandManager::CommandArgs::FromString("val=0.5"));
+    const auto centeredZoom = OIV::ViewCommandPolicy::ParseZoom(
+        OIV::CommandManager::CommandArgs::FromString("val=0.5"));
     REQUIRE(centeredZoom.centerX == -1);
     REQUIRE(centeredZoom.centerY == -1);
 
-    const auto pan =
-        OIV::ViewCommandPolicy::ParsePan(OIV::CommandManager::CommandArgs::FromString("direction=left;amount=32"));
+    const auto pan = OIV::ViewCommandPolicy::ParsePan(
+        OIV::CommandManager::CommandArgs::FromString("direction=left;amount=32"));
     REQUIRE(pan.direction == OIV::PanDirection::Left);
     REQUIRE(pan.amount == Catch::Approx(32.0));
 
-    REQUIRE(OIV::ViewCommandPolicy::ParsePlacement(
-                OIV::CommandManager::CommandArgs::FromString("cmd=fitToScreen")) ==
+    REQUIRE(OIV::ViewCommandPolicy::ParsePlacement(OIV::CommandManager::CommandArgs::FromString("cmd=fitToScreen")) ==
             OIV::PlacementAction::FitToScreen);
-    REQUIRE(OIV::ViewCommandPolicy::ParsePlacement(
-                OIV::CommandManager::CommandArgs::FromString("cmd=unknown")) == OIV::PlacementAction::None);
+    REQUIRE(OIV::ViewCommandPolicy::ParsePlacement(OIV::CommandManager::CommandArgs::FromString("cmd=unknown")) ==
+            OIV::PlacementAction::None);
 
-    REQUIRE(OIV::ViewCommandPolicy::FormatZoomResult(1.25) ==
-            L"<textcolor=#ff8930>Zoom <textcolor=#7672ff>(125.00%)");
+    REQUIRE(OIV::ViewCommandPolicy::FormatZoomResult(1.25) == L"<textcolor=#ff8930>Zoom <textcolor=#7672ff>(125.00%)");
     REQUIRE(OIV::ViewCommandPolicy::FormatPlacementResult("Center") == L"<textcolor=#00ff00>Center");
 }
 
 TEST_CASE("ViewCommandPolicy parses navigation and window size decisions", "[AppCore]")
 {
-    auto navigation =
-        OIV::ViewCommandPolicy::ParseNavigation(OIV::CommandManager::CommandArgs::FromString("amount=end;subimage=false"));
+    auto navigation = OIV::ViewCommandPolicy::ParseNavigation(
+        OIV::CommandManager::CommandArgs::FromString("amount=end;subimage=false"));
     REQUIRE(navigation.amount == OIV::FileList::IndexEnd);
     REQUIRE_FALSE(navigation.subImage);
 
-    navigation =
-        OIV::ViewCommandPolicy::ParseNavigation(OIV::CommandManager::CommandArgs::FromString("amount=-1;subimage=true"));
+    navigation = OIV::ViewCommandPolicy::ParseNavigation(
+        OIV::CommandManager::CommandArgs::FromString("amount=-1;subimage=true"));
     REQUIRE(navigation.amount == -1);
     REQUIRE(navigation.subImage);
     REQUIRE(OIV::ViewCommandPolicy::NextSubImageIndex(0, -1, 3) == 2);
     REQUIRE(OIV::ViewCommandPolicy::NextSubImageIndex(2, 1, 3) == 0);
 
-    auto window = OIV::ViewCommandPolicy::DecideWindowSize(
-        OIV::CommandManager::CommandArgs::FromString("size_type=relative;width=50;height=25"),
-        {400, 200},
-        {300, 100},
-        {0, 0, 1000, 800});
+    auto window = OIV::ViewCommandPolicy::DecideWindowSize(OIV::CommandManager::CommandArgs::FromString(
+                                                               "size_type=relative;width=50;height=25"),
+                                                           {400, 200}, {300, 100}, {0, 0, 1000, 800});
     REQUIRE(window.mode == OIV::WindowSizeMode::Windowed);
     REQUIRE(window.size == LLUtils::PointI32{500, 200});
     REQUIRE(window.position == LLUtils::PointI32{250, 100});
 
-    window = OIV::ViewCommandPolicy::DecideWindowSize(
-        OIV::CommandManager::CommandArgs::FromString("size_type=absolute;width=1200;height=900"),
-        {400, 200},
-        {900, 700},
-        {0, 0, 1000, 800});
+    window = OIV::ViewCommandPolicy::DecideWindowSize(OIV::CommandManager::CommandArgs::FromString(
+                                                          "size_type=absolute;width=1200;height=900"),
+                                                      {400, 200}, {900, 700}, {0, 0, 1000, 800});
     REQUIRE(window.size == LLUtils::PointI32{1000, 800});
     REQUIRE(window.position == LLUtils::PointI32{0, 0});
 
     REQUIRE(OIV::ViewCommandPolicy::DecideWindowSize(
-                OIV::CommandManager::CommandArgs::FromString("size_type=fullscreen"),
-                {},
-                {},
-                {}).mode == OIV::WindowSizeMode::Fullscreen);
+                OIV::CommandManager::CommandArgs::FromString("size_type=fullscreen"), {}, {}, {})
+                .mode == OIV::WindowSizeMode::Fullscreen);
 }
 
 TEST_CASE("ImageTransformCommandPolicy parses and formats axis-aligned transforms", "[AppCore]")
@@ -412,13 +422,11 @@ TEST_CASE("ImageTransformCommandPolicy parses and formats axis-aligned transform
         OIV::CommandManager::CommandArgs::FromString("type=unknown"));
     REQUIRE_FALSE(command.HasTransform());
 
-    REQUIRE(OIV::ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
-                IMUtil::AxisAlignedRotation::Rotate180,
-                IMUtil::AxisAlignedFlip::Vertical) ==
+    REQUIRE(OIV::ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(IMUtil::AxisAlignedRotation::Rotate180,
+                                                                               IMUtil::AxisAlignedFlip::Vertical) ==
             L"Rotation <textcolor=#7672ff>(180 degrees)\n<textcolor=#ff8930>Flip <textcolor=#7672ff>(vertical)");
     REQUIRE(OIV::ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
-                IMUtil::AxisAlignedRotation::None,
-                IMUtil::AxisAlignedFlip::None) == L"No transformation");
+                IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::None) == L"No transformation");
 }
 
 TEST_CASE("ViewerPresentationPolicy formats viewer messages", "[AppCore]")
@@ -426,21 +434,15 @@ TEST_CASE("ViewerPresentationPolicy formats viewer messages", "[AppCore]")
     REQUIRE(OIV::ViewerPresentationPolicy::FormatOperationResult(OIV::OperationResult::NoDataFound) ==
             L"No Image loaded");
     REQUIRE(OIV::ViewerPresentationPolicy::FormatFailedOperation(L"Cannot crop selected area",
-                                                                  OIV::OperationResult::NoSelection) ==
+                                                                 OIV::OperationResult::NoSelection) ==
             L"Cannot crop selected area - No selection");
     REQUIRE(OIV::ViewerPresentationPolicy::FormatOpenedFileMessage(L"<path>") == L"File: <path>");
     REQUIRE(OIV::ViewerPresentationPolicy::FormatTopMostMessage(2) == L"Top most ending in...2");
     REQUIRE(OIV::ViewerPresentationPolicy::FormatNonFileTitlePrefix(OIV::ImageSource::Clipboard) ==
             L"Clipboard image - ");
-    REQUIRE(OIV::ViewerPresentationPolicy::FormatFileTitlePrefix(L"image",
-                                                                  L".png",
-                                                                  L"C:\\folder\\",
-                                                                  true,
-                                                                  3,
-                                                                  10) ==
+    REQUIRE(OIV::ViewerPresentationPolicy::FormatFileTitlePrefix(L"image", L".png", L"C:\\folder\\", true, 3, 10) ==
             L"3/10 | image.png @ C:\\folder - ");
-    REQUIRE(OIV::ViewerPresentationPolicy::FormatTitle(L"image - ", L"OpenImageViewer") ==
-            L"image - OpenImageViewer");
+    REQUIRE(OIV::ViewerPresentationPolicy::FormatTitle(L"image - ", L"OpenImageViewer") == L"image - OpenImageViewer");
 }
 
 TEST_CASE("SubImagePolicy maps visible sub-images and selections", "[AppCore]")
@@ -454,13 +456,11 @@ TEST_CASE("SubImagePolicy maps visible sub-images and selections", "[AppCore]")
     REQUIRE(OIV::SubImagePolicy::TotalDisplayedImages(3, true) == 4);
     REQUIRE(OIV::SubImagePolicy::TotalDisplayedImages(3, false) == 3);
 
-    REQUIRE(OIV::SubImagePolicy::ActualImageIndexFromDisplayIndex(0, true) ==
-            OIV::SubImagePolicy::MainImageIndex);
+    REQUIRE(OIV::SubImagePolicy::ActualImageIndexFromDisplayIndex(0, true) == OIV::SubImagePolicy::MainImageIndex);
     REQUIRE(OIV::SubImagePolicy::ActualImageIndexFromDisplayIndex(2, true) == 1);
     REQUIRE(OIV::SubImagePolicy::ActualImageIndexFromDisplayIndex(2, false) == 2);
 
-    REQUIRE(OIV::SubImagePolicy::InitialSelectionIndex(true, 500, {100, 200}) ==
-            OIV::SubImagePolicy::MainImageIndex);
+    REQUIRE(OIV::SubImagePolicy::InitialSelectionIndex(true, 500, {100, 200}) == OIV::SubImagePolicy::MainImageIndex);
     REQUIRE(OIV::SubImagePolicy::InitialSelectionIndex(true, 100, {500, 200}) == 1);
     REQUIRE(OIV::SubImagePolicy::InitialSelectionIndex(false, 0, {100, 500}) == 1);
 }
@@ -485,26 +485,21 @@ TEST_CASE("FrameLimiterPolicy decides refresh timing", "[AppCore]")
 
 TEST_CASE("ImageEditPolicy validates selection operations", "[AppCore]")
 {
-    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(false, true) ==
-            OIV::OperationResult::NoDataFound);
-    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(true, true) ==
-            OIV::OperationResult::NoSelection);
-    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(true, false) ==
-            OIV::OperationResult::Success);
+    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(false, true) == OIV::OperationResult::NoDataFound);
+    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(true, true) == OIV::OperationResult::NoSelection);
+    REQUIRE(OIV::ImageEditPolicy::ValidateSelectionOperation(true, false) == OIV::OperationResult::Success);
 }
 
 TEST_CASE("SortCommandPolicy decides sort type and direction changes", "[AppCore]")
 {
-    auto decision = OIV::SortCommandPolicy::Decide(
-        OIV::CommandManager::CommandArgs::FromString("type=date"),
-        OIV::FileSorter::SortType::Name);
+    auto decision = OIV::SortCommandPolicy::Decide(OIV::CommandManager::CommandArgs::FromString("type=date"),
+                                                   OIV::FileSorter::SortType::Name);
     REQUIRE(decision.valid);
     REQUIRE(decision.sortType == OIV::FileSorter::SortType::Date);
     REQUIRE_FALSE(decision.reverseDirection);
 
-    decision = OIV::SortCommandPolicy::Decide(
-        OIV::CommandManager::CommandArgs::FromString("type=name"),
-        OIV::FileSorter::SortType::Name);
+    decision = OIV::SortCommandPolicy::Decide(OIV::CommandManager::CommandArgs::FromString("type=name"),
+                                              OIV::FileSorter::SortType::Name);
     REQUIRE(decision.valid);
     REQUIRE(decision.reverseDirection);
     REQUIRE(OIV::SortCommandPolicy::Reverse(OIV::FileSorter::SortDirection::Ascending) ==
@@ -532,7 +527,7 @@ TEST_CASE("ColorCorrectionCommandPolicy parses and applies color corrections", "
 TEST_CASE("ColorCountPolicy ignores stale completions unless image info is visible", "[AppCore]")
 {
     int currentImage = 0;
-    int staleImage = 0;
+    int staleImage   = 0;
 
     REQUIRE(OIV::ColorCountPolicy::DecideCompletion(&currentImage, &currentImage, false) ==
             OIV::ColorCountCompletionAction::ApplyToCurrentImage);
@@ -548,9 +543,8 @@ TEST_CASE("ColorCountPolicy ignores stale completions unless image info is visib
 TEST_CASE("SelectionRect creates, moves, and cancels a selection", "[AppCore]")
 {
     std::vector<std::pair<LLUtils::RectI32, bool>> changes;
-    OIV::SelectionRect selection([&](const LLUtils::RectI32& rect, bool visible) {
-        changes.push_back({rect, visible});
-    });
+    OIV::SelectionRect selection([&](const LLUtils::RectI32& rect, bool visible)
+                                 { changes.push_back({rect, visible}); });
 
     selection.SetSelection(OIV::SelectionRect::Operation::BeginDrag, {10, 10});
     selection.SetSelection(OIV::SelectionRect::Operation::Drag, {30, 40});
@@ -582,11 +576,9 @@ TEST_CASE("SelectionWorkflowPolicy formats, places, and snaps selections", "[App
     REQUIRE(OIV::SelectionWorkflowPolicy::PlaceSelectionLabel({{2, 20}, {30, 60}}, {40, 10}, {200, 120}) ==
             LLUtils::PointI32{30, 40});
 
-    REQUIRE(OIV::SelectionWorkflowPolicy::SnapToImagePixels({24, 33}, 2.0, {5.0, 7.0}) ==
-            LLUtils::PointI32{25, 33});
+    REQUIRE(OIV::SelectionWorkflowPolicy::SnapToImagePixels({24, 33}, 2.0, {5.0, 7.0}) == LLUtils::PointI32{25, 33});
     REQUIRE(OIV::SelectionWorkflowPolicy::ShouldSaveImageSpaceSelection(OIV::SelectionRect::Operation::Drag));
-    REQUIRE_FALSE(
-        OIV::SelectionWorkflowPolicy::ShouldSaveImageSpaceSelection(OIV::SelectionRect::Operation::NoOp));
+    REQUIRE_FALSE(OIV::SelectionWorkflowPolicy::ShouldSaveImageSpaceSelection(OIV::SelectionRect::Operation::NoOp));
 }
 
 TEST_CASE("ViewTransformController calculates fit, center, and coordinate transforms", "[AppCore]")
@@ -596,22 +588,19 @@ TEST_CASE("ViewTransformController calculates fit, center, and coordinate transf
     const LLUtils::PointF64 offset = OIV::ViewTransformController::CenterOffset({400.0, 300.0}, {200.0, 100.0});
     REQUIRE(offset == LLUtils::PointF64{300.0, 250.0});
 
-    const LLUtils::PointF64 clientPoint =
-        OIV::ViewTransformController::ImageToClient(LLUtils::PointF64{10.0, 20.0}, 2.0, {5.0, 7.0});
+    const LLUtils::PointF64 clientPoint = OIV::ViewTransformController::ImageToClient(LLUtils::PointF64{10.0, 20.0},
+                                                                                      2.0, {5.0, 7.0});
     REQUIRE(clientPoint == LLUtils::PointF64{25.0, 47.0});
-    REQUIRE(OIV::ViewTransformController::ClientToImage(clientPoint, 2.0, {5.0, 7.0}) ==
-            LLUtils::PointF64{10.0, 20.0});
+    REQUIRE(OIV::ViewTransformController::ClientToImage(clientPoint, 2.0, {5.0, 7.0}) == LLUtils::PointF64{10.0, 20.0});
 }
 
 TEST_CASE("ViewTransformController bounds offsets using configured margins", "[AppCore]")
 {
-    REQUIRE(OIV::ViewTransformController::ResolveOffset(
-                {500.0, -500.0}, {100.0, 100.0}, {300.0, 300.0}, {0.75, 0.75}) ==
-            LLUtils::PointF64{75.0, -275.0});
+    REQUIRE(OIV::ViewTransformController::ResolveOffset({500.0, -500.0}, {100.0, 100.0}, {300.0, 300.0},
+                                                        {0.75, 0.75}) == LLUtils::PointF64{75.0, -275.0});
 
-    REQUIRE(OIV::ViewTransformController::ResolveOffset(
-                {-100.0, 100.0}, {300.0, 300.0}, {100.0, 100.0}, {0.75, 0.75}) ==
-            LLUtils::PointF64{-75.0, 100.0});
+    REQUIRE(OIV::ViewTransformController::ResolveOffset({-100.0, 100.0}, {300.0, 300.0}, {100.0, 100.0},
+                                                        {0.75, 0.75}) == LLUtils::PointF64{-75.0, 100.0});
 }
 
 TEST_CASE("ViewActionController resolves zoom and auto-place decisions", "[AppCore]")
@@ -682,8 +671,7 @@ TEST_CASE("InputGesturePolicy maps pan vectors to cursor hints", "[AppCore]")
 
 TEST_CASE("FileRemovalPolicy chooses removal actions", "[AppCore]")
 {
-    REQUIRE(OIV::FileRemovalPolicy::Decide(L"a.png", L"b.png", {}, true, true, 2) ==
-            OIV::RemovedFileAction::Ignore);
+    REQUIRE(OIV::FileRemovalPolicy::Decide(L"a.png", L"b.png", {}, true, true, 2) == OIV::RemovedFileAction::Ignore);
     REQUIRE(OIV::FileRemovalPolicy::Decide(L"a.png", L"a.png", L"a.png", false, true, 2) ==
             OIV::RemovedFileAction::KeepMissingCurrent);
     REQUIRE(OIV::FileRemovalPolicy::Decide(L"a.png", L"a.png", {}, true, false, 2) ==
@@ -698,14 +686,9 @@ TEST_CASE("FileRemovalPolicy unloads only after failed removal jumps", "[AppCore
 {
     REQUIRE(OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(OIV::RemovedFileAction::TryStart, false, false));
     REQUIRE_FALSE(OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(OIV::RemovedFileAction::TryStart, true, false));
-    REQUIRE(OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(
-        OIV::RemovedFileAction::TryNextThenPrevious,
-        false,
-        false));
-    REQUIRE_FALSE(OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(
-        OIV::RemovedFileAction::TryNextThenPrevious,
-        false,
-        true));
+    REQUIRE(OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(OIV::RemovedFileAction::TryNextThenPrevious, false, false));
+    REQUIRE_FALSE(
+        OIV::FileRemovalPolicy::ShouldUnloadAfterJumps(OIV::RemovedFileAction::TryNextThenPrevious, false, true));
 }
 
 TEST_CASE("FileChangePolicy routes watcher events", "[AppCore]")
@@ -723,8 +706,7 @@ TEST_CASE("FileChangePolicy routes watcher events", "[AppCore]")
             OIV::FileChangeAction::CurrentFileChanged);
 
     eventArgs = {7, Op::WatchedFolderRemoved, L"C:\\images", {}, {}};
-    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) ==
-            OIV::FileChangeAction::ClearWatchedFolder);
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ClearWatchedFolder);
 
     eventArgs = {9, Op::Modified, L"C:\\config", L"Settings.json", {}};
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ReloadSettings);
@@ -789,10 +771,8 @@ TEST_CASE("AppSettingsPolicy parses typed settings values", "[AppCore]")
     auto sortType = OIV::AppSettingsPolicy::ParseSortType(L"extension");
     REQUIRE(sortType.valid);
     REQUIRE(sortType.value == OIV::FileSorter::SortType::Extension);
-    REQUIRE(OIV::AppSettingsPolicy::ParseSortDirection(L"ascending") ==
-            OIV::FileSorter::SortDirection::Ascending);
-    REQUIRE(OIV::AppSettingsPolicy::ParseSortDirection(L"descending") ==
-            OIV::FileSorter::SortDirection::Descending);
+    REQUIRE(OIV::AppSettingsPolicy::ParseSortDirection(L"ascending") == OIV::FileSorter::SortDirection::Ascending);
+    REQUIRE(OIV::AppSettingsPolicy::ParseSortDirection(L"descending") == OIV::FileSorter::SortDirection::Descending);
 
     auto sortDirectionTarget = OIV::AppSettingsPolicy::ParseSortDirectionTarget(L"files/sortbydatedirection");
     REQUIRE(sortDirectionTarget.valid);
@@ -884,28 +864,24 @@ TEST_CASE("AppSettingsPolicy maps setting changes to typed actions", "[AppCore]"
     REQUIRE_FALSE(action.boolValue);
 
     REQUIRE(OIV::AppSettingsPolicy::ParseAction(L"unknown/key", L"value").type == ActionType::None);
-    REQUIRE(OIV::AppSettingsPolicy::ParseAction(L"filesystem/deletedfileremovalmode", L"bad").type ==
-            ActionType::None);
+    REQUIRE(OIV::AppSettingsPolicy::ParseAction(L"filesystem/deletedfileremovalmode", L"bad").type == ActionType::None);
     REQUIRE(OIV::AppSettingsPolicy::ParseAction(L"files/defaultsortmode", L"bad").type == ActionType::None);
 }
 
 TEST_CASE("ImageFormatCatalogPolicy builds image dialog filters", "[AppCore]")
 {
     const auto catalog = OIV::ImageFormatCatalogPolicy::Build(
-        {CreatePlugin(IMCodec::CodecCapabilities::Decode | IMCodec::CodecCapabilities::Encode,
-                      L"PNG image",
+        {CreatePlugin(IMCodec::CodecCapabilities::Decode | IMCodec::CodecCapabilities::Encode, L"PNG image",
                       {L"PNG", L"Apng"}),
          CreatePlugin(IMCodec::CodecCapabilities::Decode, L"JPEG image", {L"jpg", L"jpeg"}),
-         CreatePlugin(IMCodec::CodecCapabilities::Encode | IMCodec::CodecCapabilities::BulkCodec,
-                      L"Bulk writer",
+         CreatePlugin(IMCodec::CodecCapabilities::Encode | IMCodec::CodecCapabilities::BulkCodec, L"Bulk writer",
                       {L"bulk"})});
 
     REQUIRE(catalog.readFilters.size() == 4);
     REQUIRE(catalog.readFilters[0].description == L"All files (*.*)");
     REQUIRE(catalog.readFilters[0].extensions == std::vector<std::wstring>{L"*.*"});
     REQUIRE(catalog.readFilters[1].description == L"All supported image formats");
-    REQUIRE(catalog.readFilters[1].extensions ==
-            std::vector<std::wstring>{L"*.png", L"*.apng", L"*.jpg", L"*.jpeg"});
+    REQUIRE(catalog.readFilters[1].extensions == std::vector<std::wstring>{L"*.png", L"*.apng", L"*.jpg", L"*.jpeg"});
     REQUIRE(catalog.readFilters[2].description == L"PNG/APNG - PNG image");
     REQUIRE(catalog.readFilters[2].extensions == std::vector<std::wstring>{L"*.png", L"*.apng"});
 
@@ -930,20 +906,20 @@ TEST_CASE("ImageFormatCatalogPolicy defaults save filter index without PNG", "[A
 
 TEST_CASE("ImageInfoPresentationPolicy builds file image rows", "[AppCore]")
 {
-    const auto folder = MakeTempFolder("oiv-image-info-policy-test");
+    const auto folder   = MakeTempFolder("oiv-image-info-policy-test");
     const auto filePath = folder / L"image.bin";
     TouchFile(filePath);
 
-    IMCodec::ImageSharedPtr image = CreateFormattedTestImage(16, 8);
+    IMCodec::ImageSharedPtr image                  = CreateFormattedTestImage(16, 8);
     image->GetImageItem()->processData.processTime = 12.5;
 
     auto fileImage = std::make_shared<OIV::OIVFileImage>(filePath.wstring(), image);
     fileImage->SetDisplayTime(3.25);
     fileImage->SetNumUniqueColors(7);
 
-    auto metaData = std::make_shared<IMCodec::ItemMetaData>();
+    auto metaData               = std::make_shared<IMCodec::ItemMetaData>();
     metaData->exifData.latitude = 1.25;
-    metaData->exifData.make = "CameraBrand";
+    metaData->exifData.make     = "CameraBrand";
     fileImage->SetMetaData(metaData);
 
     FakeImageCodec codec;
@@ -981,17 +957,16 @@ TEST_CASE("ImageInfoPresentationPolicy builds file image rows", "[AppCore]")
 
 TEST_CASE("ImageInfoPresentationPolicy handles generated animation images", "[AppCore]")
 {
-    auto containerItem = std::make_shared<IMCodec::ImageItem>();
-    containerItem->itemType = IMCodec::ImageItemType::Container;
-    containerItem->descriptor.width = 4;
-    containerItem->descriptor.height = 4;
+    auto containerItem                                = std::make_shared<IMCodec::ImageItem>();
+    containerItem->itemType                           = IMCodec::ImageItemType::Container;
+    containerItem->descriptor.width                   = 4;
+    containerItem->descriptor.height                  = 4;
     containerItem->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-    containerItem->descriptor.texelFormatStorage = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-    containerItem->descriptor.rowPitchInBytes = 16;
+    containerItem->descriptor.texelFormatStorage      = IMCodec::TexelFormat::I_R8_G8_B8_A8;
+    containerItem->descriptor.rowPitchInBytes         = 16;
 
-    IMCodec::ImageSharedPtr container = std::make_shared<IMCodec::Image>(
-        containerItem,
-        IMCodec::ImageItemType::AnimationFrame);
+    IMCodec::ImageSharedPtr container = std::make_shared<IMCodec::Image>(containerItem,
+                                                                         IMCodec::ImageItemType::AnimationFrame);
     container->SetSubImage(0, CreateFormattedTestImage(4, 2));
 
     auto image = std::make_shared<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib, container);
@@ -1172,9 +1147,9 @@ TEST_CASE("Event Add keeps fire-and-forget listener compatibility", "[AppCore][L
 TEST_CASE("FileList updates the current folder list from watcher events", "[AppCore]")
 {
     const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-test").wstring();
-    const auto fileA = (std::filesystem::path(folder) / L"a.png").wstring();
-    const auto fileB = (std::filesystem::path(folder) / L"b.png").wstring();
-    const auto fileC = (std::filesystem::path(folder) / L"c.png").wstring();
+    const auto fileA  = (std::filesystem::path(folder) / L"a.png").wstring();
+    const auto fileB  = (std::filesystem::path(folder) / L"b.png").wstring();
+    const auto fileC  = (std::filesystem::path(folder) / L"c.png").wstring();
     std::filesystem::create_directories(folder);
 
     ActiveFileProvider activeProvider;
@@ -1184,11 +1159,7 @@ TEST_CASE("FileList updates the current folder list from watcher events", "[AppC
     OIV::FileSorter sorter;
     std::vector<std::pair<OIV::FileList::index_type, OIV::FileList::index_type>> indexChanges;
 
-    OIV::FileList fileList(&activeProvider,
-                           &watcher,
-                           &sorter,
-                           {L"png"},
-                           L"png",
+    OIV::FileList fileList(&activeProvider, &watcher, &sorter, {L"png"}, L"png",
                            [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
     fileList.SetFolder(folder, {fileA, fileC});
@@ -1207,7 +1178,7 @@ TEST_CASE("FileList updates the current folder list from watcher events", "[AppC
 TEST_CASE("FileList disconnects from watcher when destroyed", "[AppCore]")
 {
     const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-disconnect-test").wstring();
-    const auto fileA = (std::filesystem::path(folder) / L"a.png").wstring();
+    const auto fileA  = (std::filesystem::path(folder) / L"a.png").wstring();
     std::filesystem::create_directories(folder);
 
     ActiveFileProvider activeProvider;
@@ -1218,11 +1189,7 @@ TEST_CASE("FileList disconnects from watcher when destroyed", "[AppCore]")
     std::vector<std::pair<OIV::FileList::index_type, OIV::FileList::index_type>> indexChanges;
 
     {
-        OIV::FileList fileList(&activeProvider,
-                               &watcher,
-                               &sorter,
-                               {L"png"},
-                               L"png",
+        OIV::FileList fileList(&activeProvider, &watcher, &sorter, {L"png"}, L"png",
                                [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
         fileList.SetFolder(folder, {fileA});
@@ -1241,8 +1208,7 @@ TEST_CASE("ImageLoadController classifies load results", "[AppCore]")
     REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(ResultCode::RC_UknownError, nullptr) ==
             OIV::ImageLoadStatus::UnknownError);
     REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(
-                ResultCode::RC_Success,
-                CreateTestImage(OIV::ImageLoadController::MaxSupportedDimension + 1, 1)) ==
+                ResultCode::RC_Success, CreateTestImage(OIV::ImageLoadController::MaxSupportedDimension + 1, 1)) ==
             OIV::ImageLoadStatus::TooLarge);
 }
 
@@ -1254,18 +1220,18 @@ TEST_CASE("ImageLoadPresentationPolicy maps load results to UI decisions", "[App
     REQUIRE_FALSE(presentation.shouldLoadImage);
     REQUIRE_FALSE(presentation.shouldShowMessage);
 
-    result = {OIV::ImageLoadStatus::Loaded, ResultCode::RC_Success, L"path.png", nullptr};
+    result       = {OIV::ImageLoadStatus::Loaded, ResultCode::RC_Success, L"path.png", nullptr};
     presentation = OIV::ImageLoadPresentationPolicy::Decide(result, L"path.png");
     REQUIRE(presentation.succeeded);
     REQUIRE(presentation.shouldLoadImage);
 
-    result = {OIV::ImageLoadStatus::UnsupportedFormat, ResultCode::RC_FileNotSupported, L"path.png", nullptr};
+    result       = {OIV::ImageLoadStatus::UnsupportedFormat, ResultCode::RC_FileNotSupported, L"path.png", nullptr};
     presentation = OIV::ImageLoadPresentationPolicy::Decide(result, L"<path>");
     REQUIRE_FALSE(presentation.succeeded);
     REQUIRE(presentation.shouldShowMessage);
     REQUIRE(presentation.message == L"Can not load the file: <path>, image format is not supported");
 
-    result = {OIV::ImageLoadStatus::NoSupportedFiles};
+    result       = {OIV::ImageLoadStatus::NoSupportedFiles};
     presentation = OIV::ImageLoadPresentationPolicy::Decide(result, L"path.png");
     REQUIRE_FALSE(presentation.succeeded);
     REQUIRE_FALSE(presentation.shouldShowMessage);
@@ -1273,14 +1239,12 @@ TEST_CASE("ImageLoadPresentationPolicy maps load results to UI decisions", "[App
 
 TEST_CASE("ImageLoadController loads direct files through the injected loader", "[AppCore]")
 {
-    auto fakeLoader = std::make_unique<FakeImageFileLoader>();
+    auto fakeLoader     = std::make_unique<FakeImageFileLoader>();
     auto* fakeLoaderPtr = fakeLoader.get();
     OIV::ImageLoadController controller(std::move(fakeLoader));
 
-    const auto result = controller.LoadFile(
-        L"C:\\images\\..\\images\\a.png",
-        IMCodec::PluginTraverseMode::AnyPlugin,
-        OIV::ImageLoadContext{800, 600});
+    const auto result = controller.LoadFile(L"C:\\images\\..\\images\\a.png", IMCodec::PluginTraverseMode::AnyPlugin,
+                                            OIV::ImageLoadContext{800, 600});
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
     REQUIRE(result.DecodeSucceeded());
@@ -1292,12 +1256,202 @@ TEST_CASE("ImageLoadController loads direct files through the injected loader", 
     REQUIRE(fakeLoaderPtr->lastContext.canvasHeight == 600);
 }
 
+TEST_CASE("FileSessionController sets current index for loaded file in folder", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-load-index-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileB.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+
+    controller.LoadFileInFolder(fileB.wstring());
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    activeProvider.activeFile = fileC.wstring();
+    controller.LoadFileInFolder(fileC.wstring());
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 2);
+    REQUIRE(controller.IsCurrentFile(fileC.wstring()));
+}
+
+TEST_CASE("FileSessionController updates current index after sort order changes", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-sort-index-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.jpg";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileB.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+
+    controller.LoadFileInFolder(fileB.wstring());
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+
+    sorter.SetSortType(OIV::FileSorter::SortType::Extension);
+    controller.SortFileList();
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 0);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    sorter.SetSortType(OIV::FileSorter::SortType::Name);
+    controller.SortFileList();
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+}
+
+TEST_CASE("FileSessionController ignores stale navigation success after sort order changes", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-sort-pending-success-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.jpg";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileB.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex completionMutex;
+    std::condition_variable completionCv;
+    std::vector<OIV::FileSessionController::CandidateResidencyCompletion> completions;
+
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+        {
+            {
+                std::lock_guard lock(completionMutex);
+                completions.push_back(completion);
+            }
+            completionCv.notify_all();
+        });
+
+    auto waitForCompletionCount = [&](std::size_t count)
+    {
+        std::unique_lock lock(completionMutex);
+        REQUIRE(
+            completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.size() >= count; }));
+        return completions[count - 1];
+    };
+
+    controller.LoadFileInFolder(fileB.wstring());
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.JumpFiles(1));
+
+    const auto staleCompletion = waitForCompletionCount(1);
+    REQUIRE(staleCompletion.fileName == fileC.wstring());
+
+    sorter.SetSortType(OIV::FileSorter::SortType::Extension);
+    controller.SortFileList();
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 0);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    const auto staleResult = controller.OnCandidateResidencyReady(staleCompletion);
+    REQUIRE(staleResult.action == OIV::FileSessionController::CandidateCompletionAction::Ignore);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    REQUIRE(controller.JumpFiles(1));
+    const auto newCompletion = waitForCompletionCount(2);
+    REQUIRE(newCompletion.fileName == fileA.wstring());
+
+    const auto newResult = controller.OnCandidateResidencyReady(newCompletion);
+    REQUIRE(newResult.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage);
+    activeProvider.activeFile = newResult.fileName;
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+}
+
+TEST_CASE("FileSessionController ignores stale navigation failure after sort order changes", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-sort-pending-failure-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.jpg";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileB.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
+    std::mutex completionMutex;
+    std::condition_variable completionCv;
+    std::vector<OIV::FileSessionController::CandidateResidencyCompletion> completions;
+
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+        {
+            {
+                std::lock_guard lock(completionMutex);
+                completions.push_back(completion);
+            }
+            completionCv.notify_all();
+        });
+
+    controller.LoadFileInFolder(fileB.wstring());
+    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.JumpFiles(1));
+
+    OIV::FileSessionController::CandidateResidencyCompletion staleCompletion;
+    {
+        std::unique_lock lock(completionMutex);
+        REQUIRE(completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.size() == 1; }));
+        staleCompletion = completions.back();
+    }
+    REQUIRE(staleCompletion.fileName == fileC.wstring());
+    REQUIRE(staleCompletion.image == nullptr);
+
+    sorter.SetSortType(OIV::FileSorter::SortType::Extension);
+    controller.SortFileList();
+
+    const auto staleResult = controller.OnCandidateResidencyReady(staleCompletion);
+    REQUIRE(staleResult.action == OIV::FileSessionController::CandidateCompletionAction::Ignore);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    std::lock_guard lock(completionMutex);
+    REQUIRE(completions.size() == 1);
+}
+
 TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-navigation-test");
-    const auto fileA = folder / L"a.png";
-    const auto fileB = folder / L"b.png";
-    const auto fileC = folder / L"c.png";
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileC  = folder / L"c.png";
     TouchFile(fileA);
     TouchFile(fileB);
     TouchFile(fileC);
@@ -1308,16 +1462,37 @@ TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
     OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::FileSessionController* controllerPtr = nullptr;
+    std::mutex loadedMutex;
+    std::condition_variable loadedCv;
+    std::vector<std::wstring> loadedFiles;
 
     OIV::FileSessionController controller(
-        &activeProvider,
-        &watcher,
-        &sorter,
-        {L"png"},
-        L"png",
-        residency,
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
         [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+        {
+            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
+            if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+            {
+                activeProvider.activeFile = result.fileName;
+                {
+                    std::lock_guard lock(loadedMutex);
+                    loadedFiles.push_back(result.fileName);
+                }
+                loadedCv.notify_all();
+            }
+        });
+    controllerPtr = &controller;
+
+    auto waitForLoaded = [&](const std::wstring& fileName)
+    {
+        std::unique_lock lock(loadedMutex);
+        return loadedCv.wait_for(
+            lock, std::chrono::milliseconds(500),
+            [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileName) != loadedFiles.end(); });
+    };
 
     controller.LoadFileInFolder(fileA.wstring());
 
@@ -1325,17 +1500,123 @@ TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 
     REQUIRE(controller.JumpFiles(1));
+    REQUIRE(waitForLoaded(fileB.wstring()));
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
     REQUIRE(controller.JumpFiles(OIV::FileList::IndexEnd));
+    REQUIRE(waitForLoaded(fileC.wstring()));
     REQUIRE(controller.IsCurrentFile(fileC.wstring()));
+}
+
+TEST_CASE("FileSessionController skips invalid requested files before committing current", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-skip-invalid-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileA.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(
+        std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{fileC.wstring()}), 1);
+    OIV::FileSessionController* controllerPtr = nullptr;
+    std::mutex resultMutex;
+    std::condition_variable resultCv;
+    std::vector<std::wstring> loadedFiles;
+
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+        {
+            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
+            if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+            {
+                activeProvider.activeFile = result.fileName;
+                {
+                    std::lock_guard lock(resultMutex);
+                    loadedFiles.push_back(result.fileName);
+                }
+                resultCv.notify_all();
+            }
+        });
+    controllerPtr = &controller;
+
+    controller.LoadFileInFolder(fileA.wstring());
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+    REQUIRE(controller.JumpFiles(1));
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+
+    std::unique_lock lock(resultMutex);
+    REQUIRE(resultCv.wait_for(
+        lock, std::chrono::milliseconds(500),
+        [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileC.wstring()) != loadedFiles.end(); }));
+    lock.unlock();
+    REQUIRE(controller.IsCurrentFile(fileC.wstring()));
+}
+
+TEST_CASE("FileSessionController keeps current file when invalid skip search is exhausted", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-invalid-exhausted-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+
+    ActiveFileProvider activeProvider;
+    activeProvider.activeFile = fileA.wstring();
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidency residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
+    OIV::FileSessionController* controllerPtr = nullptr;
+    std::mutex resultMutex;
+    std::condition_variable resultCv;
+    std::vector<std::wstring> failedFiles;
+
+    OIV::FileSessionController controller(
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
+        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+        {
+            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
+            if (result.action == OIV::FileSessionController::CandidateCompletionAction::ShowFailure)
+            {
+                {
+                    std::lock_guard lock(resultMutex);
+                    failedFiles.push_back(result.fileName);
+                }
+                resultCv.notify_all();
+            }
+        });
+    controllerPtr = &controller;
+
+    controller.LoadFileInFolder(fileA.wstring());
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+    REQUIRE(controller.JumpFiles(1));
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+
+    std::unique_lock lock(resultMutex);
+    REQUIRE(resultCv.wait_for(
+        lock, std::chrono::milliseconds(500),
+        [&] { return std::find(failedFiles.begin(), failedFiles.end(), fileB.wstring()) != failedFiles.end(); }));
+    lock.unlock();
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 }
 
 TEST_CASE("FileSessionController applies folder-load residency completions", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-folder-load-test");
-    const auto fileA = folder / L"a.png";
-    const auto fileB = folder / L"b.png";
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
 
     ActiveFileProvider activeProvider;
     FakeFileWatcher watcher;
@@ -1343,19 +1624,13 @@ TEST_CASE("FileSessionController applies folder-load residency completions", "[A
     OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
 
     OIV::FileSessionController controller(
-        &activeProvider,
-        &watcher,
-        &sorter,
-        {L"png"},
-        L"png",
-        residency,
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
         [](const std::wstring&, IMCodec::ImageSharedPtr) {},
         [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
 
-    OIV::BrowseResidencyManager::FileListSnapshot snapshot{
-        folder.wstring(),
-        {fileA.wstring(), fileB.wstring()},
-        OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
+    OIV::BrowseResidencyManager::FileListSnapshot snapshot{folder.wstring(),
+                                                           {fileA.wstring(), fileB.wstring()},
+                                                           OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
 
     REQUIRE(controller.OnFolderLoadResidencyReady(snapshot, fileB.wstring(), CreateTestImage()));
     REQUIRE(controller.GetFileList().GetSize() == 2);
@@ -1368,7 +1643,7 @@ TEST_CASE("FileSessionController applies folder-load residency completions", "[A
 TEST_CASE("ImageLoadController routes folders to file session", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-image-load-folder-route-test");
-    const auto fileA = folder / L"a.png";
+    const auto fileA  = folder / L"a.png";
     TouchFile(fileA);
 
     ActiveFileProvider activeProvider;
@@ -1377,28 +1652,24 @@ TEST_CASE("ImageLoadController routes folders to file session", "[AppCore]")
     OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
 
     OIV::FileSessionController fileSessionController(
-        &activeProvider,
-        &watcher,
-        &sorter,
-        {L"png"},
-        L"png",
-        residency,
+        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
         [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::FileSessionController::CandidateResidencyCompletion&) {});
 
-    auto fakeLoader = std::make_unique<FakeImageFileLoader>();
+    auto fakeLoader     = std::make_unique<FakeImageFileLoader>();
     auto* fakeLoaderPtr = fakeLoader.get();
     OIV::ImageLoadController controller(std::move(fakeLoader), &fileSessionController);
 
-    const auto folderResult =
-        controller.LoadFileOrFolder(folder.wstring(), IMCodec::PluginTraverseMode::NoTraverse, {});
+    const auto folderResult = controller.LoadFileOrFolder(folder.wstring(), IMCodec::PluginTraverseMode::NoTraverse,
+                                                          {});
 
     REQUIRE(folderResult.status == OIV::ImageLoadStatus::FolderLoadQueued);
     REQUIRE(fakeLoaderPtr->lastPath.empty());
 
-    const auto emptyFolder = MakeTempFolder("oiv-image-load-empty-folder-route-test");
-    const auto emptyFolderResult =
-        controller.LoadFileOrFolder(emptyFolder.wstring(), IMCodec::PluginTraverseMode::NoTraverse, {});
+    const auto emptyFolder       = MakeTempFolder("oiv-image-load-empty-folder-route-test");
+    const auto emptyFolderResult = controller.LoadFileOrFolder(emptyFolder.wstring(),
+                                                               IMCodec::PluginTraverseMode::NoTraverse, {});
 
     REQUIRE(emptyFolderResult.status == OIV::ImageLoadStatus::NoSupportedFiles);
 }

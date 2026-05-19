@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Image.h>
-#include <OIVShared/BrowseResidencyManager.h>
+#include <OIVAppCore/FileSessionController.h>
 
 #include <cstdint>
 #include <string>
@@ -12,7 +12,7 @@ namespace OIV
     {
         FileChanged,
         FileIndexResidencyReady,
-        FolderLoadResidencyReady,
+        CandidateResidencyReady,
         AutoScroll,
         FirstFrameDisplayed,
         LoadFileExternally,
@@ -25,12 +25,7 @@ namespace OIV
         IMCodec::ImageSharedPtr image;
     };
 
-    struct FolderLoadResidencyReadyData
-    {
-        BrowseResidencyManager::FileListSnapshot snapshot;
-        std::wstring fileName;
-        IMCodec::ImageSharedPtr image;
-    };
+    using CandidateResidencyReadyData = FileSessionController::CandidateResidencyCompletion;
 
     struct CountColorsData
     {

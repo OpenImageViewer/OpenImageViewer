@@ -8,10 +8,10 @@
 namespace OIV
 {
     FileList::FileList(IFileListProvider* fileListProvider, IFileWatcher* fileWatcher, FileSorter* fileSorter,
-                       const hashset_type& knownFileTypesSet, string_type knownfileTypes, OnFileIndexChangedCallbackType callback)
+                       const hashset_type& knownFileTypesSet, string_type knownfileTypes,
+                       OnFileIndexChangedCallbackType callback)
         : fFileListProvider(fileListProvider), fFileWatcher(fileWatcher), fFileSorter(fileSorter),
-          fKnownFileTypesSet(knownFileTypesSet), fKnownFileTypes(knownfileTypes)
-          , fOnFileIndexChangedCallback(callback)
+          fKnownFileTypesSet(knownFileTypesSet), fKnownFileTypes(knownfileTypes), fOnFileIndexChangedCallback(callback)
     {
         fFileChangedConnection = fFileWatcher->GetFileChangedEvent().Connect(
             [this](IFileWatcher::FileChangedEventArgs fileChangedEventArgs) { OnFileChanged(fileChangedEventArgs); });
@@ -19,7 +19,11 @@ namespace OIV
 
     void FileList::Sort()
     {
+        const string_type currentFile = IsIndexValid(fCurrentEntryIndex)
+                                            ? fListFiles[static_cast<std::size_t>(fCurrentEntryIndex)]
+                                            : fFileListProvider->GetActiveFileName();
         std::sort(fListFiles.begin(), fListFiles.end(), *fFileSorter);
+        (void) SetCurrentIndexByElementName(currentFile);
     }
 
     const FileList::string_type& FileList::GetCurrentItemName() const
@@ -40,12 +44,14 @@ namespace OIV
         return Snapshot{fCurrentFolder, fListFiles, fCurrentEntryIndex};
     }
 
-    void FileList::SetCurrentIndexByElementName(const string_type& element)
+    ResultCode FileList::SetCurrentIndexByElementName(const string_type& element)
     {
         list_string_type::iterator it = std::find(fListFiles.begin(), fListFiles.end(), element);
 
         if (it != fListFiles.end())
-            SetCurrentIndex(std::distance(fListFiles.begin(), it));
+            return SetCurrentIndex(std::distance(fListFiles.begin(), it));
+
+        return ResultCode::RC_OutOfRange;
     }
 
     FileList::index_type FileList::GetCurrentIndex() const
@@ -183,8 +189,8 @@ namespace OIV
     {
         if (fileChangedEventArgs.folderID == fFolderID)
         {
-            auto openedFileName = fFileListProvider->GetActiveFileName();
-            std::wstring absoluteFilePath = std::filesystem::path(openedFileName);
+            auto openedFileName             = fFileListProvider->GetActiveFileName();
+            std::wstring absoluteFilePath   = std::filesystem::path(openedFileName);
             std::wstring absoluteFolderPath = std::filesystem::path(openedFileName).parent_path();
             std::wstring changedFileName =
                 (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring();
@@ -260,7 +266,8 @@ namespace OIV
                 {
                     auto fileNameToRemove = *it;
                     fListFiles.erase(it);
-                    auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2, *fFileSorter);
+                    auto itRenamedFile = std::lower_bound(fListFiles.begin(), fListFiles.end(), filePath2,
+                                                          *fFileSorter);
                     fListFiles.insert(itRenamedFile, filePath2);
 
                     if (filePath == fFileListProvider->GetActiveFileName())
