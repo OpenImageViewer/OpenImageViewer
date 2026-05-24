@@ -26,17 +26,15 @@ namespace OIV
         const std::string cx = args.GetArgValue("cx");
         const std::string cy = args.GetArgValue("cy");
 
-        return ZoomCommand{
-            std::atof(args.GetArgValue("val").c_str()),
-            cx.empty() ? -1 : std::atoi(cx.c_str()),
-            cy.empty() ? -1 : std::atoi(cy.c_str())};
+        return ZoomCommand{std::atof(args.GetArgValue("val").c_str()), cx.empty() ? -1 : std::atoi(cx.c_str()),
+                           cy.empty() ? -1 : std::atoi(cy.c_str())};
     }
 
     std::wstring ViewCommandPolicy::FormatZoomResult(double scale)
     {
         std::wstringstream stream;
-        stream << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>(" << std::fixed << std::setprecision(2)
-               << scale * 100.0 << "%)";
+        stream << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>(" << std::fixed << std::setprecision(2) << scale * 100.0
+               << "%)";
         return stream.str();
     }
 
@@ -61,8 +59,8 @@ namespace OIV
     std::wstring ViewCommandPolicy::FormatPanResult(const std::string& displayName, double amount)
     {
         std::wstringstream stream;
-        stream << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(displayName)
-               << "<textcolor=#7672ff> (" << amount << " pixels)";
+        stream << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(displayName) << "<textcolor=#7672ff> ("
+               << amount << " pixels)";
         return stream.str();
     }
 
@@ -88,19 +86,20 @@ namespace OIV
     NavigationCommand ViewCommandPolicy::ParseNavigation(const CommandManager::CommandArgs& args)
     {
         const std::string amount = args.GetArgValue("amount");
-        return NavigationCommand{
-            amount == "start" ? FileList::IndexStart : amount == "end" ? FileList::IndexEnd : std::stoi(amount),
-            args.GetArgValue("subimage") == "true"};
+        return NavigationCommand{amount == "start" ? FolderFileList::IndexStart
+                                 : amount == "end" ? FolderFileList::IndexEnd
+                                                   : std::stoi(amount),
+                                 args.GetArgValue("subimage") == "true"};
     }
 
-    FileList::index_type ViewCommandPolicy::NextSubImageIndex(FileList::index_type selected,
-                                                              FileList::index_type amount,
-                                                              FileList::index_type count)
+    FolderFileList::index_type ViewCommandPolicy::NextSubImageIndex(FolderFileList::index_type selected,
+                                                                    FolderFileList::index_type amount,
+                                                                    FolderFileList::index_type count)
     {
         if (count <= 0)
             return 0;
 
-        return LLUtils::Math::Modulu<FileList::index_type>(selected + amount, count);
+        return LLUtils::Math::Modulu<FolderFileList::index_type>(selected + amount, count);
     }
 
     WindowSizeDecision ViewCommandPolicy::DecideWindowSize(const CommandManager::CommandArgs& args,
@@ -116,24 +115,24 @@ namespace OIV
         if (sizeType != "absolute" && sizeType != "relative")
             return {};
 
-        const double width = std::stod(args.GetArgValue("width"));
+        const double width  = std::stod(args.GetArgValue("width"));
         const double height = std::stod(args.GetArgValue("height"));
 
-        int32_t finalWidth = 0;
+        int32_t finalWidth  = 0;
         int32_t finalHeight = 0;
 
         if (sizeType == "absolute")
         {
-            finalWidth = static_cast<int32_t>(std::round(width));
+            finalWidth  = static_cast<int32_t>(std::round(width));
             finalHeight = static_cast<int32_t>(std::round(height));
         }
         else
         {
-            finalWidth = static_cast<int32_t>(std::round(width * workingArea.Width() / 100.0));
+            finalWidth  = static_cast<int32_t>(std::round(width * workingArea.Width() / 100.0));
             finalHeight = static_cast<int32_t>(std::round(height * workingArea.Height() / 100.0));
         }
 
-        finalWidth = std::min(workingArea.Width(), finalWidth);
+        finalWidth  = std::min(workingArea.Width(), finalWidth);
         finalHeight = std::min(workingArea.Height(), finalHeight);
 
         const LLUtils::PointI32 windowNewSize{finalWidth, finalHeight};
@@ -144,4 +143,4 @@ namespace OIV
 
         return {WindowSizeMode::Windowed, windowNewSize, displacedPos};
     }
-}
+}  // namespace OIV

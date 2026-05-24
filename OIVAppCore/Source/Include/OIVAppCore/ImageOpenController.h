@@ -1,6 +1,6 @@
 #pragma once
 
-#include <OIVAppCore/FileSessionController.h>
+#include <OIVAppCore/BrowseSessionController.h>
 
 #include <OIVImage/OIVFileImage.h>
 #include <ImageLoader.h>
@@ -24,7 +24,7 @@ namespace OIV
 
     struct ImageLoadContext
     {
-        int canvasWidth = 0;
+        int canvasWidth  = 0;
         int canvasHeight = 0;
     };
 
@@ -37,7 +37,7 @@ namespace OIV
     struct ImageLoadResult
     {
         ImageLoadStatus status = ImageLoadStatus::UnknownError;
-        ResultCode resultCode = ResultCode::RC_UknownError;
+        ResultCode resultCode  = ResultCode::RC_UknownError;
         std::wstring normalizedPath;
         std::shared_ptr<OIVFileImage> image;
 
@@ -47,7 +47,8 @@ namespace OIV
     class IImageFileLoader
     {
       public:
-        virtual ~IImageFileLoader() = default;
+
+        virtual ~IImageFileLoader()                                           = default;
         virtual ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath,
                                              IMCodec::PluginTraverseMode traverseMode,
                                              const ImageLoadContext& context) = 0;
@@ -56,37 +57,37 @@ namespace OIV
     class OIVImageFileLoader : public IImageFileLoader
     {
       public:
+
         explicit OIVImageFileLoader(IMCodec::ImageLoader& imageLoader);
-        ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath,
-                                     IMCodec::PluginTraverseMode traverseMode,
+        ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath, IMCodec::PluginTraverseMode traverseMode,
                                      const ImageLoadContext& context) override;
 
       private:
+
         IMCodec::ImageLoader& fImageLoader;
     };
 
-    class ImageLoadController
+    class ImageOpenController
     {
       public:
+
         static constexpr std::uint32_t MaxSupportedDimension = 16384;
 
-        explicit ImageLoadController(std::unique_ptr<IImageFileLoader> imageFileLoader,
-                                     FileSessionController* fileSessionController = nullptr);
+        explicit ImageOpenController(std::unique_ptr<IImageFileLoader> imageFileLoader,
+                                     BrowseSessionController* fileSessionController = nullptr);
 
-        void SetFileSessionController(FileSessionController* fileSessionController);
-        ImageLoadResult LoadFile(const std::wstring& filePath,
-                                 IMCodec::PluginTraverseMode traverseMode,
+        void SetBrowseSessionController(BrowseSessionController* fileSessionController);
+        ImageLoadResult LoadFile(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode,
                                  const ImageLoadContext& context);
-        ImageLoadResult LoadFileOrFolder(const std::wstring& filePath,
-                                         IMCodec::PluginTraverseMode traverseMode,
+        ImageLoadResult LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode,
                                          const ImageLoadContext& context);
 
-        static ImageLoadStatus ClassifyLoadResult(ResultCode resultCode,
-                                                  const IMCodec::ImageSharedPtr& image,
+        static ImageLoadStatus ClassifyLoadResult(ResultCode resultCode, const IMCodec::ImageSharedPtr& image,
                                                   std::uint32_t maxSupportedDimension = MaxSupportedDimension);
 
       private:
-        FileSessionController* fFileSessionController = nullptr;
+
+        BrowseSessionController* fBrowseSessionController = nullptr;
         std::unique_ptr<IImageFileLoader> fImageFileLoader;
     };
 }  // namespace OIV

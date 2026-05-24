@@ -1,4 +1,4 @@
-#include <OIVAppCore/ImageLoadController.h>
+#include <OIVAppCore/ImageOpenController.h>
 
 #include <LLUtils/StringDefs.h>
 
@@ -12,10 +12,7 @@ namespace OIV
         return resultCode == ResultCode::RC_Success;
     }
 
-    OIVImageFileLoader::OIVImageFileLoader(IMCodec::ImageLoader& imageLoader)
-        : fImageLoader(imageLoader)
-    {
-    }
+    OIVImageFileLoader::OIVImageFileLoader(IMCodec::ImageLoader& imageLoader) : fImageLoader(imageLoader) {}
 
     ImageFileLoadResult OIVImageFileLoader::LoadFile(const std::wstring& normalizedFilePath,
                                                      IMCodec::PluginTraverseMode traverseMode,
@@ -31,57 +28,51 @@ namespace OIV
         return ImageFileLoadResult{result, file};
     }
 
-    ImageLoadController::ImageLoadController(std::unique_ptr<IImageFileLoader> imageFileLoader,
-                                             FileSessionController* fileSessionController)
-        : fFileSessionController(fileSessionController)
-        , fImageFileLoader(std::move(imageFileLoader))
+    ImageOpenController::ImageOpenController(std::unique_ptr<IImageFileLoader> imageFileLoader,
+                                             BrowseSessionController* fileSessionController)
+        : fBrowseSessionController(fileSessionController), fImageFileLoader(std::move(imageFileLoader))
     {
     }
 
-    void ImageLoadController::SetFileSessionController(FileSessionController* fileSessionController)
+    void ImageOpenController::SetBrowseSessionController(BrowseSessionController* fileSessionController)
     {
-        fFileSessionController = fileSessionController;
+        fBrowseSessionController = fileSessionController;
     }
 
-    ImageLoadResult ImageLoadController::LoadFile(const std::wstring& filePath,
+    ImageLoadResult ImageOpenController::LoadFile(const std::wstring& filePath,
                                                   IMCodec::PluginTraverseMode traverseMode,
                                                   const ImageLoadContext& context)
     {
         const std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
-        if (fFileSessionController != nullptr)
-            fFileSessionController->PrepareDirectFileLoad(normalizedPath);
+        if (fBrowseSessionController != nullptr)
+            fBrowseSessionController->BeginDirectOpen(normalizedPath);
 
         auto fileLoadResult = fImageFileLoader->LoadFile(normalizedPath, traverseMode, context);
-        const auto image = fileLoadResult.image != nullptr ? fileLoadResult.image->GetImage() : nullptr;
+        const auto image    = fileLoadResult.image != nullptr ? fileLoadResult.image->GetImage() : nullptr;
 
-        return ImageLoadResult{
-            ClassifyLoadResult(fileLoadResult.resultCode, image),
-            fileLoadResult.resultCode,
-            normalizedPath,
-            std::move(fileLoadResult.image)};
+        return ImageLoadResult{ClassifyLoadResult(fileLoadResult.resultCode, image), fileLoadResult.resultCode,
+                               normalizedPath, std::move(fileLoadResult.image)};
     }
 
-    ImageLoadResult ImageLoadController::LoadFileOrFolder(const std::wstring& filePath,
+    ImageLoadResult ImageOpenController::LoadFileOrFolder(const std::wstring& filePath,
                                                           IMCodec::PluginTraverseMode traverseMode,
                                                           const ImageLoadContext& context)
     {
         if (std::filesystem::is_directory(filePath))
         {
-            const bool folderLoadQueued = fFileSessionController != nullptr &&
-                                          fFileSessionController->RequestFolderLoadResidency(filePath);
+            const bool folderLoadQueued = fBrowseSessionController != nullptr &&
+                                          fBrowseSessionController->RequestFolderLoadResidency(filePath);
 
-            return ImageLoadResult{
-                folderLoadQueued ? ImageLoadStatus::FolderLoadQueued : ImageLoadStatus::NoSupportedFiles,
-                folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
-                std::filesystem::path(filePath).lexically_normal().wstring(),
-                nullptr};
+            return ImageLoadResult{folderLoadQueued ? ImageLoadStatus::FolderLoadQueued
+                                                    : ImageLoadStatus::NoSupportedFiles,
+                                   folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
+                                   std::filesystem::path(filePath).lexically_normal().wstring(), nullptr};
         }
 
         return LoadFile(filePath, traverseMode, context);
     }
 
-    ImageLoadStatus ImageLoadController::ClassifyLoadResult(ResultCode resultCode,
-                                                            const IMCodec::ImageSharedPtr& image,
+    ImageLoadStatus ImageOpenController::ClassifyLoadResult(ResultCode resultCode, const IMCodec::ImageSharedPtr& image,
                                                             std::uint32_t maxSupportedDimension)
     {
         if (resultCode == ResultCode::RC_FileNotSupported)

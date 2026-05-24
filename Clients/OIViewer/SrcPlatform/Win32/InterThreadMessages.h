@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Image.h>
-#include <OIVAppCore/FileSessionController.h>
+#include <OIVAppCore/BrowseSessionController.h>
 
 #include <cstdint>
 #include <string>
@@ -25,7 +25,7 @@ namespace OIV
         IMCodec::ImageSharedPtr image;
     };
 
-    using CandidateResidencyReadyData = FileSessionController::CandidateResidencyCompletion;
+    using CandidateResidencyReadyData = BrowseSessionController::BrowseCandidateCompletion;
 
     struct CountColorsData
     {

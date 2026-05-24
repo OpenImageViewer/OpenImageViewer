@@ -1,6 +1,6 @@
 #pragma once
 
-#include <OIVAppCore/ImageLoadController.h>
+#include <OIVAppCore/ImageOpenController.h>
 
 #include <string>
 
@@ -8,8 +8,8 @@ namespace OIV
 {
     struct ImageLoadPresentation
     {
-        bool succeeded = false;
-        bool shouldLoadImage = false;
+        bool succeeded         = false;
+        bool shouldLoadImage   = false;
         bool shouldShowMessage = false;
         std::wstring message;
     };
@@ -17,7 +17,7 @@ namespace OIV
     class ImageLoadPresentationPolicy
     {
       public:
-        static ImageLoadPresentation Decide(const ImageLoadResult& loadResult,
-                                            const std::wstring& formattedFilePath);
+
+        static ImageLoadPresentation Decide(const ImageLoadResult& loadResult, const std::wstring& formattedFilePath);
     };
-}
+}  // namespace OIV

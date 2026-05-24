@@ -2,8 +2,8 @@
 
 #include <Image.h>
 #include <ImageItem.h>
-#include <OIVShared/BrowseResidencyManager.h>
-#include <OIVShared/ImageResidency.h>
+#include <OIVShared/BrowseResidencyController.h>
+#include <OIVShared/ImageResidencyCache.h>
 #include <OIVShared/Task.h>
 
 #include <algorithm>
@@ -34,7 +34,8 @@ namespace
         {
         }
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey&, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey&,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             ++fCallCount;
 
@@ -98,7 +99,8 @@ namespace
         {
         }
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey&, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey&,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             const int callIndex = ++fCallCount;
 
@@ -161,7 +163,8 @@ namespace
         {
         }
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey& key, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey& key,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             ++fCallCount;
 
@@ -187,7 +190,8 @@ namespace
 
         explicit FolderSwitchResidencyProcessor(IMCodec::ImageSharedPtr image) : fImage(std::move(image)) {}
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey& key, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey& key,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             ++fCallCount;
 
@@ -293,21 +297,21 @@ TEST_CASE("PriorityTaskExecutor preserves submission order for equal priorities"
     REQUIRE(processedOrder == std::vector<int>{1, 2});
 }
 
-TEST_CASE("ImageResidency coalesces in-flight requests and caches successful results", "[Residency]")
+TEST_CASE("ImageResidencyCache coalesces in-flight requests and caches successful results", "[Residency]")
 {
     auto expectedImage                   = CreateTestImage();
     auto processor                       = std::make_unique<FakeResidencyProcessor>(expectedImage, true);
     FakeResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     OIV::TicketID firstTask;
-    REQUIRE_NOTHROW(
-        firstTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"), OIV::ImageResidencyItemType::FullSize));
+    REQUIRE_NOTHROW(firstTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"),
+                                                                OIV::ImageResidencyCacheItemType::FullSize));
     REQUIRE_NOTHROW(processorPtr->WaitUntilStarted());
 
     OIV::TicketID secondTask;
-    REQUIRE_NOTHROW(
-        secondTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"), OIV::ImageResidencyItemType::FullSize));
+    REQUIRE_NOTHROW(secondTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"),
+                                                                 OIV::ImageResidencyCacheItemType::FullSize));
     REQUIRE(processorPtr->GetCallCount() == 1);
 
     REQUIRE_NOTHROW(processorPtr->Release());
@@ -321,8 +325,8 @@ TEST_CASE("ImageResidency coalesces in-flight requests and caches successful res
     REQUIRE(processorPtr->GetCallCount() == 1);
 
     OIV::TicketID cachedTask;
-    REQUIRE_NOTHROW(
-        cachedTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"), OIV::ImageResidencyItemType::FullSize));
+    REQUIRE_NOTHROW(cachedTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-a"),
+                                                                 OIV::ImageResidencyCacheItemType::FullSize));
     REQUIRE(cachedTask.await_ready() == true);
     IMCodec::ImageSharedPtr cachedImage;
     REQUIRE_NOTHROW(cachedImage = cachedTask.get());
@@ -330,17 +334,17 @@ TEST_CASE("ImageResidency coalesces in-flight requests and caches successful res
     REQUIRE(processorPtr->GetCallCount() == 1);
 }
 
-TEST_CASE("ImageResidency retries after a failed request", "[Residency]")
+TEST_CASE("ImageResidencyCache retries after a failed request", "[Residency]")
 {
     auto expectedImage                   = CreateTestImage();
     auto processor                       = std::make_unique<FakeResidencyProcessor>(expectedImage);
     FakeResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     processorPtr->SetShouldSucceed(false);
     OIV::TicketID failedTask;
-    REQUIRE_NOTHROW(
-        failedTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-b"), OIV::ImageResidencyItemType::Thumbnail));
+    REQUIRE_NOTHROW(failedTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-b"),
+                                                                 OIV::ImageResidencyCacheItemType::Thumbnail));
     IMCodec::ImageSharedPtr failedImage;
     REQUIRE_NOTHROW(failedImage = failedTask.get());
     REQUIRE(failedImage == nullptr);
@@ -348,45 +352,46 @@ TEST_CASE("ImageResidency retries after a failed request", "[Residency]")
 
     processorPtr->SetShouldSucceed(true);
     OIV::TicketID retryTask;
-    REQUIRE_NOTHROW(
-        retryTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-b"), OIV::ImageResidencyItemType::Thumbnail));
+    REQUIRE_NOTHROW(retryTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-b"),
+                                                                OIV::ImageResidencyCacheItemType::Thumbnail));
     IMCodec::ImageSharedPtr retryImage;
     REQUIRE_NOTHROW(retryImage = retryTask.get());
     REQUIRE(retryImage == expectedImage);
     REQUIRE(processorPtr->GetCallCount() == 2);
 }
 
-TEST_CASE("ImageResidency removes resident items from the cache", "[Residency]")
+TEST_CASE("ImageResidencyCache removes resident items from the cache", "[Residency]")
 {
     auto expectedImage = CreateTestImage();
     auto processor     = std::make_unique<FakeResidencyProcessor>(expectedImage);
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
-    auto firstTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-c"), OIV::ImageResidencyItemType::FullSize);
+    auto firstTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-c"),
+                                                     OIV::ImageResidencyCacheItemType::FullSize);
     REQUIRE(firstTask.get() == expectedImage);
-    REQUIRE(residency.getResidencyState(LLUTILS_TEXT("image-c"), OIV::ImageResidencyItemType::FullSize) ==
+    REQUIRE(residency.getResidencyState(LLUTILS_TEXT("image-c"), OIV::ImageResidencyCacheItemType::FullSize) ==
             OIV::ResidencyState::Resident);
 
-    residency.removeResidency(LLUTILS_TEXT("image-c"), OIV::ImageResidencyItemType::FullSize);
-    REQUIRE(residency.getResidencyState(LLUTILS_TEXT("image-c"), OIV::ImageResidencyItemType::FullSize) ==
+    residency.removeResidency(LLUTILS_TEXT("image-c"), OIV::ImageResidencyCacheItemType::FullSize);
+    REQUIRE(residency.getResidencyState(LLUTILS_TEXT("image-c"), OIV::ImageResidencyCacheItemType::FullSize) ==
             OIV::ResidencyState::NotResident);
 }
 
-TEST_CASE("ImageResidency reload bypasses stale in-flight requests", "[Residency]")
+TEST_CASE("ImageResidencyCache reload bypasses stale in-flight requests", "[Residency]")
 {
     auto firstImage                        = CreateTestImage();
     auto secondImage                       = CreateTestImage();
     auto processor                         = std::make_unique<ReloadResidencyProcessor>(firstImage, secondImage);
     ReloadResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 2);
+    OIV::ImageResidencyCache residency(std::move(processor), 2);
 
     auto firstTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-reload"),
-                                                     OIV::ImageResidencyItemType::FullSize);
+                                                     OIV::ImageResidencyCacheItemType::FullSize);
     processorPtr->WaitUntilFirstStarted();
 
-    residency.removeResidency(LLUTILS_TEXT("image-reload"), OIV::ImageResidencyItemType::FullSize);
+    residency.removeResidency(LLUTILS_TEXT("image-reload"), OIV::ImageResidencyCacheItemType::FullSize);
     auto secondTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-reload"),
-                                                      OIV::ImageResidencyItemType::FullSize);
+                                                      OIV::ImageResidencyCacheItemType::FullSize);
 
     REQUIRE(WaitUntil([&] { return processorPtr->GetCallCount() >= 2; }));
     REQUIRE(secondTask.get() == secondImage);
@@ -395,22 +400,22 @@ TEST_CASE("ImageResidency reload bypasses stale in-flight requests", "[Residency
     REQUIRE(firstTask.get() == firstImage);
 
     auto cachedTask = residency.requestResidencyAsync(LLUTILS_TEXT("image-reload"),
-                                                      OIV::ImageResidencyItemType::FullSize);
+                                                      OIV::ImageResidencyCacheItemType::FullSize);
     REQUIRE(cachedTask.await_ready() == true);
     REQUIRE(cachedTask.get() == secondImage);
     REQUIRE(processorPtr->GetCallCount() == 2);
 }
 
-TEST_CASE("BrowseResidencyManager predicts forward and bounds retained residency", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController predicts forward and bounds retained residency", "[Residency][BrowsePolicy]")
 {
     auto processor = std::make_unique<FakeResidencyProcessor>(CreateTestImage());
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
     std::vector<std::wstring> currentReadyFiles;
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency,
         [&](const std::wstring& fileName, IMCodec::ImageSharedPtr)
         {
@@ -418,107 +423,112 @@ TEST_CASE("BrowseResidencyManager predicts forward and bounds retained residency
             currentReadyFiles.push_back(fileName);
             callbackCv.notify_all();
         },
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+           IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyManager::FileListSnapshot fileList{L"folder-a",
-                                                                 {L"a", L"b", L"c", L"d", L"e", L"f", L"g"},
-                                                                 0};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a",
+                                                                          {L"a", L"b", L"c", L"d", L"e", L"f", L"g"},
+                                                                          0};
 
-    manager.OnCurrentIndexChanged(fileList, 0);
+    manager.RefreshCommittedCurrent(fileList);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"a", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"b", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"b", OIV::ImageResidencyItemType::FullSize) ==
-                       OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"c", OIV::ImageResidencyItemType::FullSize) ==
+                   residency.getResidencyState(L"c", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
     auto secondSnapshot         = fileList;
     secondSnapshot.currentIndex = 1;
-    manager.OnCurrentIndexChanged(secondSnapshot, 0);
+    manager.CommitNavigation(secondSnapshot, 0);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"d", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"d", OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
     auto thirdSnapshot         = fileList;
     thirdSnapshot.currentIndex = 2;
-    manager.OnCurrentIndexChanged(thirdSnapshot, 1);
+    manager.CommitNavigation(thirdSnapshot, 1);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"e", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"e", OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
     auto fourthSnapshot         = fileList;
     fourthSnapshot.currentIndex = 3;
-    manager.OnCurrentIndexChanged(fourthSnapshot, 2);
+    manager.CommitNavigation(fourthSnapshot, 2);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"f", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"f", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"a", OIV::ImageResidencyItemType::FullSize) ==
+                   residency.getResidencyState(L"a", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident;
         }));
 
-    std::unique_lock callbackLock(callbackMutex);
-    REQUIRE(callbackCv.wait_for(
-        callbackLock, std::chrono::milliseconds(500), [&]
-        { return std::find(currentReadyFiles.begin(), currentReadyFiles.end(), L"d") != currentReadyFiles.end(); }));
+    REQUIRE_FALSE(WaitUntil(
+        [&]
+        {
+            std::lock_guard lock(callbackMutex);
+            return currentReadyFiles.empty() == false;
+        },
+        std::chrono::milliseconds(100)));
 }
 
-TEST_CASE("BrowseResidencyManager reverses prediction direction and reloads through residency",
+TEST_CASE("BrowseResidencyController reverses prediction direction and reloads through residency",
           "[Residency][BrowsePolicy]")
 {
     auto processor                       = std::make_unique<FakeResidencyProcessor>(CreateTestImage());
     FakeResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::atomic<int> currentReadyCount = 0;
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency, [&](const std::wstring&, IMCodec::ImageSharedPtr) { ++currentReadyCount; },
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+           IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyManager::FileListSnapshot fileList{L"folder-a", {L"a", L"b", L"c", L"d", L"e", L"f"}, 4};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a",
+                                                                          {L"a", L"b", L"c", L"d", L"e", L"f"},
+                                                                          4};
 
-    manager.OnCurrentIndexChanged(fileList, 3);
+    manager.CommitNavigation(fileList, 3);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"e", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"f", OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
     auto reversedSnapshot         = fileList;
     reversedSnapshot.currentIndex = 3;
-    manager.OnCurrentIndexChanged(reversedSnapshot, 4);
+    manager.CommitNavigation(reversedSnapshot, 4);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"c", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"c", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"b", OIV::ImageResidencyItemType::FullSize) ==
+                   residency.getResidencyState(L"b", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
     const int callsBeforeReload = processorPtr->GetCallCount();
-    manager.OnCurrentFileReloadRequested(reversedSnapshot);
+    manager.ReloadCurrent(reversedSnapshot);
     REQUIRE(WaitUntil([&] { return processorPtr->GetCallCount() > callsBeforeReload; }));
-    REQUIRE(currentReadyCount.load() > 0);
+    REQUIRE(WaitUntil([&] { return currentReadyCount.load() > 0; }));
 }
 
-TEST_CASE("BrowseResidencyManager reports current image load failures", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController reports current image load failures", "[Residency][BrowsePolicy]")
 {
     auto processor                       = std::make_unique<FakeResidencyProcessor>(CreateTestImage());
     FakeResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     processorPtr->SetShouldSucceed(false);
 
@@ -526,7 +536,7 @@ TEST_CASE("BrowseResidencyManager reports current image load failures", "[Reside
     std::condition_variable callbackCv;
     std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> currentReadyResults;
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency,
         [&](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
         {
@@ -534,11 +544,12 @@ TEST_CASE("BrowseResidencyManager reports current image load failures", "[Reside
             currentReadyResults.emplace_back(fileName, image);
             callbackCv.notify_all();
         },
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+           IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyManager::FileListSnapshot fileList{L"folder-a", {L"failed-image"}, 0};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a", {L"failed-image"}, 0};
 
-    manager.OnCurrentIndexChanged(fileList, 0);
+    manager.ReloadCurrent(fileList);
 
     std::unique_lock callbackLock(callbackMutex);
     REQUIRE(callbackCv.wait_for(callbackLock, std::chrono::milliseconds(500),
@@ -547,73 +558,77 @@ TEST_CASE("BrowseResidencyManager reports current image load failures", "[Reside
     REQUIRE(currentReadyResults.front().second == nullptr);
 }
 
-TEST_CASE("BrowseResidencyManager ties residency eviction to working folder", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController ties residency eviction to working folder", "[Residency][BrowsePolicy]")
 {
     auto processor = std::make_unique<FakeResidencyProcessor>(CreateTestImage());
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+           IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyManager::FileListSnapshot fileListA{L"folder-a",
-                                                                  {L"folder-a\\a", L"folder-a\\b", L"folder-a\\c",
-                                                                   L"folder-a\\d"},
-                                                                  1};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListA{L"folder-a",
+                                                                           {L"folder-a\\a", L"folder-a\\b",
+                                                                            L"folder-a\\c", L"folder-a\\d"},
+                                                                           1};
 
-    manager.OnCurrentIndexChanged(fileListA, 0);
+    manager.RefreshCommittedCurrent(fileListA);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"folder-a\\b", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyItemType::FullSize) ==
+                   residency.getResidencyState(L"folder-a\\d", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
     manager.InvalidateCurrent();
-    REQUIRE(residency.getResidencyState(L"folder-a\\b", OIV::ImageResidencyItemType::FullSize) ==
+    REQUIRE(residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
             OIV::ResidencyState::Resident);
 
-    const OIV::BrowseResidencyManager::FileListSnapshot fileListB{L"folder-b", {L"folder-b\\a", L"folder-b\\b"}, 0};
-    manager.OnCurrentIndexChanged(fileListB, OIV::BrowseResidencyManager::FileListSnapshot::IndexStart);
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListB{L"folder-b",
+                                                                           {L"folder-b\\a", L"folder-b\\b"},
+                                                                           0};
+    manager.RefreshCommittedCurrent(fileListB);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"folder-a\\b", OIV::ImageResidencyItemType::FullSize) ==
+            return residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident &&
-                   residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyItemType::FullSize) ==
+                   residency.getResidencyState(L"folder-a\\d", OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident;
         }));
 }
 
-TEST_CASE("BrowseResidencyManager ignores stale folder-load completions", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[Residency][BrowsePolicy]")
 {
     auto processor                               = std::make_unique<FolderSwitchResidencyProcessor>(CreateTestImage());
     FolderSwitchResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 2);
+    OIV::ImageResidencyCache residency(std::move(processor), 2);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
     std::vector<std::wstring> callbackFolders;
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyManager::FileListSnapshot& snapshot, const std::wstring&, IMCodec::ImageSharedPtr)
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot& snapshot, const std::wstring&,
+            IMCodec::ImageSharedPtr)
         {
             std::lock_guard lock(callbackMutex);
             callbackFolders.push_back(snapshot.folderPath);
             callbackCv.notify_all();
         });
 
-    const OIV::BrowseResidencyManager::FileListSnapshot folderA{
+    const OIV::BrowseResidencyController::FolderFileListSnapshot folderA{
         L"folder-a",
         {L"folder-a\\a"},
-        OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
-    const OIV::BrowseResidencyManager::FileListSnapshot folderB{
+        OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot folderB{
         L"folder-b",
         {L"folder-b\\a"},
-        OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
+        OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folderA);
     processorPtr->WaitUntilFolderAStarted();
@@ -640,19 +655,20 @@ TEST_CASE("BrowseResidencyManager ignores stale folder-load completions", "[Resi
     REQUIRE(processorPtr->GetCallCount() >= 2);
 }
 
-TEST_CASE("BrowseResidencyManager reports folder load failure after all candidates fail", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController reports folder load failure after all candidates fail",
+          "[Residency][BrowsePolicy]")
 {
     auto processor = std::make_unique<SelectiveResidencyProcessor>(std::vector<std::wstring>{});
     SelectiveResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
     std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> folderReadyResults;
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring& fileName,
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring& fileName,
             IMCodec::ImageSharedPtr image)
         {
             std::lock_guard lock(callbackMutex);
@@ -660,10 +676,10 @@ TEST_CASE("BrowseResidencyManager reports folder load failure after all candidat
             callbackCv.notify_all();
         });
 
-    const OIV::BrowseResidencyManager::FileListSnapshot folder{
+    const OIV::BrowseResidencyController::FolderFileListSnapshot folder{
         L"folder-a",
         {L"folder-a\\a", L"folder-a\\b"},
-        OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
+        OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folder);
 
@@ -676,19 +692,20 @@ TEST_CASE("BrowseResidencyManager reports folder load failure after all candidat
     REQUIRE(processorPtr->GetCallCount() == 2);
 }
 
-TEST_CASE("BrowseResidencyManager keeps scanning folder failures until a candidate loads", "[Residency][BrowsePolicy]")
+TEST_CASE("BrowseResidencyController keeps scanning folder failures until a candidate loads",
+          "[Residency][BrowsePolicy]")
 {
     auto processor = std::make_unique<SelectiveResidencyProcessor>(std::vector<std::wstring>{L"folder-a\\b"});
     SelectiveResidencyProcessor* processorPtr = processor.get();
-    OIV::ImageResidency residency(std::move(processor), 1);
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
     std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> folderReadyResults;
 
-    OIV::BrowseResidencyManager manager(
+    OIV::BrowseResidencyController manager(
         residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring& fileName,
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring& fileName,
             IMCodec::ImageSharedPtr image)
         {
             std::lock_guard lock(callbackMutex);
@@ -696,10 +713,10 @@ TEST_CASE("BrowseResidencyManager keeps scanning folder failures until a candida
             callbackCv.notify_all();
         });
 
-    const OIV::BrowseResidencyManager::FileListSnapshot folder{
+    const OIV::BrowseResidencyController::FolderFileListSnapshot folder{
         L"folder-a",
         {L"folder-a\\a", L"folder-a\\b"},
-        OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
+        OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folder);
 

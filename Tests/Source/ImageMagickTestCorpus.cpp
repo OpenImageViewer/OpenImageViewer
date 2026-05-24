@@ -966,7 +966,7 @@ namespace OIV::Tests
         return *corpus;
     }
 
-    std::vector<std::wstring> BuildBrowsingFileList(const GeneratedCorpus& corpus)
+    std::vector<std::wstring> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus)
     {
         std::vector<std::wstring> result;
         for (const auto& image : corpus.validImages)
@@ -981,7 +981,7 @@ namespace OIV::Tests
 
     std::vector<std::wstring> FindConsecutiveValidFiles(const GeneratedCorpus& corpus, std::size_t count)
     {
-        const auto allFiles = BuildBrowsingFileList(corpus);
+        const auto allFiles = BuildBrowsingFolderFileList(corpus);
         const auto badFiles = BuildBadFileSet(corpus);
 
         for (auto first = allFiles.begin(); first != allFiles.end(); ++first)
@@ -1004,7 +1004,7 @@ namespace OIV::Tests
 
     std::pair<std::wstring, std::wstring> FindValidFileBeforeBadFile(const GeneratedCorpus& corpus)
     {
-        const auto allFiles = BuildBrowsingFileList(corpus);
+        const auto allFiles = BuildBrowsingFolderFileList(corpus);
         const auto badFiles = BuildBadFileSet(corpus);
 
         for (std::size_t i = 1; i < allFiles.size(); ++i)

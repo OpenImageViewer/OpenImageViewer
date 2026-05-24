@@ -107,8 +107,8 @@ namespace OIV
         reinterpret_cast<ViewerApplication*>(args->userData)->NetSettingsCallback(args);
     }
 
-    using netsettings_Create_func = void (*)(GuiCreateParams*);
-    using netsettings_SetVisible_func = void (*)(bool);
+    using netsettings_Create_func       = void (*)(GuiCreateParams*);
+    using netsettings_SetVisible_func   = void (*)(bool);
     using netsettings_SaveSettings_func = void (*)();
 
     struct SettingsContext
@@ -130,9 +130,9 @@ namespace OIV
         if (settingsContext.created == false)
         {
             using namespace std::filesystem;
-            const path programPath = path(LLUtils::PlatformUtility::GetExeFolder());
+            const path programPath     = path(LLUtils::PlatformUtility::GetExeFolder());
             const path netsettingsPath = programPath / "Extensions" / "NetSettings";
-            const path cliAdapterPath = netsettingsPath / "CliAdapter.dll";
+            const path cliAdapterPath  = netsettingsPath / "CliAdapter.dll";
 
             if (exists(cliAdapterPath))
             {
@@ -150,11 +150,11 @@ namespace OIV
                         GetProcAddress(dllModule, "netsettings_SaveUserSettings"));
 
                     GuiCreateParams params{};
-                    params.userData = this;
-                    params.callback = &::OIV::ViewerApplication::NetSettingsCallback_;
-                    auto templateFile = (netsettingsPath / "Resources/GuiTemplate.json");
-                    params.templateFilePath = templateFile.c_str();
-                    auto userSettingsFile = (programPath / "Resources/Configuration/Settings.json");
+                    params.userData             = this;
+                    params.callback             = &::OIV::ViewerApplication::NetSettingsCallback_;
+                    auto templateFile           = (netsettingsPath / "Resources/GuiTemplate.json");
+                    params.templateFilePath     = templateFile.c_str();
+                    auto userSettingsFile       = (programPath / "Resources/Configuration/Settings.json");
                     params.userSettingsFilePath = userSettingsFile.c_str();
 
                     settingsContext.Create(&params);
@@ -193,14 +193,14 @@ namespace OIV
     }
 
     void ViewerApplication::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args,
-                                  std::wstring seperatedCallStack)
+                                            std::wstring seperatedCallStack)
     {
         using namespace std;
         wstringstream ss;
-        std::wstring source = isFromLibrary ? L"OIV library" : L"OIV viewer";
-        const wstring introMessage = LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) +
-                                     L" exception has occured at " + args.functionName + L" at " + source +
-                                     L".\nDescription: " + args.description;
+        std::wstring source          = isFromLibrary ? L"OIV library" : L"OIV viewer";
+        const wstring introMessage   = LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) +
+                                       L" exception has occured at " + args.functionName + L" at " + source +
+                                       L".\nDescription: " + args.description;
         const wstring displayMessage = introMessage + L"\nPlease refer to the log file [" + mLogFile.GetLogPath() +
                                        L"] for more information";
 
@@ -239,11 +239,12 @@ namespace OIV
         : fRefreshTimer(std::bind(&ViewerApplication::OnRefreshTimer, this)),
           fRefreshOperation(std::bind(&ViewerApplication::OnRefresh, this)),
           fPreserveImageSpaceSelection(std::bind(&ViewerApplication::OnPreserveSelectionRect, this)),
-          fSelectionRect(
-              std::bind(&ViewerApplication::OnSelectionRectChanged, this, std::placeholders::_1, std::placeholders::_2)),
+          fSelectionRect(std::bind(&ViewerApplication::OnSelectionRectChanged, this, std::placeholders::_1,
+                                   std::placeholders::_2)),
           fVirtualStatusBar(&fLabelManager, std::bind(&ViewerApplication::OnLabelRefreshRequest, this)),
           fFreeType(std::make_unique<FreeType::FreeTypeConnector>()), fLabelManager(fFreeType.get()),
-          fImageLoadController(std::make_unique<ImageLoadController>(std::make_unique<OIVImageFileLoader>(fImageLoader))),
+          fImageOpenController(
+              std::make_unique<ImageOpenController>(std::make_unique<OIVImageFileLoader>(fImageLoader))),
           fEventSync(std::bind(&ViewerApplication::OnMessageFromBackgroundThread, this, std::placeholders::_1))
 
     //, fFileCache(&fImageLoader, std::bind(&ViewerApplication::OnImageReady, this, std::placeholders::_1))
@@ -321,11 +322,9 @@ namespace OIV
         }
 
         const high_resolution_clock::time_point now = high_resolution_clock::now();
-        const auto decision = FrameLimiterPolicy::Decide(
-            EnableFrameLimiter,
-            fRefreshTimer.GetEnabled(),
-            duration_cast<microseconds>(now - fLastRefreshTime).count(),
-            fRefreshRateTimes1000);
+        const auto decision = FrameLimiterPolicy::Decide(EnableFrameLimiter, fRefreshTimer.GetEnabled(),
+                                                         duration_cast<microseconds>(now - fLastRefreshTime).count(),
+                                                         fRefreshRateTimes1000);
 
         switch (decision.action)
         {
@@ -409,24 +408,29 @@ namespace OIV
             const ImageSource imageSource = fImageState.GetOpenedImage()->GetImageSource();
             if (imageSource == ImageSource::File)
             {
-                auto decomposedPath = MessageFormatter::DecomposePath(GetOpenedFileName());
-                bool includeIndex = false;
+                const auto& committedCurrentFile = fBrowseSessionController != nullptr
+                                                       ? fBrowseSessionController->GetCommittedCurrentFile()
+                                                       : std::wstring{};
+                auto decomposedPath              = MessageFormatter::DecomposePath(
+                    committedCurrentFile.empty() ? GetOpenedFileName() : committedCurrentFile);
+                bool includeIndex   = false;
                 size_t displayIndex = 0;
-                size_t fileCount = 0;
-                if (GetAppActive() == true && fFileSessionController != nullptr)
+                size_t fileCount    = 0;
+                if (GetAppActive() == true && fBrowseSessionController != nullptr)
                 {
-                    const auto& fileList = fFileSessionController->GetFileList();
-                    includeIndex = true;
-                    displayIndex = fileList.GetCurrentIndex() == FileList::IndexStart ? 0 : fileList.GetCurrentIndex() + 1;
-                    fileCount = fileList.GetSize();
+                    const auto& fileList = fBrowseSessionController->GetFolderFileList();
+                    if (fileList.IsIndexValid(fileList.GetCurrentIndex()))
+                    {
+                        includeIndex = true;
+                        displayIndex = fileList.GetCurrentIndex() + 1;
+                        fileCount    = fileList.GetSize();
+                    }
                 }
 
                 title = ViewerPresentationPolicy::FormatFileTitlePrefix(decomposedPath.fileName,
-                                                                         decomposedPath.extension,
-                                                                         decomposedPath.parentPath,
-                                                                         includeIndex,
-                                                                         displayIndex,
-                                                                         fileCount);
+                                                                        decomposedPath.extension,
+                                                                        decomposedPath.parentPath, includeIndex,
+                                                                        displayIndex, fileCount);
             }
             else
                 title = ViewerPresentationPolicy::FormatNonFileTitlePrefix(imageSource);
@@ -437,7 +441,7 @@ namespace OIV
     void ViewerApplication::OnContextMenuTimer()
     {
         fContextMenuTimer.SetInterval(0);
-        auto pos = ::Win32::Win32Helper::GetMouseCursorPosition();
+        auto pos        = ::Win32::Win32Helper::GetMouseCursorPosition();
         auto chosenItem = fContextMenu->Show(pos.x - 16, pos.y + -16, AlignmentHorizontal::Center,
                                              AlignmentVertical::Center);
 
@@ -445,7 +449,7 @@ namespace OIV
         {
             CommandRequestIntenal request;
             request.commandName = chosenItem->userData.command;
-            request.args = chosenItem->userData.args;
+            request.args        = chosenItem->userData.args;
             ExecuteCommandInternal(request);
         }
     }
@@ -546,7 +550,7 @@ namespace OIV
                 break;
             case NotificationIconGroup::NotificationIconAction::ContextMenu:
             {
-                auto rect = fNotificationIcons.GetIconRect(fNotificationIconID);
+                auto rect       = fNotificationIcons.GetIconRect(fNotificationIconID);
                 auto bottomLeft = ShellIntegrationHelper::TrayContextMenuPosition(rect);
 
                 fWindow.SetForground();
@@ -619,7 +623,7 @@ namespace OIV
         // get the text size to reposition on screen
         using namespace LLUtils;
         PointI32 clientSize = fWindow.GetCanvasSize();
-        PointI32 center = (clientSize - static_cast<PointI32>(welcomeMessage->GetImage()->GetDimensions())) / 2;
+        PointI32 center     = (clientSize - static_cast<PointI32>(welcomeMessage->GetImage()->GetDimensions())) / 2;
         welcomeMessage->SetPosition(static_cast<PointF64>(center));
 
         if (welcomeMessage->IsDirty())

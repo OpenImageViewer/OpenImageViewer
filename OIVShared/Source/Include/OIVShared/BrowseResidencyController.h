@@ -2,7 +2,7 @@
 
 #include <Image.h>
 #include <LLUtils/StringDefs.h>
-#include <OIVShared/ImageResidency.h>
+#include <OIVShared/ImageResidencyCache.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -17,11 +17,11 @@
 
 namespace OIV
 {
-    class BrowseResidencyManager
+    class BrowseResidencyController
     {
       public:
 
-        struct FileListSnapshot
+        struct FolderFileListSnapshot
         {
             using string_type      = LLUtils::native_string_type;
             using list_string_type = LLUtils::ListString<string_type>;
@@ -30,15 +30,16 @@ namespace OIV
             static constexpr index_type IndexEnd   = std::numeric_limits<index_type>::max();
             static constexpr index_type IndexStart = std::numeric_limits<index_type>::min();
 
-            FileListSnapshot() = default;
+            FolderFileListSnapshot() = default;
 
-            FileListSnapshot(string_type folderPathParam, list_string_type filesParam, index_type currentIndexParam)
+            FolderFileListSnapshot(string_type folderPathParam, list_string_type filesParam,
+                                   index_type currentIndexParam)
                 : folderPath(std::move(folderPathParam)), files(std::move(filesParam)), currentIndex(currentIndexParam)
             {
             }
 
             template <typename Snapshot>
-            FileListSnapshot(const Snapshot& snapshot)
+            FolderFileListSnapshot(const Snapshot& snapshot)
                 : folderPath(snapshot.folderPath), files(snapshot.files.begin(), snapshot.files.end()),
                   currentIndex(static_cast<index_type>(snapshot.currentIndex))
             {
@@ -50,45 +51,52 @@ namespace OIV
         };
         using CurrentImageReadyCallback =
             std::function<void(const LLUtils::native_string_type&, IMCodec::ImageSharedPtr)>;
-        using FolderLoadReadyCallback =
-            std::function<void(const FileListSnapshot&, const LLUtils::native_string_type&, IMCodec::ImageSharedPtr)>;
+        using FolderLoadReadyCallback     = std::function<void(
+            const FolderFileListSnapshot&, const LLUtils::native_string_type&, IMCodec::ImageSharedPtr)>;
         using CandidateImageReadyCallback = std::function<void(
             std::uint64_t, std::ptrdiff_t, const LLUtils::native_string_type&, IMCodec::ImageSharedPtr)>;
 
         static constexpr std::size_t PredictedImageCount = 2;
         static constexpr std::size_t ResidentImageCount  = 5;
 
-        BrowseResidencyManager(ImageResidency& imageResidency, CurrentImageReadyCallback currentImageReadyCallback,
-                               FolderLoadReadyCallback folderLoadReadyCallback)
-            : fImageResidency(imageResidency), fCurrentImageReadyCallback(std::move(currentImageReadyCallback)),
+        BrowseResidencyController(ImageResidencyCache& imageResidency,
+                                  CurrentImageReadyCallback currentImageReadyCallback,
+                                  FolderLoadReadyCallback folderLoadReadyCallback)
+            : fImageResidencyCache(imageResidency), fCurrentImageReadyCallback(std::move(currentImageReadyCallback)),
               fFolderLoadReadyCallback(std::move(folderLoadReadyCallback))
         {
         }
 
-        ~BrowseResidencyManager() { WaitForPendingTasks(); }
+        ~BrowseResidencyController() { WaitForPendingTasks(); }
 
-        void OnCurrentIndexChanged(const FileListSnapshot& snapshot, std::ptrdiff_t previous)
+        void RefreshCommittedCurrent(const FolderFileListSnapshot& snapshot)
         {
+            if (IsIndexValid(snapshot, snapshot.currentIndex) == false)
+            {
+                CleanupCompletedTasks();
+                return;
+            }
+
             SetWorkingFolder(snapshot.folderPath);
             CleanupCompletedTasks();
-            ApplyPolicy(snapshot, ResolveDirection(snapshot.currentIndex, previous), false, true);
+            ApplyPolicy(snapshot, 0, false, false);
         }
 
-        void OnCurrentIndexCommitted(const FileListSnapshot& snapshot, std::ptrdiff_t previous)
+        void CommitNavigation(const FolderFileListSnapshot& snapshot, std::ptrdiff_t previous)
         {
             SetWorkingFolder(snapshot.folderPath);
             CleanupCompletedTasks();
             ApplyPolicy(snapshot, ResolveDirection(snapshot.currentIndex, previous), false, false);
         }
 
-        void OnCurrentFileReloadRequested(const FileListSnapshot& snapshot)
+        void ReloadCurrent(const FolderFileListSnapshot& snapshot)
         {
             SetWorkingFolder(snapshot.folderPath);
             CleanupCompletedTasks();
             ApplyPolicy(snapshot, 0, true, true);
         }
 
-        void RequestFolderLoadResidency(const FileListSnapshot& snapshot)
+        void RequestFolderLoadResidency(const FolderFileListSnapshot& snapshot)
         {
             SetWorkingFolder(snapshot.folderPath);
             CleanupCompletedTasks();
@@ -125,7 +133,7 @@ namespace OIV
                 fTrackedFiles.clear();
                 fDesiredFiles.clear();
                 fRecentFiles.clear();
-                fCurrentSnapshot = FileListSnapshot{};
+                fCurrentSnapshot = FolderFileListSnapshot{};
                 fDirection       = 1;
                 fWorkingFolder   = folderPath;
                 ++fGeneration;
@@ -141,7 +149,7 @@ namespace OIV
             CleanupCompletedTasks();
 
             std::lock_guard lock(fMutex);
-            fCurrentSnapshot = FileListSnapshot{};
+            fCurrentSnapshot = FolderFileListSnapshot{};
             ++fGeneration;
         }
 
@@ -156,7 +164,7 @@ namespace OIV
                 fTrackedFiles.clear();
                 fDesiredFiles.clear();
                 fRecentFiles.clear();
-                fCurrentSnapshot = FileListSnapshot{};
+                fCurrentSnapshot = FolderFileListSnapshot{};
                 fDirection       = 1;
                 fWorkingFolder.clear();
                 ++fGeneration;
@@ -182,7 +190,7 @@ namespace OIV
 
         static constexpr std::ptrdiff_t InvalidIndex = static_cast<std::ptrdiff_t>(-1);
 
-        static bool IsIndexValid(const FileListSnapshot& snapshot, std::ptrdiff_t index)
+        static bool IsIndexValid(const FolderFileListSnapshot& snapshot, std::ptrdiff_t index)
         {
             return index >= 0 && index < static_cast<std::ptrdiff_t>(snapshot.files.size());
         }
@@ -203,12 +211,12 @@ namespace OIV
                 orderedFiles.push_back(fileName);
         }
 
-        bool IsFolderLoadCurrentLocked(const FileListSnapshot& snapshot, std::uint64_t generation) const
+        bool IsFolderLoadCurrentLocked(const FolderFileListSnapshot& snapshot, std::uint64_t generation) const
         {
             return generation == fGeneration && snapshot.folderPath == fWorkingFolder;
         }
 
-        void ApplyPolicy(const FileListSnapshot& snapshot, int requestedDirection, bool forceReloadCurrent,
+        void ApplyPolicy(const FolderFileListSnapshot& snapshot, int requestedDirection, bool forceReloadCurrent,
                          bool requestCurrent)
         {
             PolicyUpdate update{};
@@ -234,7 +242,7 @@ namespace OIV
             }
 
             if (forceReloadCurrent && update.currentFile.empty() == false)
-                fImageResidency.removeResidency(update.currentFile, ImageResidencyItemType::FullSize);
+                fImageResidencyCache.removeResidency(update.currentFile, ImageResidencyCacheItemType::FullSize);
 
             EvictFiles(update.filesToEvict);
             if (requestCurrent == false && update.currentFile.empty() == false)
@@ -301,7 +309,7 @@ namespace OIV
         void EvictFiles(const std::vector<LLUtils::native_string_type>& filesToEvict)
         {
             for (const auto& fileName : filesToEvict)
-                fImageResidency.removeResidency(fileName, ImageResidencyItemType::FullSize);
+                fImageResidencyCache.removeResidency(fileName, ImageResidencyCacheItemType::FullSize);
         }
 
         void RequestFiles(const std::vector<LLUtils::native_string_type>& filesToRequest,
@@ -331,8 +339,8 @@ namespace OIV
         {
             try
             {
-                IMCodec::ImageSharedPtr image = co_await fImageResidency.requestResidencyAsync(
-                    fileName, ImageResidencyItemType::FullSize);
+                IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
+                    fileName, ImageResidencyCacheItemType::FullSize);
 
                 bool shouldDeliverCurrent = false;
                 bool shouldEvict          = image == nullptr;
@@ -346,7 +354,7 @@ namespace OIV
                 }
 
                 if (shouldEvict)
-                    fImageResidency.removeResidency(fileName, ImageResidencyItemType::FullSize);
+                    fImageResidencyCache.removeResidency(fileName, ImageResidencyCacheItemType::FullSize);
 
                 if (shouldDeliverCurrent && fCurrentImageReadyCallback)
                     fCurrentImageReadyCallback(fileName, image);
@@ -364,11 +372,11 @@ namespace OIV
         {
             try
             {
-                IMCodec::ImageSharedPtr image = co_await fImageResidency.requestResidencyAsync(
-                    fileName, ImageResidencyItemType::FullSize);
+                IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
+                    fileName, ImageResidencyCacheItemType::FullSize);
 
                 if (image == nullptr)
-                    fImageResidency.removeResidency(fileName, ImageResidencyItemType::FullSize);
+                    fImageResidencyCache.removeResidency(fileName, ImageResidencyCacheItemType::FullSize);
 
                 if (callback)
                     callback(generation, index, fileName, image);
@@ -384,7 +392,7 @@ namespace OIV
             }
         }
 
-        TicketID RequestFolderLoadResidencyAsync(FileListSnapshot snapshot, std::uint64_t generation)
+        TicketID RequestFolderLoadResidencyAsync(FolderFileListSnapshot snapshot, std::uint64_t generation)
         {
             try
             {
@@ -394,8 +402,8 @@ namespace OIV
                     if (failedFileName.empty())
                         failedFileName = fileName;
 
-                    IMCodec::ImageSharedPtr image = co_await fImageResidency.requestResidencyAsync(
-                        fileName, ImageResidencyItemType::FullSize);
+                    IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
+                        fileName, ImageResidencyCacheItemType::FullSize);
 
                     {
                         std::lock_guard lock(fMutex);
@@ -425,12 +433,12 @@ namespace OIV
 
       private:
 
-        ImageResidency& fImageResidency;
+        ImageResidencyCache& fImageResidencyCache;
         CurrentImageReadyCallback fCurrentImageReadyCallback;
         FolderLoadReadyCallback fFolderLoadReadyCallback;
         std::vector<TicketID> fPendingTasks;
         std::mutex fMutex;
-        FileListSnapshot fCurrentSnapshot;
+        FolderFileListSnapshot fCurrentSnapshot;
         std::set<LLUtils::native_string_type> fTrackedFiles;
         std::set<LLUtils::native_string_type> fDesiredFiles;
         std::deque<LLUtils::native_string_type> fRecentFiles;

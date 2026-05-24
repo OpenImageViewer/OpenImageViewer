@@ -75,7 +75,8 @@
 
 namespace OIV
 {
-    void ViewerApplication::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_Zoom(const CommandManager::CommandRequest& request,
+                                     CommandManager::CommandResult& result)
     {
         if (IsImageOpen())
         {
@@ -85,7 +86,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_ViewState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_ViewState(const CommandManager::CommandRequest& request,
+                                          CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -93,7 +95,7 @@ namespace OIV
         string type = request.args.GetArgValue("type");
 
         bool fullscreenModeChanged = false;
-        bool filterTypeChanged = false;
+        bool filterTypeChanged     = false;
 
         if (type == "toggleBorders")
         {
@@ -102,7 +104,7 @@ namespace OIV
         }
         else if (type == "quit")
         {
-            string op = request.args.GetArgValue("op");
+            string op        = request.args.GetArgValue("op");
             bool closeToTray = op == "closetotray";
             CloseApplication(closeToTray);
         }
@@ -261,7 +263,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request,
-                                        [[maybe_unused]] CommandManager::CommandResult& result)
+                                                  [[maybe_unused]] CommandManager::CommandResult& result)
     {
         auto type = request.args.GetArgValue("type");
         if (type == "imageinfo")  // Toggle image info
@@ -278,7 +280,7 @@ namespace OIV
                 return;
             }
 
-            text = fLabelManager.GetOrCreateTextLabel("keyBindings");
+            text         = fLabelManager.GetOrCreateTextLabel("keyBindings");
             auto message = MessageHelper::CreateKeyBindingsMessage();
 
             text->SetText(message);
@@ -303,7 +305,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_OpenFile([[maybe_unused]] const CommandManager::CommandRequest& request,
-                               [[maybe_unused]] CommandManager::CommandResult& response)
+                                         [[maybe_unused]] CommandManager::CommandResult& response)
     {
         std::string cmd = request.args.GetArgValue("cmd");
         if (cmd == "savefile")
@@ -323,7 +325,7 @@ namespace OIV
                     case ImageSource::File:
                     {
                         std::filesystem::path p = std::dynamic_pointer_cast<OIVFileImage>(openedImage)->GetFileName();
-                        defaultFileName = p.stem();
+                        defaultFileName         = p.stem();
                     }
                     break;
                     case ImageSource::Clipboard:
@@ -374,22 +376,21 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request,
-                                           CommandManager::CommandResult& response)
+                                                     CommandManager::CommandResult& response)
     {
-        const AxisAlignedTransformCommand command =
-            ImageTransformCommandPolicy::ParseAxisAlignedTransform(request.args);
+        const AxisAlignedTransformCommand command = ImageTransformCommandPolicy::ParseAxisAlignedTransform(
+            request.args);
 
         if (command.HasTransform())
         {
             TransformImage(command.rotation, command.flip);
             response.resValue = ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
-                fImageState.GetAxisAlignedRotation(),
-                fImageState.GetAxisAlignedFlip());
+                fImageState.GetAxisAlignedRotation(), fImageState.GetAxisAlignedFlip());
         }
     }
 
     void ViewerApplication::CMD_ToggleColorCorrection([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                            CommandManager::CommandResult& result)
+                                                      CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -401,13 +402,11 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_SetWindowSize(const CommandManager::CommandRequest& request,
-                                    CommandManager::CommandResult& result)
+                                              CommandManager::CommandResult& result)
     {
-        const auto& workArea = fCurrentMonitorProperties.monitorInfo.rcWork;
+        const auto& workArea              = fCurrentMonitorProperties.monitorInfo.rcWork;
         const WindowSizeDecision decision = ViewCommandPolicy::DecideWindowSize(
-            request.args,
-            fWindow.GetWindowSize(),
-            fWindow.GetPosition(),
+            request.args, fWindow.GetWindowSize(), fWindow.GetPosition(),
             {workArea.left, workArea.top, workArea.right, workArea.bottom});
 
         switch (decision.mode)
@@ -434,7 +433,8 @@ namespace OIV
         result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
     }
 
-    void ViewerApplication::CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_SortFiles(const CommandManager::CommandRequest& request,
+                                          CommandManager::CommandResult& result)
     {
         const SortCommandDecision decision = SortCommandPolicy::Decide(request.args, fFileSorter.GetSortType());
 
@@ -446,11 +446,13 @@ namespace OIV
                 fFileSorter.SetSortType(decision.sortType);
         }
 
-        SortFileList();
-        result.resValue = SortCommandPolicy::FormatSortResult(request.displayName, fFileSorter.GetActiveSortDirection());
+        SortFolderFileList();
+        result.resValue = SortCommandPolicy::FormatSortResult(request.displayName,
+                                                              fFileSorter.GetActiveSortDirection());
     }
 
-    void ViewerApplication::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_Sequencer(const CommandManager::CommandRequest& request,
+                                          CommandManager::CommandResult& result)
     {
         auto openedImage = fImageState.GetOpenedImage();
         if (openedImage != nullptr &&
@@ -459,14 +461,14 @@ namespace OIV
             if (SequencerPolicy::IsChangeSpeedCommand(request.args))
             {
                 fCurrentSequencerSpeed = SequencerPolicy::ApplySpeedChange(
-                    fCurrentSequencerSpeed,
-                    SequencerPolicy::ParseSpeedChangePercent(request.args));
+                    fCurrentSequencerSpeed, SequencerPolicy::ParseSpeedChangePercent(request.args));
                 result.resValue = SequencerPolicy::FormatSpeed(fCurrentSequencerSpeed);
             }
         }
     }
 
-    void ViewerApplication::CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_DeleteFile(const CommandManager::CommandRequest& request,
+                                           CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -481,7 +483,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_ColorCorrection(const CommandManager::CommandRequest& request,
-                                      CommandManager::CommandResult& result)
+                                                CommandManager::CommandResult& result)
     {
         const ColorCorrectionCommand command = ColorCorrectionCommandPolicy::Parse(request.args);
         if (command.IsValid() == false)
@@ -512,12 +514,13 @@ namespace OIV
         if (value == nullptr)
             return;
 
-        *value = ColorCorrectionCommandPolicy::Apply(*value, command.operation, command.value);
+        *value          = ColorCorrectionCommandPolicy::Apply(*value, command.operation, command.value);
         result.resValue = ColorCorrectionCommandPolicy::FormatResult(command, *value);
         UpdateExposure();
     }
 
-    void ViewerApplication::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_Pan(const CommandManager::CommandRequest& request,
+                                    CommandManager::CommandResult& result)
     {
         const PanCommand command = ViewCommandPolicy::ParsePan(request.args);
 
@@ -543,7 +546,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
-                                      CommandManager::CommandResult& result)
+                                                CommandManager::CommandResult& result)
     {
         using namespace std;
         string cmd = request.args.GetArgValue("cmd");
@@ -575,7 +578,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                         CommandManager::CommandResult& result)
+                                                   CommandManager::CommandResult& result)
     {
         switch (PasteFromClipBoard())
         {
@@ -592,7 +595,7 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
-                                        CommandManager::CommandResult& result)
+                                                  CommandManager::CommandResult& result)
     {
         using namespace std;
         const string cmd = request.args.GetArgValue("cmd");
@@ -635,7 +638,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_Placement(const CommandManager::CommandRequest& request,
+                                          CommandManager::CommandResult& result)
     {
         switch (ViewCommandPolicy::ParsePlacement(request.args))
         {
@@ -656,19 +660,17 @@ namespace OIV
     }
 
     void ViewerApplication::CMD_Navigate(const CommandManager::CommandRequest& request,
-                               [[maybe_unused]] CommandManager::CommandResult& result)
+                                         [[maybe_unused]] CommandManager::CommandResult& result)
     {
         const NavigationCommand command = ViewCommandPolicy::ParseNavigation(request.args);
         if (command.subImage)
         {
-            auto& imageList = fWindow.GetImageControl().GetImageList();
+            auto& imageList        = fWindow.GetImageControl().GetImageList();
             const auto numElements = imageList.GetNumberOfElements();
             if (numElements > 0)
             {
-                imageList.SetSelected(static_cast<int>(ViewCommandPolicy::NextSubImageIndex(
-                    imageList.GetSelected(),
-                    command.amount,
-                    numElements)));
+                imageList.SetSelected(static_cast<int>(
+                    ViewCommandPolicy::NextSubImageIndex(imageList.GetSelected(), command.amount, numElements)));
             }
         }
         else
@@ -677,7 +679,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+    void ViewerApplication::CMD_Shell(const CommandManager::CommandRequest& request,
+                                      CommandManager::CommandResult& result)
     {
         result.resValue = ShellCommandHandler::Execute(request, GetOpenedFileName(), fImageState.GetOpenedImage());
     }

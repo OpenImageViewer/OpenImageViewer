@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <mutex>
+#include <atomic>
 #include <OIVAppCore/IFileWatcher.h>
 #include <LLUtils/Event.h>
 #include <LLUtils/UniqueIDProvider.h>
@@ -109,17 +110,8 @@ public:
 
     void RemoveFolder(FolderID folderID) override
     {
-        auto itData = fMapIDData.find(folderID);
-        if (itData == fMapIDData.end())
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Incoherent data structures.");
-
-        if (CloseHandle(itData->second.directoryHandle) == FALSE)
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Could not close handle.");
-
-        fUniqueIDProvider.Release(itData->second.uniqueID);
-
-        fMapFolderID.erase(itData->second.folderPath);
-        fMapIDData.erase(itData);
+        std::lock_guard<std::mutex> Lock(fDataMutex);
+        RemoveFolderLocked(folderID);
     }
 
     void RemoveFolder(const std::wstring& folder) override
@@ -129,7 +121,7 @@ public:
         if (it == fMapFolderID.end())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Folder not found.");
 
-        RemoveFolder(it->second);
+        RemoveFolderLocked(it->second);
 
 
 
@@ -141,32 +133,40 @@ public:
         return FileChangedEvent;
     }
 
-    static VOID CALLBACK QueueShutdownBackgroundThread(ULONG_PTR dwParam)
-    {
-        reinterpret_cast<FileWatcherWin32*>(dwParam)->fQueueShutdownBackgroundThread = true;
-    }
+    static VOID CALLBACK WakeAlertableWait(ULONG_PTR) {}
 
-    void QueueShutdown()
+    void Shutdown()
     {
-        QueueUserAPC(QueueShutdownBackgroundThread, reinterpret_cast<HANDLE>(fFileWatchThread.native_handle()), (ULONG_PTR)this);
+        fShutdownRequested.store(true);
+        if (fFileWatchThread.joinable())
+        {
+            // The watcher thread blocks in GetQueuedCompletionStatusEx(..., INFINITE, TRUE). The TRUE argument
+            // makes the wait alertable, so this APC only wakes that wait; shutdown state is set above and the
+            // APC must not dereference this object.
+            QueueUserAPC(WakeAlertableWait, reinterpret_cast<HANDLE>(fFileWatchThread.native_handle()), 0);
+            // wait for background thread to close.
+            fFileWatchThread.join();
+        }
+
+        RemoveAll();
+        if (fCompletionPortHandle != nullptr)
+        {
+            CloseHandle(fCompletionPortHandle);
+            fCompletionPortHandle = nullptr;
+        }
     }
 
     ~FileWatcherWin32()
     {
-        RemoveAll();
-        if (fFileWatchThread.joinable())
-        {
-            QueueShutdown();
-            // wait for background thread to close.
-            fFileWatchThread.join();
-        }
+        Shutdown();
     }
 
     void CompletionPortStatusEntryPoint()
     {
-        while (fQueueShutdownBackgroundThread == false)
+        bool shutdownRequested = fShutdownRequested.load();
+        while (shutdownRequested == false)
         {
-            ULONG numEntiresReceived;
+            ULONG numEntiresReceived = 0;
             constexpr ULONG maxEntires = 32;
             OVERLAPPED_ENTRY overlappedEntires[maxEntires];
             BOOL result = GetQueuedCompletionStatusEx(
@@ -176,13 +176,13 @@ public:
                 , &numEntiresReceived
                 , INFINITE
                 , TRUE);
+            shutdownRequested = fShutdownRequested.load();
 
-            if (numEntiresReceived > maxEntires)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "some entries are unhandled, please complete the implementation");
-
-
-            if (result == TRUE)
+            if (result == TRUE && shutdownRequested == false)
             {
+                if (numEntiresReceived > maxEntires)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::NotImplemented, "some entries are unhandled, please complete the implementation");
+
                 std::map<FolderID, std::vector<FileChangedEventArgs>> eventsToRaise;
                 {
                     std::lock_guard<std::mutex> lock(fDataMutex);
@@ -287,7 +287,7 @@ public:
                     {
                         auto it = fMapIDData.find(folderID);
                         folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath, std::wstring(),std::wstring() });
-                        RemoveFolder(folderID); 
+                        RemoveFolderLocked(folderID);
                     }
                 }
 
@@ -295,7 +295,7 @@ public:
                 for (const auto& eventArgs : folderRemovalEvents)
                     FileChangedEvent.Raise(eventArgs);
             }
-            else if (fQueueShutdownBackgroundThread == false)
+            else if (shutdownRequested == false)
             {
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "can not get completion status");
             }
@@ -305,6 +305,21 @@ public:
 
 
     private:
+        void RemoveFolderLocked(FolderID folderID)
+        {
+            auto itData = fMapIDData.find(folderID);
+            if (itData == fMapIDData.end())
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Incoherent data structures.");
+
+            if (CloseHandle(itData->second.directoryHandle) == FALSE)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Could not close handle.");
+
+            fUniqueIDProvider.Release(itData->second.uniqueID);
+
+            fMapFolderID.erase(itData->second.folderPath);
+            fMapIDData.erase(itData);
+        }
+
         DWORD ReadDirectoryChanges(FolderData& folderData)
         {
             return
@@ -341,7 +356,7 @@ private:
     std::mutex fDataMutex;
     std::thread fFileWatchThread;
     UniqueIDProvider fUniqueIDProvider{ 1 };
-    bool fQueueShutdownBackgroundThread = false;
+    std::atomic_bool fShutdownRequested = false;
 };
 
 }  // namespace Win32

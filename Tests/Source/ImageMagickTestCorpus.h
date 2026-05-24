@@ -29,7 +29,7 @@ namespace OIV::Tests
     };
 
     const GeneratedCorpus& EnsureImageMagickCorpus();
-    std::vector<std::wstring> BuildBrowsingFileList(const GeneratedCorpus& corpus);
+    std::vector<std::wstring> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus);
     std::vector<std::wstring> FindConsecutiveValidFiles(const GeneratedCorpus& corpus, std::size_t count);
     std::pair<std::wstring, std::wstring> FindValidFileBeforeBadFile(const GeneratedCorpus& corpus);
     std::string NarrowPath(const std::filesystem::path& path);

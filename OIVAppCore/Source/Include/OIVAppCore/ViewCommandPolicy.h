@@ -1,7 +1,7 @@
 #pragma once
 
 #include <OIVAppCore/CommandManager.h>
-#include <OIVAppCore/FileList.h>
+#include <OIVAppCore/FolderFileList.h>
 
 #include <LLUtils/Point.h>
 
@@ -12,7 +12,7 @@ namespace OIV
 {
     struct ZoomCommand
     {
-        double amount = 0.0;
+        double amount   = 0.0;
         int32_t centerX = -1;
         int32_t centerY = -1;
     };
@@ -29,7 +29,7 @@ namespace OIV
     struct PanCommand
     {
         PanDirection direction = PanDirection::None;
-        double amount = 0.0;
+        double amount          = 0.0;
     };
 
     enum class PlacementAction
@@ -42,8 +42,8 @@ namespace OIV
 
     struct NavigationCommand
     {
-        FileList::index_type amount = 0;
-        bool subImage = false;
+        FolderFileList::index_type amount = 0;
+        bool subImage                     = false;
     };
 
     enum class WindowSizeMode
@@ -56,9 +56,9 @@ namespace OIV
 
     struct WindowWorkingArea
     {
-        int32_t left = 0;
-        int32_t top = 0;
-        int32_t right = 0;
+        int32_t left   = 0;
+        int32_t top    = 0;
+        int32_t right  = 0;
         int32_t bottom = 0;
 
         int32_t Width() const;
@@ -75,6 +75,7 @@ namespace OIV
     class ViewCommandPolicy
     {
       public:
+
         static ZoomCommand ParseZoom(const CommandManager::CommandArgs& args);
         static std::wstring FormatZoomResult(double scale);
 
@@ -85,13 +86,12 @@ namespace OIV
         static std::wstring FormatPlacementResult(const std::string& displayName);
 
         static NavigationCommand ParseNavigation(const CommandManager::CommandArgs& args);
-        static FileList::index_type NextSubImageIndex(FileList::index_type selected,
-                                                      FileList::index_type amount,
-                                                      FileList::index_type count);
+        static FolderFileList::index_type NextSubImageIndex(FolderFileList::index_type selected,
+                                                            FolderFileList::index_type amount,
+                                                            FolderFileList::index_type count);
 
         static WindowSizeDecision DecideWindowSize(const CommandManager::CommandArgs& args,
                                                    LLUtils::PointI32 currentWindowSize,
-                                                   LLUtils::PointI32 currentPosition,
-                                                   WindowWorkingArea workingArea);
+                                                   LLUtils::PointI32 currentPosition, WindowWorkingArea workingArea);
     };
-}
+}  // namespace OIV

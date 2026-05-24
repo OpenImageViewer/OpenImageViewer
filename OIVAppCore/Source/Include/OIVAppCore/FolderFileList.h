@@ -2,7 +2,6 @@
 
 #include <LLUtils/StringDefs.h>
 #include <LLUtils/FileSystemHelper.h>
-#include <OIVAppCore/IFileListProvider.h>
 #include <OIVAppCore/IFileWatcher.h>
 #include <OIVShared/FileSorter.h>
 
@@ -14,12 +13,15 @@
 
 namespace OIV
 {
-    /// @brief A class to manage file browsing with embedded file watcher
-    class FileList
+    using FolderFileListStringType    = LLUtils::native_string_type;
+    using FolderFileListStringSetType = std::set<FolderFileListStringType>;
+
+    /// @brief A class to manage folder file order and current index.
+    class FolderFileList
     {
       public:
 
-        using string_type                    = FileListStringType;
+        using string_type                    = FolderFileListStringType;
         using list_string_type               = LLUtils::ListString<string_type>;
         using hashset_type                   = std::set<string_type>;
         using index_type                     = list_string_type::difference_type;
@@ -36,9 +38,8 @@ namespace OIV
             index_type currentIndex = IndexStart;
         };
 
-        FileList(IFileListProvider* fileListProvider, IFileWatcher* fileWatcher, FileSorter* fileSorter,
-                 const hashset_type& knownFileTypesSet, string_type knownfileTypes,
-                 OnFileIndexChangedCallbackType callback);
+        FolderFileList(FileSorter* fileSorter, const hashset_type& knownFileTypesSet, string_type knownfileTypes,
+                       OnFileIndexChangedCallbackType callback);
 
         index_type GetCurrentIndex() const;
         ResultCode SetCurrentIndex(index_type index);
@@ -46,33 +47,30 @@ namespace OIV
         index_type GetIndexFromMarker(index_type marker) const;
         const string_type& GetCurrentItemName() const;
         bool IsIndexValid(index_type index) const;
-        void SetFolder(const string_type& folder, list_string_type&& initialFileList);
+        void SetFolder(const string_type& folder, list_string_type&& initialFolderFileList,
+                       const string_type& currentFile);
         const string_type& GetFolder() const;
-        IFileWatcher::FolderID GetFolderID() const;
         size_t GetSize() const;
         Snapshot CreateSnapshot() const;
         ResultCode SetCurrentIndexByElementName(const string_type& element);
+        void InvalidateCurrentIndex();
         string_type GetElementNameFromIndex(index_type index) const;
-        void Sort();
-        list_string_type GetSupportedFileListInFolder(const string_type& folderPath);
+        void Sort(const string_type& currentFile);
+        list_string_type GetSupportedFolderFileListInFolder(const string_type& folderPath);
+        bool IsSupportedFileType(const string_type& filePath) const;
+        void UpdateFolderFileList(IFileWatcher::FileChangedOp fileOp, const std::wstring& filePath,
+                                  const std::wstring& filePath2, const string_type& currentFile);
 
       private:
 
-        void UpdateEntryIndex();
-        void OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
-        void UpdateFileList(IFileWatcher::FileChangedOp fileOp, const std::wstring& filePath,
-                            const std::wstring& filePath2);
-        void LoadFileInFolder();
+        void UpdateEntryIndex(const string_type& currentFile);
+        void LoadFilesInFolder();
 
       private:
 
-        IFileListProvider* fFileListProvider{};
         list_string_type fListFiles;
         index_type fCurrentEntryIndex = IndexStart;
         string_type fCurrentFolder;
-        IFileWatcher::FolderID fFolderID{};
-        IFileWatcher* fFileWatcher{};
-        IFileWatcher::OnFileChangedEventArgsEvent::Connection fFileChangedConnection;
         FileSorter* fFileSorter;
         hashset_type fKnownFileTypesSet;
         string_type fKnownFileTypes;

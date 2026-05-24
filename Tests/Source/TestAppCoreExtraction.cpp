@@ -6,16 +6,16 @@
 #include <OIVAppCore/CommandController.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 #include <OIVAppCore/FileChangePolicy.h>
-#include <OIVAppCore/FileList.h>
+#include <OIVAppCore/FolderFileList.h>
 #include <OIVAppCore/FileReloadPolicy.h>
 #include <OIVAppCore/FileRemovalPolicy.h>
-#include <OIVAppCore/FileSessionController.h>
+#include <OIVAppCore/BrowseSessionController.h>
 #include <OIVAppCore/FrameLimiterPolicy.h>
 #include <OIVAppCore/ImageEditPolicy.h>
 #include <OIVAppCore/ImageFormatCatalogPolicy.h>
 #include <OIVAppCore/ImageInfoPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
-#include <OIVAppCore/ImageLoadController.h>
+#include <OIVAppCore/ImageOpenController.h>
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
 #include <OIVAppCore/InputGesturePolicy.h>
 #include <OIVAppCore/IFileWatcher.h>
@@ -31,7 +31,7 @@
 #include <OIVShared/ViewTransformController.h>
 #include <OIVShared/AdaptiveMotion.h>
 #include <OIVShared/FileSorter.h>
-#include <OIVShared/ImageResidency.h>
+#include <OIVShared/ImageResidencyCache.h>
 #include <OIVShared/RecursiveDelayOp.h>
 #include <OIVShared/UnitFormatter.h>
 
@@ -94,15 +94,6 @@ namespace
         FolderID fFolderID = 7;
         std::wstring fFolder;
         OnFileChangedEventArgsEvent fEvent;
-    };
-
-    class ActiveFileProvider : public OIV::IFileListProvider
-    {
-      public:
-
-        OIV::FileListStringType GetActiveFileName() override { return activeFile; }
-
-        OIV::FileListStringType activeFile;
     };
 
     IMCodec::ImageSharedPtr CreateTestImage(uint32_t width = 1, uint32_t height = 1)
@@ -182,7 +173,8 @@ namespace
     {
       public:
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey&, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey&,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             ++fCallCount;
             outValue = CreateTestImage();
@@ -205,7 +197,8 @@ namespace
         {
         }
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey& key, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey& key,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             ++fCallCount;
             const auto& fileName = std::get<0>(key);
@@ -376,7 +369,7 @@ TEST_CASE("ViewCommandPolicy parses navigation and window size decisions", "[App
 {
     auto navigation = OIV::ViewCommandPolicy::ParseNavigation(
         OIV::CommandManager::CommandArgs::FromString("amount=end;subimage=false"));
-    REQUIRE(navigation.amount == OIV::FileList::IndexEnd);
+    REQUIRE(navigation.amount == OIV::FolderFileList::IndexEnd);
     REQUIRE_FALSE(navigation.subImage);
 
     navigation = OIV::ViewCommandPolicy::ParseNavigation(
@@ -712,7 +705,7 @@ TEST_CASE("FileChangePolicy routes watcher events", "[AppCore]")
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ReloadSettings);
 
     eventArgs = {11, Op::Modified, L"C:\\other", L"x.png", {}};
-    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::UnexpectedFolder);
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::Ignore);
 }
 
 TEST_CASE("FileReloadPolicy decides reload timing", "[AppCore]")
@@ -1144,7 +1137,7 @@ TEST_CASE("Event Add keeps fire-and-forget listener compatibility", "[AppCore][L
     REQUIRE(count == 4);
 }
 
-TEST_CASE("FileList updates the current folder list from watcher events", "[AppCore]")
+TEST_CASE("FolderFileList updates the current folder list from explicit file changes", "[AppCore]")
 {
     const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-test").wstring();
     const auto fileA  = (std::filesystem::path(folder) / L"a.png").wstring();
@@ -1152,63 +1145,108 @@ TEST_CASE("FileList updates the current folder list from watcher events", "[AppC
     const auto fileC  = (std::filesystem::path(folder) / L"c.png").wstring();
     std::filesystem::create_directories(folder);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileA;
-
-    FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    std::vector<std::pair<OIV::FileList::index_type, OIV::FileList::index_type>> indexChanges;
+    std::vector<std::pair<OIV::FolderFileList::index_type, OIV::FolderFileList::index_type>> indexChanges;
 
-    OIV::FileList fileList(&activeProvider, &watcher, &sorter, {L"png"}, L"png",
-                           [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
+    OIV::FolderFileList fileList(&sorter, {L"png"}, L"png",
+                                 [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
-    fileList.SetFolder(folder, {fileA, fileC});
+    fileList.SetFolder(folder, {fileA, fileC}, fileA);
     REQUIRE(fileList.GetSize() == 2);
     REQUIRE(fileList.GetCurrentItemName() == fileA);
 
-    watcher.Raise(OIV::IFileWatcher::FileChangedOp::Add, folder, L"b.png");
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Add, fileB, {}, fileA);
     REQUIRE(fileList.GetSize() == 3);
     REQUIRE(fileList.GetElementNameFromIndex(1) == fileB);
+    REQUIRE(fileList.GetCurrentItemName() == fileA);
 
-    watcher.Raise(OIV::IFileWatcher::FileChangedOp::Remove, folder, L"b.png");
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Remove, fileB, {}, fileA);
+    REQUIRE(fileList.GetSize() == 2);
+    REQUIRE(fileList.GetElementNameFromIndex(1) == fileC);
+
+    const auto fileBText = (std::filesystem::path(folder) / L"b.txt").wstring();
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileC, fileBText, fileA);
+    REQUIRE(fileList.GetSize() == 1);
+    REQUIRE(fileList.GetCurrentItemName() == fileA);
+
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileBText, fileC, fileA);
     REQUIRE(fileList.GetSize() == 2);
     REQUIRE(fileList.GetElementNameFromIndex(1) == fileC);
 }
 
-TEST_CASE("FileList disconnects from watcher when destroyed", "[AppCore]")
+TEST_CASE("FolderFileList sorts files loaded from disk for every sort mode", "[AppCore]")
 {
-    const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-disconnect-test").wstring();
+    const auto folder  = MakeTempFolder("oiv-file-list-disk-sort-test");
+    const auto filePng = folder / L"a.png";
+    const auto fileBmp = folder / L"b.bmp";
+    const auto fileJpg = folder / L"c.jpg";
+    TouchFile(filePng);
+    TouchFile(fileBmp);
+    TouchFile(fileJpg);
+
+    const auto baseTime = std::filesystem::file_time_type::clock::now();
+    std::filesystem::last_write_time(filePng, baseTime - std::chrono::hours(2));
+    std::filesystem::last_write_time(fileBmp, baseTime);
+    std::filesystem::last_write_time(fileJpg, baseTime - std::chrono::hours(1));
+
+    auto requireLoadedOrder = [&](OIV::FileSorter::SortType sortType, OIV::FileSorter::SortDirection sortDirection,
+                                  const std::vector<std::filesystem::path>& expectedFiles,
+                                  const std::filesystem::path& currentFile)
+    {
+        OIV::FileSorter sorter;
+        sorter.SetSortType(sortType);
+        sorter.SetActiveSortDirection(sortDirection);
+
+        OIV::FolderFileList fileList(&sorter, {L"bmp", L"jpg", L"png"}, L"bmp;jpg;png", [](auto, auto) {});
+
+        fileList.SetFolder(folder.wstring(), {}, currentFile.wstring());
+
+        REQUIRE(fileList.GetSize() == expectedFiles.size());
+        for (std::size_t index = 0; index < expectedFiles.size(); ++index)
+            REQUIRE(fileList.GetElementNameFromIndex(static_cast<OIV::FolderFileList::index_type>(index)) ==
+                    expectedFiles[index].wstring());
+        REQUIRE(fileList.GetCurrentIndex() == 1);
+        REQUIRE(fileList.GetCurrentItemName() == currentFile.wstring());
+    };
+
+    requireLoadedOrder(OIV::FileSorter::SortType::Name, OIV::FileSorter::SortDirection::Descending,
+                       {fileJpg, fileBmp, filePng}, fileBmp);
+    requireLoadedOrder(OIV::FileSorter::SortType::Extension, OIV::FileSorter::SortDirection::Ascending,
+                       {fileBmp, fileJpg, filePng}, fileJpg);
+    requireLoadedOrder(OIV::FileSorter::SortType::Date, OIV::FileSorter::SortDirection::Descending,
+                       {fileBmp, fileJpg, filePng}, fileJpg);
+}
+
+TEST_CASE("FolderFileList leaves current index invalid when current file is not represented", "[AppCore]")
+{
+    const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-unrepresented-test").wstring();
     const auto fileA  = (std::filesystem::path(folder) / L"a.png").wstring();
+    const auto fileB  = (std::filesystem::path(folder) / L"b.txt").wstring();
     std::filesystem::create_directories(folder);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileA;
-
-    FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    std::vector<std::pair<OIV::FileList::index_type, OIV::FileList::index_type>> indexChanges;
+    std::vector<std::pair<OIV::FolderFileList::index_type, OIV::FolderFileList::index_type>> indexChanges;
 
-    {
-        OIV::FileList fileList(&activeProvider, &watcher, &sorter, {L"png"}, L"png",
-                               [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
+    OIV::FolderFileList fileList(&sorter, {L"png"}, L"png",
+                                 [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
-        fileList.SetFolder(folder, {fileA});
-    }
+    fileList.SetFolder(folder, {fileA}, fileB);
 
-    REQUIRE_NOTHROW(watcher.Raise(OIV::IFileWatcher::FileChangedOp::Add, folder, L"b.png"));
+    REQUIRE(fileList.GetSize() == 1);
+    REQUIRE_FALSE(fileList.IsIndexValid(fileList.GetCurrentIndex()));
     REQUIRE(indexChanges.empty());
 }
 
-TEST_CASE("ImageLoadController classifies load results", "[AppCore]")
+TEST_CASE("ImageOpenController classifies load results", "[AppCore]")
 {
-    REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(ResultCode::RC_Success, CreateTestImage()) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_Success, CreateTestImage()) ==
             OIV::ImageLoadStatus::Loaded);
-    REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(ResultCode::RC_FileNotSupported, nullptr) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_FileNotSupported, nullptr) ==
             OIV::ImageLoadStatus::UnsupportedFormat);
-    REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(ResultCode::RC_UknownError, nullptr) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_UknownError, nullptr) ==
             OIV::ImageLoadStatus::UnknownError);
-    REQUIRE(OIV::ImageLoadController::ClassifyLoadResult(
-                ResultCode::RC_Success, CreateTestImage(OIV::ImageLoadController::MaxSupportedDimension + 1, 1)) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(
+                ResultCode::RC_Success, CreateTestImage(OIV::ImageOpenController::MaxSupportedDimension + 1, 1)) ==
             OIV::ImageLoadStatus::TooLarge);
 }
 
@@ -1237,11 +1275,11 @@ TEST_CASE("ImageLoadPresentationPolicy maps load results to UI decisions", "[App
     REQUIRE_FALSE(presentation.shouldShowMessage);
 }
 
-TEST_CASE("ImageLoadController loads direct files through the injected loader", "[AppCore]")
+TEST_CASE("ImageOpenController loads direct files through the injected loader", "[AppCore]")
 {
     auto fakeLoader     = std::make_unique<FakeImageFileLoader>();
     auto* fakeLoaderPtr = fakeLoader.get();
-    OIV::ImageLoadController controller(std::move(fakeLoader));
+    OIV::ImageOpenController controller(std::move(fakeLoader));
 
     const auto result = controller.LoadFile(L"C:\\images\\..\\images\\a.png", IMCodec::PluginTraverseMode::AnyPlugin,
                                             OIV::ImageLoadContext{800, 600});
@@ -1256,7 +1294,7 @@ TEST_CASE("ImageLoadController loads direct files through the injected loader", 
     REQUIRE(fakeLoaderPtr->lastContext.canvasHeight == 600);
 }
 
-TEST_CASE("FileSessionController sets current index for loaded file in folder", "[AppCore]")
+TEST_CASE("BrowseSessionController sets current index for loaded file in folder", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-load-index-test");
     const auto fileA  = folder / L"a.png";
@@ -1266,28 +1304,22 @@ TEST_CASE("FileSessionController sets current index for loaded file in folder", 
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileB.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"png"}, L"png", residency,
+                                            [](const std::wstring&, IMCodec::ImageSharedPtr) {});
 
-    controller.LoadFileInFolder(fileB.wstring());
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
-    activeProvider.activeFile = fileC.wstring();
-    controller.LoadFileInFolder(fileC.wstring());
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 2);
+    REQUIRE(controller.CommitCurrentFile(fileC.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 2);
     REQUIRE(controller.IsCurrentFile(fileC.wstring()));
 }
 
-TEST_CASE("FileSessionController updates current index after sort order changes", "[AppCore]")
+TEST_CASE("BrowseSessionController updates current index after sort order changes", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-sort-index-test");
     const auto fileA  = folder / L"a.png";
@@ -1297,32 +1329,27 @@ TEST_CASE("FileSessionController updates current index after sort order changes"
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileB.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
+                                            [](const std::wstring&, IMCodec::ImageSharedPtr) {});
 
-    controller.LoadFileInFolder(fileB.wstring());
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
 
     sorter.SetSortType(OIV::FileSorter::SortType::Extension);
-    controller.SortFileList();
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 0);
+    controller.SortFolderFileList();
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 0);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
     sorter.SetSortType(OIV::FileSorter::SortType::Name);
-    controller.SortFileList();
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    controller.SortFolderFileList();
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 }
 
-TEST_CASE("FileSessionController ignores stale navigation success after sort order changes", "[AppCore]")
+TEST_CASE("BrowseSessionController ignores stale navigation success after sort order changes", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-sort-pending-success-test");
     const auto fileA  = folder / L"a.png";
@@ -1332,21 +1359,16 @@ TEST_CASE("FileSessionController ignores stale navigation success after sort ord
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileB.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
     std::mutex completionMutex;
     std::condition_variable completionCv;
-    std::vector<OIV::FileSessionController::CandidateResidencyCompletion> completions;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
             {
                 std::lock_guard lock(completionMutex);
@@ -1363,33 +1385,32 @@ TEST_CASE("FileSessionController ignores stale navigation success after sort ord
         return completions[count - 1];
     };
 
-    controller.LoadFileInFolder(fileB.wstring());
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.JumpFiles(1));
 
     const auto staleCompletion = waitForCompletionCount(1);
     REQUIRE(staleCompletion.fileName == fileC.wstring());
 
     sorter.SetSortType(OIV::FileSorter::SortType::Extension);
-    controller.SortFileList();
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 0);
+    controller.SortFolderFileList();
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 0);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
-    const auto staleResult = controller.OnCandidateResidencyReady(staleCompletion);
-    REQUIRE(staleResult.action == OIV::FileSessionController::CandidateCompletionAction::Ignore);
+    const auto staleResult = controller.OnBrowseCandidateReady(staleCompletion);
+    REQUIRE(staleResult.action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
     REQUIRE(controller.JumpFiles(1));
     const auto newCompletion = waitForCompletionCount(2);
     REQUIRE(newCompletion.fileName == fileA.wstring());
 
-    const auto newResult = controller.OnCandidateResidencyReady(newCompletion);
-    REQUIRE(newResult.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage);
-    activeProvider.activeFile = newResult.fileName;
+    const auto newResult = controller.OnBrowseCandidateReady(newCompletion);
+    REQUIRE(newResult.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage);
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 }
 
-TEST_CASE("FileSessionController ignores stale navigation failure after sort order changes", "[AppCore]")
+TEST_CASE("BrowseSessionController ignores stale navigation failure after sort order changes", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-sort-pending-failure-test");
     const auto fileA  = folder / L"a.png";
@@ -1399,21 +1420,16 @@ TEST_CASE("FileSessionController ignores stale navigation failure after sort ord
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileB.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
+    OIV::ImageResidencyCache residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
     std::mutex completionMutex;
     std::condition_variable completionCv;
-    std::vector<OIV::FileSessionController::CandidateResidencyCompletion> completions;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"jpg", L"png"}, L"jpg;png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
             {
                 std::lock_guard lock(completionMutex);
@@ -1422,11 +1438,11 @@ TEST_CASE("FileSessionController ignores stale navigation failure after sort ord
             completionCv.notify_all();
         });
 
-    controller.LoadFileInFolder(fileB.wstring());
-    REQUIRE(controller.GetFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.JumpFiles(1));
 
-    OIV::FileSessionController::CandidateResidencyCompletion staleCompletion;
+    OIV::BrowseSessionController::BrowseCandidateCompletion staleCompletion;
     {
         std::unique_lock lock(completionMutex);
         REQUIRE(completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.size() == 1; }));
@@ -1436,17 +1452,241 @@ TEST_CASE("FileSessionController ignores stale navigation failure after sort ord
     REQUIRE(staleCompletion.image == nullptr);
 
     sorter.SetSortType(OIV::FileSorter::SortType::Extension);
-    controller.SortFileList();
+    controller.SortFolderFileList();
 
-    const auto staleResult = controller.OnCandidateResidencyReady(staleCompletion);
-    REQUIRE(staleResult.action == OIV::FileSessionController::CandidateCompletionAction::Ignore);
+    const auto staleResult = controller.OnBrowseCandidateReady(staleCompletion);
+    REQUIRE(staleResult.action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
     std::lock_guard lock(completionMutex);
     REQUIRE(completions.size() == 1);
 }
 
-TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
+TEST_CASE("BrowseSessionController accepts normalized pending file identity", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-normalized-pending-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex completionMutex;
+    std::condition_variable completionCv;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
+
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
+        {
+            {
+                std::lock_guard lock(completionMutex);
+                completions.push_back(completion);
+            }
+            completionCv.notify_all();
+        });
+
+    REQUIRE(controller.CommitCurrentFile(fileA.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.JumpFiles(1));
+
+    OIV::BrowseSessionController::BrowseCandidateCompletion completion;
+    {
+        std::unique_lock lock(completionMutex);
+        REQUIRE(
+            completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.empty() == false; }));
+        completion = completions.back();
+    }
+
+    completion.fileName = (folder / L"." / L"b.png").wstring();
+    const auto result   = controller.OnBrowseCandidateReady(completion);
+
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage);
+    REQUIRE(result.fileName == fileB.wstring());
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+}
+
+TEST_CASE("BrowseSessionController ignores stale navigation success after watched folder changes", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-watch-pending-success-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileC  = folder / L"c.png";
+    const auto fileD  = folder / L"aa.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex completionMutex;
+    std::condition_variable completionCv;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
+
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
+        {
+            {
+                std::lock_guard lock(completionMutex);
+                completions.push_back(completion);
+            }
+            completionCv.notify_all();
+        });
+
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
+    REQUIRE(controller.JumpFiles(1));
+
+    OIV::BrowseSessionController::BrowseCandidateCompletion staleCompletion;
+    {
+        std::unique_lock lock(completionMutex);
+        REQUIRE(
+            completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.empty() == false; }));
+        staleCompletion = completions.back();
+    }
+    REQUIRE(staleCompletion.fileName == fileC.wstring());
+
+    TouchFile(fileD);
+    controller.OnFileChanged(
+        {controller.GetActiveFolderID(), OIV::IFileWatcher::FileChangedOp::Add, folder.wstring(), L"aa.png", {}});
+
+    REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 2);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+
+    const auto staleResult = controller.OnBrowseCandidateReady(staleCompletion);
+    REQUIRE(staleResult.action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
+    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+}
+
+TEST_CASE("BrowseSessionController returns removal result when committed current is deleted", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-current-delete-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileC  = folder / L"c.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"png"}, L"png", residency,
+                                            [](const std::wstring&, IMCodec::ImageSharedPtr) {});
+
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+
+    const auto result = controller.OnFileChanged(
+        {controller.GetActiveFolderID(), OIV::IFileWatcher::FileChangedOp::Remove, folder.wstring(), L"b.png", {}});
+
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::CurrentFileRemoved);
+    REQUIRE(result.fileName == fileB.wstring());
+    REQUIRE(controller.GetCommittedCurrentFile().empty());
+    REQUIRE(controller.GetFolderFileList().GetSize() == 2);
+}
+
+TEST_CASE("BrowseSessionController returns unsupported result when committed current is renamed to unsupported type",
+          "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-current-unsupported-rename-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"png"}, L"png", residency,
+                                            [](const std::wstring&, IMCodec::ImageSharedPtr) {});
+
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+
+    const auto result = controller.OnFileChanged({controller.GetActiveFolderID(),
+                                                  OIV::IFileWatcher::FileChangedOp::Rename, folder.wstring(), L"b.png",
+                                                  L"b.txt"});
+
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::CurrentFileUnsupportedRename);
+    REQUIRE(result.fileName == fileB.wstring());
+    REQUIRE(controller.GetCommittedCurrentFile().empty());
+    REQUIRE(controller.GetFolderFileList().GetSize() == 1);
+}
+
+TEST_CASE("BrowseSessionController commits supported current rename and reloads renamed file", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-current-supported-rename-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    const auto fileD  = folder / L"d.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex loadedMutex;
+    std::condition_variable loadedCv;
+    std::vector<std::wstring> loadedFiles;
+
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"png"}, L"png", residency,
+                                            [&](const std::wstring& fileName, IMCodec::ImageSharedPtr)
+                                            {
+                                                {
+                                                    std::lock_guard lock(loadedMutex);
+                                                    loadedFiles.push_back(fileName);
+                                                }
+                                                loadedCv.notify_all();
+                                            });
+
+    REQUIRE(controller.CommitCurrentFile(fileB.wstring()) == ResultCode::RC_Success);
+
+    const auto result = controller.OnFileChanged({controller.GetActiveFolderID(),
+                                                  OIV::IFileWatcher::FileChangedOp::Rename, folder.wstring(), L"b.png",
+                                                  L"d.png"});
+
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
+    REQUIRE(controller.IsCurrentFile(fileD.wstring()));
+    REQUIRE(controller.GetFolderFileList().GetCurrentItemName() == fileD.wstring());
+
+    std::unique_lock lock(loadedMutex);
+    REQUIRE(loadedCv.wait_for(
+        lock, std::chrono::milliseconds(500),
+        [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileD.wstring()) != loadedFiles.end(); }));
+}
+
+TEST_CASE("BrowseSessionController ignores file watcher events from inactive folders", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-file-session-inactive-watch-test");
+    const auto fileA  = folder / L"a.png";
+    const auto fileB  = folder / L"b.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {L"png"}, L"png", residency,
+                                            [](const std::wstring&, IMCodec::ImageSharedPtr) {});
+
+    REQUIRE(controller.CommitCurrentFile(fileA.wstring()) == ResultCode::RC_Success);
+    const auto sizeBefore = controller.GetFolderFileList().GetSize();
+
+    const auto result = controller.OnFileChanged(
+        {static_cast<OIV::IFileWatcher::FolderID>(controller.GetActiveFolderID() + 1),
+         OIV::IFileWatcher::FileChangedOp::Add,
+         folder.wstring(),
+         L"aa.png",
+         {}});
+
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
+    REQUIRE(controller.GetFolderFileList().GetSize() == sizeBefore);
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+}
+
+TEST_CASE("BrowseSessionController owns folder navigation", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-navigation-test");
     const auto fileA  = folder / L"a.png";
@@ -1456,27 +1696,21 @@ TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileA.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
-    OIV::FileSessionController* controllerPtr = nullptr;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController* controllerPtr = nullptr;
     std::mutex loadedMutex;
     std::condition_variable loadedCv;
     std::vector<std::wstring> loadedFiles;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
-            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
-            if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+            const auto result = controllerPtr->OnBrowseCandidateReady(completion);
+            if (result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage)
             {
-                activeProvider.activeFile = result.fileName;
                 {
                     std::lock_guard lock(loadedMutex);
                     loadedFiles.push_back(result.fileName);
@@ -1494,21 +1728,21 @@ TEST_CASE("FileSessionController owns folder navigation", "[AppCore]")
             [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileName) != loadedFiles.end(); });
     };
 
-    controller.LoadFileInFolder(fileA.wstring());
+    REQUIRE(controller.CommitCurrentFile(fileA.wstring()) == ResultCode::RC_Success);
 
-    REQUIRE(controller.GetFileList().GetSize() == 3);
+    REQUIRE(controller.GetFolderFileList().GetSize() == 3);
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(waitForLoaded(fileB.wstring()));
     REQUIRE(controller.IsCurrentFile(fileB.wstring()));
 
-    REQUIRE(controller.JumpFiles(OIV::FileList::IndexEnd));
+    REQUIRE(controller.JumpFiles(OIV::FolderFileList::IndexEnd));
     REQUIRE(waitForLoaded(fileC.wstring()));
     REQUIRE(controller.IsCurrentFile(fileC.wstring()));
 }
 
-TEST_CASE("FileSessionController skips invalid requested files before committing current", "[AppCore]")
+TEST_CASE("BrowseSessionController skips invalid requested files before committing current", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-skip-invalid-test");
     const auto fileA  = folder / L"a.png";
@@ -1518,28 +1752,22 @@ TEST_CASE("FileSessionController skips invalid requested files before committing
     TouchFile(fileB);
     TouchFile(fileC);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileA.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(
+    OIV::ImageResidencyCache residency(
         std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{fileC.wstring()}), 1);
-    OIV::FileSessionController* controllerPtr = nullptr;
+    OIV::BrowseSessionController* controllerPtr = nullptr;
     std::mutex resultMutex;
     std::condition_variable resultCv;
     std::vector<std::wstring> loadedFiles;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
-            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
-            if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+            const auto result = controllerPtr->OnBrowseCandidateReady(completion);
+            if (result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage)
             {
-                activeProvider.activeFile = result.fileName;
                 {
                     std::lock_guard lock(resultMutex);
                     loadedFiles.push_back(result.fileName);
@@ -1549,7 +1777,7 @@ TEST_CASE("FileSessionController skips invalid requested files before committing
         });
     controllerPtr = &controller;
 
-    controller.LoadFileInFolder(fileA.wstring());
+    REQUIRE(controller.CommitCurrentFile(fileA.wstring()) == ResultCode::RC_Success);
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
@@ -1562,7 +1790,7 @@ TEST_CASE("FileSessionController skips invalid requested files before committing
     REQUIRE(controller.IsCurrentFile(fileC.wstring()));
 }
 
-TEST_CASE("FileSessionController keeps current file when invalid skip search is exhausted", "[AppCore]")
+TEST_CASE("BrowseSessionController keeps current file when invalid skip search is exhausted", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-invalid-exhausted-test");
     const auto fileA  = folder / L"a.png";
@@ -1570,25 +1798,20 @@ TEST_CASE("FileSessionController keeps current file when invalid skip search is 
     TouchFile(fileA);
     TouchFile(fileB);
 
-    ActiveFileProvider activeProvider;
-    activeProvider.activeFile = fileA.wstring();
-
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
-    OIV::FileSessionController* controllerPtr = nullptr;
+    OIV::ImageResidencyCache residency(std::make_unique<SelectiveResidencyProcessor>(std::set<std::wstring>{}), 1);
+    OIV::BrowseSessionController* controllerPtr = nullptr;
     std::mutex resultMutex;
     std::condition_variable resultCv;
     std::vector<std::wstring> failedFiles;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
-            const auto result = controllerPtr->OnCandidateResidencyReady(completion);
-            if (result.action == OIV::FileSessionController::CandidateCompletionAction::ShowFailure)
+            const auto result = controllerPtr->OnBrowseCandidateReady(completion);
+            if (result.action == OIV::BrowseSessionController::BrowseSessionAction::ShowFailure)
             {
                 {
                     std::lock_guard lock(resultMutex);
@@ -1599,7 +1822,7 @@ TEST_CASE("FileSessionController keeps current file when invalid skip search is 
         });
     controllerPtr = &controller;
 
-    controller.LoadFileInFolder(fileA.wstring());
+    REQUIRE(controller.CommitCurrentFile(fileA.wstring()) == ResultCode::RC_Success);
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
@@ -1612,54 +1835,71 @@ TEST_CASE("FileSessionController keeps current file when invalid skip search is 
     REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 }
 
-TEST_CASE("FileSessionController applies folder-load residency completions", "[AppCore]")
+TEST_CASE("BrowseSessionController applies folder-load residency completions", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-folder-load-test");
     const auto fileA  = folder / L"a.png";
     const auto fileB  = folder / L"b.png";
+    TouchFile(fileA);
+    TouchFile(fileB);
 
-    ActiveFileProvider activeProvider;
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex completionMutex;
+    std::condition_variable completionCv;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
 
-    OIV::FileSessionController controller(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {});
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
+        {
+            {
+                std::lock_guard lock(completionMutex);
+                completions.push_back(completion);
+            }
+            completionCv.notify_all();
+        });
 
-    OIV::BrowseResidencyManager::FileListSnapshot snapshot{folder.wstring(),
-                                                           {fileA.wstring(), fileB.wstring()},
-                                                           OIV::BrowseResidencyManager::FileListSnapshot::IndexStart};
+    REQUIRE(controller.RequestFolderLoadResidency(folder.wstring()));
 
-    REQUIRE(controller.OnFolderLoadResidencyReady(snapshot, fileB.wstring(), CreateTestImage()));
-    REQUIRE(controller.GetFileList().GetSize() == 2);
-    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+    OIV::BrowseSessionController::BrowseCandidateCompletion completion;
+    {
+        std::unique_lock lock(completionMutex);
+        REQUIRE(
+            completionCv.wait_for(lock, std::chrono::milliseconds(500), [&] { return completions.empty() == false; }));
+        completion = completions.back();
+    }
 
-    REQUIRE_FALSE(controller.OnFolderLoadResidencyReady(snapshot, fileA.wstring(), nullptr));
-    REQUIRE(controller.IsCurrentFile(fileB.wstring()));
+    REQUIRE(completion.folderLoad);
+    const auto result = controller.OnFolderOpenCandidateReady(completion);
+    REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage);
+    REQUIRE(controller.GetFolderFileList().GetSize() == 2);
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
+
+    completion.image = nullptr;
+    REQUIRE(controller.OnFolderOpenCandidateReady(completion).action ==
+            OIV::BrowseSessionController::BrowseSessionAction::Ignore);
+    REQUIRE(controller.IsCurrentFile(fileA.wstring()));
 }
 
-TEST_CASE("ImageLoadController routes folders to file session", "[AppCore]")
+TEST_CASE("ImageOpenController routes folders to file session", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-image-load-folder-route-test");
     const auto fileA  = folder / L"a.png";
     TouchFile(fileA);
 
-    ActiveFileProvider activeProvider;
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
-    OIV::ImageResidency residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
 
-    OIV::FileSessionController fileSessionController(
-        &activeProvider, &watcher, &sorter, {L"png"}, L"png", residency,
-        [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::FileSessionController::CandidateResidencyCompletion&) {});
+    OIV::BrowseSessionController fileSessionController(
+        &watcher, &sorter, {L"png"}, L"png", residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseSessionController::BrowseCandidateCompletion&) {});
 
     auto fakeLoader     = std::make_unique<FakeImageFileLoader>();
     auto* fakeLoaderPtr = fakeLoader.get();
-    OIV::ImageLoadController controller(std::move(fakeLoader), &fileSessionController);
+    OIV::ImageOpenController controller(std::move(fakeLoader), &fileSessionController);
 
     const auto folderResult = controller.LoadFileOrFolder(folder.wstring(), IMCodec::PluginTraverseMode::NoTraverse,
                                                           {});

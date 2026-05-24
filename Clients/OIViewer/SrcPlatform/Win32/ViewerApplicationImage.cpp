@@ -77,8 +77,8 @@ namespace OIV
 {
     void ViewerApplication::UnloadOpenedImaged()
     {
-        if (fFileSessionController != nullptr)
-            fFileSessionController->InvalidateCurrent();
+        if (fBrowseSessionController != nullptr)
+            fBrowseSessionController->InvalidateCurrent();
         fImageState.ClearAll();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
@@ -278,7 +278,7 @@ namespace OIV
     bool ViewerApplication::LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
         const auto clientSize = fWindow.GetClientSize();
-        return ProcessImageLoadResult(fImageLoadController->LoadFile(
+        return ProcessImageLoadResult(fImageOpenController->LoadFile(
             filePath, loaderFlags, ImageLoadContext{static_cast<int>(clientSize.cx), static_cast<int>(clientSize.cy)}));
     }
 
@@ -294,7 +294,29 @@ namespace OIV
         const ImageLoadPresentation presentation = ImageLoadPresentationPolicy::Decide(loadResult, formattedFilePath);
 
         if (presentation.shouldLoadImage)
+        {
+            if (fBrowseSessionController != nullptr && loadResult.image != nullptr &&
+                loadResult.image->GetImageSource() == ImageSource::File)
+            {
+                const ResultCode commitResult = fBrowseSessionController->CommitCurrentFile(loadResult.normalizedPath);
+                if (commitResult != ResultCode::RC_Success)
+                {
+                    const ImageLoadResult commitFailure{ImageLoadStatus::UnknownError, commitResult,
+                                                        loadResult.normalizedPath, nullptr};
+                    const auto failurePresentation = ImageLoadPresentationPolicy::Decide(commitFailure,
+                                                                                         formattedFilePath);
+                    if (failurePresentation.shouldShowMessage)
+                    {
+                        SetUserMessage(failurePresentation.message,
+                                       static_cast<GroupID>(UserMessageGroups::FailedFileLoad),
+                                       MessageFlags::Persistent);
+                    }
+                    return false;
+                }
+            }
+
             LoadOivImage(loadResult.image);
+        }
 
         if (presentation.shouldShowMessage)
             SetUserMessage(presentation.message, static_cast<GroupID>(UserMessageGroups::FailedFileLoad),
@@ -357,10 +379,6 @@ namespace OIV
             fWindow.SetVisible(true);
             fIsTryToLoadInitialFile = false;
         }
-        else
-        {
-            ProcessLoadedDirectory();
-        }
 
         UpdateOpenImageUI();
 
@@ -407,19 +425,33 @@ namespace OIV
                fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File;
     }
 
-    void ViewerApplication::SortFileList()
+    void ViewerApplication::SortFolderFileList()
     {
-        if (fFileSessionController != nullptr)
+        if (fBrowseSessionController != nullptr)
         {
-            fFileSessionController->SortFileList();
+            fBrowseSessionController->SortFolderFileList();
             UpdateTitle();
         }
     }
 
-    void ViewerApplication::LoadFileInFolder(std::wstring absoluteFilePath)
+    void ViewerApplication::ApplyBrowseSessionResult(const BrowseSessionController::BrowseSessionResult& result)
     {
-        if (fFileSessionController != nullptr)
-            fFileSessionController->LoadFileInFolder(absoluteFilePath);
+        switch (result.action)
+        {
+            case BrowseSessionController::BrowseSessionAction::Ignore:
+                break;
+            case BrowseSessionController::BrowseSessionAction::DisplayImage:
+                OnFileIndexResidencyReady(result.fileName, result.image);
+                break;
+            case BrowseSessionController::BrowseSessionAction::ShowFailure:
+                ProcessImageLoadResult(
+                    {ImageLoadStatus::UnknownError, ResultCode::RC_UknownError, result.fileName, nullptr});
+                break;
+            case BrowseSessionController::BrowseSessionAction::CurrentFileRemoved:
+            case BrowseSessionController::BrowseSessionAction::CurrentFileUnsupportedRename:
+                ProcessRemovalOfOpenedFile(result.fileName);
+                break;
+        }
     }
 
     void ViewerApplication::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
@@ -449,8 +481,9 @@ namespace OIV
                                            DeletedFileRemovalMode::DeletedInternally;
         const bool removeExternalDeletes = (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) ==
                                            DeletedFileRemovalMode::DeletedExternally;
-        const size_t fileCount = fFileSessionController != nullptr ? fFileSessionController->GetFileList().GetSize()
-                                                                   : 0;
+        const size_t fileCount           = fBrowseSessionController != nullptr
+                                               ? fBrowseSessionController->GetFolderFileList().GetSize()
+                                               : 0;
 
         const auto action = FileRemovalPolicy::Decide(GetOpenedFileName(), fileName, fRequestedFileForRemoval,
                                                       removeInternalDeletes, removeExternalDeletes, fileCount);
@@ -461,7 +494,7 @@ namespace OIV
 
             if (action == RemovedFileAction::TryStart)
             {
-                firstJumpSucceeded = JumpFiles(FileList::IndexStart);
+                firstJumpSucceeded = JumpFiles(FolderFileList::IndexStart);
             }
             else if (action == RemovedFileAction::TryNextThenPrevious)
             {
@@ -485,8 +518,8 @@ namespace OIV
     void ViewerApplication::OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs  = *fileChangedEventArgsPtr;
-        const bool hasActiveFolder = fFileSessionController != nullptr;
-        const auto activeFolderID  = hasActiveFolder ? fFileSessionController->GetFileList().GetFolderID()
+        const bool hasActiveFolder = fBrowseSessionController != nullptr;
+        const auto activeFolderID  = hasActiveFolder ? fBrowseSessionController->GetActiveFolderID()
                                                      : IFileWatcher::FolderID{};
 
         switch (FileChangePolicy::Decide(fileChangedEventArgs, hasActiveFolder, activeFolderID, fCOnfigurationFolderID,
@@ -511,21 +544,17 @@ namespace OIV
 
     void ViewerApplication::OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs)
     {
-        fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(InterThreadMessages::FileChanged),
-                           fileChangedEventArgs);
-    }
-
-    void ViewerApplication::ProcessLoadedDirectory()
-    {
-        if (IsOpenedImageIsAFile())
+        if (fIsShuttingDown == false)
         {
-            LoadFileInFolder(GetOpenedFileName());
+            fEventSync.AddData(static_cast<std::underlying_type_t<InterThreadMessages>>(
+                                   InterThreadMessages::FileChanged),
+                               fileChangedEventArgs);
         }
     }
 
     void ViewerApplication::OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image)
     {
-        if (fFileSessionController == nullptr || !fFileSessionController->IsCurrentFile(fileName))
+        if (fBrowseSessionController == nullptr || !fBrowseSessionController->IsCurrentFile(fileName))
         {
             return;
         }
@@ -590,6 +619,11 @@ namespace OIV
                     LL_EXCEPTION_UNEXPECTED_VALUE;
 
                 OnFileChangedImpl(fileChangedEventArgs);
+                BrowseSessionController::BrowseSessionResult result;
+                if (fBrowseSessionController != nullptr)
+                    result = fBrowseSessionController->OnFileChanged(*fileChangedEventArgs);
+                UpdateTitle();
+                ApplyBrowseSessionResult(result);
 
                 break;
             }
@@ -604,18 +638,13 @@ namespace OIV
             {
                 const auto& candidateResidencyReadyData = std::any_cast<const CandidateResidencyReadyData&>(
                     sharedData.data);
-                const auto result = fFileSessionController != nullptr
-                                        ? fFileSessionController->OnCandidateResidencyReady(candidateResidencyReadyData)
-                                        : FileSessionController::CandidateCompletionResult{};
-                if (result.action == FileSessionController::CandidateCompletionAction::LoadImage)
-                {
-                    OnFileIndexResidencyReady(result.fileName, result.image);
-                }
-                else if (result.action == FileSessionController::CandidateCompletionAction::ShowFailure)
-                {
-                    ProcessImageLoadResult(
-                        {ImageLoadStatus::UnknownError, ResultCode::RC_UknownError, result.fileName, nullptr});
-                }
+                const auto result =
+                    fBrowseSessionController != nullptr
+                        ? candidateResidencyReadyData.folderLoad
+                              ? fBrowseSessionController->OnFolderOpenCandidateReady(candidateResidencyReadyData)
+                              : fBrowseSessionController->OnBrowseCandidateReady(candidateResidencyReadyData)
+                        : BrowseSessionController::BrowseSessionResult{};
+                ApplyBrowseSessionResult(result);
                 break;
             }
             case InterThreadMessages::AutoScroll:
@@ -637,9 +666,9 @@ namespace OIV
         }
     }
 
-    bool ViewerApplication::JumpFiles(FileList::index_type step)
+    bool ViewerApplication::JumpFiles(FolderFileList::index_type step)
     {
-        return fFileSessionController != nullptr && fFileSessionController->JumpFiles(step);
+        return fBrowseSessionController != nullptr && fBrowseSessionController->JumpFiles(step);
     }
 
     void ViewerApplication::OnImageReady(IMCodec::ImageSharedPtr image) {}
@@ -904,8 +933,8 @@ namespace OIV
             action       = fFileReloadPolicy.ConfirmReload(mbResult == IDYES);
         }
 
-        if (action == ReloadAction::RequestNow && fFileSessionController != nullptr)
-            fFileSessionController->RequestCurrentFileReload();
+        if (action == ReloadAction::RequestNow && fBrowseSessionController != nullptr)
+            fBrowseSessionController->RequestCurrentFileReload();
     }
 
     void ViewerApplication::ProcessCurrentFileChanged()
@@ -917,7 +946,7 @@ namespace OIV
     bool ViewerApplication::LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
         const auto clientSize = fWindow.GetClientSize();
-        return ProcessImageLoadResult(fImageLoadController->LoadFileOrFolder(
+        return ProcessImageLoadResult(fImageOpenController->LoadFileOrFolder(
             filePath, traverseMode,
             ImageLoadContext{static_cast<int>(clientSize.cx), static_cast<int>(clientSize.cy)}));
     }
@@ -952,8 +981,4 @@ namespace OIV
         }
     }
 
-    FileListStringType ViewerApplication::GetActiveFileName()
-    {
-        return GetOpenedFileName();
-    }
 }  // namespace OIV

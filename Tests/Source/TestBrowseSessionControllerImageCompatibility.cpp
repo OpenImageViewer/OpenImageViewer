@@ -2,10 +2,10 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <OIVAppCore/FileSessionController.h>
+#include <OIVAppCore/BrowseSessionController.h>
 #include <OIVAppCore/IFileWatcher.h>
 #include <OIVShared/FileSorter.h>
-#include <OIVShared/ImageResidency.h>
+#include <OIVShared/ImageResidencyCache.h>
 
 #include <ImageLoader.h>
 
@@ -52,28 +52,6 @@ namespace
         FolderID fFolderID = 11;
         std::wstring fFolder;
         OnFileChangedEventArgsEvent fEvent;
-    };
-
-    class ActiveFileProvider : public OIV::IFileListProvider
-    {
-      public:
-
-        OIV::FileListStringType GetActiveFileName() override
-        {
-            std::lock_guard lock(fMutex);
-            return fActiveFile;
-        }
-
-        void SetActiveFileName(std::wstring fileName)
-        {
-            std::lock_guard lock(fMutex);
-            fActiveFile = std::move(fileName);
-        }
-
-      private:
-
-        std::mutex fMutex;
-        std::wstring fActiveFile;
     };
 
     struct BrowseObserver
@@ -157,7 +135,8 @@ namespace
     {
       public:
 
-        bool ProcessResidencyRequest(const OIV::ImageResidencyKey& key, OIV::ImageResidencyValue& outValue) override
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey& key,
+                                     OIV::ImageResidencyCacheValue& outValue) override
         {
             const auto fileName = std::get<0>(key);
             MarkStarted(fileName);
@@ -257,60 +236,53 @@ namespace
         return processor;
     }
 
-    struct FileSessionControllerFixture
+    struct BrowseSessionControllerFixture
     {
-        FileSessionControllerFixture(const OIV::Tests::GeneratedCorpus& corpus, const std::wstring& initialFile)
+        BrowseSessionControllerFixture(const OIV::Tests::GeneratedCorpus& corpus, const std::wstring& initialFile)
             : residency(MakeControlledProcessor(processor), 4),
               controller(
-                  &activeProvider, &watcher, &sorter, corpus.extensions, corpus.extensionList, residency,
+                  &watcher, &sorter, corpus.extensions, corpus.extensionList, residency,
                   [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+                  { observer.MarkLoaded(fileName, image != nullptr); },
+                  [this](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
                   {
-                      if (image != nullptr)
-                          activeProvider.SetActiveFileName(fileName);
-                      observer.MarkLoaded(fileName, image != nullptr);
-                  },
-                  [](const OIV::BrowseResidencyManager::FileListSnapshot&, const std::wstring&,
-                     IMCodec::ImageSharedPtr) {},
-                  [this](const OIV::FileSessionController::CandidateResidencyCompletion& completion)
-                  {
-                      const auto result = controller.OnCandidateResidencyReady(completion);
-                      if (result.action == OIV::FileSessionController::CandidateCompletionAction::LoadImage)
+                      const auto result = controller.OnBrowseCandidateReady(completion);
+                      if (result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage)
                       {
-                          activeProvider.SetActiveFileName(result.fileName);
                           observer.MarkLoaded(result.fileName, true);
                       }
-                      else if (result.action == OIV::FileSessionController::CandidateCompletionAction::ShowFailure)
+                      else if (result.action == OIV::BrowseSessionController::BrowseSessionAction::ShowFailure)
                       {
                           observer.MarkLoaded(result.fileName, false);
                       }
                   })
         {
-            activeProvider.SetActiveFileName(initialFile);
+            initialFileName = initialFile;
         }
 
-        ~FileSessionControllerFixture() { processor->ReleaseAll(); }
+        ~BrowseSessionControllerFixture() { processor->ReleaseAll(); }
 
-        void LoadFolder() { controller.LoadFileInFolder(activeProvider.GetActiveFileName()); }
+        void LoadFolder() { REQUIRE(controller.CommitCurrentFile(initialFileName) == ResultCode::RC_Success); }
 
-        ActiveFileProvider activeProvider;
+        std::wstring initialFileName;
         FakeFileWatcher watcher;
         OIV::FileSorter sorter;
         ControlledImageMagickResidencyProcessor* processor = nullptr;
-        OIV::ImageResidency residency;
+        OIV::ImageResidencyCache residency;
         BrowseObserver observer;
-        OIV::FileSessionController controller;
+        OIV::BrowseSessionController controller;
     };
 }  // namespace
 
-TEST_CASE("FileSessionController sequentially browses ImageMagick generated files",
+TEST_CASE("BrowseSessionController sequentially browses ImageMagick generated files",
           "[ImageCompatibility][Integration][Browse]")
 {
     const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
     const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
-    FileSessionControllerFixture fixture(corpus, files.front());
+    BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
-    REQUIRE(fixture.controller.GetFileList().GetSize() == OIV::Tests::BuildBrowsingFileList(corpus).size());
+    REQUIRE(fixture.controller.GetFolderFileList().GetSize() == OIV::Tests::BuildBrowsingFolderFileList(corpus).size());
     REQUIRE(fixture.controller.IsCurrentFile(files[0]));
 
     auto releaseAndWaitForCurrent = [&](const std::wstring& expectedFile)
@@ -340,12 +312,12 @@ TEST_CASE("FileSessionController sequentially browses ImageMagick generated file
     }
 }
 
-TEST_CASE("FileSessionController ignores stale pending loads during rapid ImageMagick browsing",
+TEST_CASE("BrowseSessionController ignores stale pending loads during rapid ImageMagick browsing",
           "[ImageCompatibility][Integration][Browse]")
 {
     const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
     const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
-    FileSessionControllerFixture fixture(corpus, files.front());
+    BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
     fixture.controller.RequestCurrentFileReload();
@@ -356,7 +328,7 @@ TEST_CASE("FileSessionController ignores stale pending loads during rapid ImageM
 
     REQUIRE(fixture.controller.JumpFiles(1));
     REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == files[0]);
+    REQUIRE(fixture.controller.GetFolderFileList().GetCurrentItemName() == files[0]);
 
     REQUIRE(fixture.processor->WaitForStarted(files[1]));
 
@@ -370,12 +342,12 @@ TEST_CASE("FileSessionController ignores stale pending loads during rapid ImageM
     REQUIRE(fixture.controller.IsCurrentFile(files[1]));
 }
 
-TEST_CASE("FileSessionController ignores stale forward load after rapid backward ImageMagick browsing",
+TEST_CASE("BrowseSessionController ignores stale forward load after rapid backward ImageMagick browsing",
           "[ImageCompatibility][Integration][Browse]")
 {
     const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
     const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
-    FileSessionControllerFixture fixture(corpus, files.front());
+    BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
     fixture.controller.RequestCurrentFileReload();
@@ -408,12 +380,12 @@ TEST_CASE("FileSessionController ignores stale forward load after rapid backward
     REQUIRE(fixture.controller.IsCurrentFile(files[0]));
 }
 
-TEST_CASE("FileSessionController recovers after browsing to a bad ImageMagick generated file",
+TEST_CASE("BrowseSessionController recovers after browsing to a bad ImageMagick generated file",
           "[ImageCompatibility][Integration][Browse]")
 {
     const auto& corpus              = OIV::Tests::EnsureImageMagickCorpus();
     const auto [validFile, badFile] = OIV::Tests::FindValidFileBeforeBadFile(corpus);
-    FileSessionControllerFixture fixture(corpus, validFile);
+    BrowseSessionControllerFixture fixture(corpus, validFile);
 
     fixture.LoadFolder();
     REQUIRE(fixture.controller.IsCurrentFile(validFile));
@@ -425,7 +397,7 @@ TEST_CASE("FileSessionController recovers after browsing to a bad ImageMagick ge
     fixture.observer.Clear();
 
     REQUIRE(fixture.controller.JumpFiles(1));
-    REQUIRE(fixture.controller.GetFileList().GetCurrentItemName() == validFile);
+    REQUIRE(fixture.controller.GetFolderFileList().GetCurrentItemName() == validFile);
     REQUIRE(fixture.processor->WaitForStarted(badFile));
 
     fixture.processor->ReleaseAll();

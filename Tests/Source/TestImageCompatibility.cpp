@@ -2,7 +2,7 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <OIVAppCore/ImageLoadController.h>
+#include <OIVAppCore/ImageOpenController.h>
 
 #include <ImageLoader.h>
 #include <OIVImage/OIVFileImage.h>
@@ -26,7 +26,7 @@ namespace
     {
         auto imageLoader = std::make_unique<IMCodec::ImageLoader>();
         auto loader      = std::make_unique<OIV::OIVImageFileLoader>(*imageLoader);
-        OIV::ImageLoadController controller(std::move(loader));
+        OIV::ImageOpenController controller(std::move(loader));
         return controller.LoadFile(filePath,
                                    IMCodec::PluginTraverseMode::AnyFileType | IMCodec::PluginTraverseMode::AnyPlugin,
                                    OIV::ImageLoadContext{1920, 1080});
@@ -135,8 +135,8 @@ namespace
         const auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                    std::chrono::steady_clock::now().time_since_epoch())
                                    .count();
-        const auto fileName = std::string("oiv-tiff-rgb-two-extra-samples-") + std::to_string(timestamp) + "-" +
-                              std::to_string(nextFileId++) + ".tiff";
+        const auto fileName  = std::string("oiv-tiff-rgb-two-extra-samples-") + std::to_string(timestamp) + "-" +
+                               std::to_string(nextFileId++) + ".tiff";
         return ScopedTempFile(std::filesystem::temp_directory_path() / fileName);
     }
 
@@ -254,7 +254,7 @@ TEST_CASE("ImageLoader exposes unmapped TIFF extra samples as subimages", "[Imag
     REQUIRE(loadedImage->GetSubImage(2)->GetRowPitchInBytes() == 2);
 }
 
-TEST_CASE("ImageLoadController rejects unsupported ImageMagick corpus variants", "[ImageCompatibility][Integration]")
+TEST_CASE("ImageOpenController rejects unsupported ImageMagick corpus variants", "[ImageCompatibility][Integration]")
 {
     const auto& corpus         = OIV::Tests::EnsureImageMagickCorpus();
     bool foundUnsupportedImage = false;
@@ -279,7 +279,7 @@ TEST_CASE("ImageLoadController rejects unsupported ImageMagick corpus variants",
         SUCCEED("ImageMagick corpus has no variants marked as unsupported.");
 }
 
-TEST_CASE("ImageLoadController rejects bad ImageMagick corpus files", "[ImageCompatibility][Integration]")
+TEST_CASE("ImageOpenController rejects bad ImageMagick corpus files", "[ImageCompatibility][Integration]")
 {
     const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
 

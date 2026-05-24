@@ -37,12 +37,11 @@
 #include "Win32/FileWatcherWin32.h"
 #include "ViewerRenderPort.h"
 #include <OIVAppCore/AppSettingsPolicy.h>
-#include <OIVAppCore/FileList.h>
+#include <OIVAppCore/FolderFileList.h>
 #include <OIVAppCore/FileReloadPolicy.h>
-#include <OIVAppCore/FileSessionController.h>
+#include <OIVAppCore/BrowseSessionController.h>
 #include <OIVAppCore/FileRemovalPolicy.h>
-#include <OIVAppCore/IFileListProvider.h>
-#include <OIVAppCore/ImageLoadController.h>
+#include <OIVAppCore/ImageOpenController.h>
 #include <OIVAppCore/ImageState.h>
 #include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionRect.h>
@@ -59,7 +58,7 @@
 #include <vector>
 #include "Win32/EventSync.h"
 #include "InterThreadMessages.h"
-#include <OIVShared/ImageResidency.h>
+#include <OIVShared/ImageResidencyCache.h>
 namespace OIV
 {
     enum class ImageSizeType
@@ -137,7 +136,7 @@ namespace OIV
         }
     };
 
-    class ViewerApplication : public IFileListProvider
+    class ViewerApplication
     {
       public:
 
@@ -217,7 +216,7 @@ namespace OIV
         HWND GetWindowHandle() const;
         void UpdateTitle();
         // bool JumpTo(FileIndexType fileIndex);
-        bool JumpFiles(FileList::index_type step);
+        bool JumpFiles(FolderFileList::index_type step);
         void ToggleFullScreen(bool multiFullScreen);
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
@@ -262,7 +261,6 @@ namespace OIV
         const std::wstring& GetOpenedFileName() const;
         bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
-        void LoadFileInFolder(std::wstring filePath);
         void TransformImage(IMUtil::AxisAlignedRotation transform, IMUtil::AxisAlignedFlip flip);
         void LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height, uint32_t rowPitch,
                      IMCodec::TexelFormat texelFormat);
@@ -298,7 +296,6 @@ namespace OIV
         void CountColorsAsync();
         void SetImageInfoVisible(bool visible);
         bool GetImageInfoVisible() const;
-        void ProcessLoadedDirectory();
         void PerformReloadFile(const std::wstring& requestedFile);
         void HandleReloadAction(ReloadAction action, const std::wstring& requestedFile);
         void ShowSettings();
@@ -395,7 +392,7 @@ namespace OIV
         bool fRockerGestureActivate  = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
         IMCodec::ImageLoader fImageLoader;
-        std::unique_ptr<ImageLoadController> fImageLoadController;
+        std::unique_ptr<ImageOpenController> fImageOpenController;
         //::Win32::ClipboardFormatType fRTFFormatID {};
         //::Win32::ClipboardFormatType fHTMLFormatID {};
 
@@ -427,7 +424,6 @@ namespace OIV
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
-        Win32::FileWatcherWin32 fFileWatcher;
         std::wstring fCurrentFolderWatched;
         std::set<std::wstring> fKnownFileTypesSet;
         std::wstring fKnownFileTypes;
@@ -445,7 +441,8 @@ namespace OIV
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const;
         void QueueResampling();
-        void SortFileList();
+        void SortFolderFileList();
+        void ApplyBrowseSessionResult(const BrowseSessionController::BrowseSessionResult& result);
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
         std::shared_ptr<OIVFileImage> fInitialFile;
@@ -471,12 +468,12 @@ namespace OIV
         ::Win32::Timer fContextMenuTimer;
         ::Win32::Timer fSequencerTimer;
         FileSorter fFileSorter;
+        // Destruction order matters: the browse session unregisters folders from the watcher, and the watcher may
+        // still suppress callbacks through fIsShuttingDown / fEventSync while shutting down. Keep this order.
         EventSync fEventSync;
         std::atomic_bool fIsShuttingDown = false;
-        ImageResidency fImageResidency;
-        std::unique_ptr<FileSessionController> fFileSessionController;
-
-        // FileListProvider
-        virtual FileListStringType GetActiveFileName() override;
+        ImageResidencyCache fImageResidencyCache;
+        Win32::FileWatcherWin32 fFileWatcher;
+        std::unique_ptr<BrowseSessionController> fBrowseSessionController;
     };
 }  // namespace OIV

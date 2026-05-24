@@ -91,10 +91,11 @@ namespace OIV
     {
         Pan(panAmount);
 
-        const PanCursorHint cursorHint = InputGesturePolicy::CursorHintForPan(panAmount);
-        const Win32::MainWindow::CursorType cursorType =
-            cursorHint.sizeAll ? Win32::MainWindow::CursorType::SizeAll
-                               : static_cast<Win32::MainWindow::CursorType>(cursorHint.directionIndex + 2);
+        const PanCursorHint cursorHint                 = InputGesturePolicy::CursorHintForPan(panAmount);
+        const Win32::MainWindow::CursorType cursorType = cursorHint.sizeAll
+                                                             ? Win32::MainWindow::CursorType::SizeAll
+                                                             : static_cast<Win32::MainWindow::CursorType>(
+                                                                   cursorHint.directionIndex + 2);
         fWindow.SetCursorType(cursorType);
     }
 
@@ -179,9 +180,9 @@ namespace OIV
     void ViewerApplication::UpdateRenderViewParams()
     {
         CmdRequestTexelGrid grid;
-        grid.gridSize = fIsGridEnabled ? 1.0 : 0.0;
+        grid.gridSize         = fIsGridEnabled ? 1.0 : 0.0;
         grid.transparencyMode = fTransparencyMode;
-        grid.generateMipmaps = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
+        grid.generateMipmaps  = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
         if (fRenderGateway.SetTexelGrid(grid) == RC_Success)
         {
             fRefreshOperation.Queue();
@@ -216,7 +217,7 @@ namespace OIV
         {
             CommandManager::CommandRequest request;
             request.displayName = "Zoom";
-            request.args = CommandManager::CommandArgs::FromString(
+            request.args        = CommandManager::CommandArgs::FromString(
                 "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY));
             request.commandName = "cmd_zoom";
             ExecuteCommand(request);
@@ -239,7 +240,7 @@ namespace OIV
             if (clientSize.cx > 0 && clientSize.cy > 0)  // window might minimized.
             {
                 const double zoom = ViewTransformController::FitScale(PointF64(clientSize.cx, clientSize.cy),
-                                                                       GetImageSize(ImageSizeType::Transformed));
+                                                                      GetImageSize(ImageSizeType::Transformed));
                 fRefreshOperation.Begin();
                 fIsLockFitToScreen = true;
                 SetZoomInternal(zoom, -1, -1, true);
@@ -252,7 +253,7 @@ namespace OIV
     void ViewerApplication::UpdateSelectionRectText()
     {
         OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
-        auto selectionSizeStr = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
+        auto selectionSizeStr           = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
 
         if (selectionSizeText == nullptr)
         {
@@ -363,9 +364,7 @@ namespace OIV
         if (fIsLockFitToScreen == false)
         {
             // We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            zoomValue = ViewActionController::ResolveZoomValue(zoomValue,
-                                                               fIsLockFitToScreen,
-                                                               GetMinimumPixelSize(),
+            zoomValue = ViewActionController::ResolveZoomValue(zoomValue, fIsLockFitToScreen, GetMinimumPixelSize(),
                                                                fMaxPixelSize);
         }
 
@@ -374,11 +373,11 @@ namespace OIV
             // Save image selection before view change
             fPreserveImageSpaceSelection.Begin();
 
-            const PointI32 clientZoomPoint =
-                ViewActionController::ResolveZoomPoint({clientX, clientY}, GetCanvasCenter());
+            const PointI32 clientZoomPoint = ViewActionController::ResolveZoomPoint({clientX, clientY},
+                                                                                    GetCanvasCenter());
 
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
-            PointF64 offset = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
+            PointF64 offset         = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
 
             QueueResampling();
 
@@ -389,8 +388,7 @@ namespace OIV
             RefreshImage();
 
             // preserve offset lock (image centering) if zoom is realtive to the center of the image
-            SetOffset(GetOffset() + offset,
-                      ViewActionController::ShouldPreserveOffsetLockForZoom(clientX, clientY));
+            SetOffset(GetOffset() + offset, ViewActionController::ShouldPreserveOffsetLockForZoom(clientX, clientY));
             fPreserveImageSpaceSelection.End();
 
             fRefreshOperation.End();
@@ -495,8 +493,8 @@ namespace OIV
         {
             fRefreshOperation.Begin();
             using namespace LLUtils;
-            PointF64 offset =
-                ViewTransformController::CenterOffset(GetCanvasCenter(), GetImageSize(ImageSizeType::Visible));
+            PointF64 offset = ViewTransformController::CenterOffset(GetCanvasCenter(),
+                                                                    GetImageSize(ImageSizeType::Visible));
             // Lock offset when centering
             fIsOffsetLocked = true;
             SetOffset(offset, true);
@@ -544,6 +542,4 @@ namespace OIV
             }
         }
     }
-
-    // IFileListWatcher
 }  // namespace OIV

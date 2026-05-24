@@ -272,13 +272,13 @@ namespace OIV
             {
                 SetSlideShowEnabled(false);
 
-                if (fFileSessionController == nullptr)
+                if (fBrowseSessionController == nullptr)
                     return;
 
-                const auto& fileList = fFileSessionController->GetFileList();
+                const auto& fileList = fBrowseSessionController->GetFolderFileList();
                 bool foundFile       = JumpFiles(1) ||
                                        (fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(), fileList.GetSize()) &&
-                                        JumpFiles(FileList::IndexStart));
+                                        JumpFiles(FolderFileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
             });
@@ -313,13 +313,8 @@ namespace OIV
 
         fFileWatcher.FileChangedEvent.Add(std::bind(&ViewerApplication::OnFileChanged, this, std::placeholders::_1));
 
-        // If a file has been succesfuly loaded, index all the file in the folder
-
-        // IFileListProvider* fileListProvider, IFileWatcher* fileWatcher, FileSorter fileSorter,
-        //          FileListStringSetType knownnFileTypesSet, FileListStringType knownFileTypes
-
-        fFileSessionController = std::make_unique<FileSessionController>(
-            this, &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes, fImageResidency,
+        fBrowseSessionController = std::make_unique<BrowseSessionController>(
+            &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes, fImageResidencyCache,
             [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
             {
                 if (!fIsShuttingDown)
@@ -329,8 +324,7 @@ namespace OIV
                                        FileIndexResidencyReadyData{fileName, image});
                 }
             },
-            [](const BrowseResidencyManager::FileListSnapshot&, const std::wstring&, IMCodec::ImageSharedPtr) {},
-            [this](const FileSessionController::CandidateResidencyCompletion& completion)
+            [this](const BrowseSessionController::BrowseCandidateCompletion& completion)
             {
                 if (!fIsShuttingDown)
                 {
@@ -339,9 +333,10 @@ namespace OIV
                                        CandidateResidencyReadyData{completion});
                 }
             });
-        fImageLoadController->SetFileSessionController(fFileSessionController.get());
+        fImageOpenController->SetBrowseSessionController(fBrowseSessionController.get());
 
-        ProcessLoadedDirectory();
+        if (IsOpenedImageIsAFile())
+            (void) fBrowseSessionController->CommitCurrentFile(GetOpenedFileName());
         UpdateTitle();
 
         AddCommandsAndKeyBindings();
