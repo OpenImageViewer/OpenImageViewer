@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/CommandManager.h>
 
 #include <ImageUtil/AxisAlignedTransform.h>
@@ -11,7 +13,7 @@ namespace OIV
     struct AxisAlignedTransformCommand
     {
         IMUtil::AxisAlignedRotation rotation = IMUtil::AxisAlignedRotation::None;
-        IMUtil::AxisAlignedFlip flip = IMUtil::AxisAlignedFlip::None;
+        IMUtil::AxisAlignedFlip flip         = IMUtil::AxisAlignedFlip::None;
 
         bool HasTransform() const
         {
@@ -22,8 +24,9 @@ namespace OIV
     class ImageTransformCommandPolicy
     {
       public:
+
         static AxisAlignedTransformCommand ParseAxisAlignedTransform(const CommandManager::CommandArgs& args);
-        static std::wstring FormatAxisAlignedTransformResult(IMUtil::AxisAlignedRotation rotation,
-                                                             IMUtil::AxisAlignedFlip flip);
+        static LLUtils::native_string_type FormatAxisAlignedTransformResult(IMUtil::AxisAlignedRotation rotation,
+                                                                            IMUtil::AxisAlignedFlip flip);
     };
-}
+}  // namespace OIV

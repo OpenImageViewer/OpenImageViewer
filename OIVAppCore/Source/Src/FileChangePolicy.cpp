@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/FileChangePolicy.h>
 
 #include <filesystem>
@@ -7,12 +8,14 @@ namespace OIV
     FileChangeAction FileChangePolicy::Decide(const IFileWatcher::FileChangedEventArgs& eventArgs, bool hasActiveFolder,
                                               IFileWatcher::FolderID activeFolderID,
                                               IFileWatcher::FolderID configurationFolderID,
-                                              const std::wstring& openedFile)
+                                              const LLUtils::native_string_type& openedFile)
     {
         if (hasActiveFolder && eventArgs.folderID == activeFolderID)
         {
-            const std::wstring changedFile = (std::filesystem::path(eventArgs.folder) / eventArgs.fileName).wstring();
-            const std::wstring renamedFile = (std::filesystem::path(eventArgs.folder) / eventArgs.fileName2).wstring();
+            const LLUtils::native_string_type changedFile =
+                (std::filesystem::path(eventArgs.folder) / eventArgs.fileName).native();
+            const LLUtils::native_string_type renamedFile =
+                (std::filesystem::path(eventArgs.folder) / eventArgs.fileName2).native();
 
             switch (eventArgs.fileOp)
             {
@@ -30,7 +33,8 @@ namespace OIV
         }
 
         if (eventArgs.folderID == configurationFolderID)
-            return eventArgs.fileName == L"Settings.json" ? FileChangeAction::ReloadSettings : FileChangeAction::Ignore;
+            return eventArgs.fileName == LLUTILS_TEXT("Settings.json") ? FileChangeAction::ReloadSettings
+                                                                       : FileChangeAction::Ignore;
 
         return FileChangeAction::Ignore;
     }

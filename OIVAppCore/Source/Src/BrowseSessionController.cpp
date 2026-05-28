@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/BrowseSessionController.h>
 
 #include <filesystem>
@@ -7,9 +8,9 @@ namespace OIV
 {
     namespace
     {
-        std::wstring NormalizeFileIdentity(const std::wstring& fileName)
+        LLUtils::native_string_type NormalizeFileIdentity(const LLUtils::native_string_type& fileName)
         {
-            return std::filesystem::path(fileName).lexically_normal().wstring();
+            return std::filesystem::path(fileName).lexically_normal().native();
         }
 
         class ScopedFileIndexChangeSuppression
@@ -44,7 +45,7 @@ namespace OIV
           fCurrentImageReadyCallback(std::move(currentImageReadyCallback)),
           fCandidateImageReadyCallback(std::move(candidateImageReadyCallback)),
           fBrowseResidencyController(imageResidency,
-                                     [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+                                     [this](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
                                      {
                                          if (fCurrentImageReadyCallback)
                                              fCurrentImageReadyCallback(fileName, std::move(image));
@@ -81,19 +82,20 @@ namespace OIV
             OnFileIndexChanged(currentIndex, previousIndex);
     }
 
-    void BrowseSessionController::BeginDirectOpen(const std::wstring& normalizedFilePath)
+    void BrowseSessionController::BeginDirectOpen(const LLUtils::native_string_type& normalizedFilePath)
     {
         ClearPendingBrowseRequest();
         const auto normalizedPath = std::filesystem::path(normalizedFilePath).lexically_normal();
-        fBrowseResidencyController.SetWorkingFolder(normalizedPath.parent_path().wstring());
+        fBrowseResidencyController.SetWorkingFolder(normalizedPath.parent_path().native());
         fBrowseResidencyController.InvalidateCurrent();
     }
 
-    ResultCode BrowseSessionController::CommitCurrentFile(const std::wstring& absoluteFilePath, bool refreshResidency)
+    ResultCode BrowseSessionController::CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath,
+                                                          bool refreshResidency)
     {
         const auto normalizedPath = std::filesystem::path(absoluteFilePath).lexically_normal();
-        const auto normalizedFile = normalizedPath.wstring();
-        const auto folderPath     = normalizedPath.parent_path().wstring();
+        const auto normalizedFile = normalizedPath.native();
+        const auto folderPath     = normalizedPath.parent_path().native();
 
         if (!std::filesystem::exists(normalizedPath))
             return ResultCode::RC_FileNotFound;
@@ -162,22 +164,22 @@ namespace OIV
                                          requestedIndex, direction, false);
     }
 
-    bool BrowseSessionController::RequestFolderLoadResidency(const std::wstring& folderPath)
+    bool BrowseSessionController::RequestFolderLoadResidency(const LLUtils::native_string_type& folderPath)
     {
         auto fileList = fFolderFileList->GetSupportedFolderFileListInFolder(folderPath);
         if (fileList.empty())
             return false;
 
-        const auto normalizedFolderPath = std::filesystem::path(folderPath).lexically_normal().wstring();
+        const auto normalizedFolderPath = std::filesystem::path(folderPath).lexically_normal().native();
         return StartPendingBrowseRequest(normalizedFolderPath, std::move(fileList), 0, 1, true);
     }
 
-    bool BrowseSessionController::IsCurrentFile(const std::wstring& fileName) const
+    bool BrowseSessionController::IsCurrentFile(const LLUtils::native_string_type& fileName) const
     {
         return NormalizeFileIdentity(fileName) == fCommittedCurrentFile;
     }
 
-    const std::wstring& BrowseSessionController::GetCommittedCurrentFile() const
+    const LLUtils::native_string_type& BrowseSessionController::GetCommittedCurrentFile() const
     {
         return fCommittedCurrentFile;
     }
@@ -197,9 +199,9 @@ namespace OIV
             ClearPendingBrowseRequest();
 
         const auto absPath = NormalizeFileIdentity(
-            (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).wstring());
+            (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).native());
         const auto absPath2 = NormalizeFileIdentity(
-            (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).wstring());
+            (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).native());
 
         if (fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::WatchedFolderRemoved)
         {
@@ -293,7 +295,7 @@ namespace OIV
         fBrowseResidencyController.RefreshCommittedCurrent(fFolderFileList->CreateSnapshot());
     }
 
-    void BrowseSessionController::WatchFolder(const std::wstring& folderPath)
+    void BrowseSessionController::WatchFolder(const LLUtils::native_string_type& folderPath)
     {
         if (fFileWatcher == nullptr)
             return;
@@ -316,7 +318,7 @@ namespace OIV
         fActiveWatchedFolder.clear();
     }
 
-    bool BrowseSessionController::StartPendingBrowseRequest(std::wstring folderPath,
+    bool BrowseSessionController::StartPendingBrowseRequest(LLUtils::native_string_type folderPath,
                                                             FolderFileList::list_string_type files,
                                                             FolderFileList::index_type requestedIndex, int direction,
                                                             bool folderLoad)
@@ -355,9 +357,9 @@ namespace OIV
 
         fBrowseResidencyController.RequestCandidateResidency(
             fPendingBrowseRequest.requestedFile, fPendingBrowseRequest.requestedIndex, fPendingBrowseRequest.generation,
-            [callback   = fCandidateImageReadyCallback,
-             folderLoad = fPendingBrowseRequest.folderLoad](std::uint64_t generation, std::ptrdiff_t index,
-                                                            const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+            [callback = fCandidateImageReadyCallback, folderLoad = fPendingBrowseRequest.folderLoad](
+                std::uint64_t generation, std::ptrdiff_t index, const LLUtils::native_string_type& fileName,
+                IMCodec::ImageSharedPtr image)
             {
                 callback(BrowseCandidateCompletion{generation, static_cast<FolderFileList::index_type>(index), fileName,
                                                    std::move(image), folderLoad});

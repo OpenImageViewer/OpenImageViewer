@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <catch2/catch_all.hpp>
 
 #include <Image.h>
@@ -158,7 +159,7 @@ namespace
     {
       public:
 
-        explicit SelectiveResidencyProcessor(std::vector<std::wstring> successfulFiles)
+        explicit SelectiveResidencyProcessor(std::vector<LLUtils::native_string_type> successfulFiles)
             : fSuccessfulFiles(std::move(successfulFiles))
         {
         }
@@ -180,7 +181,7 @@ namespace
 
       private:
 
-        std::vector<std::wstring> fSuccessfulFiles;
+        std::vector<LLUtils::native_string_type> fSuccessfulFiles;
         std::atomic<int> fCallCount = 0;
     };
 
@@ -413,30 +414,32 @@ TEST_CASE("BrowseResidencyController predicts forward and bounds retained reside
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
-    std::vector<std::wstring> currentReadyFiles;
+    std::vector<LLUtils::native_string_type> currentReadyFiles;
 
     OIV::BrowseResidencyController manager(
         residency,
-        [&](const std::wstring& fileName, IMCodec::ImageSharedPtr)
+        [&](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr)
         {
             std::lock_guard lock(callbackMutex);
             currentReadyFiles.push_back(fileName);
             callbackCv.notify_all();
         },
-        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type&,
            IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a",
-                                                                          {L"a", L"b", L"c", L"d", L"e", L"f", L"g"},
-                                                                          0};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{
+        LLUTILS_TEXT("folder-a"),
+        {LLUTILS_TEXT("a"), LLUTILS_TEXT("b"), LLUTILS_TEXT("c"), LLUTILS_TEXT("d"), LLUTILS_TEXT("e"),
+         LLUTILS_TEXT("f"), LLUTILS_TEXT("g")},
+        0};
 
     manager.RefreshCommittedCurrent(fileList);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"b", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("b"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"c", OIV::ImageResidencyCacheItemType::FullSize) ==
+                   residency.getResidencyState(LLUTILS_TEXT("c"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
@@ -446,7 +449,7 @@ TEST_CASE("BrowseResidencyController predicts forward and bounds retained reside
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"d", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("d"), OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
@@ -456,7 +459,7 @@ TEST_CASE("BrowseResidencyController predicts forward and bounds retained reside
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"e", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("e"), OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
@@ -466,9 +469,9 @@ TEST_CASE("BrowseResidencyController predicts forward and bounds retained reside
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"f", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("f"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"a", OIV::ImageResidencyCacheItemType::FullSize) ==
+                   residency.getResidencyState(LLUTILS_TEXT("a"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident;
         }));
 
@@ -490,19 +493,21 @@ TEST_CASE("BrowseResidencyController reverses prediction direction and reloads t
 
     std::atomic<int> currentReadyCount = 0;
     OIV::BrowseResidencyController manager(
-        residency, [&](const std::wstring&, IMCodec::ImageSharedPtr) { ++currentReadyCount; },
-        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+        residency, [&](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) { ++currentReadyCount; },
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type&,
            IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a",
-                                                                          {L"a", L"b", L"c", L"d", L"e", L"f"},
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{LLUTILS_TEXT("folder-a"),
+                                                                          {LLUTILS_TEXT("a"), LLUTILS_TEXT("b"),
+                                                                           LLUTILS_TEXT("c"), LLUTILS_TEXT("d"),
+                                                                           LLUTILS_TEXT("e"), LLUTILS_TEXT("f")},
                                                                           4};
 
     manager.CommitNavigation(fileList, 3);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"f", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("f"), OIV::ImageResidencyCacheItemType::FullSize) ==
                    OIV::ResidencyState::Resident;
         }));
 
@@ -512,9 +517,9 @@ TEST_CASE("BrowseResidencyController reverses prediction direction and reloads t
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"c", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("c"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"b", OIV::ImageResidencyCacheItemType::FullSize) ==
+                   residency.getResidencyState(LLUTILS_TEXT("b"), OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
@@ -534,27 +539,29 @@ TEST_CASE("BrowseResidencyController reports current image load failures", "[Res
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
-    std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> currentReadyResults;
+    std::vector<std::pair<LLUtils::native_string_type, IMCodec::ImageSharedPtr>> currentReadyResults;
 
     OIV::BrowseResidencyController manager(
         residency,
-        [&](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+        [&](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
         {
             std::lock_guard lock(callbackMutex);
             currentReadyResults.emplace_back(fileName, image);
             callbackCv.notify_all();
         },
-        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type&,
            IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{L"folder-a", {L"failed-image"}, 0};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileList{LLUTILS_TEXT("folder-a"),
+                                                                          {LLUTILS_TEXT("failed-image")},
+                                                                          0};
 
     manager.ReloadCurrent(fileList);
 
     std::unique_lock callbackLock(callbackMutex);
     REQUIRE(callbackCv.wait_for(callbackLock, std::chrono::milliseconds(500),
                                 [&] { return currentReadyResults.empty() == false; }));
-    REQUIRE(currentReadyResults.front().first == L"failed-image");
+    REQUIRE(currentReadyResults.front().first == LLUTILS_TEXT("failed-image"));
     REQUIRE(currentReadyResults.front().second == nullptr);
 }
 
@@ -564,39 +571,45 @@ TEST_CASE("BrowseResidencyController ties residency eviction to working folder",
     OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     OIV::BrowseResidencyController manager(
-        residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring&,
+        residency, [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
+        [](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type&,
            IMCodec::ImageSharedPtr) {});
 
-    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListA{L"folder-a",
-                                                                           {L"folder-a\\a", L"folder-a\\b",
-                                                                            L"folder-a\\c", L"folder-a\\d"},
-                                                                           1};
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListA{
+        LLUTILS_TEXT("folder-a"),
+        {LLUTILS_TEXT("folder-a\\a"), LLUTILS_TEXT("folder-a\\b"), LLUTILS_TEXT("folder-a\\c"),
+         LLUTILS_TEXT("folder-a\\d")},
+        1};
 
     manager.RefreshCommittedCurrent(fileListA);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("folder-a\\c"),
+                                               OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident &&
-                   residency.getResidencyState(L"folder-a\\d", OIV::ImageResidencyCacheItemType::FullSize) ==
+                   residency.getResidencyState(LLUTILS_TEXT("folder-a\\d"),
+                                               OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::Resident;
         }));
 
     manager.InvalidateCurrent();
-    REQUIRE(residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
+    REQUIRE(residency.getResidencyState(LLUTILS_TEXT("folder-a\\c"), OIV::ImageResidencyCacheItemType::FullSize) ==
             OIV::ResidencyState::Resident);
 
-    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListB{L"folder-b",
-                                                                           {L"folder-b\\a", L"folder-b\\b"},
+    const OIV::BrowseResidencyController::FolderFileListSnapshot fileListB{LLUTILS_TEXT("folder-b"),
+                                                                           {LLUTILS_TEXT("folder-b\\a"),
+                                                                            LLUTILS_TEXT("folder-b\\b")},
                                                                            0};
     manager.RefreshCommittedCurrent(fileListB);
     REQUIRE(WaitUntil(
         [&]
         {
-            return residency.getResidencyState(L"folder-a\\c", OIV::ImageResidencyCacheItemType::FullSize) ==
+            return residency.getResidencyState(LLUTILS_TEXT("folder-a\\c"),
+                                               OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident &&
-                   residency.getResidencyState(L"folder-a\\d", OIV::ImageResidencyCacheItemType::FullSize) ==
+                   residency.getResidencyState(LLUTILS_TEXT("folder-a\\d"),
+                                               OIV::ImageResidencyCacheItemType::FullSize) ==
                        OIV::ResidencyState::NotResident;
         }));
 }
@@ -609,11 +622,11 @@ TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[R
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
-    std::vector<std::wstring> callbackFolders;
+    std::vector<LLUtils::native_string_type> callbackFolders;
 
     OIV::BrowseResidencyController manager(
-        residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot& snapshot, const std::wstring&,
+        residency, [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot& snapshot, const LLUtils::native_string_type&,
             IMCodec::ImageSharedPtr)
         {
             std::lock_guard lock(callbackMutex);
@@ -622,12 +635,12 @@ TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[R
         });
 
     const OIV::BrowseResidencyController::FolderFileListSnapshot folderA{
-        L"folder-a",
-        {L"folder-a\\a"},
+        LLUTILS_TEXT("folder-a"),
+        {LLUTILS_TEXT("folder-a\\a")},
         OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
     const OIV::BrowseResidencyController::FolderFileListSnapshot folderB{
-        L"folder-b",
-        {L"folder-b\\a"},
+        LLUTILS_TEXT("folder-b"),
+        {LLUTILS_TEXT("folder-b\\a")},
         OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folderA);
@@ -639,8 +652,8 @@ TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[R
         REQUIRE(callbackCv.wait_for(callbackLock, std::chrono::milliseconds(500),
                                     [&]
                                     {
-                                        return std::find(callbackFolders.begin(), callbackFolders.end(), L"folder-b") !=
-                                               callbackFolders.end();
+                                        return std::find(callbackFolders.begin(), callbackFolders.end(),
+                                                         LLUTILS_TEXT("folder-b")) != callbackFolders.end();
                                     }));
     }
 
@@ -649,7 +662,8 @@ TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[R
         [&]
         {
             std::lock_guard lock(callbackMutex);
-            return std::find(callbackFolders.begin(), callbackFolders.end(), L"folder-a") != callbackFolders.end();
+            return std::find(callbackFolders.begin(), callbackFolders.end(), LLUTILS_TEXT("folder-a")) !=
+                   callbackFolders.end();
         },
         std::chrono::milliseconds(100)));
     REQUIRE(processorPtr->GetCallCount() >= 2);
@@ -658,17 +672,17 @@ TEST_CASE("BrowseResidencyController ignores stale folder-load completions", "[R
 TEST_CASE("BrowseResidencyController reports folder load failure after all candidates fail",
           "[Residency][BrowsePolicy]")
 {
-    auto processor = std::make_unique<SelectiveResidencyProcessor>(std::vector<std::wstring>{});
+    auto processor = std::make_unique<SelectiveResidencyProcessor>(std::vector<LLUtils::native_string_type>{});
     SelectiveResidencyProcessor* processorPtr = processor.get();
     OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
-    std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> folderReadyResults;
+    std::vector<std::pair<LLUtils::native_string_type, IMCodec::ImageSharedPtr>> folderReadyResults;
 
     OIV::BrowseResidencyController manager(
-        residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring& fileName,
+        residency, [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type& fileName,
             IMCodec::ImageSharedPtr image)
         {
             std::lock_guard lock(callbackMutex);
@@ -677,8 +691,8 @@ TEST_CASE("BrowseResidencyController reports folder load failure after all candi
         });
 
     const OIV::BrowseResidencyController::FolderFileListSnapshot folder{
-        L"folder-a",
-        {L"folder-a\\a", L"folder-a\\b"},
+        LLUTILS_TEXT("folder-a"),
+        {LLUTILS_TEXT("folder-a\\a"), LLUTILS_TEXT("folder-a\\b")},
         OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folder);
@@ -687,7 +701,7 @@ TEST_CASE("BrowseResidencyController reports folder load failure after all candi
     REQUIRE(callbackCv.wait_for(callbackLock, std::chrono::milliseconds(500),
                                 [&] { return folderReadyResults.empty() == false; }));
     REQUIRE(folderReadyResults.size() == 1);
-    REQUIRE(folderReadyResults.front().first == L"folder-a\\a");
+    REQUIRE(folderReadyResults.front().first == LLUTILS_TEXT("folder-a\\a"));
     REQUIRE(folderReadyResults.front().second == nullptr);
     REQUIRE(processorPtr->GetCallCount() == 2);
 }
@@ -695,17 +709,18 @@ TEST_CASE("BrowseResidencyController reports folder load failure after all candi
 TEST_CASE("BrowseResidencyController keeps scanning folder failures until a candidate loads",
           "[Residency][BrowsePolicy]")
 {
-    auto processor = std::make_unique<SelectiveResidencyProcessor>(std::vector<std::wstring>{L"folder-a\\b"});
+    auto processor = std::make_unique<SelectiveResidencyProcessor>(
+        std::vector<LLUtils::native_string_type>{LLUTILS_TEXT("folder-a\\b")});
     SelectiveResidencyProcessor* processorPtr = processor.get();
     OIV::ImageResidencyCache residency(std::move(processor), 1);
 
     std::mutex callbackMutex;
     std::condition_variable callbackCv;
-    std::vector<std::pair<std::wstring, IMCodec::ImageSharedPtr>> folderReadyResults;
+    std::vector<std::pair<LLUtils::native_string_type, IMCodec::ImageSharedPtr>> folderReadyResults;
 
     OIV::BrowseResidencyController manager(
-        residency, [](const std::wstring&, IMCodec::ImageSharedPtr) {},
-        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const std::wstring& fileName,
+        residency, [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseResidencyController::FolderFileListSnapshot&, const LLUtils::native_string_type& fileName,
             IMCodec::ImageSharedPtr image)
         {
             std::lock_guard lock(callbackMutex);
@@ -714,8 +729,8 @@ TEST_CASE("BrowseResidencyController keeps scanning folder failures until a cand
         });
 
     const OIV::BrowseResidencyController::FolderFileListSnapshot folder{
-        L"folder-a",
-        {L"folder-a\\a", L"folder-a\\b"},
+        LLUTILS_TEXT("folder-a"),
+        {LLUTILS_TEXT("folder-a\\a"), LLUTILS_TEXT("folder-a\\b")},
         OIV::BrowseResidencyController::FolderFileListSnapshot::IndexStart};
 
     manager.RequestFolderLoadResidency(folder);
@@ -724,7 +739,7 @@ TEST_CASE("BrowseResidencyController keeps scanning folder failures until a cand
     REQUIRE(callbackCv.wait_for(callbackLock, std::chrono::milliseconds(500),
                                 [&] { return folderReadyResults.empty() == false; }));
     REQUIRE(folderReadyResults.size() == 1);
-    REQUIRE(folderReadyResults.front().first == L"folder-a\\b");
+    REQUIRE(folderReadyResults.front().first == LLUTILS_TEXT("folder-a\\b"));
     REQUIRE(folderReadyResults.front().second != nullptr);
     REQUIRE(processorPtr->GetCallCount() == 2);
 }

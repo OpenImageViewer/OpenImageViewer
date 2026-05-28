@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 
 namespace OIV
@@ -19,38 +20,38 @@ namespace OIV
         return {};
     }
 
-    std::wstring ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
-        IMUtil::AxisAlignedRotation rotation,
-        IMUtil::AxisAlignedFlip flip)
+    LLUtils::native_string_type ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
+        IMUtil::AxisAlignedRotation rotation, IMUtil::AxisAlignedFlip flip)
     {
-        std::wstring rotationText;
+        LLUtils::native_string_type rotationText;
         switch (rotation)
         {
             case IMUtil::AxisAlignedRotation::Rotate90CW:
-                rotationText = L"90 degrees clockwise";
+                rotationText = LLUTILS_TEXT("90 degrees clockwise");
                 break;
             case IMUtil::AxisAlignedRotation::Rotate180:
-                rotationText = L"180 degrees";
+                rotationText = LLUTILS_TEXT("180 degrees");
                 break;
             case IMUtil::AxisAlignedRotation::Rotate90CCW:
-                rotationText = L"90 degrees counter clockwise";
+                rotationText = LLUTILS_TEXT("90 degrees counter clockwise");
                 break;
             case IMUtil::AxisAlignedRotation::None:
                 break;
         }
 
-        std::wstring result;
+        LLUtils::native_string_type result;
         if (rotationText.empty() == false)
-            result += std::wstring(L"Rotation <textcolor=#7672ff>(") + rotationText + L')';
+            result += LLUtils::native_string_type(LLUTILS_TEXT("Rotation <textcolor=#7672ff>(")) + rotationText +
+                      LLUTILS_TEXT(')');
 
-        std::wstring flipText;
+        LLUtils::native_string_type flipText;
         switch (flip)
         {
             case IMUtil::AxisAlignedFlip::Horizontal:
-                flipText = L"horizontal";
+                flipText = LLUTILS_TEXT("horizontal");
                 break;
             case IMUtil::AxisAlignedFlip::Vertical:
-                flipText = L"vertical";
+                flipText = LLUTILS_TEXT("vertical");
                 break;
             case IMUtil::AxisAlignedFlip::None:
                 break;
@@ -59,14 +60,15 @@ namespace OIV
         if (flipText.empty() == false)
         {
             if (rotationText.empty() == false)
-                result += L'\n';
+                result += LLUTILS_TEXT('\n');
 
-            result += std::wstring(L"<textcolor=#ff8930>Flip <textcolor=#7672ff>(") + flipText + L')';
+            result += LLUtils::native_string_type(LLUTILS_TEXT("<textcolor=#ff8930>Flip <textcolor=#7672ff>(")) +
+                      flipText + LLUTILS_TEXT(')');
         }
 
         if (result.empty())
-            result = L"No transformation";
+            result = LLUTILS_TEXT("No transformation");
 
         return result;
     }
-}
+}  // namespace OIV

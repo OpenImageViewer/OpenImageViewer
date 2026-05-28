@@ -1,4 +1,6 @@
 #pragma once
+
+#include <LLUtils/StringDefs.h>
 #include <LLUtils/StringUtility.h>
 
 #include <string>
@@ -8,11 +10,11 @@
 
 namespace OIV
 {
-    
+
     class CommandManager
     {
-    public:
-        
+      public:
+
         struct KeyValuePair
         {
             std::string key;
@@ -33,14 +35,13 @@ namespace OIV
 
         struct CommandResult
         {
-            std::wstring resValue;
+            LLUtils::native_string_type resValue;
         };
 
         struct CommandArgs
         {
             static CommandArgs FromString(const std::string& str)
             {
-                
                 using namespace LLUtils;
                 using namespace std;
                 CommandArgs args;
@@ -50,7 +51,7 @@ namespace OIV
                 for (const std::string& pair : props)
                 {
                     ListAString keyval = StringUtility::split(pair, '=');
-                    args.args.push_back({ keyval[0],keyval[1] });
+                    args.args.push_back({keyval[0], keyval[1]});
                 }
                 return args;
             }
@@ -66,7 +67,6 @@ namespace OIV
             }
         };
 
-    
         struct CommandRequest
         {
             std::string displayName;
@@ -76,43 +76,37 @@ namespace OIV
 
         using CommandCallback = std::function<void(const CommandRequest&, CommandResult&)>;
 
-
         class Command
         {
-        public:
+          public:
 
-            Command()
-            {
-                
-            }
+            Command() {}
             Command(const std::string& commandName, CommandCallback callback)
             {
                 fCommandName = commandName;
-                fCallBack = callback;
+                fCallBack    = callback;
             }
-            const std::string& GetName() const
-            {
-                return fCommandName;
-            }
-            void Execute(const CommandRequest& commandRequest, CommandResult& res)
-            {
-                fCallBack(commandRequest, res);
-            }
+            const std::string& GetName() const { return fCommandName; }
+            void Execute(const CommandRequest& commandRequest, CommandResult& res) { fCallBack(commandRequest, res); }
 
-        private:
+          private:
+
             std::string fCommandName;
             CommandCallback fCallBack;
         };
-        
+
         using MapCommands = std::map<std::string, Command>;
-    public:
+
+      public:
+
         CommandRequest GetCommandRequestGroup(const std::string& commandGroupID)
         {
             auto itCommadnGroup = fMapCommandGroup.find(commandGroupID);
             if (itCommadnGroup != fMapCommandGroup.end())
             {
                 const auto& group = itCommadnGroup->second;
-                return CommandRequest{ group.commandDisplayName , group.commandName,CommandArgs::FromString(group.arguments) };
+                return CommandRequest{group.commandDisplayName, group.commandName,
+                                      CommandArgs::FromString(group.arguments)};
             }
             return {};
         }
@@ -134,18 +128,13 @@ namespace OIV
             fMapCommandGroup.emplace(commandGroup.GroupID, commandGroup);
         }
 
-        void AddCommand(const Command& command)
-        {
-            fCommands.insert(std::make_pair(command.GetName(), command));
-        }
+        void AddCommand(const Command& command) { fCommands.insert(std::make_pair(command.GetName(), command)); }
 
-        const MapCommandGroup& GetPredefinedCommandGroup() const
-        {
-            return fMapCommandGroup;
-        }
+        const MapCommandGroup& GetPredefinedCommandGroup() const { return fMapCommandGroup; }
 
-    private:
+      private:
+
         MapCommandGroup fMapCommandGroup;
         MapCommands fCommands;
     };
-}
+}  // namespace OIV

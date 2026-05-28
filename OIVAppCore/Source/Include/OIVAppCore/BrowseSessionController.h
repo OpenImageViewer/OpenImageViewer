@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/FolderFileList.h>
 #include <OIVShared/BrowseResidencyController.h>
 #include <OIVShared/ImageResidencyCache.h>
@@ -20,7 +22,7 @@ namespace OIV
         {
             std::uint64_t generation         = 0;
             FolderFileList::index_type index = FolderFileList::IndexStart;
-            std::wstring fileName;
+            LLUtils::native_string_type fileName;
             IMCodec::ImageSharedPtr image;
             bool folderLoad = false;
         };
@@ -37,7 +39,7 @@ namespace OIV
         struct BrowseSessionResult
         {
             BrowseSessionAction action = BrowseSessionAction::Ignore;
-            std::wstring fileName;
+            LLUtils::native_string_type fileName;
             IMCodec::ImageSharedPtr image;
         };
 
@@ -54,13 +56,13 @@ namespace OIV
         const FolderFileList& GetFolderFileList() const;
 
         void SortFolderFileList();
-        void BeginDirectOpen(const std::wstring& normalizedFilePath);
-        ResultCode CommitCurrentFile(const std::wstring& absoluteFilePath, bool refreshResidency = true);
+        void BeginDirectOpen(const LLUtils::native_string_type& normalizedFilePath);
+        ResultCode CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath, bool refreshResidency = true);
         void InvalidateCurrent();
         bool JumpFiles(FolderFileList::index_type step);
-        bool RequestFolderLoadResidency(const std::wstring& folderPath);
-        bool IsCurrentFile(const std::wstring& fileName) const;
-        const std::wstring& GetCommittedCurrentFile() const;
+        bool RequestFolderLoadResidency(const LLUtils::native_string_type& folderPath);
+        bool IsCurrentFile(const LLUtils::native_string_type& fileName) const;
+        const LLUtils::native_string_type& GetCommittedCurrentFile() const;
         IFileWatcher::FolderID GetActiveFolderID() const;
         BrowseSessionResult OnFileChanged(const IFileWatcher::FileChangedEventArgs& fileChangedEventArgs);
         BrowseSessionResult OnFolderOpenCandidateReady(const BrowseCandidateCompletion& completion);
@@ -80,16 +82,16 @@ namespace OIV
             FolderFileList::index_type requestedIndex         = FolderFileList::IndexStart;
             FolderFileList::index_type originalRequestedIndex = FolderFileList::IndexStart;
             int direction                                     = 0;
-            std::wstring requestedFile;
-            std::wstring originalRequestedFile;
-            std::wstring folderPath;
+            LLUtils::native_string_type requestedFile;
+            LLUtils::native_string_type originalRequestedFile;
+            LLUtils::native_string_type folderPath;
             FolderFileList::list_string_type files;
         };
 
         void OnFileIndexChanged(FolderFileList::index_type current, FolderFileList::index_type previous);
-        void WatchFolder(const std::wstring& folderPath);
+        void WatchFolder(const LLUtils::native_string_type& folderPath);
         void RemoveActiveFolderWatch();
-        bool StartPendingBrowseRequest(std::wstring folderPath, FolderFileList::list_string_type files,
+        bool StartPendingBrowseRequest(LLUtils::native_string_type folderPath, FolderFileList::list_string_type files,
                                        FolderFileList::index_type requestedIndex, int direction, bool folderLoad);
         void RequestPendingCandidate();
         bool IsPendingCandidateCompletion(const BrowseCandidateCompletion& completion) const;
@@ -103,8 +105,8 @@ namespace OIV
 
         IFileWatcher* fFileWatcher{};
         IFileWatcher::FolderID fActiveFolderID{};
-        std::wstring fActiveWatchedFolder;
-        std::wstring fCommittedCurrentFile;
+        LLUtils::native_string_type fActiveWatchedFolder;
+        LLUtils::native_string_type fCommittedCurrentFile;
         std::unique_ptr<FolderFileList> fFolderFileList;
         CurrentImageReadyCallback fCurrentImageReadyCallback;
         CandidateImageReadyCallback fCandidateImageReadyCallback;

@@ -58,8 +58,8 @@ namespace OIV
         void Sort(const string_type& currentFile);
         list_string_type GetSupportedFolderFileListInFolder(const string_type& folderPath);
         bool IsSupportedFileType(const string_type& filePath) const;
-        void UpdateFolderFileList(IFileWatcher::FileChangedOp fileOp, const std::wstring& filePath,
-                                  const std::wstring& filePath2, const string_type& currentFile);
+        void UpdateFolderFileList(IFileWatcher::FileChangedOp fileOp, const LLUtils::native_string_type& filePath,
+                                  const LLUtils::native_string_type& filePath2, const string_type& currentFile);
 
       private:
 

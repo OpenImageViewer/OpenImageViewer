@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/IFileWatcher.h>
 
 #include <string>
@@ -18,10 +20,10 @@ namespace OIV
     class FileChangePolicy
     {
       public:
-        static FileChangeAction Decide(const IFileWatcher::FileChangedEventArgs& eventArgs,
-                                       bool hasActiveFolder,
+
+        static FileChangeAction Decide(const IFileWatcher::FileChangedEventArgs& eventArgs, bool hasActiveFolder,
                                        IFileWatcher::FolderID activeFolderID,
                                        IFileWatcher::FolderID configurationFolderID,
-                                       const std::wstring& openedFile);
+                                       const LLUtils::native_string_type& openedFile);
     };
-}
+}  // namespace OIV

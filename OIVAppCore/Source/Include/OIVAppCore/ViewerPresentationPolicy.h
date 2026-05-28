@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVImage/OIVBaseImage.h>
 
 #include <string>
@@ -17,17 +19,19 @@ namespace OIV
     class ViewerPresentationPolicy
     {
       public:
-        static std::wstring FormatOperationResult(OperationResult result);
-        static std::wstring FormatFailedOperation(const std::wstring& action, OperationResult result);
-        static std::wstring FormatOpenedFileMessage(const std::wstring& formattedFilePath);
-        static std::wstring FormatTopMostMessage(int counter);
-        static std::wstring FormatNonFileTitlePrefix(ImageSource source);
-        static std::wstring FormatFileTitlePrefix(const std::wstring& fileName,
-                                                  const std::wstring& extension,
-                                                  const std::wstring& parentPath,
-                                                  bool includeIndex,
-                                                  size_t displayIndex,
-                                                  size_t fileCount);
-        static std::wstring FormatTitle(const std::wstring& imagePrefix, const std::wstring& versionText);
+
+        static LLUtils::native_string_type FormatOperationResult(OperationResult result);
+        static LLUtils::native_string_type FormatFailedOperation(const LLUtils::native_string_type& action,
+                                                                 OperationResult result);
+        static LLUtils::native_string_type FormatOpenedFileMessage(const LLUtils::native_string_type& formattedFilePath);
+        static LLUtils::native_string_type FormatTopMostMessage(int counter);
+        static LLUtils::native_string_type FormatNonFileTitlePrefix(ImageSource source);
+        static LLUtils::native_string_type FormatFileTitlePrefix(const LLUtils::native_string_type& fileName,
+                                                                 const LLUtils::native_string_type& extension,
+                                                                 const LLUtils::native_string_type& parentPath,
+                                                                 bool includeIndex, size_t displayIndex,
+                                                                 size_t fileCount);
+        static LLUtils::native_string_type FormatTitle(const LLUtils::native_string_type& imagePrefix,
+                                                       const LLUtils::native_string_type& versionText);
     };
 }  // namespace OIV

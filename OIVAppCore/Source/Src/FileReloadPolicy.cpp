@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/FileReloadPolicy.h>
 
 namespace OIV
@@ -12,17 +13,17 @@ namespace OIV
         return fMode;
     }
 
-    const std::wstring& FileReloadPolicy::GetPendingReloadFile() const
+    const LLUtils::native_string_type& FileReloadPolicy::GetPendingReloadFile() const
     {
         return fPendingReloadFile;
     }
 
-    bool FileReloadPolicy::HasPendingReloadFor(const std::wstring& fileName) const
+    bool FileReloadPolicy::HasPendingReloadFor(const LLUtils::native_string_type& fileName) const
     {
         return !fPendingReloadFile.empty() && fPendingReloadFile == fileName;
     }
 
-    ReloadAction FileReloadPolicy::OnCurrentFileChanged(const std::wstring& openedFile, bool appActive)
+    ReloadAction FileReloadPolicy::OnCurrentFileChanged(const LLUtils::native_string_type& openedFile, bool appActive)
     {
         switch (fMode)
         {
@@ -43,7 +44,7 @@ namespace OIV
         return ReloadAction::None;
     }
 
-    ReloadAction FileReloadPolicy::OnPendingReloadRequested(const std::wstring& requestedFile)
+    ReloadAction FileReloadPolicy::OnPendingReloadRequested(const LLUtils::native_string_type& requestedFile)
     {
         if (!HasPendingReloadFor(requestedFile))
             return ReloadAction::None;

@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include "ImageMagickTestCorpus.h"
 
 #include <catch2/catch_all.hpp>
@@ -25,9 +26,9 @@ namespace
     {
       public:
 
-        bool IsFolderRegistered(const std::wstring& folder) const override { return fFolder == folder; }
+        bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override { return fFolder == folder; }
 
-        FolderID AddFolder(const std::wstring& folder) override
+        FolderID AddFolder(const LLUtils::native_string_type& folder) override
         {
             fFolder = folder;
             return fFolderID;
@@ -39,7 +40,7 @@ namespace
                 fFolder.clear();
         }
 
-        void RemoveFolder(const std::wstring& folder) override
+        void RemoveFolder(const LLUtils::native_string_type& folder) override
         {
             if (folder == fFolder)
                 fFolder.clear();
@@ -50,7 +51,7 @@ namespace
       private:
 
         FolderID fFolderID = 11;
-        std::wstring fFolder;
+        LLUtils::native_string_type fFolder;
         OnFileChangedEventArgsEvent fEvent;
     };
 
@@ -58,11 +59,11 @@ namespace
     {
         struct LoadedEvent
         {
-            std::wstring fileName;
+            LLUtils::native_string_type fileName;
             bool hasImage = false;
         };
 
-        void MarkLoaded(const std::wstring& fileName, bool hasImage = true)
+        void MarkLoaded(const LLUtils::native_string_type& fileName, bool hasImage = true)
         {
             {
                 std::lock_guard lock(mutex);
@@ -72,7 +73,8 @@ namespace
             cv.notify_all();
         }
 
-        bool WaitForLoaded(const std::wstring& fileName, std::chrono::milliseconds timeout = std::chrono::seconds(60))
+        bool WaitForLoaded(const LLUtils::native_string_type& fileName,
+                           std::chrono::milliseconds timeout = std::chrono::seconds(60))
         {
             std::unique_lock lock(mutex);
             return cv.wait_for(lock, timeout,
@@ -83,7 +85,8 @@ namespace
                                });
         }
 
-        bool WaitForFailed(const std::wstring& fileName, std::chrono::milliseconds timeout = std::chrono::seconds(60))
+        bool WaitForFailed(const LLUtils::native_string_type& fileName,
+                           std::chrono::milliseconds timeout = std::chrono::seconds(60))
         {
             std::unique_lock lock(mutex);
             return cv.wait_for(lock, timeout,
@@ -105,7 +108,7 @@ namespace
             return !WaitForLoadedCount(loadedFiles.size() + 1, timeout);
         }
 
-        std::size_t CountLoaded(const std::wstring& fileName)
+        std::size_t CountLoaded(const LLUtils::native_string_type& fileName)
         {
             std::lock_guard lock(mutex);
             return static_cast<std::size_t>(std::ranges::count_if(
@@ -128,7 +131,7 @@ namespace
         std::mutex mutex;
         std::condition_variable cv;
         std::vector<LoadedEvent> loadedFiles;
-        std::wstring lastLoadedFile;
+        LLUtils::native_string_type lastLoadedFile;
     };
 
     class ControlledImageMagickResidencyProcessor : public OIV::RequestProcessorType
@@ -160,20 +163,21 @@ namespace
             }
         }
 
-        bool WaitForStarted(const std::wstring& fileName, std::chrono::milliseconds timeout = std::chrono::seconds(30))
+        bool WaitForStarted(const LLUtils::native_string_type& fileName,
+                            std::chrono::milliseconds timeout = std::chrono::seconds(30))
         {
             std::unique_lock lock(fMutex);
             return fCv.wait_for(lock, timeout, [&] { return fStartedCounts[fileName] > 0; });
         }
 
-        bool WaitForCompleted(const std::wstring& fileName,
+        bool WaitForCompleted(const LLUtils::native_string_type& fileName,
                               std::chrono::milliseconds timeout = std::chrono::seconds(30))
         {
             std::unique_lock lock(fMutex);
             return fCv.wait_for(lock, timeout, [&] { return fCompletedCounts[fileName] > 0; });
         }
 
-        void Release(const std::wstring& fileName)
+        void Release(const LLUtils::native_string_type& fileName)
         {
             {
                 std::lock_guard lock(fMutex);
@@ -193,7 +197,7 @@ namespace
 
       private:
 
-        void MarkStarted(const std::wstring& fileName)
+        void MarkStarted(const LLUtils::native_string_type& fileName)
         {
             {
                 std::lock_guard lock(fMutex);
@@ -203,7 +207,7 @@ namespace
             fCv.notify_all();
         }
 
-        void MarkCompleted(const std::wstring& fileName)
+        void MarkCompleted(const LLUtils::native_string_type& fileName)
         {
             {
                 std::lock_guard lock(fMutex);
@@ -212,7 +216,7 @@ namespace
             fCv.notify_all();
         }
 
-        void WaitUntilReleased(const std::wstring& fileName)
+        void WaitUntilReleased(const LLUtils::native_string_type& fileName)
         {
             std::unique_lock lock(fMutex);
             fCv.wait_for(lock, std::chrono::seconds(30),
@@ -221,10 +225,10 @@ namespace
 
         std::mutex fMutex;
         std::condition_variable fCv;
-        std::map<std::wstring, std::size_t> fStartedCounts;
-        std::map<std::wstring, std::size_t> fCompletedCounts;
-        std::set<std::wstring> fReleasedFiles;
-        std::vector<std::wstring> fStartedFiles;
+        std::map<LLUtils::native_string_type, std::size_t> fStartedCounts;
+        std::map<LLUtils::native_string_type, std::size_t> fCompletedCounts;
+        std::set<LLUtils::native_string_type> fReleasedFiles;
+        std::vector<LLUtils::native_string_type> fStartedFiles;
         bool fReleaseEverything = false;
     };
 
@@ -238,11 +242,12 @@ namespace
 
     struct BrowseSessionControllerFixture
     {
-        BrowseSessionControllerFixture(const OIV::Tests::GeneratedCorpus& corpus, const std::wstring& initialFile)
+        BrowseSessionControllerFixture(const OIV::Tests::GeneratedCorpus& corpus,
+                                       const LLUtils::native_string_type& initialFile)
             : residency(MakeControlledProcessor(processor), 4),
               controller(
                   &watcher, &sorter, corpus.extensions, corpus.extensionList, residency,
-                  [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+                  [this](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
                   { observer.MarkLoaded(fileName, image != nullptr); },
                   [this](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
                   {
@@ -264,7 +269,7 @@ namespace
 
         void LoadFolder() { REQUIRE(controller.CommitCurrentFile(initialFileName) == ResultCode::RC_Success); }
 
-        std::wstring initialFileName;
+        LLUtils::native_string_type initialFileName;
         FakeFileWatcher watcher;
         OIV::FileSorter sorter;
         ControlledImageMagickResidencyProcessor* processor = nullptr;
@@ -285,7 +290,7 @@ TEST_CASE("BrowseSessionController sequentially browses ImageMagick generated fi
     REQUIRE(fixture.controller.GetFolderFileList().GetSize() == OIV::Tests::BuildBrowsingFolderFileList(corpus).size());
     REQUIRE(fixture.controller.IsCurrentFile(files[0]));
 
-    auto releaseAndWaitForCurrent = [&](const std::wstring& expectedFile)
+    auto releaseAndWaitForCurrent = [&](const LLUtils::native_string_type& expectedFile)
     {
         INFO("Waiting for current file request: " << std::filesystem::path(expectedFile).string());
         REQUIRE(fixture.processor->WaitForStarted(expectedFile));

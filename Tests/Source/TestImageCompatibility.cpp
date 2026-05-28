@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include "ImageMagickTestCorpus.h"
 
 #include <catch2/catch_all.hpp>
@@ -22,7 +23,7 @@
 
 namespace
 {
-    OIV::ImageLoadResult LoadWithRealController(const std::wstring& filePath)
+    OIV::ImageLoadResult LoadWithRealController(const LLUtils::native_string_type& filePath)
     {
         auto imageLoader = std::make_unique<IMCodec::ImageLoader>();
         auto loader      = std::make_unique<OIV::OIVImageFileLoader>(*imageLoader);
@@ -191,7 +192,7 @@ TEST_CASE("ImageLoader decodes ImageMagick compatibility matrix", "[ImageCompati
             OIV::ImageLoadResult result;
             try
             {
-                result = LoadWithRealController(image.path.wstring());
+                result = LoadWithRealController(image.path.native());
             }
             catch (const std::exception& exception)
             {
@@ -235,7 +236,7 @@ TEST_CASE("ImageLoader exposes unmapped TIFF extra samples as subimages", "[Imag
     const auto tempFile = MakeTiffExtraSampleFile();
     WriteRgbTiffWithTwoExtraSamples(tempFile.Path());
 
-    const auto result = LoadWithRealController(tempFile.Path().wstring());
+    const auto result = LoadWithRealController(tempFile.Path().native());
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
     REQUIRE(result.resultCode == ResultCode::RC_Success);
@@ -267,7 +268,7 @@ TEST_CASE("ImageOpenController rejects unsupported ImageMagick corpus variants",
         foundUnsupportedImage = true;
         DYNAMIC_SECTION(image.format << " " << image.variant << " " << OIV::Tests::NarrowPath(image.path))
         {
-            const auto result = LoadWithRealController(image.path.wstring());
+            const auto result = LoadWithRealController(image.path.native());
 
             INFO("unsupported image path=" << OIV::Tests::NarrowPath(image.path));
             REQUIRE(result.status == OIV::ImageLoadStatus::UnsupportedFormat);
@@ -287,7 +288,7 @@ TEST_CASE("ImageOpenController rejects bad ImageMagick corpus files", "[ImageCom
     {
         DYNAMIC_SECTION(image.variant << " " << OIV::Tests::NarrowPath(image.path))
         {
-            const auto result = LoadWithRealController(image.path.wstring());
+            const auto result = LoadWithRealController(image.path.native());
 
             INFO("bad image path=" << OIV::Tests::NarrowPath(image.path));
             REQUIRE(result.status != OIV::ImageLoadStatus::Loaded);

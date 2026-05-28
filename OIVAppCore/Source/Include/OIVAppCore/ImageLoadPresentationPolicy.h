@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/ImageOpenController.h>
 
 #include <string>
@@ -11,13 +13,14 @@ namespace OIV
         bool succeeded         = false;
         bool shouldLoadImage   = false;
         bool shouldShowMessage = false;
-        std::wstring message;
+        LLUtils::native_string_type message;
     };
 
     class ImageLoadPresentationPolicy
     {
       public:
 
-        static ImageLoadPresentation Decide(const ImageLoadResult& loadResult, const std::wstring& formattedFilePath);
+        static ImageLoadPresentation Decide(const ImageLoadResult& loadResult,
+                                            const LLUtils::native_string_type& formattedFilePath);
     };
 }  // namespace OIV

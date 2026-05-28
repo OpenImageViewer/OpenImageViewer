@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
 
 #include <sstream>
@@ -5,73 +6,74 @@
 
 namespace OIV
 {
-    std::wstring ViewerPresentationPolicy::FormatOperationResult(OperationResult result)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatOperationResult(OperationResult result)
     {
         switch (result)
         {
             case OperationResult::NoDataFound:
-                return L"No Image loaded";
+                return LLUTILS_TEXT("No Image loaded");
             case OperationResult::Success:
-                return L"Success";
+                return LLUTILS_TEXT("Success");
             case OperationResult::NoSelection:
-                return L"No selection";
+                return LLUTILS_TEXT("No selection");
             case OperationResult::UnkownError:
             default:
-                return L"Unknown error";
+                return LLUTILS_TEXT("Unknown error");
         }
     }
 
-    std::wstring ViewerPresentationPolicy::FormatFailedOperation(const std::wstring& action, OperationResult result)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatFailedOperation(
+        const LLUtils::native_string_type& action, OperationResult result)
     {
-        return action + L" - " + FormatOperationResult(result);
+        return action + LLUTILS_TEXT(" - ") + FormatOperationResult(result);
     }
 
-    std::wstring ViewerPresentationPolicy::FormatOpenedFileMessage(const std::wstring& formattedFilePath)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatOpenedFileMessage(
+        const LLUtils::native_string_type& formattedFilePath)
     {
-        return L"File: " + formattedFilePath;
+        return LLUTILS_TEXT("File: ") + formattedFilePath;
     }
 
-    std::wstring ViewerPresentationPolicy::FormatTopMostMessage(int counter)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatTopMostMessage(int counter)
     {
-        return L"Top most ending in..." + std::to_wstring(counter);
+        LLUtils::native_stringstream stream;
+        stream << LLUTILS_TEXT("Top most ending in...") << counter;
+        return stream.str();
     }
 
-    std::wstring ViewerPresentationPolicy::FormatNonFileTitlePrefix(ImageSource source)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatNonFileTitlePrefix(ImageSource source)
     {
         switch (source)
         {
             case ImageSource::ClipboardText:
-                return L"Clipboard text - ";
+                return LLUTILS_TEXT("Clipboard text - ");
             case ImageSource::Clipboard:
-                return L"Clipboard image - ";
+                return LLUTILS_TEXT("Clipboard image - ");
             case ImageSource::GeneratedByLib:
-                return L"Internal image - ";
+                return LLUTILS_TEXT("Internal image - ");
             default:
-                return L"Unknown image source - ";
+                return LLUTILS_TEXT("Unknown image source - ");
         }
     }
 
-    std::wstring ViewerPresentationPolicy::FormatFileTitlePrefix(const std::wstring& fileName,
-                                                                 const std::wstring& extension,
-                                                                 const std::wstring& parentPath,
-                                                                 bool includeIndex,
-                                                                 size_t displayIndex,
-                                                                 size_t fileCount)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatFileTitlePrefix(
+        const LLUtils::native_string_type& fileName, const LLUtils::native_string_type& extension,
+        const LLUtils::native_string_type& parentPath, bool includeIndex, size_t displayIndex, size_t fileCount)
     {
-        std::wstringstream stream;
+        LLUtils::native_stringstream stream;
         if (includeIndex)
-            stream << displayIndex << L"/" << fileCount << L" | ";
+            stream << displayIndex << LLUTILS_TEXT("/") << fileCount << LLUTILS_TEXT(" | ");
 
-        stream << fileName << extension << L" @ ";
+        stream << fileName << extension << LLUTILS_TEXT(" @ ");
         if (parentPath.empty() == false)
-            stream << std::wstring_view(parentPath.data(), parentPath.length() - 1);
+            stream << LLUtils::native_string_view(parentPath.data(), parentPath.length() - 1);
 
-        stream << L" - ";
+        stream << LLUTILS_TEXT(" - ");
         return stream.str();
     }
 
-    std::wstring ViewerPresentationPolicy::FormatTitle(const std::wstring& imagePrefix,
-                                                       const std::wstring& versionText)
+    LLUtils::native_string_type ViewerPresentationPolicy::FormatTitle(const LLUtils::native_string_type& imagePrefix,
+                                                                      const LLUtils::native_string_type& versionText)
     {
         return imagePrefix + versionText;
     }

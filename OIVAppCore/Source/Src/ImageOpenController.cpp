@@ -14,7 +14,7 @@ namespace OIV
 
     OIVImageFileLoader::OIVImageFileLoader(IMCodec::ImageLoader& imageLoader) : fImageLoader(imageLoader) {}
 
-    ImageFileLoadResult OIVImageFileLoader::LoadFile(const std::wstring& normalizedFilePath,
+    ImageFileLoadResult OIVImageFileLoader::LoadFile(const LLUtils::native_string_type& normalizedFilePath,
                                                      IMCodec::PluginTraverseMode traverseMode,
                                                      const ImageLoadContext& context)
     {
@@ -39,11 +39,11 @@ namespace OIV
         fBrowseSessionController = fileSessionController;
     }
 
-    ImageLoadResult ImageOpenController::LoadFile(const std::wstring& filePath,
+    ImageLoadResult ImageOpenController::LoadFile(const LLUtils::native_string_type& filePath,
                                                   IMCodec::PluginTraverseMode traverseMode,
                                                   const ImageLoadContext& context)
     {
-        const std::wstring normalizedPath = std::filesystem::path(filePath).lexically_normal().wstring();
+        const LLUtils::native_string_type normalizedPath = std::filesystem::path(filePath).lexically_normal().native();
         if (fBrowseSessionController != nullptr)
             fBrowseSessionController->BeginDirectOpen(normalizedPath);
 
@@ -54,7 +54,7 @@ namespace OIV
                                normalizedPath, std::move(fileLoadResult.image)};
     }
 
-    ImageLoadResult ImageOpenController::LoadFileOrFolder(const std::wstring& filePath,
+    ImageLoadResult ImageOpenController::LoadFileOrFolder(const LLUtils::native_string_type& filePath,
                                                           IMCodec::PluginTraverseMode traverseMode,
                                                           const ImageLoadContext& context)
     {
@@ -66,7 +66,7 @@ namespace OIV
             return ImageLoadResult{folderLoadQueued ? ImageLoadStatus::FolderLoadQueued
                                                     : ImageLoadStatus::NoSupportedFiles,
                                    folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
-                                   std::filesystem::path(filePath).lexically_normal().wstring(), nullptr};
+                                   std::filesystem::path(filePath).lexically_normal().native(), nullptr};
         }
 
         return LoadFile(filePath, traverseMode, context);

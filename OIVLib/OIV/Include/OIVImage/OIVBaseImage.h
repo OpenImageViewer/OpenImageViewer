@@ -1,4 +1,6 @@
 #pragma once
+
+#include <LLUtils/StringDefs.h>
 #include <string>
 #include <vector>
 #include <memory>
@@ -13,106 +15,79 @@
 namespace OIV
 {
     constexpr int64_t UniqueColorsUninitialized = -1;
-    constexpr int64_t UniqueColorsFailed = -2;
+    constexpr int64_t UniqueColorsFailed        = -2;
 
     enum class ImageSource
     {
-          None
-        , File
-        , Clipboard
-        , ClipboardText
-        , InternalText
-        , GeneratedByLib
+        None,
+        File,
+        Clipboard,
+        ClipboardText,
+        InternalText,
+        GeneratedByLib
     };
 
     class OIVBaseImage : public IRenderable
     {
-    public:
+      public:
+
         OIVBaseImage(ImageSource source);
         OIVBaseImage(ImageSource source, IMCodec::ImageSharedPtr image);
         ImageSource GetImageSource() const { return fSource; }
-        
-        std::wstring GetDescription() const
+
+        LLUtils::native_string_type GetDescription() const
         {
-            std::wstringstream ss;
-            ss << fImage->GetWidth() << L" X " << fImage->GetHeight() << L" X "
-                << fImage->GetBitsPerTexel() << L" BPP | loaded in " << std::fixed << std::setprecision(1)
-                << fImage->GetImageItem()->processData.processTime << L" ms"
-                //<< L"/" << fDescriptor.DisplayTime + fDescriptor.LoadTime << L" ms"
+            LLUtils::native_stringstream ss;
+            ss << fImage->GetWidth() << LLUTILS_TEXT(" X ") << fImage->GetHeight() << LLUTILS_TEXT(" X ")
+               << fImage->GetBitsPerTexel() << LLUTILS_TEXT(" BPP | loaded in ") << std::fixed << std::setprecision(1)
+               << fImage->GetImageItem()->processData.processTime << LLUTILS_TEXT(" ms")
+                //<< LLUTILS_TEXT("/") << fDescriptor.DisplayTime + fDescriptor.LoadTime << LLUTILS_TEXT(" ms")
                 ;
 
             return ss.str();
         }
 
-        
-
         void SetUnderlyingImage(IMCodec::ImageSharedPtr image);
 
-        void SetMetaData(IMCodec::ItemMetaDataSharedPtr metaData)
-        {
-            fImageMetaData = metaData;
-        }
+        void SetMetaData(IMCodec::ItemMetaDataSharedPtr metaData) { fImageMetaData = metaData; }
 
-        const IMCodec::ItemMetaDataSharedPtr& GetMetaData()
-        {
-            return fImageMetaData;
-        }
+        const IMCodec::ItemMetaDataSharedPtr& GetMetaData() { return fImageMetaData; }
 
-        bool IsDirty() const
-        {
-            return PerformIsDirty();
-        }
+        bool IsDirty() const { return PerformIsDirty(); }
 
-        void SetDisplayTime(double displayTime)
-        {
-            fDisplayTime = displayTime;
-        }
+        void SetDisplayTime(double displayTime) { fDisplayTime = displayTime; }
 
-        double GetDisplayTime()
-        {
-            return fDisplayTime;
-        }
+        double GetDisplayTime() { return fDisplayTime; }
 
-        void SetNumUniqueColors(int64_t numUniqueColors)
-        {
-            fNumUniqueColors = numUniqueColors;
-        }
+        void SetNumUniqueColors(int64_t numUniqueColors) { fNumUniqueColors = numUniqueColors; }
 
-        int64_t GetNumUniqueColors()
-        {
-            return fNumUniqueColors;
-        }
-
-
-
+        int64_t GetNumUniqueColors() { return fNumUniqueColors; }
 
 #pragma region IRenderable
 
         IMCodec::ImageSharedPtr GetImage() override { return fImage; }
-        bool GetVisible() const override{ return fImagePropertiesCurrent.visible;}
-        OIV_Filter_type GetFilterType() const override {return fImagePropertiesCurrent.filterType;}
-        double GetOpacity() const override {return fImagePropertiesCurrent.opacity;}
-        LLUtils::PointF64 GetPosition() const override {return fImagePropertiesCurrent.position;}
-        LLUtils::PointF64 GetScale() const override {return fImagePropertiesCurrent.scale;}
-        OIV_Image_Render_mode GetImageRenderMode() const override {return fImagePropertiesCurrent.imageRenderMode;}
-        bool GetIsImageDirty() const override{return fIsImageDirty;}
-        void ClearImageDirty() override {fIsImageDirty = false;}
+        bool GetVisible() const override { return fImagePropertiesCurrent.visible; }
+        OIV_Filter_type GetFilterType() const override { return fImagePropertiesCurrent.filterType; }
+        double GetOpacity() const override { return fImagePropertiesCurrent.opacity; }
+        LLUtils::PointF64 GetPosition() const override { return fImagePropertiesCurrent.position; }
+        LLUtils::PointF64 GetScale() const override { return fImagePropertiesCurrent.scale; }
+        OIV_Image_Render_mode GetImageRenderMode() const override { return fImagePropertiesCurrent.imageRenderMode; }
+        bool GetIsImageDirty() const override { return fIsImageDirty; }
+        void ClearImageDirty() override { fIsImageDirty = false; }
         uint32_t GetID() const override { return fObjectId; }
-        void PreRender() override {PerformPreRender();}
-
+        void PreRender() override { PerformPreRender(); }
 
 #pragma endregion IRenderable
 
-
 #pragma region Text display
 
-        //Text Display
+        // Text Display
 
         void SetPosition(LLUtils::PointF64 position)
         {
             if (fImagePropertiesCurrent.position != position)
             {
-                fIsDirty = true;
+                fIsDirty                         = true;
                 fImagePropertiesCurrent.position = position;
             }
         }
@@ -121,7 +96,7 @@ namespace OIV
         {
             if (fImagePropertiesCurrent.filterType != filterType)
             {
-                fIsDirty = true;
+                fIsDirty                           = true;
                 fImagePropertiesCurrent.filterType = filterType;
             }
         }
@@ -129,7 +104,7 @@ namespace OIV
         {
             if (fImagePropertiesCurrent.imageRenderMode != renderMode)
             {
-                fIsDirty = true;
+                fIsDirty                                = true;
                 fImagePropertiesCurrent.imageRenderMode = renderMode;
             }
         }
@@ -138,18 +113,16 @@ namespace OIV
         {
             if (fImagePropertiesCurrent.visible != visible)
             {
-                fIsDirty = true;
+                fIsDirty                        = true;
                 fImagePropertiesCurrent.visible = visible;
             }
         }
-
-        
 
         void SetOpacity(double opacity)
         {
             if (fImagePropertiesCurrent.opacity != opacity)
             {
-                fIsDirty = true;
+                fIsDirty                        = true;
                 fImagePropertiesCurrent.opacity = opacity;
             }
         }
@@ -158,42 +131,36 @@ namespace OIV
         {
             if (fImagePropertiesCurrent.scale != scale)
             {
-                fIsDirty = true;
+                fIsDirty                      = true;
                 fImagePropertiesCurrent.scale = scale;
             }
         }
 #pragma endregion Text display
 
-        //Keep OIVBaseImage polymorphic
+        // Keep OIVBaseImage polymorphic
         virtual ~OIVBaseImage();
 
-    protected:
+      protected:
 
-        virtual bool PerformIsDirty() const
-        {
-            return fIsDirty;
-        }
-        virtual void PerformPreRender() 
-        {
-            fIsDirty = false;
-        };
-        
-    private:
+        virtual bool PerformIsDirty() const { return fIsDirty; }
+        virtual void PerformPreRender() { fIsDirty = false; };
+
+      private:
+
         OIV_CMD_ImageProperties_Request fImagePropertiesCurrent{};
         OIV_CMD_ImageProperties_Request fImagePropertiesCached{};
 
-        static inline LLUtils::UniqueIdProvider<uint32_t> fUniqueIdProvider{ 1 };
+        static inline LLUtils::UniqueIdProvider<uint32_t> fUniqueIdProvider{1};
         ImageSource fSource;
         IMCodec::ItemMetaDataSharedPtr fImageMetaData;
         decltype(fUniqueIdProvider)::underlying_type fObjectId;
         IMCodec::ImageSharedPtr fImage;
         bool fIsImageDirty = true;
-        bool fIsDirty = true;
+        bool fIsDirty      = true;
         std::mutex fRendererMutex;
         double fDisplayTime{};
         int64_t fNumUniqueColors = UniqueColorsUninitialized;
-
     };
 
     using OIVBaseImageSharedPtr = std::shared_ptr<OIVBaseImage>;
-}
+}  // namespace OIV

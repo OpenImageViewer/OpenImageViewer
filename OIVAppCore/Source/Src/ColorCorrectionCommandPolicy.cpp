@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 
 #include <LLUtils/StringUtility.h>
@@ -12,9 +13,9 @@ namespace OIV
     {
         ColorCorrectionCommand command;
         command.channelName = args.GetArgValue("type");
-        command.operation = args.GetArgValue("op");
-        command.valueText = args.GetArgValue("val");
-        command.value = std::atof(command.valueText.c_str());
+        command.operation   = args.GetArgValue("op");
+        command.valueText   = args.GetArgValue("val");
+        command.value       = std::atof(command.valueText.c_str());
 
         if (command.channelName == "gamma")
             command.channel = ColorCorrectionChannel::Gamma;
@@ -44,12 +45,13 @@ namespace OIV
         return currentValue;
     }
 
-    std::wstring ColorCorrectionCommandPolicy::FormatResult(const ColorCorrectionCommand& command, double newValue)
+    LLUtils::native_string_type ColorCorrectionCommandPolicy::FormatResult(const ColorCorrectionCommand& command,
+                                                                           double newValue)
     {
-        std::wstringstream stream;
-        stream << L"<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(command.channelName)
-               << L"<textcolor=#7672ff> " << LLUtils::StringUtility::ToWString(command.operation) << L" "
-               << LLUtils::StringUtility::ToWString(command.valueText);
+        LLUtils::native_stringstream stream;
+        stream << LLUTILS_TEXT("<textcolor=#00ff00>") << LLUtils::StringUtility::ToNativeString(command.channelName)
+               << LLUTILS_TEXT("<textcolor=#7672ff> ") << LLUtils::StringUtility::ToNativeString(command.operation)
+               << LLUTILS_TEXT(" ") << LLUtils::StringUtility::ToNativeString(command.valueText);
 
         if (command.operation == "increase" || command.operation == "decrease")
             stream << "%";
@@ -57,4 +59,4 @@ namespace OIV
         stream << "<textcolor=#00ff00> (" << std::fixed << std::setprecision(0) << newValue * 100 << "%)";
         return stream.str();
     }
-}
+}  // namespace OIV

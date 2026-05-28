@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ImageInfoPresentationPolicy.h>
 
 #include <OIVShared/UnitFormatter.h>
@@ -19,21 +20,20 @@ namespace OIV
 {
     namespace
     {
-        std::wstring FormatNumber(long double value, int precision = 2)
+        LLUtils::native_string_type FormatNumber(long double value, int precision = 2)
         {
-            std::wstringstream stream;
+            LLUtils::native_stringstream stream;
             stream << std::fixed << std::setprecision(precision) << value;
             return stream.str();
         }
 
-        void AddRow(ImageInfoPresentationPolicy::ImageInfoRows& rows,
-                    const std::string& key,
-                    std::initializer_list<std::wstring> values)
+        void AddRow(ImageInfoPresentationPolicy::ImageInfoRows& rows, const std::string& key,
+                    std::initializer_list<LLUtils::native_string_type> values)
         {
             ImageInfoPresentationPolicy::ImageInfoRow row;
             row.key = key;
             row.values.reserve(values.size());
-            for (const std::wstring& value : values)
+            for (const LLUtils::native_string_type& value : values)
                 row.values.push_back({value});
 
             rows.push_back(std::move(row));
@@ -43,21 +43,21 @@ namespace OIV
         {
             switch (semantic)
             {
-            case IMCodec::ChannelSemantic::Red:
-                return "R";
-            case IMCodec::ChannelSemantic::Green:
-                return "G";
-            case IMCodec::ChannelSemantic::Blue:
-                return "B";
-            case IMCodec::ChannelSemantic::Opacity:
-                return "A";
-            case IMCodec::ChannelSemantic::Monochrome:
-                return "Monochrome";
-            case IMCodec::ChannelSemantic::Float:
-                return "Float";
-            case IMCodec::ChannelSemantic::None:
-            default:
-                return "Undefined";
+                case IMCodec::ChannelSemantic::Red:
+                    return "R";
+                case IMCodec::ChannelSemantic::Green:
+                    return "G";
+                case IMCodec::ChannelSemantic::Blue:
+                    return "B";
+                case IMCodec::ChannelSemantic::Opacity:
+                    return "A";
+                case IMCodec::ChannelSemantic::Monochrome:
+                    return "Monochrome";
+                case IMCodec::ChannelSemantic::Float:
+                    return "Float";
+                case IMCodec::ChannelSemantic::None:
+                default:
+                    return "Undefined";
             }
         }
 
@@ -65,23 +65,21 @@ namespace OIV
         {
             switch (dataType)
             {
-            case IMCodec::ChannelDataType::Float:
-                return "float";
-            case IMCodec::ChannelDataType::SignedInt:
-                return "signed";
-            case IMCodec::ChannelDataType::UnsignedInt:
-                return "unsigned";
-            case IMCodec::ChannelDataType::None:
-            default:
-                return "undefined";
+                case IMCodec::ChannelDataType::Float:
+                    return "float";
+                case IMCodec::ChannelDataType::SignedInt:
+                    return "signed";
+                case IMCodec::ChannelDataType::UnsignedInt:
+                    return "unsigned";
+                case IMCodec::ChannelDataType::None:
+                default:
+                    return "undefined";
             }
         }
     }  // namespace
 
     ImageInfoPresentationPolicy::ImageInfoRows ImageInfoPresentationPolicy::Build(
-        const OIVBaseImageSharedPtr& image,
-        const OIVBaseImageSharedPtr& rasterized,
-        IMCodec::IImageCodec& imageCodec)
+        const OIVBaseImageSharedPtr& image, const OIVBaseImageSharedPtr& rasterized, IMCodec::IImageCodec& imageCodec)
     {
         ImageInfoRows rows;
         std::shared_ptr<OIVFileImage> fileImage = std::dynamic_pointer_cast<OIVFileImage>(image);
@@ -89,16 +87,17 @@ namespace OIV
         if (fileImage != nullptr)
         {
             const std::filesystem::path filePath = fileImage->GetFileName();
-            AddRow(rows, "File path", {filePath.wstring()});
+            AddRow(rows, "File path", {filePath.native()});
 
             const uintmax_t fileSize = std::filesystem::file_size(filePath);
             AddRow(rows, "File size", {UnitFormatter::FormatUnit(fileSize, UnitType::BinaryDataShort, 0, 0)});
             AddRow(rows, "File date", {FormatFileTime(filePath)});
 
-            const uint32_t bitmapSize = rasterized->GetImage()->GetTotalSizeOfImageTexels();
-            const long double compressionRatio = fileSize == 0 ? 0.0L : static_cast<long double>(bitmapSize) /
-                static_cast<long double>(fileSize);
-            AddRow(rows, "Compression ratio", {L"1:", FormatNumber(compressionRatio)});
+            const uint32_t bitmapSize          = rasterized->GetImage()->GetTotalSizeOfImageTexels();
+            const long double compressionRatio = fileSize == 0 ? 0.0L
+                                                               : static_cast<long double>(bitmapSize) /
+                                                                     static_cast<long double>(fileSize);
+            AddRow(rows, "Compression ratio", {LLUTILS_TEXT("1:"), FormatNumber(compressionRatio)});
         }
         else if (image != nullptr)
         {
@@ -106,18 +105,25 @@ namespace OIV
         }
 
         const bool isAnimation = rasterized->GetImage()->GetItemType() == IMCodec::ImageItemType::Container &&
-            rasterized->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame;
+                                 rasterized->GetImage()->GetSubImageGroupType() ==
+                                     IMCodec::ImageItemType::AnimationFrame;
 
         if (isAnimation)
-            AddRow(rows, "Num frames", {std::to_wstring(rasterized->GetImage()->GetNumSubImages())});
+            AddRow(rows, "Num frames",
+                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetImage()->GetNumSubImages()))});
         else
-            AddRow(rows, "Num sub-images", {std::to_wstring(rasterized->GetImage()->GetNumSubImages())});
+            AddRow(rows, "Num sub-images",
+                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetImage()->GetNumSubImages()))});
 
         IMCodec::ImageSharedPtr frame = isAnimation ? rasterized->GetImage()->GetSubImage(0) : rasterized->GetImage();
 
-        AddRow(rows, "Width", {std::to_wstring(frame->GetWidth()), L"px"});
-        AddRow(rows, "Height", {std::to_wstring(frame->GetHeight()), L"px"});
-        AddRow(rows, "bit depth", {std::to_wstring(frame->GetBitsPerTexel()), L" bpp"});
+        AddRow(rows, "Width",
+               {LLUtils::StringUtility::ToNativeString(std::to_string(frame->GetWidth())), LLUTILS_TEXT("px")});
+        AddRow(rows, "Height",
+               {LLUtils::StringUtility::ToNativeString(std::to_string(frame->GetHeight())), LLUTILS_TEXT("px")});
+        AddRow(rows, "bit depth",
+               {LLUtils::StringUtility::ToNativeString(std::to_string(frame->GetBitsPerTexel())),
+                LLUTILS_TEXT(" bpp")});
         AddRow(rows, "channels info", {FormatTexelInfo(frame->GetTexelInfo())});
         if (frame->GetOriginalTexelFormat() != IMCodec::TexelFormat::UNKNOWN &&
             frame->GetOriginalTexelFormat() != frame->GetTexelFormat())
@@ -128,25 +134,28 @@ namespace OIV
         if (image != nullptr && image->GetImage() != nullptr)
         {
             const IMCodec::ItemProcessData& processData = image->GetImage()->GetProcessData();
-            AddRow(rows, "Load time", {FormatNumber(static_cast<long double>(processData.processTime)), L"ms"});
-            AddRow(rows, "Display time", {FormatNumber(static_cast<long double>(rasterized->GetDisplayTime())), L"ms"});
+            AddRow(rows, "Load time",
+                   {FormatNumber(static_cast<long double>(processData.processTime)), LLUTILS_TEXT("ms")});
+            AddRow(rows, "Display time",
+                   {FormatNumber(static_cast<long double>(rasterized->GetDisplayTime())), LLUTILS_TEXT("ms")});
 
-            std::wstring pluginDescription = L"Unknown";
+            LLUtils::native_string_type pluginDescription = LLUTILS_TEXT("Unknown");
             IMCodec::PluginProperties properties;
             if (imageCodec.GetPluginInfo(processData.pluginUsed, properties) == IMCodec::ImageResult::Success)
-                pluginDescription = LLUtils::StringUtility::ConvertString<std::wstring>(properties.pluginDescription);
+                pluginDescription = LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
+                    properties.pluginDescription);
 
             AddRow(rows, "Codec used", {pluginDescription});
         }
 
         const int64_t uniqueValues = rasterized->GetNumUniqueColors();
         if (uniqueValues > -1)
-            AddRow(rows, "Unique values", {std::to_wstring(uniqueValues)});
+            AddRow(rows, "Unique values", {LLUtils::StringUtility::ToNativeString(std::to_string(uniqueValues))});
 
         if (image != nullptr && image->GetMetaData() != nullptr)
         {
             const IMCodec::ItemMetaDataSharedPtr& metaData = image->GetMetaData();
-            const IMCodec::ExifData& exifData = metaData->exifData;
+            const IMCodec::ExifData& exifData              = metaData->exifData;
             if (exifData.longitude != std::numeric_limits<double>::max())
                 AddRow(rows, "Longitude", {FormatNumber(exifData.longitude, 6)});
 
@@ -154,25 +163,25 @@ namespace OIV
                 AddRow(rows, "Latitude", {FormatNumber(exifData.latitude, 6)});
 
             if (exifData.altitude != std::numeric_limits<double>::max())
-                AddRow(rows, "Altitude", {FormatNumber(exifData.altitude), L"m"});
+                AddRow(rows, "Altitude", {FormatNumber(exifData.altitude), LLUTILS_TEXT("m")});
 
             if (exifData.make.empty() == false)
-                AddRow(rows, "Manufacturer", {LLUtils::StringUtility::ToWString(exifData.make)});
+                AddRow(rows, "Manufacturer", {LLUtils::StringUtility::ToNativeString(exifData.make)});
 
             if (exifData.model.empty() == false)
-                AddRow(rows, "Model", {LLUtils::StringUtility::ToWString(exifData.model)});
+                AddRow(rows, "Model", {LLUtils::StringUtility::ToNativeString(exifData.model)});
 
             if (exifData.software.empty() == false)
-                AddRow(rows, "Software", {LLUtils::StringUtility::ToWString(exifData.software)});
+                AddRow(rows, "Software", {LLUtils::StringUtility::ToNativeString(exifData.software)});
 
             if (exifData.copyright.empty() == false)
-                AddRow(rows, "Copyright", {LLUtils::StringUtility::ToWString(exifData.copyright)});
+                AddRow(rows, "Copyright", {LLUtils::StringUtility::ToNativeString(exifData.copyright)});
         }
 
         return rows;
     }
 
-    std::wstring ImageInfoPresentationPolicy::FormatFileTime(const std::filesystem::path& filePath)
+    LLUtils::native_string_type ImageInfoPresentationPolicy::FormatFileTime(const std::filesystem::path& filePath)
     {
         const std::filesystem::file_time_type fileTime = std::filesystem::last_write_time(filePath);
         const auto systemTime = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
@@ -193,38 +202,38 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "could not convert time_t to a tm structure");
 #endif
 
-        std::wstringstream stream;
-        stream << std::put_time(&localTime, L"%Y-%m-%d %X");
+        LLUtils::native_stringstream stream;
+        stream << std::put_time(&localTime, LLUTILS_TEXT("%Y-%m-%d %X"));
         return stream.str();
     }
 
-    std::wstring ImageInfoPresentationPolicy::FormatImageSource(ImageSource source)
+    LLUtils::native_string_type ImageInfoPresentationPolicy::FormatImageSource(ImageSource source)
     {
         switch (source)
         {
-        case ImageSource::None:
-            return L"none";
-        case ImageSource::File:
-            return L"file";
-        case ImageSource::Clipboard:
-            return L"clipboard";
-        case ImageSource::ClipboardText:
-            return L"clipboard text";
-        case ImageSource::InternalText:
-            return L"internal text";
-        case ImageSource::GeneratedByLib:
-            return L"auto generated";
-        default:
-            return L"unknown";
+            case ImageSource::None:
+                return LLUTILS_TEXT("none");
+            case ImageSource::File:
+                return LLUTILS_TEXT("file");
+            case ImageSource::Clipboard:
+                return LLUTILS_TEXT("clipboard");
+            case ImageSource::ClipboardText:
+                return LLUTILS_TEXT("clipboard text");
+            case ImageSource::InternalText:
+                return LLUTILS_TEXT("internal text");
+            case ImageSource::GeneratedByLib:
+                return LLUTILS_TEXT("auto generated");
+            default:
+                return LLUTILS_TEXT("unknown");
         }
     }
 
-    std::wstring ImageInfoPresentationPolicy::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)
+    LLUtils::native_string_type ImageInfoPresentationPolicy::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)
     {
         if (texelInfo.numChannles == 0)
             return {};
 
-        bool sameDataTypeForAllChannels = true;
+        bool sameDataTypeForAllChannels   = true;
         IMCodec::ChannelDataType dataType = texelInfo.channles[0].channelDataType;
         for (size_t i = 1; i < texelInfo.numChannles; i++)
         {
@@ -235,22 +244,22 @@ namespace OIV
             }
         }
 
-        std::wstringstream stream;
+        LLUtils::native_stringstream stream;
         for (size_t i = 0; i < texelInfo.numChannles; i++)
         {
             const IMCodec::ChannelInfo& channel = texelInfo.channles[i];
-            stream << LLUtils::StringUtility::ConvertString<std::wstring>(
+            stream << LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
                           std::string(FormatSemantic(channel.semantic)))
-                   << L':';
+                   << LLUTILS_TEXT(':');
             if (sameDataTypeForAllChannels == false || channel.semantic == IMCodec::ChannelSemantic::Monochrome)
-                stream << L'('
-                       << LLUtils::StringUtility::ConvertString<std::wstring>(
+                stream << LLUTILS_TEXT('(')
+                       << LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
                               std::string(FormatDataType(channel.channelDataType)))
-                       << L')';
+                       << LLUTILS_TEXT(')');
 
             stream << static_cast<int>(channel.width);
             if (i + 1 < texelInfo.numChannles)
-                stream << L' ';
+                stream << LLUTILS_TEXT(' ');
         }
 
         return stream.str();

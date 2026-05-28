@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include "OIVGLRenderer.h"
 #include "GLRenderer/Quad.h"
 namespace OIV
@@ -9,9 +10,8 @@ namespace OIV
         memset(&fImageSize, 0, sizeof(GLfloat) * 2);
         memset(&fViewportSize, 0, sizeof(GLfloat) * 2);
         GLint uShowGrid = 0;
-        fIsParamsDirty = true;
+        fIsParamsDirty  = true;
     }
-
 
     void OIVGLRenderer::PrepareResources()
     {
@@ -22,12 +22,11 @@ namespace OIV
 
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
-        std::wstring vertexShaderPath = L"./Resources/Programs/QuadVP.shader";
-        std::wstring fragmentShaderPath = L"./Resources/Programs/QuadFP.shader";
+        LLUtils::native_string_type vertexShaderPath   = LLUTILS_TEXT("./Resources/Programs/QuadVP.shader");
+        LLUtils::native_string_type fragmentShaderPath = LLUTILS_TEXT("./Resources/Programs/QuadFP.shader");
 
-        fProgram = GLGpuProgramUniquePtr(new GLGpuProgram(
-            LLUtils::File::ReadAllText(vertexShaderPath).c_str()
-            , LLUtils::File::ReadAllText(fragmentShaderPath).c_str()));
+        fProgram = GLGpuProgramUniquePtr(new GLGpuProgram(LLUtils::File::ReadAllText(vertexShaderPath).c_str(),
+                                                          LLUtils::File::ReadAllText(fragmentShaderPath).c_str()));
 
         fProgram->Bind();
         fTexture = GLTextureUniquePtr(new GLTexture());
@@ -48,11 +47,10 @@ namespace OIV
         return 0;
     }
 
-
     int OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
-        fShowGrid = viewParams.showGrid ? 1 : 0;
+        fShowGrid      = viewParams.showGrid ? 1 : 0;
         fIsParamsDirty = true;
         return 0;
     }
@@ -65,14 +63,14 @@ namespace OIV
 
     int OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
     {
-        //TODO: implement
+        // TODO: implement
         return 0;
     }
 
-    int OIVGLRenderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) 
+    int OIVGLRenderer::SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image)
     {
-        fImageSize[0] = static_cast<GLfloat>(image->GetWidth());
-        fImageSize[1] = static_cast<GLfloat>(image->GetHeight());
+        fImageSize[0]  = static_cast<GLfloat>(image->GetWidth());
+        fImageSize[1]  = static_cast<GLfloat>(image->GetHeight());
         fIsParamsDirty = true;
         fTexture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
         return 0;
@@ -83,12 +81,12 @@ namespace OIV
         return 0;
     }
 
-    int OIVGLRenderer::SetExposure(const OIV_CMD_ColorExposure_Request & exposure)
+    int OIVGLRenderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
     {
         return 0;
     }
 
-    int OIVGLRenderer::SetImageProperties(const OIV_CMD_ImageProperties_Request &)
+    int OIVGLRenderer::SetImageProperties(const OIV_CMD_ImageProperties_Request&)
     {
         return 0;
     }
@@ -109,10 +107,10 @@ namespace OIV
     void OIVGLRenderer::UpdateViewportSize(int x, int y)
     {
         glViewport(0, 0, x, y);
-        fIsParamsDirty = true;
+        fIsParamsDirty   = true;
         fViewportSize[0] = static_cast<GLfloat>(x);
         fViewportSize[1] = static_cast<GLfloat>(y);
-        fIsParamsDirty = true;
+        fIsParamsDirty   = true;
     }
 
     void OIVGLRenderer::UpdateGpuParams()
@@ -127,4 +125,4 @@ namespace OIV
             fIsParamsDirty = false;
         }
     }
-}
+}  // namespace OIV

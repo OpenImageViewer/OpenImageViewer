@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include "ImageMagickTestCorpus.h"
 
 #include <catch2/catch_all.hpp>
@@ -399,7 +400,7 @@ namespace OIV::Tests
         std::filesystem::path GetTestExecutableFolder()
         {
 #ifdef _WIN32
-            std::wstring buffer(MAX_PATH, L'\0');
+            LLUtils::native_string_type buffer(MAX_PATH, LLUTILS_TEXT('\0'));
             DWORD length = 0;
             while (true)
             {
@@ -459,8 +460,8 @@ namespace OIV::Tests
 
         void AddGeneratedExtension(GeneratedCorpus& corpus, const std::filesystem::path& path)
         {
-            auto extension = path.extension().wstring();
-            if (!extension.empty() && extension.front() == L'.')
+            auto extension = path.extension().native();
+            if (!extension.empty() && extension.front() == LLUTILS_TEXT('.'))
                 extension.erase(extension.begin());
             extension = LLUtils::StringUtility::ToLower(extension);
             if (!extension.empty())
@@ -469,12 +470,12 @@ namespace OIV::Tests
 
         void FinalizeExtensionList(GeneratedCorpus& corpus)
         {
-            std::wostringstream extensions;
+            LLUtils::native_stringstream extensions;
             bool first = true;
             for (const auto& extension : corpus.extensions)
             {
                 if (!first)
-                    extensions << L";";
+                    extensions << LLUTILS_TEXT(";");
                 first = false;
                 extensions << extension;
             }
@@ -944,11 +945,11 @@ namespace OIV::Tests
             return corpus;
         }
 
-        std::set<std::wstring> BuildBadFileSet(const GeneratedCorpus& corpus)
+        std::set<LLUtils::native_string_type> BuildBadFileSet(const GeneratedCorpus& corpus)
         {
-            std::set<std::wstring> badFiles;
+            std::set<LLUtils::native_string_type> badFiles;
             for (const auto& image : corpus.badImages)
-                badFiles.insert(image.path.wstring());
+                badFiles.insert(image.path.native());
             return badFiles;
         }
     }  // namespace
@@ -966,27 +967,27 @@ namespace OIV::Tests
         return *corpus;
     }
 
-    std::vector<std::wstring> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus)
+    std::vector<LLUtils::native_string_type> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus)
     {
-        std::vector<std::wstring> result;
+        std::vector<LLUtils::native_string_type> result;
         for (const auto& image : corpus.validImages)
-            result.push_back(image.path.wstring());
+            result.push_back(image.path.native());
         for (const auto& image : corpus.badImages)
-            result.push_back(image.path.wstring());
+            result.push_back(image.path.native());
 
         OIV::FileSorter sorter;
         std::sort(result.begin(), result.end(), sorter);
         return result;
     }
 
-    std::vector<std::wstring> FindConsecutiveValidFiles(const GeneratedCorpus& corpus, std::size_t count)
+    std::vector<LLUtils::native_string_type> FindConsecutiveValidFiles(const GeneratedCorpus& corpus, std::size_t count)
     {
         const auto allFiles = BuildBrowsingFolderFileList(corpus);
         const auto badFiles = BuildBadFileSet(corpus);
 
         for (auto first = allFiles.begin(); first != allFiles.end(); ++first)
         {
-            std::vector<std::wstring> window;
+            std::vector<LLUtils::native_string_type> window;
             for (auto it = first; it != allFiles.end() && window.size() < count; ++it)
             {
                 if (badFiles.contains(*it))
@@ -1002,7 +1003,8 @@ namespace OIV::Tests
         return {};
     }
 
-    std::pair<std::wstring, std::wstring> FindValidFileBeforeBadFile(const GeneratedCorpus& corpus)
+    std::pair<LLUtils::native_string_type, LLUtils::native_string_type> FindValidFileBeforeBadFile(
+        const GeneratedCorpus& corpus)
     {
         const auto allFiles = BuildBrowsingFolderFileList(corpus);
         const auto badFiles = BuildBadFileSet(corpus);

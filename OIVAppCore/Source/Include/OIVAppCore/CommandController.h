@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/CommandManager.h>
 
 #include <functional>
@@ -12,28 +14,20 @@ namespace OIV
     class CommandController
     {
       public:
+
         struct CommandRegistration
         {
             std::string name;
             CommandManager::CommandCallback callback;
         };
 
-        using CommandResultSink = std::function<void(const std::wstring&)>;
+        using CommandResultSink = std::function<void(const LLUtils::native_string_type&)>;
 
-        explicit CommandController(CommandResultSink resultSink = {})
-            : fResultSink(std::move(resultSink))
-        {
-        }
+        explicit CommandController(CommandResultSink resultSink = {}) : fResultSink(std::move(resultSink)) {}
 
-        CommandManager& GetCommandManager()
-        {
-            return fCommandManager;
-        }
+        CommandManager& GetCommandManager() { return fCommandManager; }
 
-        void SetResultSink(CommandResultSink resultSink)
-        {
-            fResultSink = std::move(resultSink);
-        }
+        void SetResultSink(CommandResultSink resultSink) { fResultSink = std::move(resultSink); }
 
         void AddCommandCallbacks(const std::vector<CommandRegistration>& registrations)
         {
@@ -70,6 +64,7 @@ namespace OIV
         }
 
       private:
+
         CommandManager fCommandManager;
         CommandResultSink fResultSink;
     };

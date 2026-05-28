@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/SortCommandPolicy.h>
 
 #include <LLUtils/StringUtility.h>
@@ -19,7 +20,7 @@ namespace OIV
         else
             return decision;
 
-        decision.valid = true;
+        decision.valid            = true;
         decision.reverseDirection = decision.sortType == currentSortType;
         return decision;
     }
@@ -30,10 +31,12 @@ namespace OIV
                                                                  : FileSorter::SortDirection::Ascending;
     }
 
-    std::wstring SortCommandPolicy::FormatSortResult(const std::string& displayName,
-                                                     FileSorter::SortDirection direction)
+    LLUtils::native_string_type SortCommandPolicy::FormatSortResult(const std::string& displayName,
+                                                                    FileSorter::SortDirection direction)
     {
-        return LLUtils::StringUtility::ToWString(displayName) + L" [" +
-               (direction == FileSorter::SortDirection::Ascending ? L"Ascending" : L"Descending") + L"]";
+        return LLUtils::StringUtility::ToNativeString(displayName) + LLUTILS_TEXT(" [") +
+               (direction == FileSorter::SortDirection::Ascending ? LLUTILS_TEXT("Ascending")
+                                                                  : LLUTILS_TEXT("Descending")) +
+               LLUTILS_TEXT("]");
     }
-}
+}  // namespace OIV

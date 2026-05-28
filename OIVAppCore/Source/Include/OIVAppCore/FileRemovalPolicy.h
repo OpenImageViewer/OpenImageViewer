@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <string>
+#include <LLUtils/StringDefs.h>
 
 namespace OIV
 {
@@ -16,14 +16,12 @@ namespace OIV
     class FileRemovalPolicy
     {
       public:
-        static RemovedFileAction Decide(const std::wstring& openedFile,
-                                        const std::wstring& removedFile,
-                                        const std::wstring& requestedRemovalFile,
-                                        bool removeInternalDeletes,
-                                        bool removeExternalDeletes,
-                                        std::size_t fileCount);
-        static bool ShouldUnloadAfterJumps(RemovedFileAction action,
-                                           bool firstJumpSucceeded,
+
+        static RemovedFileAction Decide(const LLUtils::native_string_type& openedFile,
+                                        const LLUtils::native_string_type& removedFile,
+                                        const LLUtils::native_string_type& requestedRemovalFile,
+                                        bool removeInternalDeletes, bool removeExternalDeletes, std::size_t fileCount);
+        static bool ShouldUnloadAfterJumps(RemovedFileAction action, bool firstJumpSucceeded,
                                            bool fallbackJumpSucceeded);
     };
 }  // namespace OIV

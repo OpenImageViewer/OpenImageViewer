@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/CommandManager.h>
 #include <OIVAppCore/FolderFileList.h>
 
@@ -77,13 +79,13 @@ namespace OIV
       public:
 
         static ZoomCommand ParseZoom(const CommandManager::CommandArgs& args);
-        static std::wstring FormatZoomResult(double scale);
+        static LLUtils::native_string_type FormatZoomResult(double scale);
 
         static PanCommand ParsePan(const CommandManager::CommandArgs& args);
-        static std::wstring FormatPanResult(const std::string& displayName, double amount);
+        static LLUtils::native_string_type FormatPanResult(const std::string& displayName, double amount);
 
         static PlacementAction ParsePlacement(const CommandManager::CommandArgs& args);
-        static std::wstring FormatPlacementResult(const std::string& displayName);
+        static LLUtils::native_string_type FormatPlacementResult(const std::string& displayName);
 
         static NavigationCommand ParseNavigation(const CommandManager::CommandArgs& args);
         static FolderFileList::index_type NextSubImageIndex(FolderFileList::index_type selected,

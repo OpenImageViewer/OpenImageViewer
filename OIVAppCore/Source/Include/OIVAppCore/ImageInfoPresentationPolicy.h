@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVImage/OIVBaseImage.h>
 #include <TexelFormat.h>
 
@@ -17,9 +19,10 @@ namespace OIV
     class ImageInfoPresentationPolicy
     {
       public:
+
         struct ImageInfoValue
         {
-            std::wstring text;
+            LLUtils::native_string_type text;
         };
 
         struct ImageInfoRow
@@ -30,11 +33,10 @@ namespace OIV
 
         using ImageInfoRows = std::vector<ImageInfoRow>;
 
-        static ImageInfoRows Build(const OIVBaseImageSharedPtr& image,
-                                   const OIVBaseImageSharedPtr& rasterized,
+        static ImageInfoRows Build(const OIVBaseImageSharedPtr& image, const OIVBaseImageSharedPtr& rasterized,
                                    IMCodec::IImageCodec& imageCodec);
-        static std::wstring FormatFileTime(const std::filesystem::path& filePath);
-        static std::wstring FormatImageSource(ImageSource source);
-        static std::wstring FormatTexelInfo(const IMCodec::TexelInfo& texelInfo);
+        static LLUtils::native_string_type FormatFileTime(const std::filesystem::path& filePath);
+        static LLUtils::native_string_type FormatImageSource(ImageSource source);
+        static LLUtils::native_string_type FormatTexelInfo(const IMCodec::TexelInfo& texelInfo);
     };
 }  // namespace OIV

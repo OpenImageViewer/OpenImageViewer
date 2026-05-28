@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/FolderFileList.h>
 
 #include <LLUtils/Exception.h>
@@ -107,7 +108,7 @@ namespace OIV
     {
         using namespace std::filesystem;
 
-        const std::wstring absoluteFolderPath = LLUtils::FileSystemHelper::ResolveFullPath(folder);
+        const LLUtils::native_string_type absoluteFolderPath = LLUtils::FileSystemHelper::ResolveFullPath(folder);
 
         if (absoluteFolderPath != fCurrentFolder)
         {
@@ -180,17 +181,20 @@ namespace OIV
 
     bool FolderFileList::IsSupportedFileType(const string_type& filePath) const
     {
-        std::wstring extension = LLUtils::StringUtility::ToLower(std::filesystem::path(filePath).extension().wstring());
+        LLUtils::native_string_type extension = LLUtils::StringUtility::ToLower(
+            std::filesystem::path(filePath).extension().native());
 
-        std::wstring_view sv(extension);
+        LLUtils::native_string_view sv(extension);
         if (sv.empty() == false)
             sv = sv.substr(1);
 
         return fKnownFileTypesSet.contains(sv.data());
     }
 
-    void FolderFileList::UpdateFolderFileList(IFileWatcher::FileChangedOp fileOp, const std::wstring& filePath,
-                                              const std::wstring& filePath2, const string_type& currentFile)
+    void FolderFileList::UpdateFolderFileList(IFileWatcher::FileChangedOp fileOp,
+                                              const LLUtils::native_string_type& filePath,
+                                              const LLUtils::native_string_type& filePath2,
+                                              const string_type& currentFile)
     {
         bool shouldUpdateIndex = false;
         switch (fileOp)

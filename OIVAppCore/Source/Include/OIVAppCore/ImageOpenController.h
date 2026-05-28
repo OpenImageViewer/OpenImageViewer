@@ -1,5 +1,7 @@
 #pragma once
 
+#include <LLUtils/StringDefs.h>
+
 #include <OIVAppCore/BrowseSessionController.h>
 
 #include <OIVImage/OIVFileImage.h>
@@ -38,7 +40,7 @@ namespace OIV
     {
         ImageLoadStatus status = ImageLoadStatus::UnknownError;
         ResultCode resultCode  = ResultCode::RC_UknownError;
-        std::wstring normalizedPath;
+        LLUtils::native_string_type normalizedPath;
         std::shared_ptr<OIVFileImage> image;
 
         bool DecodeSucceeded() const;
@@ -49,7 +51,7 @@ namespace OIV
       public:
 
         virtual ~IImageFileLoader()                                           = default;
-        virtual ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath,
+        virtual ImageFileLoadResult LoadFile(const LLUtils::native_string_type& normalizedFilePath,
                                              IMCodec::PluginTraverseMode traverseMode,
                                              const ImageLoadContext& context) = 0;
     };
@@ -59,7 +61,8 @@ namespace OIV
       public:
 
         explicit OIVImageFileLoader(IMCodec::ImageLoader& imageLoader);
-        ImageFileLoadResult LoadFile(const std::wstring& normalizedFilePath, IMCodec::PluginTraverseMode traverseMode,
+        ImageFileLoadResult LoadFile(const LLUtils::native_string_type& normalizedFilePath,
+                                     IMCodec::PluginTraverseMode traverseMode,
                                      const ImageLoadContext& context) override;
 
       private:
@@ -77,10 +80,10 @@ namespace OIV
                                      BrowseSessionController* fileSessionController = nullptr);
 
         void SetBrowseSessionController(BrowseSessionController* fileSessionController);
-        ImageLoadResult LoadFile(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode,
+        ImageLoadResult LoadFile(const LLUtils::native_string_type& filePath, IMCodec::PluginTraverseMode traverseMode,
                                  const ImageLoadContext& context);
-        ImageLoadResult LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode,
-                                         const ImageLoadContext& context);
+        ImageLoadResult LoadFileOrFolder(const LLUtils::native_string_type& filePath,
+                                         IMCodec::PluginTraverseMode traverseMode, const ImageLoadContext& context);
 
         static ImageLoadStatus ClassifyLoadResult(ResultCode resultCode, const IMCodec::ImageSharedPtr& image,
                                                   std::uint32_t maxSupportedDimension = MaxSupportedDimension);

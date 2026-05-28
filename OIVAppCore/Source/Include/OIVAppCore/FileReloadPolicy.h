@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <LLUtils/StringDefs.h>
 
 namespace OIV
 {
@@ -23,16 +23,18 @@ namespace OIV
     class FileReloadPolicy
     {
       public:
+
         void SetMode(FileReloadMode mode);
         FileReloadMode GetMode() const;
-        const std::wstring& GetPendingReloadFile() const;
-        bool HasPendingReloadFor(const std::wstring& fileName) const;
-        ReloadAction OnCurrentFileChanged(const std::wstring& openedFile, bool appActive);
-        ReloadAction OnPendingReloadRequested(const std::wstring& requestedFile);
+        const LLUtils::native_string_type& GetPendingReloadFile() const;
+        bool HasPendingReloadFor(const LLUtils::native_string_type& fileName) const;
+        ReloadAction OnCurrentFileChanged(const LLUtils::native_string_type& openedFile, bool appActive);
+        ReloadAction OnPendingReloadRequested(const LLUtils::native_string_type& requestedFile);
         ReloadAction ConfirmReload(bool accepted);
 
       private:
+
         FileReloadMode fMode = FileReloadMode::Confirmation;
-        std::wstring fPendingReloadFile;
+        LLUtils::native_string_type fPendingReloadFile;
     };
 }  // namespace OIV

@@ -1,27 +1,25 @@
+#include <LLUtils/StringDefs.h>
 #include "D3D11Shader.h"
 #include <LLUtils/FileHelper.h>
 #include "D3D11Utility.h"
 
-namespace  OIV
+namespace OIV
 {
 
     class D3D11IncludeHandler final : public ID3DInclude
     {
-    public:
+      public:
 
-        D3D11IncludeHandler(D3D11Shader* shader) : fShader(shader)
-        {
-            
-        }
+        D3D11IncludeHandler(D3D11Shader* shader) : fShader(shader) {}
 
-        
-        COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE Open([[maybe_unused]] D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName,
-            [[maybe_unused]] LPCVOID pParentData, LPCVOID *ppData, UINT *pBytes) override
+        COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE Open([[maybe_unused]] D3D_INCLUDE_TYPE IncludeType,
+                                                            LPCSTR pFileName, [[maybe_unused]] LPCVOID pParentData,
+                                                            LPCVOID* ppData, UINT* pBytes) override
         {
             using namespace std;
             filesystem::path p = fShader->GetsourceFileName();
-            p = p.parent_path() / pFileName;
-            
+            p                  = p.parent_path() / pFileName;
+
             LLUtils::Buffer buf = LLUtils::File::ReadAllBytes(p);
 
             std::byte* buffer;
@@ -30,7 +28,6 @@ namespace  OIV
             *pBytes = static_cast<UINT>(bufferSize);
             *ppData = buffer;
             return S_OK;
-            
         }
 
         COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE Close(LPCVOID pData) override
@@ -39,25 +36,19 @@ namespace  OIV
             return S_OK;
         }
 
-    private:
+      private:
+
         D3D11Shader* fShader;
-        
     };
 
-
-    D3D11Shader::D3D11Shader(D3D11DeviceSharedPtr d3dDevice)
-        : fDevice(d3dDevice)
-    {
-
-    }
+    D3D11Shader::D3D11Shader(D3D11DeviceSharedPtr d3dDevice) : fDevice(d3dDevice) {}
 
     void D3D11Shader::SetMicroCode(LLUtils::Buffer&& blob)
     {
         fShaderData = std::move(blob);
     }
 
-
-    void D3D11Shader::SetSourceFileName(const std::wstring& fileName)
+    void D3D11Shader::SetSourceFileName(const LLUtils::native_string_type& fileName)
     {
         fSourceFileName = fileName;
     }
@@ -78,7 +69,7 @@ namespace  OIV
 
                 fSourceCode = LLUtils::File::ReadAllText<std::string>(GetsourceFileName());
             }
-            
+
             if (fSourceCode.empty() == true)
                 D3D11Error::HandleError("Direct3D11 could not locate the GPU programs");
 
@@ -88,7 +79,7 @@ namespace  OIV
         if (fShaderData == nullptr)
             D3D11Error::HandleError("Could not compile GPU program");
         else
-           Create();
+            Create();
     }
 
     const std::string& D3D11Shader::Getsource() const
@@ -96,7 +87,7 @@ namespace  OIV
         return fSourceCode;
     }
 
-    const std::wstring& D3D11Shader::GetsourceFileName() const
+    const LLUtils::native_string_type& D3D11Shader::GetsourceFileName() const
     {
         return fSourceFileName;
     }
@@ -123,22 +114,18 @@ namespace  OIV
 
     UINT D3D11Shader::GetCompileFlags() const
     {
-        return 
-              D3DCOMPILE_OPTIMIZATION_LEVEL3 
-            | D3DCOMPILE_IEEE_STRICTNESS 
-            | D3DCOMPILE_ENABLE_STRICTNESS
-            | D3DCOMPILE_WARNINGS_ARE_ERRORS
-        ;
+        return D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_IEEE_STRICTNESS | D3DCOMPILE_ENABLE_STRICTNESS |
+               D3DCOMPILE_WARNINGS_ARE_ERRORS;
     }
 
     void D3D11Shader::Compile()
     {
         D3D_SHADER_MACRO macros[2];
         macros[0].Definition = "1";
-        macros[0].Name = "HLSL";
+        macros[0].Name       = "HLSL";
 
         macros[1].Definition = nullptr;
-        macros[1].Name = nullptr;
+        macros[1].Name       = nullptr;
 
         ComPtr<ID3DBlob> microCode;
         ComPtr<ID3DBlob> errors;
@@ -148,21 +135,14 @@ namespace  OIV
 
         D3D11IncludeHandler includeHandler(this);
         GetShaderCompileParams(params);
-        
-        res =
-            D3DCompile(
-                static_cast<const void*>(fSourceCode.c_str())
-                , fSourceCode.length()
-                , fSourceFileName.empty() == false ? LLUtils::StringUtility::ConvertString<std::string>(fSourceFileName).c_str() : nullptr /*source name*/
-                , &macros[0]
-                , &includeHandler
-                , "main"
-                , params.target.c_str()
-                , GetCompileFlags() 
-                , 0
-                , microCode.GetAddressOf()
-                , errors.GetAddressOf()
-            );
+
+        res = D3DCompile(static_cast<const void*>(fSourceCode.c_str()), fSourceCode.length(),
+                         fSourceFileName.empty() == false
+                             ? LLUtils::StringUtility::ConvertString<std::string>(fSourceFileName).c_str()
+                             : nullptr /*source name*/
+                         ,
+                         &macros[0], &includeHandler, "main", params.target.c_str(), GetCompileFlags(), 0,
+                         microCode.GetAddressOf(), errors.GetAddressOf());
 
         if (SUCCEEDED(res) == false)
             HandleCompileError(errors.Get());
@@ -185,4 +165,4 @@ namespace  OIV
 
         D3D11Error::HandleError(errorMessage);
     }
-}
+}  // namespace OIV

@@ -1,4 +1,6 @@
 #pragma once
+
+#include <LLUtils/StringDefs.h>
 #include "OIVBaseImage.h"
 #include <LLUtils/BitFlags.h>
 #include <LLUtils/Templates.h>
@@ -9,13 +11,12 @@ namespace FreeType
     class FreeTypeConnector;
 }
 
-
 namespace OIV
 {
     struct CreateTextParams
     {
-        std::wstring fontPath;
-        std::wstring text;
+        LLUtils::native_string_type fontPath;
+        LLUtils::native_string_type text;
         int32_t maxWidth;
         uint32_t outlineWidth;
         LLUtils::Color textColor;
@@ -31,34 +32,31 @@ namespace OIV
         FreeType::RenderMode renderMode;
     };
 
-    
     struct TextMetrics
     {
         uint32_t rowHeight;
         uint32_t totalRows;
     };
 
-
     class OIVTextImage : public OIVBaseImage
     {
         enum class DirtyFlags : uint32_t
         {
-              None      = 0
-            , Metrics   = 1 << 0
-            , Bitmap    = 1 << 1
-            , All       = LLUtils::GetMaxBitsMask<uint32_t>()
+            None    = 0,
+            Metrics = 1 << 0,
+            Bitmap  = 1 << 1,
+            All     = LLUtils::GetMaxBitsMask<uint32_t>()
         };
         LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DirtyFlags);
 
-    public:
+      public:
 
         OIVTextImage(ImageSource imageSource, FreeType::FreeTypeConnector* freeType);
 
         OIVTextImage(FreeType::FreeTypeConnector* freeType);
-        
-    
+
 #pragma region Text rendering
-        void SetText(const std::wstring& text)
+        void SetText(const LLUtils::native_string_type& text)
         {
             if (fTextOptionsCurrent.text != text)
             {
@@ -76,7 +74,7 @@ namespace OIV
             }
         }
 
-        void  SetFontPath(const std::wstring& sFontPath)
+        void SetFontPath(const LLUtils::native_string_type& sFontPath)
         {
             if (fTextOptionsCurrent.fontPath != sFontPath)
             {
@@ -92,9 +90,8 @@ namespace OIV
                 fTextOptionsCurrent.fontSize = fontSize;
                 fDirtyFlags.set(DirtyFlags::All);
             }
-
         }
-        void SetOutlineWidth(uint16_t outlineWidth) 
+        void SetOutlineWidth(uint16_t outlineWidth)
         {
             if (fTextOptionsCurrent.outlineWidth != outlineWidth)
             {
@@ -102,8 +99,7 @@ namespace OIV
                 fDirtyFlags.set(DirtyFlags::All);
             }
         }
-  
-        
+
         void SetBackgroundColor(LLUtils::Color color)
         {
             if (fTextOptionsCurrent.backgroundColor != color)
@@ -158,21 +154,16 @@ namespace OIV
             }
         }
 
-
         TextMetrics GetMetrics();
         void UpdateTextMetrics();
-        void Create()
-        {
-            UpdateBitmap();
-        }
+        void Create() { UpdateBitmap(); }
 
-    
 #pragma endregion Text display
 
 #pragma region Text rendering
         CreateTextParams fTextOptionsCurrent{};
-        
-    protected:
+
+      protected:
 
         void UpdateBitmap()
         {
@@ -188,11 +179,10 @@ namespace OIV
             }
         }
 
-        void PerformPreRender() override 
-        { 
+        void PerformPreRender() override
+        {
             OIVBaseImage::PerformPreRender();
             UpdateBitmap();
-
         };
 
         bool PerformIsDirty() const override
@@ -200,18 +190,16 @@ namespace OIV
             return fDirtyFlags.testAny(DirtyFlags::All) || OIVBaseImage::PerformIsDirty();
         };
 
-    private:
+      private:
 
-       FreeType::TextCreateParams GetCreateParams();
-       IMCodec::ImageSharedPtr CreateText();
-       LLUtils::BitFlags<DirtyFlags> fDirtyFlags{};
-       FreeType::TextMetrics fCachedTextMetrics;
-       FreeType::FreeTypeConnector* fFreeType{};
-        
+        FreeType::TextCreateParams GetCreateParams();
+        IMCodec::ImageSharedPtr CreateText();
+        LLUtils::BitFlags<DirtyFlags> fDirtyFlags{};
+        FreeType::TextMetrics fCachedTextMetrics;
+        FreeType::FreeTypeConnector* fFreeType{};
     };
-
 
     using OIVTextImageUniquePtr = std::unique_ptr<OIVTextImage>;
     using OIVTextImageSharedPtr = std::shared_ptr<OIVTextImage>;
 
-}
+}  // namespace OIV

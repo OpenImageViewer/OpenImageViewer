@@ -1,48 +1,50 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/AppSettingsPolicy.h>
 
 namespace OIV
 {
-    int64_t AppSettingsPolicy::ParseIntegral(const std::wstring& value)
+    int64_t AppSettingsPolicy::ParseIntegral(const LLUtils::native_string_type& value)
     {
         return std::stoll(value);
     }
 
-    double AppSettingsPolicy::ParseFloat(const std::wstring& value)
+    double AppSettingsPolicy::ParseFloat(const LLUtils::native_string_type& value)
     {
         return std::stod(value);
     }
 
-    bool AppSettingsPolicy::ParseBool(const std::wstring& value)
+    bool AppSettingsPolicy::ParseBool(const LLUtils::native_string_type& value)
     {
-        return value == L"true";
+        return value == LLUTILS_TEXT("true");
     }
 
-    AppSettingsPolicy::Action AppSettingsPolicy::ParseAction(const std::wstring& key, const std::wstring& value)
+    AppSettingsPolicy::Action AppSettingsPolicy::ParseAction(const LLUtils::native_string_type& key,
+                                                             const LLUtils::native_string_type& value)
     {
-        if (key == L"viewsettings/maxzoom")
+        if (key == LLUTILS_TEXT("viewsettings/maxzoom"))
             return {ActionType::MaxZoom, ParseFloat(value)};
-        if (key == L"viewsettings/imagemargins/x")
+        if (key == LLUTILS_TEXT("viewsettings/imagemargins/x"))
             return {ActionType::ImageMarginX, ParseFloat(value)};
-        if (key == L"viewsettings/imagemargins/y")
+        if (key == LLUTILS_TEXT("viewsettings/imagemargins/y"))
             return {ActionType::ImageMarginY, ParseFloat(value)};
-        if (key == L"viewsettings/minimagesize")
+        if (key == LLUTILS_TEXT("viewsettings/minimagesize"))
             return {ActionType::MinImageSize, ParseFloat(value)};
-        if (key == L"viewsettings/slideshowinterval")
+        if (key == LLUTILS_TEXT("viewsettings/slideshowinterval"))
             return {ActionType::SlideshowInterval, 0.0, ParseIntegral(value)};
-        if (key == L"viewsettings/quickbrowsedelay")
+        if (key == LLUTILS_TEXT("viewsettings/quickbrowsedelay"))
             return {ActionType::QuickBrowseDelay, 0.0, ParseIntegral(value)};
-        if (key == L"autoscroll/deadzoneradius")
+        if (key == LLUTILS_TEXT("autoscroll/deadzoneradius"))
             return {ActionType::AutoScrollDeadZoneRadius, 0.0, ParseIntegral(value)};
-        if (key == L"autoscroll/speedfactorin")
+        if (key == LLUTILS_TEXT("autoscroll/speedfactorin"))
             return {ActionType::AutoScrollSpeedFactorIn, ParseFloat(value)};
-        if (key == L"autoscroll/speedfactorout")
+        if (key == LLUTILS_TEXT("autoscroll/speedfactorout"))
             return {ActionType::AutoScrollSpeedFactorOut, ParseFloat(value)};
-        if (key == L"autoscroll/speedfactorrange")
+        if (key == LLUTILS_TEXT("autoscroll/speedfactorrange"))
             return {ActionType::AutoScrollSpeedFactorRange, 0.0, ParseIntegral(value)};
-        if (key == L"autoscroll/maxspeed")
+        if (key == LLUTILS_TEXT("autoscroll/maxspeed"))
             return {ActionType::AutoScrollMaxSpeed, 0.0, ParseIntegral(value)};
 
-        if (key == L"filesystem/deletedfileremovalmode")
+        if (key == LLUTILS_TEXT("filesystem/deletedfileremovalmode"))
         {
             const ParsedSetting<DeletedFileRemovalMode> mode = ParseDeletedFileRemovalMode(value);
             if (mode.valid)
@@ -54,7 +56,7 @@ namespace OIV
             return {};
         }
 
-        if (key == L"filesystem/modifiedfilereloadmode")
+        if (key == LLUTILS_TEXT("filesystem/modifiedfilereloadmode"))
         {
             const ParsedSetting<FileReloadMode> mode = ParseFileReloadMode(value);
             if (mode.valid)
@@ -66,10 +68,10 @@ namespace OIV
             return {};
         }
 
-        if (key == L"system/reloadsettingsfileifchanged")
+        if (key == LLUTILS_TEXT("system/reloadsettingsfileifchanged"))
             return {ActionType::ReloadSettingsFileIfChanged, 0.0, 0, ParseBool(value)};
 
-        if (key == L"files/defaultsortmode")
+        if (key == LLUTILS_TEXT("files/defaultsortmode"))
         {
             const ParsedSetting<FileSorter::SortType> sortType = ParseSortType(value);
             if (sortType.valid)
@@ -85,7 +87,7 @@ namespace OIV
             sortDirectionTarget.valid)
         {
             Action action{ActionType::SortDirection};
-            action.sortType = sortDirectionTarget.value;
+            action.sortType      = sortDirectionTarget.value;
             action.sortDirection = ParseSortDirection(value);
             return action;
         }
@@ -95,80 +97,83 @@ namespace OIV
         {
             Action action{ActionType::BackgroundColor};
             action.backgroundColorIndex = backgroundColorIndex.value;
-            action.textValue = value;
+            action.textValue            = value;
             return action;
         }
 
-        if (key == L"imagesettings/biggestsubimage")
+        if (key == LLUTILS_TEXT("imagesettings/biggestsubimage"))
             return {ActionType::BiggestSubImageOnLoad, 0.0, 0, ParseBool(value)};
 
         return {};
     }
 
-    ParsedSetting<DeletedFileRemovalMode> AppSettingsPolicy::ParseDeletedFileRemovalMode(const std::wstring& value)
+    ParsedSetting<DeletedFileRemovalMode> AppSettingsPolicy::ParseDeletedFileRemovalMode(
+        const LLUtils::native_string_type& value)
     {
-        if (value == L"always")
+        if (value == LLUTILS_TEXT("always"))
             return {true, DeletedFileRemovalMode::Always};
-        if (value == L"externally")
+        if (value == LLUTILS_TEXT("externally"))
             return {true, DeletedFileRemovalMode::DeletedExternally};
-        if (value == L"internally")
+        if (value == LLUTILS_TEXT("internally"))
             return {true, DeletedFileRemovalMode::DeletedInternally};
-        if (value == L"none")
+        if (value == LLUTILS_TEXT("none"))
             return {true, DeletedFileRemovalMode::None};
 
         return {};
     }
 
-    ParsedSetting<FileReloadMode> AppSettingsPolicy::ParseFileReloadMode(const std::wstring& value)
+    ParsedSetting<FileReloadMode> AppSettingsPolicy::ParseFileReloadMode(const LLUtils::native_string_type& value)
     {
-        if (value == L"none")
+        if (value == LLUTILS_TEXT("none"))
             return {true, FileReloadMode::None};
-        if (value == L"confirmation")
+        if (value == LLUTILS_TEXT("confirmation"))
             return {true, FileReloadMode::Confirmation};
-        if (value == L"autoforeground")
+        if (value == LLUTILS_TEXT("autoforeground"))
             return {true, FileReloadMode::AutoForeground};
-        if (value == L"autobackground")
+        if (value == LLUTILS_TEXT("autobackground"))
             return {true, FileReloadMode::AutoBackground};
 
         return {};
     }
 
-    ParsedSetting<FileSorter::SortType> AppSettingsPolicy::ParseSortType(const std::wstring& value)
+    ParsedSetting<FileSorter::SortType> AppSettingsPolicy::ParseSortType(const LLUtils::native_string_type& value)
     {
-        if (value == L"name")
+        if (value == LLUTILS_TEXT("name"))
             return {true, FileSorter::SortType::Name};
-        if (value == L"date")
+        if (value == LLUTILS_TEXT("date"))
             return {true, FileSorter::SortType::Date};
-        if (value == L"extension")
+        if (value == LLUTILS_TEXT("extension"))
             return {true, FileSorter::SortType::Extension};
 
         return {};
     }
 
-    FileSorter::SortDirection AppSettingsPolicy::ParseSortDirection(const std::wstring& value)
+    FileSorter::SortDirection AppSettingsPolicy::ParseSortDirection(const LLUtils::native_string_type& value)
     {
-        return value == L"ascending" ? FileSorter::SortDirection::Ascending : FileSorter::SortDirection::Descending;
+        return value == LLUTILS_TEXT("ascending") ? FileSorter::SortDirection::Ascending
+                                                  : FileSorter::SortDirection::Descending;
     }
 
-    ParsedSetting<FileSorter::SortType> AppSettingsPolicy::ParseSortDirectionTarget(const std::wstring& key)
+    ParsedSetting<FileSorter::SortType> AppSettingsPolicy::ParseSortDirectionTarget(
+        const LLUtils::native_string_type& key)
     {
-        if (key == L"files/sortbynamedirection")
+        if (key == LLUTILS_TEXT("files/sortbynamedirection"))
             return {true, FileSorter::SortType::Name};
-        if (key == L"files/sortbydatedirection")
+        if (key == LLUTILS_TEXT("files/sortbydatedirection"))
             return {true, FileSorter::SortType::Date};
-        if (key == L"files/sortbyextensiondirection")
+        if (key == LLUTILS_TEXT("files/sortbyextensiondirection"))
             return {true, FileSorter::SortType::Extension};
 
         return {};
     }
 
-    ParsedSetting<uint32_t> AppSettingsPolicy::ParseBackgroundColorIndex(const std::wstring& key)
+    ParsedSetting<uint32_t> AppSettingsPolicy::ParseBackgroundColorIndex(const LLUtils::native_string_type& key)
     {
-        if (key == L"displaysettings/backgroundcolor1")
+        if (key == LLUTILS_TEXT("displaysettings/backgroundcolor1"))
             return {true, 0};
-        if (key == L"displaysettings/backgroundcolor2")
+        if (key == LLUTILS_TEXT("displaysettings/backgroundcolor2"))
             return {true, 1};
 
         return {};
     }
-}
+}  // namespace OIV

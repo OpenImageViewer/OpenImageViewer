@@ -1,3 +1,4 @@
+#include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ViewCommandPolicy.h>
 
 #include <LLUtils/MathUtil.h>
@@ -30,9 +31,9 @@ namespace OIV
                            cy.empty() ? -1 : std::atoi(cy.c_str())};
     }
 
-    std::wstring ViewCommandPolicy::FormatZoomResult(double scale)
+    LLUtils::native_string_type ViewCommandPolicy::FormatZoomResult(double scale)
     {
-        std::wstringstream stream;
+        LLUtils::native_stringstream stream;
         stream << "<textcolor=#ff8930>Zoom <textcolor=#7672ff>(" << std::fixed << std::setprecision(2) << scale * 100.0
                << "%)";
         return stream.str();
@@ -56,11 +57,11 @@ namespace OIV
         return command;
     }
 
-    std::wstring ViewCommandPolicy::FormatPanResult(const std::string& displayName, double amount)
+    LLUtils::native_string_type ViewCommandPolicy::FormatPanResult(const std::string& displayName, double amount)
     {
-        std::wstringstream stream;
-        stream << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToWString(displayName) << "<textcolor=#7672ff> ("
-               << amount << " pixels)";
+        LLUtils::native_stringstream stream;
+        stream << "<textcolor=#00ff00>" << LLUtils::StringUtility::ToNativeString(displayName)
+               << "<textcolor=#7672ff> (" << amount << " pixels)";
         return stream.str();
     }
 
@@ -78,9 +79,9 @@ namespace OIV
         return PlacementAction::None;
     }
 
-    std::wstring ViewCommandPolicy::FormatPlacementResult(const std::string& displayName)
+    LLUtils::native_string_type ViewCommandPolicy::FormatPlacementResult(const std::string& displayName)
     {
-        return L"<textcolor=#00ff00>" + LLUtils::StringUtility::ToWString(displayName);
+        return LLUTILS_TEXT("<textcolor=#00ff00>") + LLUtils::StringUtility::ToNativeString(displayName);
     }
 
     NavigationCommand ViewCommandPolicy::ParseNavigation(const CommandManager::CommandArgs& args)

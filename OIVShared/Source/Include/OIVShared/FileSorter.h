@@ -1,4 +1,6 @@
 #pragma once
+
+#include <LLUtils/StringDefs.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/StringUtility.h>
 
@@ -31,17 +33,18 @@ namespace OIV
 
         struct FileNameSorter
         {
-            bool operator()(const std::wstring& A, const std::wstring& B, SortDirection direction) const
+            bool operator()(const LLUtils::native_string_type& A, const LLUtils::native_string_type& B,
+                            SortDirection direction) const
             {
                 using namespace LLUtils;
                 using path = std::filesystem::path;
                 path aPath(StringUtility::ToLower(A));
-                std::wstring aName = aPath.stem();
-                std::wstring aExt  = aPath.extension();
+                LLUtils::native_string_type aName = aPath.stem();
+                LLUtils::native_string_type aExt  = aPath.extension();
 
                 path bPath(StringUtility::ToLower(B));
-                std::wstring bName = bPath.stem();
-                std::wstring bExt  = bPath.extension();
+                LLUtils::native_string_type bName = bPath.stem();
+                LLUtils::native_string_type bExt  = bPath.extension();
 
                 return direction == SortDirection::Ascending ? (aName < bName || ((aName == bName) && aExt < bExt))
                                                              : bName < aName || ((bName == aName) && bExt < aExt);
@@ -50,17 +53,18 @@ namespace OIV
 
         struct FileExtensionSorter
         {
-            bool operator()(const std::wstring& A, const std::wstring& B, SortDirection direction) const
+            bool operator()(const LLUtils::native_string_type& A, const LLUtils::native_string_type& B,
+                            SortDirection direction) const
             {
                 using namespace LLUtils;
                 using path = std::filesystem::path;
                 path aPath(StringUtility::ToLower(A));
-                std::wstring aName = aPath.stem();
-                std::wstring aExt  = aPath.extension();
+                LLUtils::native_string_type aName = aPath.stem();
+                LLUtils::native_string_type aExt  = aPath.extension();
 
                 path bPath(StringUtility::ToLower(B));
-                std::wstring bName = bPath.stem();
-                std::wstring bExt  = bPath.extension();
+                LLUtils::native_string_type bName = bPath.stem();
+                LLUtils::native_string_type bExt  = bPath.extension();
 
                 return direction == SortDirection::Ascending ? (aExt < bExt || ((aExt == bExt) && aName < bName))
                                                              : bExt < aExt || ((bExt == aExt) && bName < aName);
@@ -69,7 +73,8 @@ namespace OIV
 
         struct FileDateSorter
         {
-            bool operator()(const std::wstring& A, const std::wstring& B, SortDirection direction) const
+            bool operator()(const LLUtils::native_string_type& A, const LLUtils::native_string_type& B,
+                            SortDirection direction) const
             {
                 std::error_code errorA;
                 std::error_code errorB;
@@ -84,7 +89,7 @@ namespace OIV
 
       public:
 
-        bool operator()(const std::wstring& A, const std::wstring& B) const
+        bool operator()(const LLUtils::native_string_type& A, const LLUtils::native_string_type& B) const
         {
             switch (fSortType)
             {
