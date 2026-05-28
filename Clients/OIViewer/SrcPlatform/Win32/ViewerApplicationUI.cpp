@@ -538,9 +538,10 @@ namespace OIV
         switch (args.action)
         {
             case NotificationIconGroup::NotificationIconAction::Select:
-                if (fWindow.GetVisible() == false)
+                if (fWindow.GetVisible() == false || fWindow.GetWindowDisplayState() == WindowDisplayState::Minimized)
                 {
                     fWindow.SetVisible(true);
+                    fWindow.SetWindowDisplayState(WindowDisplayState::Restored);
                     fWindow.SetForground();
                 }
                 else
