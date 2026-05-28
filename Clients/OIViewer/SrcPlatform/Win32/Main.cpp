@@ -7,21 +7,21 @@
 #include "./Win32/UserMessages.h"
 
 
-std::wstring CompileFilePathFromArguments(int argc, const wchar_t** argv)
+LLUtils::native_string_type CompileFilePathFromArguments(int argc, const wchar_t** argv)
 {
-    std::wstring filePath;
+    LLUtils::native_string_type filePath;
 
     if (argc > 1)
     {
         filePath = argv[1];
         for (int i = 2; i < argc; i++)
-            filePath += std::wstring(L" ") + argv[i];
+            filePath += LLUtils::native_string_type(LLUTILS_TEXT(" ")) + argv[i];
     }
 
     return filePath;
 }
 
-void RunApp(const std::wstring& filePath)
+void RunApp(const LLUtils::native_string_type& filePath)
 {
     OIV::ViewerApplication viewerApplication;
     viewerApplication.Init(filePath);
@@ -31,7 +31,7 @@ void RunApp(const std::wstring& filePath)
 int mainFunction(int argc, const wchar_t** argv)
 {
     using namespace OIV;
-    std::wstring filePath = CompileFilePathFromArguments(argc, argv);
+    LLUtils::native_string_type filePath = CompileFilePathFromArguments(argc, argv);
 
     if (filePath.empty() == false)
     {

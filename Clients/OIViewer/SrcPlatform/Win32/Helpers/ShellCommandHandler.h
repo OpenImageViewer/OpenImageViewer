@@ -11,8 +11,8 @@ namespace OIV
     class ShellCommandHandler
     {
       public:
-        static std::wstring Execute(const CommandManager::CommandRequest& request,
-                                    const std::wstring& openedFileName,
+        static LLUtils::native_string_type Execute(const CommandManager::CommandRequest& request,
+                                    const LLUtils::native_string_type& openedFileName,
                                     OIVBaseImageSharedPtr openedImage);
     };
 }

@@ -38,7 +38,7 @@ namespace OIV
             void ShowStatusBar(bool show);
             void SetShowImageControl(bool show);
             Win32Window& GetCanvasWindow() { return fCanvasWindow; }
-            void SetStatusBarText(std::wstring message, int part, int type);
+            void SetStatusBarText(LLUtils::native_string_type message, int part, int type);
             void SetIsTrayWindow(bool isTrayWindow);
             static bool GetIsTrayWindow(HWND hwnd);
 

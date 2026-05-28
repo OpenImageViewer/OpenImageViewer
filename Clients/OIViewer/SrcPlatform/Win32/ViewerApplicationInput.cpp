@@ -91,9 +91,9 @@ namespace OIV
             }
             else
             {
-                std::wstring anchorPath = LLUtils::StringUtility::ToNativeString(
+                LLUtils::native_string_type anchorPath = LLUtils::StringUtility::ToNativeString(
                                               LLUtils::PlatformUtility::GetExeFolder()) +
-                                          L"./Resources/Cursors/ArrowC.cur";
+                                          LLUTILS_TEXT("./Resources/Cursors/ArrowC.cur");
                 std::unique_ptr<OIVFileImage> fileImage = std::make_unique<OIVFileImage>(anchorPath);
                 if (fileImage->Load(&fImageLoader, IMCodec::PluginTraverseMode::AnyPlugin) == RC_Success)
                 {
@@ -550,7 +550,7 @@ namespace OIV
 
     bool ViewerApplication::HandleFileDragDropEvent(const ::Win32::EventDdragDropFile* event_ddrag_drop_file)
     {
-        std::wstring normalizedPath =
+        LLUtils::native_string_type normalizedPath =
             std::filesystem::path(event_ddrag_drop_file->fileName).lexically_normal().wstring();
         if (LoadFileOrFolder(normalizedPath,
                              IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType))

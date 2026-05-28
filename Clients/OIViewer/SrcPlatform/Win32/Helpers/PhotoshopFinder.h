@@ -13,22 +13,22 @@ namespace OIV
 
         struct greater
         {
-            bool operator()(const std::wstring &a, std::wstring const &b) const
+            bool operator()(const LLUtils::native_string_type &a, LLUtils::native_string_type const &b) const
             {
                 return std::stod(a) > std::stod(b);
             }
         };
 
-        static std::wstring FindPhotoshop()
+        static LLUtils::native_string_type FindPhotoshop()
         {
             using namespace std;
             using namespace winreg;
             try
             {
-                RegKey key{ HKEY_LOCAL_MACHINE, L"SOFTWARE\\Adobe\\Photoshop",KEY_READ };
+                RegKey key{ HKEY_LOCAL_MACHINE, LLUTILS_TEXT("SOFTWARE\\Adobe\\Photoshop"),KEY_READ };
 
                 vector<wstring> subKeyNames = key.EnumSubKeys();
-                std::vector<std::wstring>  versions;
+                std::vector<LLUtils::native_string_type>  versions;
                 for (const auto& s : subKeyNames)
                     versions.push_back(s);
 
@@ -38,10 +38,10 @@ namespace OIV
                 {
                     try
                     {
-                        RegKey versionkey{ HKEY_LOCAL_MACHINE, L"SOFTWARE\\Adobe\\Photoshop\\" + version,KEY_READ };
+                        RegKey versionkey{ HKEY_LOCAL_MACHINE, LLUTILS_TEXT("SOFTWARE\\Adobe\\Photoshop\\") + version,KEY_READ };
 
-                        const std::wstring appPath = std::wstring(L"ApplicationPath");
-                        std::wstring fileName = versionkey.GetStringValue(appPath) + L"\\Photoshop.exe";
+                        const LLUtils::native_string_type appPath = LLUtils::native_string_type(LLUTILS_TEXT("ApplicationPath"));
+                        LLUtils::native_string_type fileName = versionkey.GetStringValue(appPath) + LLUTILS_TEXT("\\Photoshop.exe");
                         if (std::filesystem::exists(fileName))
                             return fileName;
                     }
@@ -54,7 +54,7 @@ namespace OIV
             {
 
             }
-            return std::wstring();
+            return LLUtils::native_string_type();
         }
     };
 }

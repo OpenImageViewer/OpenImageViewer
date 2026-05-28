@@ -30,12 +30,12 @@ public:
 
     OnFileChangedEventArgsEvent FileChangedEvent;
 
-    bool IsFolderRegistered(const std::wstring& folder) const override
+    bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override
     {
         return fMapFolderID.find(folder) != fMapFolderID.end();
     }
 
-    FolderID AddFolder(const std::wstring& folder) override
+    FolderID AddFolder(const LLUtils::native_string_type& folder) override
     {
         std::lock_guard<std::mutex> Lock(fDataMutex);
 
@@ -114,7 +114,7 @@ public:
         RemoveFolderLocked(folderID);
     }
 
-    void RemoveFolder(const std::wstring& folder) override
+    void RemoveFolder(const LLUtils::native_string_type& folder) override
     {
         std::lock_guard<std::mutex> Lock(fDataMutex);
         auto it = fMapFolderID.find(folder);
@@ -203,8 +203,8 @@ public:
                                 FileChangedOp fileOp = FileChangedOp::None;
                                 FILE_NOTIFY_INFORMATION* currentPacket = reinterpret_cast<FILE_NOTIFY_INFORMATION*>(reinterpret_cast<uint8_t*>(folderData.info) + currentOffset);
 
-                                std::wstring fileName(currentPacket->FileName, currentPacket->FileNameLength / sizeof(wchar_t));
-                                std::wstring newName;
+                                LLUtils::native_string_type fileName(currentPacket->FileName, currentPacket->FileNameLength / sizeof(wchar_t));
+                                LLUtils::native_string_type newName;
                                 switch (currentPacket->Action)
                                 {
                                 case FILE_ACTION_ADDED:
@@ -230,7 +230,7 @@ public:
                                         {
                                             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "expected a NEW_NAME packet packet");
                                         }
-                                        newName = std::wstring(currentPacket->FileName, currentPacket->FileNameLength / sizeof(wchar_t));
+                                        newName = LLUtils::native_string_type(currentPacket->FileName, currentPacket->FileNameLength / sizeof(wchar_t));
                                     }
 
                                     break;
@@ -286,7 +286,7 @@ public:
                     for (FolderID folderID : foldersToRemove)
                     {
                         auto it = fMapIDData.find(folderID);
-                        folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath, std::wstring(),std::wstring() });
+                        folderRemovalEvents.push_back(FileChangedEventArgs{folderID, FileChangedOp::WatchedFolderRemoved ,it->second.folderPath, LLUtils::native_string_type(),LLUtils::native_string_type() });
                         RemoveFolderLocked(folderID);
                     }
                 }
@@ -343,12 +343,12 @@ private:
         UniqueIDProvider::underlying_type uniqueID;
         OVERLAPPED overlapped{};
         HANDLE directoryHandle = nullptr;
-        std::wstring folderPath;
+        LLUtils::native_string_type folderPath;
     };
 
 private:
 
-    using MapFolderID = std::map <std::wstring, FolderID>;
+    using MapFolderID = std::map <LLUtils::native_string_type, FolderID>;
     using MapIDData = std::map <FolderID, FolderData>;
     MapFolderID fMapFolderID;
     MapIDData fMapIDData;

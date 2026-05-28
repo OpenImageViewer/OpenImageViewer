@@ -108,7 +108,7 @@ namespace OIV
                 case WM_MOUSEWHEEL:
                     //case WM_MOUSEHWHEEL:
                 {
-                    //MessageBox(0, L"aa", L"aa", MB_OK);
+                    //MessageBox(0, LLUTILS_TEXT("aa"), LLUTILS_TEXT("aa"), MB_OK);
                     int zDelta = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;
                     DWORD direction = zDelta < 0 ? SB_PAGEDOWN : SB_PAGEUP;
                     SendMessage(WM_VSCROLL, direction, 0);

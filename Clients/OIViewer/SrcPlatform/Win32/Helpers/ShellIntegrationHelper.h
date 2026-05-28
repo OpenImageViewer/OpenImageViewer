@@ -20,7 +20,7 @@ namespace OIV
             return {static_cast<int32_t>(position.x), static_cast<int32_t>(position.y)};
         }
 
-        static std::string ViewCommandArgsFromTrayItem(const std::wstring& itemDisplayName)
+        static std::string ViewCommandArgsFromTrayItem(const LLUtils::native_string_type& itemDisplayName)
         {
             return std::string("type=") +
                    LLUtils::StringUtility::ToLower(LLUtils::StringUtility::ConvertString<std::string>(

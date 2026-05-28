@@ -213,9 +213,9 @@ namespace OIV
             }
         }
 
-        std::wstringstream ss;
-        ss << imageSlot + 1 << L'/' << totalImages << L"  " << bitmapBuffer.width << L" x " << bitmapBuffer.height
-           << L" x " << bitmapBuffer.bitsPerPixel << L" BPP";
+        LLUtils::native_stringstream ss;
+        ss << imageSlot + 1 << L'/' << totalImages << LLUTILS_TEXT("  ") << bitmapBuffer.width << LLUTILS_TEXT(" x ") << bitmapBuffer.height
+           << LLUTILS_TEXT(" x ") << bitmapBuffer.bitsPerPixel << LLUTILS_TEXT(" BPP");
 
         fWindow.GetImageControl().GetImageList().SetImage(
             {imageSlot, ss.str(), std::make_shared<::Win32::BitmapSharedPtr::element_type>(bitmapBuffer),
@@ -275,7 +275,7 @@ namespace OIV
         }
     }
 
-    bool ViewerApplication::LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags)
+    bool ViewerApplication::LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
         const auto clientSize = fWindow.GetClientSize();
         return ProcessImageLoadResult(fImageOpenController->LoadFile(
@@ -290,7 +290,7 @@ namespace OIV
         if (loadResult.status == ImageLoadStatus::NoSupportedFiles)
             return false;
 
-        auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) + L"<textcolor=#ff8930>";
+        auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) + LLUTILS_TEXT("<textcolor=#ff8930>");
         const ImageLoadPresentation presentation = ImageLoadPresentationPolicy::Decide(loadResult, formattedFilePath);
 
         if (presentation.shouldLoadImage)
@@ -407,9 +407,9 @@ namespace OIV
         }
     }
 
-    const std::wstring& ViewerApplication::GetOpenedFileName() const
+    const LLUtils::native_string_type& ViewerApplication::GetOpenedFileName() const
     {
-        static const std::wstring emptyString;
+        static const LLUtils::native_string_type emptyString;
         std::shared_ptr<OIVFileImage> file = std::dynamic_pointer_cast<OIVFileImage>(fImageState.GetOpenedImage());
         return file != nullptr ? file->GetFileName() : emptyString;
     }
@@ -475,7 +475,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::ProcessRemovalOfOpenedFile(const std::wstring& fileName)
+    void ViewerApplication::ProcessRemovalOfOpenedFile(const LLUtils::native_string_type& fileName)
     {
         const bool removeInternalDeletes = (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedInternally) ==
                                            DeletedFileRemovalMode::DeletedInternally;
@@ -552,7 +552,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+    void ViewerApplication::OnFileIndexResidencyReady(const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
     {
         if (fBrowseSessionController == nullptr || !fBrowseSessionController->IsCurrentFile(fileName))
         {
@@ -749,7 +749,7 @@ namespace OIV
 
         else if (formatType == CF_UNICODETEXT || formatType == CF_TEXT)
         {
-            std::wstring text;
+            LLUtils::native_string_type text;
             /*if (isHTMLFormat)
                 text = LLUtils::StringUtility::ToWString((char*)clipboardBuffer);
             if (isRTFText)
@@ -918,19 +918,19 @@ namespace OIV
         PostInitOperations();
     }
 
-    void ViewerApplication::PerformReloadFile(const std::wstring& requestedFile)
+    void ViewerApplication::PerformReloadFile(const LLUtils::native_string_type& requestedFile)
     {
         HandleReloadAction(fFileReloadPolicy.OnPendingReloadRequested(requestedFile), requestedFile);
     }
 
-    void ViewerApplication::HandleReloadAction(ReloadAction action, const std::wstring& requestedFile)
+    void ViewerApplication::HandleReloadAction(ReloadAction action, const LLUtils::native_string_type& requestedFile)
     {
         if (action == ReloadAction::AskUser)
         {
             using namespace std::string_literals;
-            int mbResult = MessageBox(fWindow.GetHandle(), (L"Reload the file: "s + requestedFile).c_str(),
-                                      L"File is changed outside of OIV", MB_YESNO);
-            action       = fFileReloadPolicy.ConfirmReload(mbResult == IDYES);
+            int mbResult = MessageBox(fWindow.GetHandle(), (LLUTILS_TEXT("Reload the file: "s) + requestedFile).c_str(),
+                                      LLUTILS_TEXT("File is changed outside of OIV"), MB_YESNO);
+            action = fFileReloadPolicy.ConfirmReload(mbResult == IDYES);
         }
 
         if (action == ReloadAction::RequestNow && fBrowseSessionController != nullptr)
@@ -943,7 +943,7 @@ namespace OIV
                            GetOpenedFileName());
     }
 
-    bool ViewerApplication::LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode)
+    bool ViewerApplication::LoadFileOrFolder(const LLUtils::native_string_type& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
         const auto clientSize = fWindow.GetClientSize();
         return ProcessImageLoadResult(fImageOpenController->LoadFileOrFolder(

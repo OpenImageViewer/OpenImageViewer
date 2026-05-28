@@ -61,8 +61,8 @@ namespace OIV
            
        
 
-            //SetStatusBarText(L"pixel: ", 0, SBT_NOBORDERS);
-            //SetStatusBarText(L"File: ", 1, 0);
+            //SetStatusBarText(LLUTILS_TEXT("pixel: "), 0, SBT_NOBORDERS);
+            //SetStatusBarText(LLUTILS_TEXT("File: "), 1, 0);
 
         }
 
@@ -90,7 +90,7 @@ namespace OIV
         }
 
 
-        void MainWindow::SetStatusBarText(std::wstring message, int part, int type)
+        void MainWindow::SetStatusBarText(LLUtils::native_string_type message, int part, int type)
         {
             if (fHandleStatusBar != nullptr)
                 ::SendMessage(fHandleStatusBar, SB_SETTEXT, MAKEWORD(part, type), reinterpret_cast<LPARAM>(message.c_str()));

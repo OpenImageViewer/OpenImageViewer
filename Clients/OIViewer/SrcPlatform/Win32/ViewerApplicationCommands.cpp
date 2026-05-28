@@ -100,7 +100,7 @@ namespace OIV
         if (type == "toggleBorders")
         {
             ToggleBorders();
-            result.resValue = std::wstring(L"Borders ") + (fShowBorders == true ? L"On" : L"Off");
+            result.resValue = LLUtils::native_string_type(LLUTILS_TEXT("Borders ")) + (fShowBorders == true ? LLUTILS_TEXT("On") : LLUTILS_TEXT("Off"));
         }
         else if (type == "quit")
         {
@@ -111,22 +111,22 @@ namespace OIV
         else if (type == "grid")
         {
             ToggleGrid();
-            result.resValue = L"Grid ";
-            result.resValue += fIsGridEnabled == true ? L"on" : L"off";
+            result.resValue = LLUTILS_TEXT("Grid ");
+            result.resValue += fIsGridEnabled == true ? LLUTILS_TEXT("on") : LLUTILS_TEXT("off");
         }
         else if (type == "slideShow")
         {
             SetSlideShowEnabled(!GetSlideShowEnabled());
-            result.resValue = L"Slideshow ";
-            result.resValue += fTimerSlideShow.GetInterval() > 0 ? L"on" : L"off";
+            result.resValue = LLUTILS_TEXT("Slideshow ");
+            result.resValue += fTimerSlideShow.GetInterval() > 0 ? LLUTILS_TEXT("on") : LLUTILS_TEXT("off");
         }
         else if (type == "toggleNormalization")
         {
             // Change normalization mode
             fImageState.SetUseRainbowNormalization(!fImageState.GetUseRainbowNormalization());
             RefreshImage();
-            result.resValue = fImageState.GetUseRainbowNormalization() ? L"Rainbow normalization"
-                                                                       : L"Grayscale normalization";
+            result.resValue = fImageState.GetUseRainbowNormalization() ? LLUTILS_TEXT("Rainbow normalization")
+                                                                       : LLUTILS_TEXT("Grayscale normalization");
         }
         else if (type == "imageFilterUp")
         {
@@ -159,8 +159,8 @@ namespace OIV
             fResetTransformationMode = static_cast<ResetTransformationMode>(
                 (static_cast<int>(fResetTransformationMode) + 1) % static_cast<int>(ResetTransformationMode::Count));
             result.resValue = fResetTransformationMode == ResetTransformationMode::DoNothing
-                                  ? L"Don't auto reset image state"
-                                  : L"Auto reset image state";
+                                  ? LLUTILS_TEXT("Don't auto reset image state")
+                                  : LLUTILS_TEXT("Auto reset image state");
         }
         else if (type == "toggletransparencymode")
         {
@@ -168,50 +168,50 @@ namespace OIV
                 (fTransparencyMode + 1) % static_cast<int>(OIV_PROP_TransparencyMode::TM_Count));
             UpdateRenderViewParams();
 
-            std::wstring userMessage = L"Transparency: ";
-            std::wstring transparencyMode;
+            LLUtils::native_string_type userMessage = LLUTILS_TEXT("Transparency: ");
+            LLUtils::native_string_type transparencyMode;
 
             switch (fTransparencyMode)
             {
                 case OIV_PROP_TransparencyMode::TM_Light:
-                    transparencyMode = L"Light";
+                    transparencyMode = LLUTILS_TEXT("Light");
                     break;
                 case OIV_PROP_TransparencyMode::TM_Medium:
-                    transparencyMode = L"Medium(default)";
+                    transparencyMode = LLUTILS_TEXT("Medium(default)");
                     break;
                 case OIV_PROP_TransparencyMode::TM_Dark:
-                    transparencyMode = L"Dark";
+                    transparencyMode = LLUTILS_TEXT("Dark");
                     break;
                 case OIV_PROP_TransparencyMode::TM_Darker:
-                    transparencyMode = L"Darker";
+                    transparencyMode = LLUTILS_TEXT("Darker");
                     break;
                 default:
                     LL_EXCEPTION_UNEXPECTED_VALUE;
             }
 
-            result.resValue = userMessage + L"<textcolor=#7672ff>" + transparencyMode;
+            result.resValue = userMessage + LLUTILS_TEXT("<textcolor=#7672ff>") + transparencyMode;
         }
         else if (type == "toggledownsamplingtechnique")
         {
             DownscalingTechnique technique = GetNextEnumValue(fDownScalingTechnique);
 
-            std::wstring downscaleTechnique;
+            LLUtils::native_string_type downscaleTechnique;
 
             switch (technique)
             {
                 case DownscalingTechnique::None:
-                    downscaleTechnique = L"No downsamling";
+                    downscaleTechnique = LLUTILS_TEXT("No downsamling");
                     break;
                 case DownscalingTechnique::HardwareMipmaps:
-                    downscaleTechnique = L"Hardware mipmaps";
+                    downscaleTechnique = LLUTILS_TEXT("Hardware mipmaps");
                     break;
                 case DownscalingTechnique::Software:
-                    downscaleTechnique = L"Box filter";
+                    downscaleTechnique = LLUTILS_TEXT("Box filter");
                     break;
                 default:
                     LL_EXCEPTION_UNEXPECTED_VALUE;
             }
-            result.resValue = DefaultTextKeyColorTag + L"Downscaling technique: " + DefaultTextValueColorTag +
+            result.resValue = DefaultTextKeyColorTag + LLUTILS_TEXT("Downscaling technique: ") + DefaultTextValueColorTag +
                               downscaleTechnique;
 
             SetDownScalingTechnique(technique);
@@ -227,13 +227,13 @@ namespace OIV
             switch (fWindow.GetFullScreenState())
             {
                 case ::Win32::FullSceenState::MultiScreen:
-                    result.resValue = L"Multi full screen";
+                    result.resValue = LLUTILS_TEXT("Multi full screen");
                     break;
                 case ::Win32::FullSceenState::SingleScreen:
-                    result.resValue = L"Full screen";
+                    result.resValue = LLUTILS_TEXT("Full screen");
                     break;
                 case ::Win32::FullSceenState::Windowed:
-                    result.resValue = L"Windowed";
+                    result.resValue = LLUTILS_TEXT("Windowed");
                     break;
                 case ::Win32::FullSceenState::None:
                     LL_EXCEPTION_UNEXPECTED_VALUE;
@@ -246,13 +246,13 @@ namespace OIV
             switch (GetFilterType())
             {
                 case FT_None:
-                    result.resValue = L"No filtering";
+                    result.resValue = LLUTILS_TEXT("No filtering");
                     break;
                 case FT_Linear:
-                    result.resValue = L"Linear filtering";
+                    result.resValue = LLUTILS_TEXT("Linear filtering");
                     break;
                 case FT_Lanczos3:
-                    result.resValue = L"Lanczos3 filtering";
+                    result.resValue = LLUTILS_TEXT("Lanczos3 filtering");
                     break;
                 case FT_Count:
                 default:
@@ -311,8 +311,8 @@ namespace OIV
         if (cmd == "savefile")
         {
             using namespace ::Win32;
-            std::wstring saveFilePath;
-            std::wstring defaultFileName;
+            LLUtils::native_string_type saveFilePath;
+            LLUtils::native_string_type defaultFileName;
             if (IsImageOpen())
             {
                 auto openedImage = fImageState.GetOpenedImage();
@@ -320,7 +320,7 @@ namespace OIV
                 switch (imageSource)
                 {
                     case ImageSource::ClipboardText:
-                        defaultFileName = L"text";
+                        defaultFileName = LLUTILS_TEXT("text");
                         break;
                     case ImageSource::File:
                     {
@@ -329,22 +329,22 @@ namespace OIV
                     }
                     break;
                     case ImageSource::Clipboard:
-                        defaultFileName = L"clipboard";
+                        defaultFileName = LLUTILS_TEXT("clipboard");
                         break;
                     default:
-                        defaultFileName = L"image";
+                        defaultFileName = LLUTILS_TEXT("image");
                         break;
                 }
 
                 auto result = FileDialog::Show(FileDialogType::SaveFile, fSaveComDlgFilters.GetFilters(),
-                                               L"Save an image", fWindow.GetHandle(), L"*." + fDefaultSaveFileExtension,
+                                               LLUTILS_TEXT("Save an image"), fWindow.GetHandle(), LLUTILS_TEXT("*.") + fDefaultSaveFileExtension,
                                                fDefaultSaveFileFormatIndex, defaultFileName, saveFilePath);
 
                 if (result == FileDialogResult::Success)
                 {
-                    std::wstring extension = LLUtils::StringUtility::ToLower(
+                    LLUtils::native_string_type extension = LLUtils::StringUtility::ToLower(
                         std::filesystem::path(saveFilePath).extension().wstring());
-                    std::wstring_view sv(extension);
+                    LLUtils::native_string_view sv(extension);
 
                     if (sv.empty() == false)
                         sv = sv.substr(1);
@@ -366,8 +366,8 @@ namespace OIV
         else
         {
             using namespace ::Win32;
-            std::wstring openFilePath;
-            auto result = FileDialog::Show(FileDialogType::OpenFile, fOpenComDlgFilters.GetFilters(), L"Open image",
+            LLUtils::native_string_type openFilePath;
+            auto result = FileDialog::Show(FileDialogType::OpenFile, fOpenComDlgFilters.GetFilters(), LLUTILS_TEXT("Open image"),
                                            fWindow.GetHandle(), {}, 0, {}, openFilePath);
 
             if (result == FileDialogResult::Success)
@@ -396,9 +396,9 @@ namespace OIV
         using namespace std;
 
         if (ToggleColorCorrection())
-            result.resValue = L"Reset color correction to previous";
+            result.resValue = LLUTILS_TEXT("Reset color correction to previous");
         else
-            result.resValue = L"Reset color correction to default";
+            result.resValue = LLUTILS_TEXT("Reset color correction to default");
     }
 
     void ViewerApplication::CMD_SetWindowSize(const CommandManager::CommandRequest& request,
@@ -563,7 +563,7 @@ namespace OIV
         {
             OperationResult res = CopyVisibleToClipBoard();
             if (res != OperationResult::Success)
-                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot copy to clipboard", res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(LLUTILS_TEXT("Cannot copy to clipboard"), res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
@@ -571,7 +571,7 @@ namespace OIV
         {
             OperationResult res = CutSelectedArea();
             if (res != OperationResult::Success)
-                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot cut selected area", res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(LLUTILS_TEXT("Cannot cut selected area"), res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
@@ -583,13 +583,13 @@ namespace OIV
         switch (PasteFromClipBoard())
         {
             case ClipboardDataType::None:
-                result.resValue = L"Nothing usable in clipboard";
+                result.resValue = LLUTILS_TEXT("Nothing usable in clipboard");
                 break;
             case ClipboardDataType::Image:
-                result.resValue = L"Paste image from clipboard";
+                result.resValue = LLUTILS_TEXT("Paste image from clipboard");
                 break;
             case ClipboardDataType::Text:
-                result.resValue = L"Paste text from clipboard";
+                result.resValue = LLUTILS_TEXT("Paste text from clipboard");
                 break;
         }
     }
@@ -603,7 +603,7 @@ namespace OIV
         {
             OperationResult res = CropVisibleImage();
             if (res != OperationResult::Success)
-                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(L"Cannot crop selected area", res);
+                result.resValue = ViewerPresentationPolicy::FormatFailedOperation(LLUTILS_TEXT("Cannot crop selected area"), res);
             else
                 result.resValue = LLUtils::StringUtility::ToWString(request.displayName);
         }
@@ -633,7 +633,7 @@ namespace OIV
             }
             else
             {
-                result.resValue = L"No image loaded";
+                result.resValue = LLUTILS_TEXT("No image loaded");
             }
         }
     }
@@ -686,9 +686,9 @@ namespace OIV
     }
 
     template <typename T>
-    std::wstring IntToHex(T val)
+    LLUtils::native_string_type IntToHex(T val)
     {
-        std::wstringstream ss;
+        LLUtils::native_stringstream ss;
         ss << std::setfill(L'0') << std::setw(sizeof(T) * 2) << std::hex << val;
 
         return ss.str();

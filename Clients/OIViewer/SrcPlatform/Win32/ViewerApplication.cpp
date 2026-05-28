@@ -75,9 +75,9 @@
 
 namespace OIV
 {
-    std::wstring ViewerApplication::GetAppDataFolder()
+    LLUtils::native_string_type ViewerApplication::GetAppDataFolder()
     {
-        return LLUtils::PlatformUtility::GetAppDataFolder() + L"/OIV/";
+        return LLUtils::PlatformUtility::GetAppDataFolder() + LLUTILS_TEXT("/OIV/");
     }
 
     HWND ViewerApplication::FindTrayBarWindow()
@@ -94,7 +94,7 @@ namespace OIV
         return nextChild;
     }
 
-    void ViewerApplication::Init(std::wstring relativeFilePath)
+    void ViewerApplication::Init(LLUtils::native_string_type relativeFilePath)
     {
         using namespace std;
         using namespace placeholders;
@@ -228,7 +228,8 @@ namespace OIV
         if (isInitialFileProvided && !isInitialFileExists)
         {
             using namespace std::string_literals;
-            SetUserMessage(L"Can not load the file: "s + filePath + L", it doesn't exist"s,
+            SetUserMessage(LLUTILS_TEXT("Can not load the file: "s) + filePath +
+                               LLUTILS_TEXT(", it doesn't exist"s),
                            static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
         }
 
@@ -315,7 +316,7 @@ namespace OIV
 
         fBrowseSessionController = std::make_unique<BrowseSessionController>(
             &fFileWatcher, &fFileSorter, fKnownFileTypesSet, fKnownFileTypes, fImageResidencyCache,
-            [this](const std::wstring& fileName, IMCodec::ImageSharedPtr image)
+            [this](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
             {
                 if (!fIsShuttingDown)
                 {

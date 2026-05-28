@@ -21,7 +21,7 @@ namespace OIV
 
     struct FileIndexResidencyReadyData
     {
-        std::wstring fileName;
+        LLUtils::native_string_type fileName;
         IMCodec::ImageSharedPtr image;
     };
 

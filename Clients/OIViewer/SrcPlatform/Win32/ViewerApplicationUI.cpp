@@ -138,7 +138,7 @@ namespace OIV
             {
                 SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
                 [[maybe_unused]] auto directory = AddDllDirectory(
-                    (netsettingsPath.lexically_normal().wstring() + L"\\").c_str());
+                    (netsettingsPath.lexically_normal().native() + LLUTILS_TEXT("\\")).c_str());
                 HMODULE dllModule = LoadLibrary(cliAdapterPath.c_str());
                 if (dllModule != nullptr)
                 {
@@ -163,13 +163,13 @@ namespace OIV
                 }
                 else
                 {
-                    LLUtils::Logger::GetSingleton().Log(std::wstring(L"Cannot load Netsettings extension, error: ") +
+                    LLUtils::Logger::GetSingleton().Log(LLUtils::native_string_type(LLUTILS_TEXT("Cannot load Netsettings extension, error: ")) +
                                                         LLUtils::PlatformUtility::GetLastErrorAsString<wchar_t>());
                 }
             }
             else
             {
-                LLUtils::Logger::GetSingleton().Log(std::wstring(L"Cannot load Netsettings extension, not found"));
+                LLUtils::Logger::GetSingleton().Log(LLUtils::native_string_type(LLUTILS_TEXT("Cannot load Netsettings extension, not found")));
             }
         }
         else
@@ -178,7 +178,7 @@ namespace OIV
         }
     }
 
-    std::wstring ViewerApplication::GetLogFilePath()
+    LLUtils::native_string_type ViewerApplication::GetLogFilePath()
     {
         auto GetVersionAsString = []
         {
@@ -189,28 +189,27 @@ namespace OIV
             return ss.str();
         };
 
-        return GetAppDataFolder() + GetVersionAsString() + L"/oiv.log";
+        return GetAppDataFolder() + GetVersionAsString() + LLUTILS_TEXT("/oiv.log");
     }
 
     void ViewerApplication::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args,
-                                            std::wstring seperatedCallStack)
+                                            LLUtils::native_string_type seperatedCallStack)
     {
-        using namespace std;
-        wstringstream ss;
-        std::wstring source          = isFromLibrary ? L"OIV library" : L"OIV viewer";
-        const wstring introMessage   = LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) +
-                                       L" exception has occured at " + args.functionName + L" at " + source +
-                                       L".\nDescription: " + args.description;
-        const wstring displayMessage = introMessage + L"\nPlease refer to the log file [" + mLogFile.GetLogPath() +
-                                       L"] for more information";
+        LLUtils::native_stringstream ss;
+        LLUtils::native_string_type source          = isFromLibrary ? LLUTILS_TEXT("OIV library") : LLUTILS_TEXT("OIV viewer");
+        const LLUtils::native_string_type introMessage   = LLUtils::Exception::ExceptionErrorCodeToString(args.errorCode) +
+                                       LLUTILS_TEXT(" exception has occured at ") + args.functionName + LLUTILS_TEXT(" at ") + source +
+                                       LLUTILS_TEXT(".\nDescription: ") + args.description;
+        const LLUtils::native_string_type displayMessage = introMessage + LLUTILS_TEXT("\nPlease refer to the log file [") + mLogFile.GetLogPath() +
+                                       LLUTILS_TEXT("] for more information");
 
-        ss << L"\n==================================================================================================\n";
-        ss << introMessage << endl;
+        ss << LLUTILS_TEXT("\n==================================================================================================\n");
+        ss << introMessage << std::endl;
 
         if (args.systemErrorMessage.empty() == false)
-            ss << "System error: " << args.systemErrorMessage;
+            ss << LLUTILS_TEXT("System error: ") << args.systemErrorMessage;
 
-        ss << "call stack:" << endl;
+        ss << LLUTILS_TEXT("call stack:") << std::endl;
 
         if (seperatedCallStack.empty() == true)
             ss << LLUtils::Exception::FormatStackTrace(
@@ -250,7 +249,7 @@ namespace OIV
     //, fFileCache(&fImageLoader, std::bind(&ViewerApplication::OnImageReady, this, std::placeholders::_1))
 
     {
-        fCommandController.SetResultSink([this](const std::wstring& message) { SetUserMessage(message); });
+        fCommandController.SetResultSink([this](const LLUtils::native_string_type& message) { SetUserMessage(message); });
 
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
         EventManager::GetSingleton().MonitorChange.Add(
@@ -377,13 +376,13 @@ namespace OIV
             OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' +
             std::to_wstring(OIV_VERSION_MINOR) +
             (OIV_VERSION_REVISION != 0
-                 ? (std::wstring(L".") + LLUtils::StringUtility::ToNativeString(OIV_VERSION_REVISION))
-                 : std::wstring{})
+                 ? (LLUtils::native_string_type(LLUTILS_TEXT(".")) + LLUtils::StringUtility::ToNativeString(OIV_VERSION_REVISION))
+                 : LLUtils::native_string_type{})
 
         // If not official release add revision and build number
 #if OIV_OFFICIAL_RELEASE == 0
 
-            + L"." + WIDEN(GIT_HASH_ID) + L"." + std::to_wstring(OIV_VERSION_BUILD)
+            + LLUTILS_TEXT(".") + WIDEN(GIT_HASH_ID) + LLUTILS_TEXT(".") + std::to_wstring(OIV_VERSION_BUILD)
     #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
             + OIV_TEXT(" | 64 bit")
     #else
@@ -402,7 +401,7 @@ namespace OIV
             + OIV_TEXT(" | UNOFFICIAL")
 #endif
             ;
-        std::wstring title;
+        LLUtils::native_string_type title;
         if (fImageState.GetOpenedImage() != nullptr)
         {
             const ImageSource imageSource = fImageState.GetOpenedImage()->GetImageSource();
@@ -410,7 +409,7 @@ namespace OIV
             {
                 const auto& committedCurrentFile = fBrowseSessionController != nullptr
                                                        ? fBrowseSessionController->GetCommittedCurrentFile()
-                                                       : std::wstring{};
+                                                       : LLUtils::native_string_type{};
                 auto decomposedPath              = MessageFormatter::DecomposePath(
                     committedCurrentFile.empty() ? GetOpenedFileName() : committedCurrentFile);
                 bool includeIndex   = false;
@@ -454,7 +453,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::OnSettingChange(const std::wstring& key, const std::wstring& value)
+    void ViewerApplication::OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value)
     {
         const AppSettingsPolicy::Action action = AppSettingsPolicy::ParseAction(key, value);
 
@@ -572,7 +571,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::SetUserMessage(const std::wstring& message, GroupID groupID, MessageFlags groupFlags)
+    void ViewerApplication::SetUserMessage(const LLUtils::native_string_type& message, GroupID groupID, MessageFlags groupFlags)
     {
         fMessageManager->SetUserMessage(groupID, groupFlags, message);
     }
@@ -583,7 +582,7 @@ namespace OIV
         {
             CountColorsAsync();
 
-            std::wstring imageInfoString = MessageHelper::CreateImageInfoMessage(
+            LLUtils::native_string_type imageInfoString = MessageHelper::CreateImageInfoMessage(
                 fImageState.GetOpenedImage(), fImageState.GetImage(ImageChainStage::SourceImage),
                 fImageLoader.GetImageCodec());
             OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
@@ -611,7 +610,7 @@ namespace OIV
 
         OIVTextImage* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
 
-        std::wstring wmsg;
+        LLUtils::native_string_type wmsg;
         wmsg += LLUtils::StringUtility::ToWString(message);
 
         welcomeMessage->SetText(wmsg);

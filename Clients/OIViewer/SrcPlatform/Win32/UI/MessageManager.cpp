@@ -210,7 +210,7 @@ namespace OIV
         return fMessages.erase(it);
     }
 
-    void MessageManager::PushNextMessage(GroupID groupID, MessageFlags groupFlags, const std::wstring& message)
+    void MessageManager::PushNextMessage(GroupID groupID, MessageFlags groupFlags, const LLUtils::native_string_type& message)
     {
         if (fMessages.size() + 1 > fMaxMessages)
         {
@@ -231,7 +231,7 @@ namespace OIV
         UpdateMessage(message, messageData);
     }
 
-    void MessageManager::UpdateMessage(const std::wstring& message, MessageData& messageData)
+    void MessageManager::UpdateMessage(const LLUtils::native_string_type& message, MessageData& messageData)
     {
         if (messageData.message == nullptr)
             CreateMessageTemplate(messageData);
@@ -250,9 +250,9 @@ namespace OIV
             fRefreshRequest.Queue();
     }
 
-    void MessageManager::SetUserMessage(uint32_t groupID, MessageFlags flags, const std::wstring& message)
+    void MessageManager::SetUserMessage(uint32_t groupID, MessageFlags flags, const LLUtils::native_string_type& message)
     {
-        const std::wstring wmsg = L"<textcolor=#ff8930>" + message;
+        const LLUtils::native_string_type wmsg = LLUTILS_TEXT("<textcolor=#ff8930>") + message;
         const bool isMoveable = (flags & MessageFlags::Moveable) == MessageFlags::Moveable;
         const bool isPersistent = (flags & MessageFlags::Persistent) == MessageFlags::Persistent;
         const bool isInterchangeable = (flags & MessageFlags::Interchangeable) == MessageFlags:: Interchangeable;

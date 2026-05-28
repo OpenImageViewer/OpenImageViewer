@@ -3,9 +3,9 @@
 
 namespace OIV
 {
-    std::wstring MessageFormatter::FormatValueObject(const ValueObjectList& objects)
+    LLUtils::native_string_type MessageFormatter::FormatValueObject(const ValueObjectList& objects)
     {
-        std::wstring result;
+        LLUtils::native_string_type result;
 
         for (const auto& e : objects)
             result += FormatValueObject(e);
@@ -13,28 +13,28 @@ namespace OIV
         return result;
     }
 
-    std::wstring MessageFormatter::FormatValueObject(const ValueObject& valueObject)
+    LLUtils::native_string_type MessageFormatter::FormatValueObject(const ValueObject& valueObject)
     {
         switch (valueObject.valueObject.index())
         {
         case 0:
-            return numberFormatWithCommas<std::wstring>(std::get<int64_t>(valueObject.valueObject), valueObject.formatArgs);
+            return numberFormatWithCommas<LLUtils::native_string_type>(std::get<int64_t>(valueObject.valueObject), valueObject.formatArgs);
             break;
         case 1:
-            return numberFormatWithCommas<std::wstring>(std::get<long double>(valueObject.valueObject), valueObject.formatArgs);
+            return numberFormatWithCommas<LLUtils::native_string_type>(std::get<long double>(valueObject.valueObject), valueObject.formatArgs);
             break;
         case 2:
             return LLUtils::StringUtility::ToWString(std::get<std::string>(valueObject.valueObject));
             break;
         case 3:
-            return std::get<std::wstring>(valueObject.valueObject);
+            return std::get<LLUtils::native_string_type>(valueObject.valueObject);
             break;
         }
 
         return {};
     }
 
-    std::wstring MessageFormatter::FormatMetaText(FormatArgs args)
+    LLUtils::native_string_type MessageFormatter::FormatMetaText(FormatArgs args)
     {
         using namespace std;
 
@@ -69,7 +69,7 @@ namespace OIV
 
 
 
-        vector<std::wstring> lines(std::min<size_t>(args.messageValues.size(), args.maxLines));
+        vector<LLUtils::native_string_type> lines(std::min<size_t>(args.messageValues.size(), args.maxLines));
 
 
         for (const auto& [key, value] : args.messageValues)
@@ -118,10 +118,10 @@ namespace OIV
         }
 
         wstringstream ss1;
-        for (const std::wstring& line : lines)
+        for (const LLUtils::native_string_type& line : lines)
             ss1 << line << "\n";
 
-        std::wstring message = ss1.str();
+        LLUtils::native_string_type message = ss1.str();
         if (message[message.size() - 1] == '\n')
             message.erase(message.size() - 1);
 
@@ -222,11 +222,13 @@ namespace OIV
         return decomposedPath;
     }
 
-    std::wstring MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
+    LLUtils::native_string_type MessageFormatter::FormatFilePath(const std::filesystem::path& filePath)
     {
         DecomposedPath decomposedPath = DecomposePath(filePath);
         using namespace std::string_literals;
-        return L"<textcolor=#808080>"s + decomposedPath.parentPath + L"<textcolor=#7672ff>" + decomposedPath.fileName + L"<textcolor=#ff00ff>" + decomposedPath.extension;
+        return LLUTILS_TEXT("<textcolor=#808080>"s) + decomposedPath.parentPath +
+               LLUTILS_TEXT("<textcolor=#7672ff>") + decomposedPath.fileName +
+               LLUTILS_TEXT("<textcolor=#ff00ff>") + decomposedPath.extension;
     }
 	
     std::string MessageFormatter::FormatTexelInfo(const IMCodec::TexelInfo& texelInfo)

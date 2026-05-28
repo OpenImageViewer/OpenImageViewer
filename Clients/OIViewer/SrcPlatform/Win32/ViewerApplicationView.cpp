@@ -412,10 +412,10 @@ namespace OIV
         {
             using namespace  LLUtils;
             PointF64 canvasSize = (PointF64)fWindow.GetCanvasSize() / GetScale();
-            std::wstringstream ss;
-            ss << L"Canvas: "
+            LLUtils::native_stringstream ss;
+            ss << LLUTILS_TEXT("Canvas: ")
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.x
-                << L" X "
+                << LLUTILS_TEXT(" X ")
                 << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6) << canvasSize.y;
             fWindow.SetStatusBarText(ss.str(), 3, 0);
         }
@@ -430,9 +430,9 @@ namespace OIV
                 using namespace LLUtils;
                 PointF64 storageImageSpace = ClientToImage(fWindow.GetMousePosition());
 
-                std::wstringstream ss;
-                ss << L"Texel: " << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6)
-                   << storageImageSpace.x << L" X " << std::fixed << std::setprecision(1) << std::setfill(L' ')
+                LLUtils::native_stringstream ss;
+                ss << LLUTILS_TEXT("Texel: ") << std::fixed << std::setprecision(1) << std::setfill(L' ') << std::setw(6)
+                   << storageImageSpace.x << LLUTILS_TEXT(" X ") << std::fixed << std::setprecision(1) << std::setfill(L' ')
                    << std::setw(6) << storageImageSpace.y;
                 fVirtualStatusBar.SetText("texelPos", ss.str());
 
@@ -443,7 +443,7 @@ namespace OIV
                 if (!(storageImageSpace.x < 0 || storageImageSpace.y < 0 || storageImageSpace.x >= storageImageSize.x ||
                       storageImageSpace.y >= storageImageSize.y))
                 {
-                    std::wstring message = StringUtility::ConvertString<OIVString>(
+                    LLUtils::native_string_type message = StringUtility::ConvertString<OIVString>(
                         OIVHelper::ParseTexelValue(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(),
                                                    static_cast<LLUtils::PointI32>(storageImageSpace)));
                     OIVString txt = LLUtils::StringUtility::ConvertString<OIVString>(message);

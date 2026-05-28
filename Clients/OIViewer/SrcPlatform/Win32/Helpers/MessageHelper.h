@@ -10,8 +10,8 @@ namespace OIV
 	class MessageHelper
 	{
 	public:
-		static std::wstring CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const OIVBaseImageSharedPtr& rasterized,  IMCodec::ImageCodec& imageCodec);
-		static std::wstring CreateKeyBindingsMessage();
-		static std::wstring GetFileTime(const std::wstring& filePath);
+		static LLUtils::native_string_type CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const OIVBaseImageSharedPtr& rasterized,  IMCodec::ImageCodec& imageCodec);
+		static LLUtils::native_string_type CreateKeyBindingsMessage();
+		static LLUtils::native_string_type GetFileTime(const LLUtils::native_string_type& filePath);
 	};
 }

@@ -143,7 +143,7 @@ namespace OIV
 			return it != std::end(fMapCommandToData) ? &it->second : nullptr;
 		}
 private:
-		std::map<std::wstring, MenuItemData> fMapCommandToData;
+		std::map<LLUtils::native_string_type, MenuItemData> fMapCommandToData;
 		HMENU fMenu = nullptr;
 		HWND fHandle = nullptr;
 		uint32_t fCurrentItemID = 0;

@@ -12,7 +12,7 @@ public:
         font.lfHeight = 20;
         font.lfWeight = FW_NORMAL;
         font.lfQuality = CLEARTYPE_QUALITY;
-        wcscpy_s(font.lfFaceName, L"Segoe UI");
+        wcscpy_s(font.lfFaceName, LLUTILS_TEXT("Segoe UI"));
         fFont = CreateFontIndirect(&font);
 
         fGrayBrush = CreateSolidBrush(RGB(245, 249, 213));
@@ -51,7 +51,7 @@ public:
     struct ImageDesc
     {
         uint32_t index{};
-        std::wstring title;
+        LLUtils::native_string_type title;
         ::Win32::BitmapSharedPtr bitmap;
         ::Win32::BitmapSharedPtr mask;
     };
@@ -190,7 +190,7 @@ public:
             LineTo(hdc, entrywidth, y + fEntryHeight - lineWidth);
             {
                 RECT r1 = { 0, textpos ,0, textpos + 24 };
-                std::wstring text = imageDesc.title;
+                LLUtils::native_string_type text = imageDesc.title;
                 DrawText(hdc, text.c_str(), static_cast<int>(text.length()), &r1, DT_CALCRECT);
                 SetBkMode(hdc, TRANSPARENT);
                 int offset = (entrywidth - (r1.right - r1.left)) / 2;

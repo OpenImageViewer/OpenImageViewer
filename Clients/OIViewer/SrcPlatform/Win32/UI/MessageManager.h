@@ -48,7 +48,7 @@ namespace OIV
 	{
     public:
         MessageManager(HWND associatedtimerWindow, LabelManager* labelManager, size_t maxMessages, RequestRefreshCallbackType callback);
-        void SetUserMessage(uint32_t groupID, MessageFlags commandGroup, const std::wstring& message);
+        void SetUserMessage(uint32_t groupID, MessageFlags commandGroup, const LLUtils::native_string_type& message);
         void UpdateMessagesPosition();
         void RemoveGroup(GroupID groupID);
 
@@ -59,9 +59,9 @@ namespace OIV
         MessageManager::ListMessageData::iterator RemoveElement(ListMessageData::iterator it);
         void OnTimer();
         ListMessageData::iterator FindVisible(GroupID groupID);
-        void PushNextMessage(GroupID groupID, MessageFlags groupFlags, const std::wstring& message);
+        void PushNextMessage(GroupID groupID, MessageFlags groupFlags, const LLUtils::native_string_type& message);
         void CreateMessageTemplate(MessageData& messageData);
-        void UpdateMessage(const std::wstring& message, MessageData& messageData);
+        void UpdateMessage(const LLUtils::native_string_type& message, MessageData& messageData);
         void OnRefresh();
         void OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams);
     private:

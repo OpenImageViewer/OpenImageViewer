@@ -128,7 +128,7 @@ namespace OIV
                 {
                     // trigger double tap.
                     callback();
-                    // MessageBox(nullptr, L"12", L"12", MB_OK);
+                    // MessageBox(nullptr, LLUTILS_TEXT("12"), LLUTILS_TEXT("12"), MB_OK);
                     fLastTap = high_resolution_clock::time_point::min();
                 }
                 fLastTap = high_resolution_clock::now();
@@ -143,9 +143,9 @@ namespace OIV
         void OnLabelRefreshRequest();
         ViewerApplication();
         ~ViewerApplication();
-        void Init(std::wstring filePath);
+        void Init(LLUtils::native_string_type filePath);
         void Run();
-        static std::wstring GetAppDataFolder();
+        static LLUtils::native_string_type GetAppDataFolder();
         static HWND FindTrayBarWindow();
 
       private:  // types
@@ -158,8 +158,8 @@ namespace OIV
 
       private:  // methods
 
-        std::wstring GetLogFilePath();
-        void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, std::wstring seperatedCallStack);
+        LLUtils::native_string_type GetLogFilePath();
+        void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args, LLUtils::native_string_type seperatedCallStack);
 #pragma region Win32 event handling
         bool handleKeyInput(const ::Win32::EventWinMessage* evnt);
         LRESULT ClientWindwMessage(const ::Win32::Event* evnt1);
@@ -180,7 +180,7 @@ namespace OIV
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
         void ProbeForMonitorChange();
         void PerformRefresh();
-        void SetUserMessage(const std::wstring& message, GroupID groupID = 0,
+        void SetUserMessage(const LLUtils::native_string_type& message, GroupID groupID = 0,
                             MessageFlags groupFlags = MessageFlags::Interchangeable);
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
@@ -251,14 +251,14 @@ namespace OIV
         void SetOriginalSize();
         void OnScroll(const LLUtils::PointF64& panAmount);
         void OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs);
-        bool LoadFile(std::wstring filePath, IMCodec::PluginTraverseMode loaderFlags);
-        bool LoadFileOrFolder(const std::wstring& filePath, IMCodec::PluginTraverseMode traverseMode);
+        bool LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags);
+        bool LoadFileOrFolder(const LLUtils::native_string_type& filePath, IMCodec::PluginTraverseMode traverseMode);
         bool ProcessImageLoadResult(const ImageLoadResult& loadResult);
         void LoadOivImage(OIVBaseImageSharedPtr oivImage);
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
-        const std::wstring& GetOpenedFileName() const;
+        const LLUtils::native_string_type& GetOpenedFileName() const;
         bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
         void TransformImage(IMUtil::AxisAlignedRotation transform, IMUtil::AxisAlignedFlip flip);
@@ -285,10 +285,10 @@ namespace OIV
         void OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs*
                                    fileChangedEventArgs);  // file change handler, runs in the main thread.
         void OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs);  // callback from file watcher
-        void OnFileIndexResidencyReady(const std::wstring& fileName, IMCodec::ImageSharedPtr image);
+        void OnFileIndexResidencyReady(const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image);
 
         void ProcessCurrentFileChanged();
-        void ProcessRemovalOfOpenedFile(const std::wstring& fileName);
+        void ProcessRemovalOfOpenedFile(const LLUtils::native_string_type& fileName);
 
         void OnNotificationIcon(::Win32::NotificationIconGroup::NotificationIconEventArgs args);
         void DelayResamplingCallback();
@@ -296,8 +296,8 @@ namespace OIV
         void CountColorsAsync();
         void SetImageInfoVisible(bool visible);
         bool GetImageInfoVisible() const;
-        void PerformReloadFile(const std::wstring& requestedFile);
-        void HandleReloadAction(ReloadAction action, const std::wstring& requestedFile);
+        void PerformReloadFile(const LLUtils::native_string_type& requestedFile);
+        void HandleReloadAction(ReloadAction action, const LLUtils::native_string_type& requestedFile);
         void ShowSettings();
         static void NetSettingsCallback_(ItemChangedArgs* callback);
         void NetSettingsCallback(ItemChangedArgs* callback);
@@ -398,11 +398,11 @@ namespace OIV
 
         DeletedFileRemovalMode fDeletedFileRemovalMode = DeletedFileRemovalMode::DeletedInternally;
 
-        std::wstring fRequestedFileForRemoval;
+        LLUtils::native_string_type fRequestedFileForRemoval;
         FileReloadPolicy fFileReloadPolicy;
         LLUtils::PointF64 fImageMargins{0.75, 0.75};
-        std::wstring DefaultTextKeyColorTag   = L"<textcolor=#ff8930ff>";
-        std::wstring DefaultTextValueColorTag = L"<textcolor=#7672ffff>";
+        LLUtils::native_string_type DefaultTextKeyColorTag   = LLUTILS_TEXT("<textcolor=#ff8930ff>");
+        LLUtils::native_string_type DefaultTextValueColorTag = LLUTILS_TEXT("<textcolor=#7672ffff>");
         LLUtils::StopWatch fFileDisplayTimer;
         MouseMultiClickHandler fMouseClickEventHandler{500, 2};
         void OnMouseMultiClick(const MouseMultiClickHandler::EventArgs& args);
@@ -424,19 +424,19 @@ namespace OIV
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
         DownscalingTechnique fDownScalingTechnique = DownscalingTechnique::Software;
-        std::wstring fCurrentFolderWatched;
-        std::set<std::wstring> fKnownFileTypesSet;
-        std::wstring fKnownFileTypes;
+        LLUtils::native_string_type fCurrentFolderWatched;
+        std::set<LLUtils::native_string_type> fKnownFileTypesSet;
+        LLUtils::native_string_type fKnownFileTypes;
         ::Win32::FileDialogFilterBuilder fOpenComDlgFilters;
         ::Win32::FileDialogFilterBuilder fSaveComDlgFilters;
-        std::wstring fDefaultSaveFileExtension = L"png";
+        LLUtils::native_string_type fDefaultSaveFileExtension = LLUTILS_TEXT("png");
         int16_t fDefaultSaveFileFormatIndex    = -1;
-        std::wstring fPendingFolderLoad;
+        LLUtils::native_string_type fPendingFolderLoad;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         ::Win32::NotificationIconGroup fNotificationIcons;
         ::Win32::NotificationIconGroup::IconID fNotificationIconID;
         std::unique_ptr<MessageManager> fMessageManager;
-        void OnSettingChange(const std::wstring& key, const std::wstring& value);
+        void OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value);
         void LoadSettings();
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const;

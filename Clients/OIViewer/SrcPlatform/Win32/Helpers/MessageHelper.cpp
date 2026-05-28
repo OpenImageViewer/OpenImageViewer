@@ -8,7 +8,7 @@
 
 namespace OIV
 {
-    std::wstring MessageHelper::CreateKeyBindingsMessage()
+    LLUtils::native_string_type MessageHelper::CreateKeyBindingsMessage()
     {
         using namespace std;
         //string message = DefaultHeaderColor + "Image information\n";
@@ -40,22 +40,21 @@ namespace OIV
         return MessageFormatter::FormatMetaText(args);
     }
 
-    std::wstring MessageHelper::GetFileTime(const std::wstring& filePath)
+    LLUtils::native_string_type MessageHelper::GetFileTime(const LLUtils::native_string_type& filePath)
     {
         return ImageInfoPresentationPolicy::FormatFileTime(filePath);
     }
 
-    std::wstring MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const OIVBaseImageSharedPtr& rasterized, IMCodec::ImageCodec& imageCodec)
+    LLUtils::native_string_type MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage, const OIVBaseImageSharedPtr& rasterized, IMCodec::ImageCodec& imageCodec)
     {
-        using namespace std;
-        wstring message = MessageFormatter::DefaultHeaderColor + L"Image information\n";
+        LLUtils::native_string_type message = MessageFormatter::DefaultHeaderColor + LLUTILS_TEXT("Image information\n");
 
         MessageFormatter::FormatArgs args;
         args.keyColor = MessageFormatter::DefaultKeyColor;
         args.maxLines = 24;
         args.minSpaceFromValue = 3;
         args.spacer = '.';
-        args.valueColor = L"<textcolor=#ffffff>";
+        args.valueColor = LLUTILS_TEXT("<textcolor=#ffffff>");
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
         const auto rows = ImageInfoPresentationPolicy::Build(oivImage, rasterized, imageCodec);
