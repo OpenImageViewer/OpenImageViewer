@@ -1,4 +1,6 @@
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if(OIV_BUILD_RENDERER_D3D11)
     add_subdirectory(OIVD3D11Renderer)
 endif()
-add_subdirectory(OIVGLRenderer)
+if(OIV_BUILD_RENDERER_GL)
+    add_subdirectory(OIVGLRenderer)
+endif()

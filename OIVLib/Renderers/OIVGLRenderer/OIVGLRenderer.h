@@ -2,37 +2,37 @@
 #define GLEW_STATIC
 
 #include <GL/glew.h>
-#include <GL/GL.h>
+#include <GL/gl.h>
 #include "GLRenderer/GLGpuProgram.h"
 
 #pragma comment(lib, "opengl32")
-//#pragma comment(lib, "glu32")
+// #pragma comment(lib, "glu32")
 
 #include <FileHelper.h>
 #include <Image.h>
 #include "GLContext.h"
 #include "GLRenderer/GLTexture.h"
-#include "../OIV/Interfaces/IRenderer.h"
-
+#include <Interfaces/IRenderer.h>
 
 namespace OIV
 {
     class OIVGLRenderer : public IRenderer
     {
-    public:
+      public:
 
         OIVGLRenderer();
-        //void TestRun();
+        // void TestRun();
 
-    private:
+      private:
+
         void UpdateGpuParams();
         void renderOneFrame();
         void UpdateViewportSize(int x, int y);
-        //bool callback(const OIV::Win32::Event* evnt1);
+        // bool callback(const OIV::Win32::Event* evnt1);
         void PrepareResources();
 
+      public:
 
-    public:
         // Inherited via IRenderer
         int Init(const OIV_RendererInitializationParams& initParams) override;
         int SetViewParams(const ViewParameters& viewParams) override;
@@ -41,10 +41,11 @@ namespace OIV
         int SetImageBuffer(uint32_t id, const IMCodec::ImageSharedPtr image) override;
         int SetSelectionRect(SelectionRect selectionRect) override;
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
-        int SetImageProperties(const OIV_CMD_ImageProperties_Request &) override;
+        int SetImageProperties(const OIV_CMD_ImageProperties_Request&) override;
         int RemoveImage(uint32_t id) override;
-        
-    private:
+
+      private:
+
         bool fIsParamsDirty;
         GLGpuProgramUniquePtr fProgram;
         GLTextureUniquePtr fTexture;
@@ -56,4 +57,4 @@ namespace OIV
         GLfloat fViewportSize[2];
         GLint fShowGrid;
     };
-}
+}  // namespace OIV

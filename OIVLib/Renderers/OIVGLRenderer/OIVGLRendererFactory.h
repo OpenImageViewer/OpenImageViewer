@@ -1,14 +1,13 @@
 #pragma once
-#include "../OIV/Interfaces/IRenderer.h"
+#include <Interfaces/IRenderer.h>
 
 namespace OIV
 {
     class GLRendererFactory
     {
-    public:
-        static IRendererSharedPtr  Create();
+      public:
+
+        static IRendererSharedPtr Create();
     };
 
-
-}
-
+}  // namespace OIV
