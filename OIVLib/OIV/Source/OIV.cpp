@@ -16,7 +16,7 @@
 #endif
 
 #if OIV_BUILD_RENDERER_GL == 1
-// #include <OIVGLRendererFactory.h>
+    #include <OIVGLRendererFactory.h>
 #endif
 
 namespace OIV

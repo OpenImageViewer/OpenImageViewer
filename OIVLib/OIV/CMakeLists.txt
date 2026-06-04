@@ -52,9 +52,24 @@ PRIVATE
 #Local libraries
 easyexif
 FreeTypeWrapper
-OIVD3D11Renderer
-delayimp
-
 #external dependencies
-
 )
+
+if(OIV_BUILD_RENDERER_D3D11)
+    target_compile_definitions(${TargetName} PRIVATE OIV_BUILD_RENDERER_D3D11=1)
+    target_link_libraries(${TargetName}
+    PRIVATE
+        OIVD3D11Renderer
+        delayimp
+    )
+endif()
+
+if(OIV_BUILD_RENDERER_GL)
+    target_compile_definitions(${TargetName} PRIVATE OIV_BUILD_RENDERER_GL=1)
+    target_link_libraries(${TargetName}
+    PRIVATE
+        OIVGLRenderer
+    )
+else()
+    target_compile_definitions(${TargetName} PRIVATE OIV_BUILD_RENDERER_GL=0)
+endif()
