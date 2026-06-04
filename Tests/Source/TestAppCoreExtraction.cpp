@@ -438,9 +438,15 @@ TEST_CASE("ViewerPresentationPolicy formats viewer messages", "[AppCore]")
     REQUIRE(OIV::ViewerPresentationPolicy::FormatTopMostMessage(2) == LLUTILS_TEXT("Top most ending in...2"));
     REQUIRE(OIV::ViewerPresentationPolicy::FormatNonFileTitlePrefix(OIV::ImageSource::Clipboard) ==
             LLUTILS_TEXT("Clipboard image - "));
+    const auto titleFolder             = std::filesystem::path{} / "folder";
+    const auto expectedFileTitlePrefix = LLUTILS_TEXT("3/10 | image.png @ ") + titleFolder.native() +
+                                         LLUTILS_TEXT(" - ");
     REQUIRE(OIV::ViewerPresentationPolicy::FormatFileTitlePrefix(LLUTILS_TEXT("image"), LLUTILS_TEXT(".png"),
-                                                                 LLUTILS_TEXT("C:\\folder\\"), true, 3, 10) ==
-            LLUTILS_TEXT("3/10 | image.png @ C:\\folder - "));
+                                                                 titleFolder.native(), true, 3,
+                                                                 10) == expectedFileTitlePrefix);
+    REQUIRE(OIV::ViewerPresentationPolicy::FormatFileTitlePrefix(LLUTILS_TEXT("image"), LLUTILS_TEXT(".png"),
+                                                                 titleFolder.native() + std::filesystem::path::preferred_separator, true,
+                                                                 3, 10) == expectedFileTitlePrefix);
     REQUIRE(OIV::ViewerPresentationPolicy::FormatTitle(LLUTILS_TEXT("image - "), LLUTILS_TEXT("OpenImageViewer")) ==
             LLUTILS_TEXT("image - OpenImageViewer"));
 }
@@ -696,27 +702,28 @@ TEST_CASE("FileChangePolicy routes watcher events", "[AppCore]")
 {
     using Op = OIV::IFileWatcher::FileChangedOp;
 
-    OIV::IFileWatcher::FileChangedEventArgs eventArgs{7,
-                                                      Op::Modified,
-                                                      LLUTILS_TEXT("C:\\images"),
-                                                      LLUTILS_TEXT("a.png"),
-                                                      {}};
-    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, LLUTILS_TEXT("C:\\images\\a.png")) ==
+    const auto basePath   = std::filesystem::path{} / "images";
+    const auto configPath = std::filesystem::path{} / "config";
+    const auto otherPath  = std::filesystem::path{} / "other";
+
+    OIV::IFileWatcher::FileChangedEventArgs eventArgs{7, Op::Modified, basePath.native(), LLUTILS_TEXT("a.png"), {}};
+
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, (basePath / "a.png").native()) ==
             OIV::FileChangeAction::CurrentFileChanged);
-    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, LLUTILS_TEXT("C:\\images\\b.png")) ==
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, (basePath / "b.png").native()) ==
             OIV::FileChangeAction::Ignore);
 
-    eventArgs = {7, Op::Rename, LLUTILS_TEXT("C:\\images"), LLUTILS_TEXT("old.png"), LLUTILS_TEXT("new.png")};
-    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, LLUTILS_TEXT("C:\\images\\new.png")) ==
+    eventArgs = {7, Op::Rename, basePath.native(), LLUTILS_TEXT("old.png"), LLUTILS_TEXT("new.png")};
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, (basePath / "new.png").native()) ==
             OIV::FileChangeAction::CurrentFileChanged);
 
-    eventArgs = {7, Op::WatchedFolderRemoved, LLUTILS_TEXT("C:\\images"), {}, {}};
+    eventArgs = {7, Op::WatchedFolderRemoved, basePath.native(), {}, {}};
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ClearWatchedFolder);
 
-    eventArgs = {9, Op::Modified, LLUTILS_TEXT("C:\\config"), LLUTILS_TEXT("Settings.json"), {}};
+    eventArgs = {9, Op::Modified, configPath.native(), LLUTILS_TEXT("Settings.json"), {}};
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ReloadSettings);
 
-    eventArgs = {11, Op::Modified, LLUTILS_TEXT("C:\\other"), LLUTILS_TEXT("x.png"), {}};
+    eventArgs = {11, Op::Modified, otherPath.native(), LLUTILS_TEXT("x.png"), {}};
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::Ignore);
 }
 
@@ -1011,8 +1018,10 @@ TEST_CASE("ImageInfoPresentationPolicy handles generated animation images", "[Ap
 TEST_CASE("FileSorter orders files by name and extension", "[AppCore][Shared]")
 {
     OIV::FileSorter sorter;
-    const LLUtils::native_string_type png = LLUTILS_TEXT("C:\\images\\b.png");
-    const LLUtils::native_string_type jpg = LLUTILS_TEXT("C:\\images\\a.jpg");
+    const auto basePath = std::filesystem::path{} / "images";
+
+    const LLUtils::native_string_type png = (basePath / "b.png").native();
+    const LLUtils::native_string_type jpg = (basePath / "a.jpg").native();
 
     sorter.SetSortType(OIV::FileSorter::SortType::Name);
     REQUIRE(sorter(jpg, png));
@@ -1168,10 +1177,10 @@ TEST_CASE("Event Add keeps fire-and-forget listener compatibility", "[AppCore][L
 
 TEST_CASE("FolderFileList updates the current folder list from explicit file changes", "[AppCore]")
 {
-    const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-test").native();
-    const auto fileA  = (std::filesystem::path(folder) / LLUTILS_TEXT("a.png")).native();
-    const auto fileB  = (std::filesystem::path(folder) / LLUTILS_TEXT("b.png")).native();
-    const auto fileC  = (std::filesystem::path(folder) / LLUTILS_TEXT("c.png")).native();
+    const auto folder = std::filesystem::temp_directory_path() / "oiv-file-list-test";
+    const auto fileA  = folder / "a.png";
+    const auto fileB  = folder / "b.png";
+    const auto fileC  = folder / "c.png";
     std::filesystem::create_directories(folder);
 
     OIV::FileSorter sorter;
@@ -1180,27 +1189,29 @@ TEST_CASE("FolderFileList updates the current folder list from explicit file cha
     OIV::FolderFileList fileList(&sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"),
                                  [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
-    fileList.SetFolder(folder, {fileA, fileC}, fileA);
+    fileList.SetFolder(folder.native(), {fileA.native(), fileC.native()}, fileA.native());
     REQUIRE(fileList.GetSize() == 2);
-    REQUIRE(fileList.GetCurrentItemName() == fileA);
+    REQUIRE(fileList.GetCurrentItemName() == fileA.native());
 
-    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Add, fileB, {}, fileA);
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Add, fileB.native(), {}, fileA.native());
     REQUIRE(fileList.GetSize() == 3);
-    REQUIRE(fileList.GetElementNameFromIndex(1) == fileB);
-    REQUIRE(fileList.GetCurrentItemName() == fileA);
+    REQUIRE(fileList.GetElementNameFromIndex(1) == fileB.native());
+    REQUIRE(fileList.GetCurrentItemName() == fileA.native());
 
-    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Remove, fileB, {}, fileA);
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Remove, fileB.native(), {}, fileA.native());
     REQUIRE(fileList.GetSize() == 2);
-    REQUIRE(fileList.GetElementNameFromIndex(1) == fileC);
+    REQUIRE(fileList.GetElementNameFromIndex(1) == fileC.native());
 
-    const auto fileBText = (std::filesystem::path(folder) / LLUTILS_TEXT("b.txt")).native();
-    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileC, fileBText, fileA);
+    const auto fileBText = folder / "b.txt";
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileC.native(), fileBText.native(),
+                                  fileA.native());
     REQUIRE(fileList.GetSize() == 1);
-    REQUIRE(fileList.GetCurrentItemName() == fileA);
+    REQUIRE(fileList.GetCurrentItemName() == fileA.native());
 
-    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileBText, fileC, fileA);
+    fileList.UpdateFolderFileList(OIV::IFileWatcher::FileChangedOp::Rename, fileBText.native(), fileC.native(),
+                                  fileA.native());
     REQUIRE(fileList.GetSize() == 2);
-    REQUIRE(fileList.GetElementNameFromIndex(1) == fileC);
+    REQUIRE(fileList.GetElementNameFromIndex(1) == fileC.native());
 }
 
 TEST_CASE("FolderFileList sorts files loaded from disk for every sort mode", "[AppCore]")
@@ -1249,9 +1260,9 @@ TEST_CASE("FolderFileList sorts files loaded from disk for every sort mode", "[A
 
 TEST_CASE("FolderFileList leaves current index invalid when current file is not represented", "[AppCore]")
 {
-    const auto folder = (std::filesystem::temp_directory_path() / "oiv-file-list-unrepresented-test").native();
-    const auto fileA  = (std::filesystem::path(folder) / LLUTILS_TEXT("a.png")).native();
-    const auto fileB  = (std::filesystem::path(folder) / LLUTILS_TEXT("b.txt")).native();
+    const auto folder = std::filesystem::temp_directory_path() / "oiv-file-list-unrepresented-test";
+    const auto fileA  = folder / "a.png";
+    const auto fileB  = folder / "b.txt";
     std::filesystem::create_directories(folder);
 
     OIV::FileSorter sorter;
@@ -1260,7 +1271,7 @@ TEST_CASE("FolderFileList leaves current index invalid when current file is not 
     OIV::FolderFileList fileList(&sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"),
                                  [&](auto current, auto previous) { indexChanges.push_back({current, previous}); });
 
-    fileList.SetFolder(folder, {fileA}, fileB);
+    fileList.SetFolder(folder.native(), {fileA.native()}, fileB.native());
 
     REQUIRE(fileList.GetSize() == 1);
     REQUIRE_FALSE(fileList.IsIndexValid(fileList.GetCurrentIndex()));
@@ -1312,14 +1323,15 @@ TEST_CASE("ImageOpenController loads direct files through the injected loader", 
     auto* fakeLoaderPtr = fakeLoader.get();
     OIV::ImageOpenController controller(std::move(fakeLoader));
 
-    const auto result = controller.LoadFile(LLUTILS_TEXT("C:\\images\\..\\images\\a.png"),
-                                            IMCodec::PluginTraverseMode::AnyPlugin, OIV::ImageLoadContext{800, 600});
+    const auto sourcePath = std::filesystem::path{} / "images" / ".." / "images" / "a.png";
+
+    const auto result = controller.LoadFile(sourcePath.native(), IMCodec::PluginTraverseMode::AnyPlugin,
+                                            OIV::ImageLoadContext{800, 600});
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
     REQUIRE(result.DecodeSucceeded());
     REQUIRE(result.image != nullptr);
-    REQUIRE(fakeLoaderPtr->lastPath ==
-            std::filesystem::path(LLUTILS_TEXT("C:\\images\\..\\images\\a.png")).lexically_normal().native());
+    REQUIRE(fakeLoaderPtr->lastPath == sourcePath.lexically_normal().native());
     REQUIRE(fakeLoaderPtr->lastTraverseMode == IMCodec::PluginTraverseMode::AnyPlugin);
     REQUIRE(fakeLoaderPtr->lastContext.canvasWidth == 800);
     REQUIRE(fakeLoaderPtr->lastContext.canvasHeight == 600);
@@ -1885,8 +1897,8 @@ TEST_CASE("BrowseSessionController keeps current file when invalid skip search i
 TEST_CASE("BrowseSessionController applies folder-load residency completions", "[AppCore]")
 {
     const auto folder = MakeTempFolder("oiv-file-session-folder-load-test");
-    const auto fileA  = folder / LLUTILS_TEXT("a.png");
-    const auto fileB  = folder / LLUTILS_TEXT("b.png");
+    const auto fileA  = folder / "a.png";
+    const auto fileB  = folder / "b.png";
     TouchFile(fileA);
     TouchFile(fileB);
 

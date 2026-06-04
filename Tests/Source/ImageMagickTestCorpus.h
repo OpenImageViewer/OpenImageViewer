@@ -31,6 +31,7 @@ namespace OIV::Tests
     };
 
     const GeneratedCorpus& EnsureImageMagickCorpus();
+    GeneratedCorpus BuildLoadableImageMagickCorpus();
     std::vector<LLUtils::native_string_type> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus);
     std::vector<LLUtils::native_string_type> FindConsecutiveValidFiles(const GeneratedCorpus& corpus,
                                                                        std::size_t count);

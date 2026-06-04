@@ -282,8 +282,8 @@ namespace
 TEST_CASE("BrowseSessionController sequentially browses ImageMagick generated files",
           "[ImageCompatibility][Integration][Browse]")
 {
-    const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
-    const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
     BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
@@ -320,8 +320,8 @@ TEST_CASE("BrowseSessionController sequentially browses ImageMagick generated fi
 TEST_CASE("BrowseSessionController ignores stale pending loads during rapid ImageMagick browsing",
           "[ImageCompatibility][Integration][Browse]")
 {
-    const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
-    const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
     BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
@@ -350,8 +350,8 @@ TEST_CASE("BrowseSessionController ignores stale pending loads during rapid Imag
 TEST_CASE("BrowseSessionController ignores stale forward load after rapid backward ImageMagick browsing",
           "[ImageCompatibility][Integration][Browse]")
 {
-    const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
-    const auto files   = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
     BrowseSessionControllerFixture fixture(corpus, files.front());
 
     fixture.LoadFolder();
@@ -388,7 +388,7 @@ TEST_CASE("BrowseSessionController ignores stale forward load after rapid backwa
 TEST_CASE("BrowseSessionController recovers after browsing to a bad ImageMagick generated file",
           "[ImageCompatibility][Integration][Browse]")
 {
-    const auto& corpus              = OIV::Tests::EnsureImageMagickCorpus();
+    const auto corpus               = OIV::Tests::BuildLoadableImageMagickCorpus();
     const auto [validFile, badFile] = OIV::Tests::FindValidFileBeforeBadFile(corpus);
     BrowseSessionControllerFixture fixture(corpus, validFile);
 

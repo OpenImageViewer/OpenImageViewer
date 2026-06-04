@@ -6,6 +6,7 @@
 #include <LLUtils/StringUtility.h>
 #include <OIVShared/FileSorter.h>
 
+#include <ImageLoader.h>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -134,10 +135,16 @@ namespace OIV::Tests
             if (pathList == nullptr)
                 return result;
 
+#ifdef _WIN32
+            constexpr char EnvironmentPathListSeparator = ';';
+#else
+            constexpr char EnvironmentPathListSeparator = ':';
+#endif
+
             std::string current;
             for (const char ch : std::string_view(pathList))
             {
-                if (ch == ';')
+                if (ch == EnvironmentPathListSeparator)
                 {
                     if (!current.empty())
                         result.push_back(current);
@@ -158,7 +165,8 @@ namespace OIV::Tests
         std::optional<std::filesystem::path> FindMagickOnPath()
         {
             const auto pathEntries                        = SplitPathList(std::getenv("PATH"));
-            const std::vector<std::string> candidateNames = {"magick.exe", "magick.com", "magick.bat", "magick.cmd"};
+            const std::vector<std::string> candidateNames = {"magick.exe", "magick.com", "magick.bat", "magick.cmd",
+                                                             "magick"};
 
             for (auto entry : pathEntries)
             {
@@ -342,7 +350,8 @@ namespace OIV::Tests
                     "Skipping ImageMagick compatibility tests because 'magick' was not found on PATH. Required minimum "
                     "is "
                     << required.display
-                    << ". Install ImageMagick 7 and ensure magick.exe, not Windows convert.exe, is available on PATH.");
+                    << ". Install ImageMagick 7 and ensure the magick executable(e.g. magick.exe, magick), not the "
+                       "convert executable(e.g. convert.exe, convert), is available on PATH.");
             }
 
             const auto versionResult = RunCommandCapture({NarrowPath(*magickPath), "-version"});
@@ -399,22 +408,7 @@ namespace OIV::Tests
 
         std::filesystem::path GetTestExecutableFolder()
         {
-#ifdef _WIN32
-            LLUtils::native_string_type buffer(MAX_PATH, LLUTILS_TEXT('\0'));
-            DWORD length = 0;
-            while (true)
-            {
-                length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
-                if (length == 0)
-                    break;
-
-                if (length < buffer.size() - 1)
-                    return std::filesystem::path(buffer.substr(0, length)).parent_path();
-
-                buffer.resize(buffer.size() * 2);
-            }
-#endif
-            return std::filesystem::current_path();
+            return LLUtils::PlatformUtility::GetExeFolder();
         }
 
         std::filesystem::path GetImageCompatibilityCacheFolder()
@@ -458,12 +452,17 @@ namespace OIV::Tests
             manifest << content;
         }
 
-        void AddGeneratedExtension(GeneratedCorpus& corpus, const std::filesystem::path& path)
+        LLUtils::native_string_type GetGeneratedExtension(const std::filesystem::path& path)
         {
             auto extension = path.extension().native();
             if (!extension.empty() && extension.front() == LLUTILS_TEXT('.'))
                 extension.erase(extension.begin());
-            extension = LLUtils::StringUtility::ToLower(extension);
+            return LLUtils::StringUtility::ToLower(extension);
+        }
+
+        void AddGeneratedExtension(GeneratedCorpus& corpus, const std::filesystem::path& path)
+        {
+            const auto extension = GetGeneratedExtension(path);
             if (!extension.empty())
                 corpus.extensions.insert(extension);
         }
@@ -952,6 +951,37 @@ namespace OIV::Tests
                 badFiles.insert(image.path.native());
             return badFiles;
         }
+
+        const std::set<LLUtils::native_string_type>& GetInstalledDecoderExtensions()
+        {
+            static const auto extensions = []
+            {
+                std::set<LLUtils::native_string_type> result;
+                IMCodec::ImageLoader imageLoader;
+                for (const auto& plugin : imageLoader.GetImageCodec().GetPluginsInfo())
+                {
+                    if ((plugin.capabilities & IMCodec::CodecCapabilities::Decode) !=
+                        IMCodec::CodecCapabilities::Decode)
+                        continue;
+
+                    for (const auto& extensionCollection : plugin.extensionCollection)
+                    {
+                        for (const auto& extension : extensionCollection.listExtensions)
+                            result.insert(LLUtils::StringUtility::ToLower(extension));
+                    }
+                }
+
+                return result;
+            }();
+
+            return extensions;
+        }
+
+        bool IsSupportedByInstalledDecoder(const GeneratedImage& image)
+        {
+            const auto extension = GetGeneratedExtension(image.path);
+            return !extension.empty() && GetInstalledDecoderExtensions().contains(extension);
+        }
     }  // namespace
 
     std::string NarrowPath(const std::filesystem::path& path)
@@ -965,6 +995,22 @@ namespace OIV::Tests
         if (!corpus.has_value())
             corpus = BuildGeneratedCorpus();
         return *corpus;
+    }
+
+    GeneratedCorpus BuildLoadableImageMagickCorpus()
+    {
+        const auto& sourceCorpus = EnsureImageMagickCorpus();
+
+        GeneratedCorpus result;
+        result.folder = sourceCorpus.folder;
+
+        std::ranges::copy_if(sourceCorpus.validImages, std::back_inserter(result.validImages),
+                             IsSupportedByInstalledDecoder);
+        std::ranges::copy_if(sourceCorpus.badImages, std::back_inserter(result.badImages),
+                             IsSupportedByInstalledDecoder);
+
+        FinalizeCorpus(result);
+        return result;
     }
 
     std::vector<LLUtils::native_string_type> BuildBrowsingFolderFileList(const GeneratedCorpus& corpus)

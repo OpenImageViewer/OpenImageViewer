@@ -176,7 +176,7 @@ namespace
 
 TEST_CASE("ImageLoader decodes ImageMagick compatibility matrix", "[ImageCompatibility][Integration]")
 {
-    const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
 
     for (const auto& image : corpus.validImages)
     {
@@ -257,7 +257,7 @@ TEST_CASE("ImageLoader exposes unmapped TIFF extra samples as subimages", "[Imag
 
 TEST_CASE("ImageOpenController rejects unsupported ImageMagick corpus variants", "[ImageCompatibility][Integration]")
 {
-    const auto& corpus         = OIV::Tests::EnsureImageMagickCorpus();
+    const auto corpus          = OIV::Tests::BuildLoadableImageMagickCorpus();
     bool foundUnsupportedImage = false;
 
     for (const auto& image : corpus.validImages)
@@ -282,7 +282,7 @@ TEST_CASE("ImageOpenController rejects unsupported ImageMagick corpus variants",
 
 TEST_CASE("ImageOpenController rejects bad ImageMagick corpus files", "[ImageCompatibility][Integration]")
 {
-    const auto& corpus = OIV::Tests::EnsureImageMagickCorpus();
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
 
     for (const auto& image : corpus.badImages)
     {
