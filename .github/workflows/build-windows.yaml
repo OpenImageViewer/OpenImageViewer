@@ -56,6 +56,7 @@ jobs:
         -S "$GITHUB_WORKSPACE" 
         -B "${{ steps.strings.outputs.build-output-dir }}"
         -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/mingw-w64-x86_64.cmake"
+        -DOIV_BUILD_RENDERER_GL=OFF
         -DIMCODEC_BUILD_CODEC_WEBP=OFF
         -DFREETYPE_WRAPPER_BUILD_FRIBIDI=OFF
         -DMINGW_POST_BUILD_DONT_COPY_BINARIES=ON
@@ -88,10 +89,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DIMCODEC_BUILD_CODEC_PNG=OFF
+        -DOIV_BUILD_RENDERER_GL=OFF
         -S ${{ github.workspace }}
 
     - name: Build

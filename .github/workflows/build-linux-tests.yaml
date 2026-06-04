@@ -1,0 +1,83 @@
+name: Build Linux tests
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux-tests:
+    name: ${{ matrix.compiler.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - name: clang
+            cc: clang
+            cxx: clang++
+            linker_flags: -fuse-ld=lld
+        # GCC14 is required before re-enabling the gcc matrix entry.
+        # - name: gcc
+        #   cc: gcc
+        #   cxx: g++
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Show tool versions
+      run: |
+        cmake --version
+        ninja --version
+        ${{ matrix.compiler.cc }} --version
+        ${{ matrix.compiler.cxx }} --version
+
+    - name: Install linker
+      if: matrix.compiler.name == 'clang'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lld
+
+    - name: Configure Git Safe Directories
+      run: |
+        git config --global --add safe.directory '*'
+
+    - name: Git update submodules
+      run: |
+        git submodule update --init --recursive --depth 1
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=$GITHUB_WORKSPACE/build/linux-${{ matrix.compiler.name }}-tests" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake
+        -G Ninja
+        -S "$GITHUB_WORKSPACE"
+        -B "${{ steps.strings.outputs.build-output-dir }}"
+        -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+        -DCMAKE_EXE_LINKER_FLAGS=${{ matrix.compiler.linker_flags }}
+        -DCMAKE_SHARED_LINKER_FLAGS=${{ matrix.compiler.linker_flags }}
+        -DCMAKE_MODULE_LINKER_FLAGS=${{ matrix.compiler.linker_flags }}
+        -DCMAKE_BUILD_TYPE=Release
+        -DOIV_BUILD_CLIENT=OFF
+        -DOIV_BUILD_RENDERER_GL=OFF
+        -DOIV_BUILD_TESTS=ON
+        -DIMCODEC_BUILD_EXAMPLES=OFF
+
+    - name: Build tests
+      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --target tests -- -j$(nproc)
+
+    - name: Run tests
+      run: "${{ steps.strings.outputs.build-output-dir }}/bin/tests"
