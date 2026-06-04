@@ -1,10 +1,10 @@
-#ifdef _MSC_VER 
+#ifdef _WIN32
 #include <windows.h>
 #include <shellapi.h>
+#include <Win32/UserMessages.h>
 #endif
 
-#include "ViewerApplication.h"
-#include "./Win32/UserMessages.h"
+#include <ViewerApplication.h>
 
 
 LLUtils::native_string_type CompileFilePathFromArguments(int argc, const wchar_t** argv)
@@ -27,6 +27,9 @@ void RunApp(const LLUtils::native_string_type& filePath)
     viewerApplication.Init(filePath);
     viewerApplication.Run();
 }
+
+
+#ifdef _WIN32
 
 int mainFunction(int argc, const wchar_t** argv)
 {
@@ -56,9 +59,7 @@ int mainFunction(int argc, const wchar_t** argv)
     }
     
     return 0;
-  }
-
-#ifdef WIN32
+}
 
 int WinMain(
          [[maybe_unused]] _In_      HINSTANCE hInstance,
@@ -71,9 +72,18 @@ int WinMain(
     wchar_t** str = CommandLineToArgvW(GetCommandLineW(), &nArgs);
     return mainFunction(nArgs, const_cast<const wchar_t**>(str));
 }
-#endif
 
 int _tmain(int argc, const TCHAR** argv)
 {
     return mainFunction(argc, argv);
 }
+
+#else
+
+// int main(int argc, const char** argv)
+int main(int argc, char* argv[])
+{
+    //return mainFunction(argc, argv);
+    RunApp({});
+}
+#endif

@@ -12,16 +12,27 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      FetchContent_MakeAvailable(winreg)
      FetchContent_GetProperties(winreg)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-     message(FATAL_ERROR "OIViewer Linux backend is not implemented yet. Configure with -DOIV_BUILD_CLIENT=OFF.")
+     message(WARNING "OIViewer Linux backend is not implemented yet. Configure with -DOIV_BUILD_CLIENT=OFF.")
+     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Linux")
 else()
      message(FATAL_ERROR "Unsupported OIViewer platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-file(GLOB_RECURSE OIVIEWER_PLATFORM_SOURCES
-     "${OIVIEWER_PLATFORM_DIR}/*.h"
-     "${OIVIEWER_PLATFORM_DIR}/*.hpp"
-     "${OIVIEWER_PLATFORM_DIR}/*.cpp"
+file(GLOB_RECURSE OIVIEWER_SOURCE_FILES
+     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp
+     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h
+     ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.hpp
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  file(GLOB_RECURSE OIVIEWER_PLATFORM_SOURCES
+          ${OIVIEWER_PLATFORM_DIR}/*.cpp
+          ${OIVIEWER_PLATFORM_DIR}/*.h
+          ${OIVIEWER_PLATFORM_DIR}/*.hpp
+     )
+endif()
+
+
 
 getGitHash(${CMAKE_CURRENT_SOURCE_DIR} GIT_HASH_ID)
 getGitBranch(${CMAKE_CURRENT_SOURCE_DIR} GIT_BRANCH)
@@ -37,6 +48,7 @@ set(ExternalFolder ../../External)
 set(TargetName OIViewer)
 add_executable(${TargetName})
 target_sources(${TargetName} PRIVATE
+     ${OIVIEWER_SOURCE_FILES}
      ${OIVIEWER_PLATFORM_SOURCES}
 )
 
@@ -84,7 +96,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
      )
      target_link_options(${TargetName} PRIVATE "-mwindows")
 endif()
-target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Src)
+
+target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
 target_include_directories(${TargetName} PRIVATE ${OIVIEWER_PLATFORM_DIR})
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/ExoticNumbers/include)
