@@ -4,6 +4,23 @@
 #include <sstream>
 #include <string_view>
 
+namespace
+{
+    bool IsPathSeparator(LLUtils::native_char_type ch)
+    {
+        return ch == static_cast<LLUtils::native_char_type>('/') || ch == static_cast<LLUtils::native_char_type>('\\');
+    }
+
+    LLUtils::native_string_view TrimTrailingPathSeparator(const LLUtils::native_string_type& path)
+    {
+        auto trimmedPath = LLUtils::native_string_view(path);
+        if (trimmedPath.empty() == false && IsPathSeparator(trimmedPath.back()))
+            trimmedPath.remove_suffix(1);
+
+        return trimmedPath;
+    }
+}  // namespace
+
 namespace OIV
 {
     LLUtils::native_string_type ViewerPresentationPolicy::FormatOperationResult(OperationResult result)
@@ -66,7 +83,7 @@ namespace OIV
 
         stream << fileName << extension << LLUTILS_TEXT(" @ ");
         if (parentPath.empty() == false)
-            stream << LLUtils::native_string_view(parentPath.data(), parentPath.length() - 1);
+            stream << TrimTrailingPathSeparator(parentPath);
 
         stream << LLUTILS_TEXT(" - ");
         return stream.str();

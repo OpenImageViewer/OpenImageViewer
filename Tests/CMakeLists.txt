@@ -25,4 +25,3 @@ elseif(MINGW)
     set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
     target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
 endif()
-           
