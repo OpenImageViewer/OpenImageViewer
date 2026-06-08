@@ -5,12 +5,13 @@ cmake_minimum_required(VERSION 3.10)
 
 #todo fix it.
 set(ExternalFolder ../External)
-set(_default_d3d11 OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(_default_d3d11 ON)
+    set(_default_gl OFF)
+else()
+    set(_default_d3d11 OFF)
+    set(_default_gl ON)
 endif()
-
-set(_default_gl ON)
 
 option(OIV_BUILD_RENDERER_D3D11 "Build D3D11 renderer" ${_default_d3d11})
 option(OIV_BUILD_RENDERER_GL "Build OpenGL renderer" ${_default_gl})
