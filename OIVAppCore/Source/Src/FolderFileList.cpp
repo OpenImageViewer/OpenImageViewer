@@ -152,7 +152,6 @@ namespace OIV
         using namespace std::filesystem;
 
         auto fileList = GetSupportedFolderFileListInFolder(fCurrentFolder);
-        std::sort(fileList.begin(), fileList.end(), *fFileSorter);
         // File is loaded from a different folder then the active one.
         std::swap(fListFiles, fileList);
     }
@@ -165,6 +164,7 @@ namespace OIV
         if (std::filesystem::is_directory(folderPath))
         {
             LLUtils::FileSystemHelper::FindFiles(fileList, folderPath, fKnownFileTypes, false, false);
+            std::sort(fileList.begin(), fileList.end(), *fFileSorter);
         }
         else
         {
