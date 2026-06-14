@@ -163,12 +163,6 @@ endif()
 
     option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
     add_subdirectory(./External/ImageCodec)
-    if (TARGET FreeImage)
-        target_compile_options(FreeImage PRIVATE
-            $<$<CXX_COMPILER_ID:Clang>:-UUNICODE -U_UNICODE>
-            $<$<CXX_COMPILER_ID:MSVC>:/UUNICODE /U_UNICODE>
-        )
-    endif()
 
 if (OIV_BUILD_CLIENT OR OIV_BUILD_TESTS)
     add_subdirectory(OIVLib)
