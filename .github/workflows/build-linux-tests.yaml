@@ -23,14 +23,26 @@ jobs:
             cc: clang
             cxx: clang++
             linker_flags: -fuse-ld=lld
-        # GCC14 is required before re-enabling the gcc matrix entry.
-        # - name: gcc
-        #   cc: gcc
-        #   cxx: g++
+          - name: gcc
+            cc: gcc-14
+            cxx: g++-14
+            linker_flags: ""
 
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+
+    - name: Install linker
+      if: matrix.compiler.name == 'clang'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lld
+
+    - name: Install GCC 14
+      if: matrix.compiler.name == 'gcc'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-14 g++-14
 
     - name: Show tool versions
       run: |
@@ -38,12 +50,6 @@ jobs:
         ninja --version
         ${{ matrix.compiler.cc }} --version
         ${{ matrix.compiler.cxx }} --version
-
-    - name: Install linker
-      if: matrix.compiler.name == 'clang'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y lld
 
     - name: Configure Git Safe Directories
       run: |

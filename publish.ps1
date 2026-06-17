@@ -9,7 +9,6 @@ param (
     [bool]$EnableConfigure = $true,
     [bool]$EnableBuild = $true,
     [bool]$EnablePackage = $true,
-    [bool]$FreeImage = $true,
     [bool]$OfficialBuild = $false,
     [bool]$OfficialRelease = $false,
     [bool]$CleanConfigureOnMismatch = $true,
@@ -470,9 +469,6 @@ function New-PlatformProfile {
         $rcFallbacks = @($baseLlvmToolDirs | ForEach-Object { "$_/llvm-rc.exe" }) + @(Get-WindowsSdkToolPaths "rc.exe")
         $mtFallbacks = @($baseLlvmToolDirs | ForEach-Object { "$_/llvm-mt.exe" }) + @(Get-WindowsSdkToolPaths "mt.exe")
 
-        $requiredRuntimeFiles = @("OIViewer.exe", "Resources")
-        if ($Options.FreeImage) { $requiredRuntimeFiles += "FreeImage.dll" }
-
         return [PSCustomObject]@{
             Name               = "Windows"
             NeedsVsEnvironment = $needsWindowsBuildTools
@@ -497,7 +493,7 @@ function New-PlatformProfile {
             )
             PackageSpec = [PSCustomObject]@{
                 RuntimePatterns  = @("*.dll", "*.exe", "Resources")
-                RequiredFiles    = $requiredRuntimeFiles
+                RequiredFiles    = @("OIViewer.exe", "Resources")
                 SymbolPatterns   = @("*.pdb")
                 ArchiveExtension = ".7z"
                 ArchiveToolKey   = "SevenZip"
@@ -769,14 +765,12 @@ function New-CMakeDefine {
 function New-CMakeConfigureSpec {
     param([object]$Context)
 
-    $freeImageValue = if ($Context.FreeImage) { "ON" } else { "OFF" }
     $platformDefines = @($Context.Profile.ConfigureToolDefines | ForEach-Object {
         New-CMakeDefine -Name $_.Name -Value $Context.Tools[$_.ToolKey] -IsPath $true
     })
     $defines = @(
         New-CMakeDefine -Name "CMAKE_BUILD_TYPE"                -Value $Context.BuildType
         New-CMakeDefine -Name "CMAKE_MAKE_PROGRAM"              -Value $Context.Tools["Ninja"]              -IsPath $true
-        New-CMakeDefine -Name "IMCODEC_BUILD_CODEC_FREEIMAGE"   -Value $freeImageValue
         New-CMakeDefine -Name "OIV_OFFICIAL_BUILD"              -Value "$($Context.OfficialBuild)"
         New-CMakeDefine -Name "OIV_OFFICIAL_RELEASE"            -Value "$($Context.OfficialRelease)"
         New-CMakeDefine -Name "OIV_VERSION_BUILD"               -Value "$($Context.VersionBuild)"
@@ -1009,7 +1003,6 @@ function New-PublishContext {
         EnableConfigure          = $Options.EnableConfigure
         EnableBuild              = $Options.EnableBuild
         EnablePackage            = $Options.EnablePackage
-        FreeImage                = $Options.FreeImage
         CleanConfigure           = $Options.CleanConfigure
         CleanConfigureOnMismatch = $Options.CleanConfigureOnMismatch
         EchoCommands             = $Options.EchoCommands
@@ -1184,7 +1177,7 @@ function Invoke-Package {
     $symbolsPackageInputs  = @($packageSpec.SymbolPatterns  | ForEach-Object { Join-PathForward $Context.BinDir $_ })
     $requiredRuntimeInputs = @($packageSpec.RequiredFiles   | ForEach-Object { Join-PathForward $Context.BinDir $_ })
 
-    # Verify specific required named files exist (OIViewer.exe, Resources, optional FreeImage.dll).
+    # Verify specific required named files exist.
     Assert-PackageInputs $requiredRuntimeInputs "runtime"
     # Pre-flight wildcard check: ensures archive inputs are never silently empty.
     Assert-PackageInputs $runtimePackageInputs "runtime"
@@ -1205,7 +1198,6 @@ function Run-OIVBuild {
         EnableConfigure          = $EnableConfigure
         EnableBuild              = $EnableBuild
         EnablePackage            = $EnablePackage
-        FreeImage                = $FreeImage
         OfficialBuild            = $OfficialBuild
         OfficialRelease          = $OfficialRelease
         CleanConfigure           = [bool]$CleanConfigure

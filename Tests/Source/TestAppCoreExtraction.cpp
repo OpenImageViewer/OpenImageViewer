@@ -1899,8 +1899,8 @@ TEST_CASE("BrowseSessionController applies folder-load residency completions", "
     const auto folder = MakeTempFolder("oiv-file-session-folder-load-test");
     const auto fileA  = folder / "a.png";
     const auto fileB  = folder / "b.png";
-    TouchFile(fileA);
     TouchFile(fileB);
+    TouchFile(fileA);
 
     FakeFileWatcher watcher;
     OIV::FileSorter sorter;
@@ -1932,6 +1932,7 @@ TEST_CASE("BrowseSessionController applies folder-load residency completions", "
     }
 
     REQUIRE(completion.folderLoad);
+    REQUIRE(completion.fileName == fileA.native());
     const auto result = controller.OnFolderOpenCandidateReady(completion);
     REQUIRE(result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage);
     REQUIRE(controller.GetFolderFileList().GetSize() == 2);
