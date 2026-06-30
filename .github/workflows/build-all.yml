@@ -1,0 +1,24 @@
+name: Build all
+
+on:
+  # Automatically validate changes destined for master; keep manual runs available.
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    uses: ./.github/workflows/build-windows.yaml
+
+  build-linux-tests:
+    uses: ./.github/workflows/build-linux-tests.yaml

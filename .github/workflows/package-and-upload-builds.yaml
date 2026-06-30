@@ -1,0 +1,171 @@
+name: Package and Upload Builds
+
+run-name: Publish ${{ inputs.official_release && 'official release' || 'snapshot' }} for ${{ github.event.workflow_run.head_sha || github.sha }}
+
+on:
+  workflow_run:
+    workflows:
+      - Build all
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      official_release:
+        description: Publish a stable Major.Minor.Patch release
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  PUBLISH_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  OFFICIAL_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.official_release || false }}
+
+jobs:
+  build-package:
+    name: Build release package
+    # Manual runs bypass CI validation; automatic runs require a successful push build on the release branch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == (vars.SNAPSHOT_RELEASE_BRANCH || 'master')
+      )
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 90
+    concurrency:
+      group: package-releases-${{ inputs.official_release && (github.event.workflow_run.head_sha || github.sha) || 'snapshot' }}
+      cancel-in-progress: ${{ ! inputs.official_release }}
+
+    steps:
+      - name: Checkout publish commit
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ env.PUBLISH_SHA }}
+          # Keep full main-repository history so publish.ps1 can extract the Git revision count.
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+
+      - name: Checkout shallow submodules
+        run: git submodule update --init --recursive --depth 1
+
+      - name: Build release package
+        shell: pwsh
+        run: ./publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE))
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: publish/**/OIV-*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-release:
+    name: Publish release
+    needs: build-package
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.official_release && 'official-release' || 'snapshot-release' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    concurrency:
+      group: publish-releases-${{ inputs.official_release && (github.event.workflow_run.head_sha || github.sha) || 'snapshot' }}
+      cancel-in-progress: false
+    env:
+      RELEASE_REPOSITORY: ${{ github.repository }}
+
+    steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: release-package
+
+      - name: Select downloaded archives
+        id: package
+        shell: pwsh
+        run: |
+          $archivePattern = '^OIV-.+(?:\.[^.]+)+$'
+          $symbolsPattern = '-Symbols(?:\.[^.]+)+$'
+          $archives = @(Get-ChildItem -Path "release-package" -Recurse -File | Where-Object { $_.Name -match $archivePattern })
+          $runtimeArchives = @($archives | Where-Object { $_.Name -notmatch $symbolsPattern })
+          $symbolsArchives = @($archives | Where-Object { $_.Name -match $symbolsPattern })
+
+          if ($runtimeArchives.Count -ne 1) {
+              $archiveList = if ($runtimeArchives.Count -eq 0) { "<none>" } else { ($runtimeArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one runtime archive, found $($runtimeArchives.Count):`n$archiveList"
+          }
+
+          if ($symbolsArchives.Count -ne 1) {
+              $archiveList = if ($symbolsArchives.Count -eq 0) { "<none>" } else { ($symbolsArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one symbols archive, found $($symbolsArchives.Count):`n$archiveList"
+          }
+
+          $runtimeArchive = $runtimeArchives[0]
+          $symbolsArchive = $symbolsArchives[0]
+          $officialRelease = [bool]::Parse($env:OFFICIAL_RELEASE)
+          $titlePattern = if ($officialRelease) {
+              '^(?<title>OIV-\d+\.\d+\.\d+)-.+(?:\.[^.]+)+$'
+          } else {
+              '^(?<title>OIV-\d+\.\d+\.\d+\.\d+)-[0-9a-f]+-.+(?:\.[^.]+)+$'
+          }
+          if ($runtimeArchive.Name -notmatch $titlePattern) {
+              throw "Runtime archive name '$($runtimeArchive.Name)' does not match the selected release mode."
+          }
+
+          $releaseTitle = $Matches.title
+          if ($symbolsArchive.Name -notmatch $titlePattern) {
+              throw "Symbols archive name '$($symbolsArchive.Name)' does not match the selected release mode."
+          }
+          if ($Matches.title -ne $releaseTitle) {
+              throw "Runtime and symbols archive versions do not match: '$($runtimeArchive.Name)', '$($symbolsArchive.Name)'."
+          }
+          $releaseTag = if ($officialRelease) { $releaseTitle } else { "snapshot" }
+          $prerelease = (-not $officialRelease).ToString().ToLowerInvariant()
+
+          "runtime_archive_path=$($runtimeArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "runtime_archive_name=$($runtimeArchive.Name)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_path=$($symbolsArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_name=$($symbolsArchive.Name)" >> $env:GITHUB_OUTPUT
+          "release_title=$releaseTitle" >> $env:GITHUB_OUTPUT
+          "release_tag=$releaseTag" >> $env:GITHUB_OUTPUT
+          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+          "Selected runtime archive $($runtimeArchive.FullName)"
+          "Selected symbols archive $($symbolsArchive.FullName)"
+          "Release title $releaseTitle"
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.package.outputs.release_tag }}
+          RELEASE_TARGET: ${{ env.PUBLISH_SHA }}
+          RELEASE_TITLE: ${{ steps.package.outputs.release_title }}
+          PRERELEASE: ${{ steps.package.outputs.prerelease }}
+          RUNTIME_ARCHIVE_PATH: ${{ steps.package.outputs.runtime_archive_path }}
+          SYMBOLS_ARCHIVE_PATH: ${{ steps.package.outputs.symbols_archive_path }}
+        run: >
+          ./.github/scripts/Publish-GitHubRelease.ps1
+          -Repository $env:RELEASE_REPOSITORY
+          -Tag $env:RELEASE_TAG
+          -TargetSha $env:RELEASE_TARGET
+          -Title $env:RELEASE_TITLE
+          -Prerelease ([bool]::Parse($env:PRERELEASE))
+          -MutableTag ([bool]::Parse($env:PRERELEASE))
+          -RuntimeArchive $env:RUNTIME_ARCHIVE_PATH
+          -SymbolsArchive $env:SYMBOLS_ARCHIVE_PATH

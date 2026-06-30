@@ -1,19 +1,14 @@
 name: Build Linux tests
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   build-linux-tests:
     name: ${{ matrix.compiler.name }}
     runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build/linux-${{ matrix.compiler.name }}-tests
 
     strategy:
       fail-fast: false
@@ -31,6 +26,9 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: recursive
 
     - name: Show tool versions
       run: |
@@ -39,32 +37,28 @@ jobs:
         ${{ matrix.compiler.cc }} --version
         ${{ matrix.compiler.cxx }} --version
 
+    - name: Run release publishing tests
+      shell: pwsh
+      run: |
+        Install-Module Pester -RequiredVersion 4.10.1 -Scope CurrentUser -Force -SkipPublisherCheck
+        Import-Module Pester -RequiredVersion 4.10.1 -Force
+        $result = Invoke-Pester -Script "Tests/PowerShell/Publish-GitHubRelease.Tests.ps1" -PassThru
+        if ($result.FailedCount -gt 0) {
+            throw "$($result.FailedCount) release publishing tests failed."
+        }
+
     - name: Install linker
       if: matrix.compiler.name == 'clang'
       run: |
         sudo apt-get update
         sudo apt-get install -y lld
 
-    - name: Configure Git Safe Directories
-      run: |
-        git config --global --add safe.directory '*'
-
-    - name: Git update submodules
-      run: |
-        git submodule update --init --recursive --depth 1
-
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=$GITHUB_WORKSPACE/build/linux-${{ matrix.compiler.name }}-tests" >> "$GITHUB_OUTPUT"
-
     - name: Configure CMake
       run: >
         cmake
         -G Ninja
         -S "$GITHUB_WORKSPACE"
-        -B "${{ steps.strings.outputs.build-output-dir }}"
+        -B "$BUILD_DIR"
         -DCMAKE_C_COMPILER=${{ matrix.compiler.cc }}
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
         -DCMAKE_EXE_LINKER_FLAGS=${{ matrix.compiler.linker_flags }}
@@ -77,7 +71,7 @@ jobs:
         -DIMCODEC_BUILD_EXAMPLES=OFF
 
     - name: Build tests
-      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --target tests -- -j$(nproc)
+      run: cmake --build "$BUILD_DIR" --target tests -- -j$(nproc)
 
     - name: Run tests
-      run: "${{ steps.strings.outputs.build-output-dir }}/bin/tests"
+      run: "$BUILD_DIR/bin/tests"

@@ -773,7 +773,7 @@ function New-CMakeConfigureSpec {
         New-CMakeDefine -Name "CMAKE_MAKE_PROGRAM"              -Value $Context.Tools["Ninja"]              -IsPath $true
         New-CMakeDefine -Name "OIV_OFFICIAL_BUILD"              -Value "$($Context.OfficialBuild)"
         New-CMakeDefine -Name "OIV_OFFICIAL_RELEASE"            -Value "$($Context.OfficialRelease)"
-        New-CMakeDefine -Name "OIV_VERSION_BUILD"               -Value "$($Context.VersionBuild)"
+        New-CMakeDefine -Name "OIV_VERSION_REVISION"            -Value "$($Context.VersionRevision)"
         New-CMakeDefine -Name "OIV_RELEASE_SUFFIX"              -Value "$($Context.ReleaseSuffix)"
     ) + $platformDefines
 
@@ -1014,11 +1014,12 @@ function New-PublishContext {
         OfficialBuild            = if ($Options.OfficialBuild) { 1 } else { 0 }
         OfficialRelease          = if ($Options.OfficialRelease) { 1 } else { 0 }
         ReleaseSuffix            = ""
-        VersionBuild             = 0
+        VersionRevision          = $null
+        ReleaseVersion           = $null
+        VersionNumber            = $null
+        PackageVersion           = $null
         DateShort                = $null
         DateLong                 = $null
-        VersionShort             = $null
-        VersionFull              = $null
         PackageBuildInfo         = $null
         PackageNameSuffix        = $null
     }
@@ -1026,19 +1027,22 @@ function New-PublishContext {
     $fileContent = Get-Content -Path $context.VersionHeader
     $major = Get-VersionValue $fileContent "OIV_VERSION_MAJOR"
     $minor = Get-VersionValue $fileContent "OIV_VERSION_MINOR"
+    $patch = Get-VersionValue $fileContent "OIV_VERSION_PATCH"
     $gitDirArg = "--git-dir=$($context.GitDir)"
     $revision = Get-GitOutput $context @($gitDirArg, "rev-list", "HEAD", "--count") "Failed to read Git revision count."
     $now = Get-Date
 
+    $context.VersionRevision = $revision
+    $context.ReleaseVersion = "$major.$minor.$patch"
+    $context.VersionNumber = "$($context.ReleaseVersion).$revision"
+    $context.PackageVersion = if ($context.OfficialRelease -eq 0) {
+        $shortHash = Get-GitOutput $context @($gitDirArg, "rev-parse", "--short=8", "HEAD") "Failed to read Git short hash."
+        "$($context.VersionNumber)-$shortHash"
+    } else {
+        $context.ReleaseVersion
+    }
     $context.DateShort = $now.ToString("yyyy-MM-dd")
     $context.DateLong = $now.ToString("yyyy-MM-dd_HH-mm-ss")
-    $context.VersionShort = "$major.$minor.$revision.$($context.VersionBuild)"
-    $context.VersionFull = if ($context.OfficialRelease -eq 0) {
-        $shortHash = Get-GitOutput $context @($gitDirArg, "rev-parse", "--short", "HEAD") "Failed to read Git short hash."
-        "$($context.VersionShort)-$shortHash"
-    } else {
-        $context.VersionShort
-    }
 
     $context
 }
@@ -1061,8 +1065,9 @@ function Write-BuildInfo {
     Write-Host ("Bin Dir       : {0}" -f $Context.BinDir)
     Write-Host ("Official Build: {0}" -f [bool]$Context.OfficialBuild)
     Write-Host ("Official Rel. : {0}" -f [bool]$Context.OfficialRelease)
-    Write-Host ("Version Short : {0}" -f $Context.VersionShort)
-    Write-Host ("Version Full  : {0}" -f $Context.VersionFull)
+    Write-Host ("Release Ver.  : {0}" -f $Context.ReleaseVersion)
+    Write-Host ("Version       : {0}" -f $Context.VersionNumber)
+    Write-Host ("Package Ver.  : {0}" -f $Context.PackageVersion)
     Write-Host ("Date          : {0}" -f $Context.DateShort)
     Write-Host ("Time          : {0}" -f $Context.DateLong)
     Write-Host "==============================================="
@@ -1162,14 +1167,14 @@ function Invoke-Package {
 
     Write-Host "Packaging..."
 
-    $outputDir = Join-PathForward $Context.BuildDir "$($Context.DateLong)-v$($Context.VersionShort)"
+    $outputDir = Join-PathForward $Context.BuildDir "$($Context.DateLong)-v$($Context.VersionNumber)"
     # Defensive guard: callers that bypass Run-OIVBuild may invoke Invoke-Package directly
     # without first calling Update-PackageBuildInfo.
     if (-not $Context.PackageNameSuffix) {
         Update-PackageBuildInfo $Context
     }
 
-    $baseName = Join-PathForward $outputDir "$($Context.DateShort)-OIV-$($Context.VersionFull)-$($Context.PackageNameSuffix)"
+    $baseName = Join-PathForward $outputDir "OIV-$($Context.PackageVersion)-$($Context.PackageNameSuffix)"
 
     Ensure-Directory $outputDir
 

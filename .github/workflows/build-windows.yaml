@@ -1,99 +1,61 @@
-name: Build all
+name: Build Windows
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master"]
-
-concurrency:
-  group: ${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   build-linux-mingw64:
     runs-on: ubuntu-latest
-    
-    # Run all steps inside your specified Docker container
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build
+
     container:
       image: ghcr.io/openimageviewer/openimageviewer/oiv-builder-arch:latest
-      # If your image is private, GitHub automatically handles the login 
-      # credentials for its own registry, so no extra login step is needed!
       credentials:
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    strategy:
-      fail-fast: true
+        password: ${{ github.token }}
 
     steps:
-    # Step 1: Clone the repository into the default workspace path
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: recursive
 
-    # Step 2: Fix dubious ownership completely by trusting all paths inside the runner container
-    - name: Configure Git Safe Directories
-      run: |
-        git config --global --add safe.directory '*'
+    - name: Trust checkout directory
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-    # Step 3: Git submodule updates now run safely without ownership blocks
-    - name: Git update submodules 
-      run: |
-        git submodule update --init --recursive --depth 1
-
-    # Step 4: Define our relative build output folder path (Using $GITHUB_WORKSPACE env variable)
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=$GITHUB_WORKSPACE/build" >> "$GITHUB_OUTPUT"
-
-    # Step 5: Configure CMake directly in the workspace using container-native paths
     - name: Configure CMake
       run: >
-        cmake 
+        cmake
         -G Ninja
-        -S "$GITHUB_WORKSPACE" 
-        -B "${{ steps.strings.outputs.build-output-dir }}"
+        -S "$GITHUB_WORKSPACE"
+        -B "$BUILD_DIR"
         -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/mingw-w64-x86_64.cmake"
         -DOIV_BUILD_RENDERER_GL=OFF
         -DIMCODEC_BUILD_CODEC_WEBP=OFF
         -DFREETYPE_WRAPPER_BUILD_FRIBIDI=OFF
         -DMINGW_POST_BUILD_DONT_COPY_BINARIES=ON
 
-    # Step 6: Compile the project
     - name: Build
-      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" -- -j$(nproc)
+      run: cmake --build "$BUILD_DIR" -- -j$(nproc)
+
   build-windows:
     runs-on: windows-2025-vs2026
-    needs: build-linux-mingw64
-    
-    strategy:
-      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
-      fail-fast: true
-    steps:
-    - uses: actions/checkout@v3
- 
-    - name: Git update submodules 
-      run: |
-        git submodule update --init --recursive --depth 1
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build
 
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: recursive
+
     - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        cmake -B "$env:BUILD_DIR"
         -DOIV_BUILD_RENDERER_GL=OFF
-        -S ${{ github.workspace }}
+        -S "$env:GITHUB_WORKSPACE"
 
     - name: Build
-      # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Release
-
-    
+      run: cmake --build "$env:BUILD_DIR" --config Release
