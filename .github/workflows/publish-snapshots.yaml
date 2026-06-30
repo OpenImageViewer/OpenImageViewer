@@ -1,0 +1,347 @@
+name: Publish Snapshots
+
+run-name: Publish snapshot for ${{ github.event.workflow_run.head_sha || github.event.inputs.commit_sha || github.sha }}
+
+on:
+  workflow_run:
+    workflows:
+      - Build all
+      - Build Linux tests
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Optional commit SHA to publish. Defaults to the current default-branch commit.
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  gate:
+    name: Verify workflows
+    runs-on: ubuntu-latest
+    outputs:
+      publish_sha: ${{ steps.resolve.outputs.sha }}
+      should_publish: ${{ steps.gate.outputs.should_publish }}
+      release_tag: ${{ steps.gate.outputs.release_tag }}
+      release_title: ${{ steps.gate.outputs.release_title }}
+      publish_mode: ${{ steps.gate.outputs.publish_mode }}
+      checkout_repository: ${{ steps.gate.outputs.checkout_repository }}
+
+    steps:
+      - name: Resolve publish commit
+        id: resolve
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+              $PSNativeCommandUseErrorActionPreference = $true
+          }
+
+          $eventName = "${{ github.event_name }}"
+
+          if ($eventName -eq "workflow_run") {
+              $sha = "${{ github.event.workflow_run.head_sha }}"
+          } else {
+              $sha = "${{ github.event.inputs.commit_sha }}"
+              if ([string]::IsNullOrWhiteSpace($sha)) {
+                  $defaultBranch = gh api "repos/$env:GITHUB_REPOSITORY" --jq ".default_branch"
+                  $sha = gh api "repos/$env:GITHUB_REPOSITORY/commits/$defaultBranch" --jq ".sha"
+              }
+          }
+
+          $sha = $sha.Trim()
+          if ($sha -notmatch "^[0-9a-fA-F]{40}$") {
+              throw "Resolved publish commit is not a full SHA: '$sha'"
+          }
+
+          "sha=$sha" >> $env:GITHUB_OUTPUT
+          "Publishing commit $sha"
+
+      - name: Verify commit workflows
+        id: gate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+              $PSNativeCommandUseErrorActionPreference = $true
+          }
+
+          $publishWorkflowName = "Publish Snapshots"
+          $requiredWorkflowNames = @("Build all", "Build Linux tests")
+          $trustedPrRepository = "TheNicker/OpenImageViewerFork"
+          $eventPayload = Get-Content -Path $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+          $eventName = "${{ github.event_name }}"
+          $publishMode = "master"
+          $releaseTag = "snapshot"
+          $releaseTitle = "Snapshot build"
+          $checkoutRepository = $env:GITHUB_REPOSITORY
+          $workflowRunsQuery = "repos/$env:GITHUB_REPOSITORY/actions/runs?head_sha=$env:PUBLISH_SHA&branch=master&event=push&per_page=100"
+
+          function Complete-WithoutPublishing {
+              param([string]$Reason)
+
+              "should_publish=false" >> $env:GITHUB_OUTPUT
+              $Reason
+              Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Snapshot publish skipped: $Reason"
+          }
+
+          if ($eventName -eq "workflow_run") {
+              $workflowRun = $eventPayload.workflow_run
+
+              if ($workflowRun.event -eq "pull_request") {
+                  $headRepository = $workflowRun.head_repository.full_name
+                  if ($headRepository -ne $trustedPrRepository) {
+                      Complete-WithoutPublishing "pull request workflow came from untrusted repository '$headRepository'."
+                      exit 0
+                  }
+
+                  $pullRequests = @($workflowRun.pull_requests)
+                  if ($pullRequests.Count -eq 0 -or -not $pullRequests[0].number) {
+                      Complete-WithoutPublishing "trusted pull request workflow did not include pull request metadata."
+                      exit 0
+                  }
+
+                  $pullRequestNumber = [int]$pullRequests[0].number
+                  $publishMode = "trusted-pr"
+                  $releaseTag = "pr-$pullRequestNumber-snapshot"
+                  $releaseTitle = "PR #$pullRequestNumber snapshot"
+                  $checkoutRepository = $trustedPrRepository
+                  $workflowRunsQuery = "repos/$env:GITHUB_REPOSITORY/actions/runs?head_sha=$env:PUBLISH_SHA&event=pull_request&per_page=100"
+              } elseif ($workflowRun.event -eq "push") {
+                  if ($workflowRun.head_branch -ne "master") {
+                      Complete-WithoutPublishing "push workflow ran on '$($workflowRun.head_branch)', not master."
+                      exit 0
+                  }
+              } else {
+                  Complete-WithoutPublishing "workflow_run event '$($workflowRun.event)' is not publishable."
+                  exit 0
+              }
+          }
+
+          $workflowRunPages = gh api --paginate --slurp $workflowRunsQuery | ConvertFrom-Json
+          $workflowRuns = @()
+          foreach ($page in @($workflowRunPages)) {
+              $workflowRuns += @($page.workflow_runs)
+          }
+
+          $workflowRuns = @($workflowRuns | Where-Object { $_.name -ne $publishWorkflowName })
+          if ($workflowRuns.Count -eq 0) {
+              Complete-WithoutPublishing "no non-publish workflow runs were found for $env:PUBLISH_SHA."
+              exit 0
+          }
+
+          $workflowRuns = @(
+              $workflowRuns |
+                  Group-Object -Property name |
+                  ForEach-Object {
+                      $_.Group |
+                          Sort-Object -Property @{ Expression = "run_attempt"; Descending = $true }, @{ Expression = "updated_at"; Descending = $true } |
+                          Select-Object -First 1
+                  }
+          )
+
+          foreach ($workflowName in $requiredWorkflowNames) {
+              if (@($workflowRuns | Where-Object { $_.name -eq $workflowName }).Count -eq 0) {
+                  Complete-WithoutPublishing "required workflow '$workflowName' has no run for $env:PUBLISH_SHA."
+                  exit 0
+              }
+          }
+
+          $pendingRuns = @($workflowRuns | Where-Object { $_.status -ne "completed" })
+          if ($pendingRuns.Count -gt 0) {
+              $pendingNames = ($pendingRuns | ForEach-Object { "$($_.name) [$($_.status)]" }) -join ", "
+              Complete-WithoutPublishing "workflow runs are still pending: $pendingNames."
+              exit 0
+          }
+
+          $failedRuns = @($workflowRuns | Where-Object { $_.conclusion -ne "success" })
+          if ($failedRuns.Count -gt 0) {
+              $failedNames = ($failedRuns | ForEach-Object { "$($_.name) [$($_.conclusion)]" }) -join ", "
+              Complete-WithoutPublishing "workflow runs are not successful: $failedNames."
+              exit 0
+          }
+
+          "should_publish=true" >> $env:GITHUB_OUTPUT
+          "release_tag=$releaseTag" >> $env:GITHUB_OUTPUT
+          "release_title=$releaseTitle" >> $env:GITHUB_OUTPUT
+          "publish_mode=$publishMode" >> $env:GITHUB_OUTPUT
+          "checkout_repository=$checkoutRepository" >> $env:GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Snapshot publish gate passed for $env:PUBLISH_SHA in $publishMode mode; target release '$releaseTag'."
+
+  build-package:
+    name: Build snapshot package
+    needs: gate
+    if: needs.gate.outputs.should_publish == 'true'
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 90
+    concurrency:
+      group: package-snapshots-${{ needs.gate.outputs.release_tag }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout publish commit
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.gate.outputs.checkout_repository }}
+          ref: ${{ needs.gate.outputs.publish_sha }}
+          submodules: recursive
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Build runtime package
+        shell: pwsh
+        run: ./publish.ps1 -OfficialBuild $true
+
+      - name: Select package archives
+        id: package
+        shell: pwsh
+        run: |
+          $runtimeArchives = @(Get-ChildItem -Path "publish" -Recurse -File -Filter "*.7z" | Where-Object { $_.Name -notlike "*-Symbols.7z" })
+          $symbolsArchives = @(Get-ChildItem -Path "publish" -Recurse -File -Filter "*-Symbols.7z")
+
+          if ($runtimeArchives.Count -ne 1) {
+              $archiveList = if ($runtimeArchives.Count -eq 0) { "<none>" } else { ($runtimeArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one runtime .7z archive, found $($runtimeArchives.Count):`n$archiveList"
+          }
+
+          if ($symbolsArchives.Count -ne 1) {
+              $archiveList = if ($symbolsArchives.Count -eq 0) { "<none>" } else { ($symbolsArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one symbols .7z archive, found $($symbolsArchives.Count):`n$archiveList"
+          }
+
+          $runtimeArchive = $runtimeArchives[0]
+          $symbolsArchive = $symbolsArchives[0]
+          "runtime_archive_path=$($runtimeArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "runtime_archive_name=$($runtimeArchive.Name)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_path=$($symbolsArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_name=$($symbolsArchive.Name)" >> $env:GITHUB_OUTPUT
+          "Selected runtime archive $($runtimeArchive.FullName)"
+          "Selected symbols archive $($symbolsArchive.FullName)"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-package
+          path: |
+            ${{ steps.package.outputs.runtime_archive_path }}
+            ${{ steps.package.outputs.symbols_archive_path }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-release:
+    name: Publish snapshot release
+    needs:
+      - gate
+      - build-package
+    if: needs.gate.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: publish-snapshots-${{ needs.gate.outputs.release_tag }}
+      cancel-in-progress: false
+    env:
+      RELEASE_REPOSITORY: OpenImageViewer/snapshots
+      RELEASE_TAG: ${{ needs.gate.outputs.release_tag }}
+      RELEASE_TITLE: ${{ needs.gate.outputs.release_title }}
+      PUBLISH_MODE: ${{ needs.gate.outputs.publish_mode }}
+      CHECKOUT_REPOSITORY: ${{ needs.gate.outputs.checkout_repository }}
+      PUBLISH_SHA: ${{ needs.gate.outputs.publish_sha }}
+
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: snapshot-package
+          path: snapshot-package
+
+      - name: Select downloaded archives
+        id: package
+        shell: pwsh
+        run: |
+          $runtimeArchives = @(Get-ChildItem -Path "snapshot-package" -Recurse -File -Filter "*.7z" | Where-Object { $_.Name -notlike "*-Symbols.7z" })
+          $symbolsArchives = @(Get-ChildItem -Path "snapshot-package" -Recurse -File -Filter "*-Symbols.7z")
+
+          if ($runtimeArchives.Count -ne 1) {
+              $archiveList = if ($runtimeArchives.Count -eq 0) { "<none>" } else { ($runtimeArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one runtime .7z archive, found $($runtimeArchives.Count):`n$archiveList"
+          }
+
+          if ($symbolsArchives.Count -ne 1) {
+              $archiveList = if ($symbolsArchives.Count -eq 0) { "<none>" } else { ($symbolsArchives | ForEach-Object { $_.FullName }) -join "`n" }
+              throw "Expected exactly one symbols .7z archive, found $($symbolsArchives.Count):`n$archiveList"
+          }
+
+          $runtimeArchive = $runtimeArchives[0]
+          $symbolsArchive = $symbolsArchives[0]
+          "runtime_archive_path=$($runtimeArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "runtime_archive_name=$($runtimeArchive.Name)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_path=$($symbolsArchive.FullName)" >> $env:GITHUB_OUTPUT
+          "symbols_archive_name=$($symbolsArchive.Name)" >> $env:GITHUB_OUTPUT
+          "Selected runtime archive $($runtimeArchive.FullName)"
+          "Selected symbols archive $($symbolsArchive.FullName)"
+
+      - name: Publish snapshot release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.SNAPSHOTS_TOKEN }}
+          RUNTIME_ARCHIVE_PATH: ${{ steps.package.outputs.runtime_archive_path }}
+          RUNTIME_ARCHIVE_NAME: ${{ steps.package.outputs.runtime_archive_name }}
+          SYMBOLS_ARCHIVE_PATH: ${{ steps.package.outputs.symbols_archive_path }}
+          SYMBOLS_ARCHIVE_NAME: ${{ steps.package.outputs.symbols_archive_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+              $PSNativeCommandUseErrorActionPreference = $true
+          }
+
+          if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) {
+              throw "SNAPSHOTS_TOKEN is not configured."
+          }
+
+          $notes = @"
+          Source repository: $env:GITHUB_REPOSITORY
+          Checkout repository: $env:CHECKOUT_REPOSITORY
+          Source commit: $env:PUBLISH_SHA
+          Publish mode: $env:PUBLISH_MODE
+          Source workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
+          "@.Trim()
+
+          $releaseExists = $true
+          try {
+              gh release view $env:RELEASE_TAG --repo $env:RELEASE_REPOSITORY *> $null
+          } catch {
+              $releaseExists = $false
+          }
+
+          if (-not $releaseExists) {
+              gh release create $env:RELEASE_TAG $env:RUNTIME_ARCHIVE_PATH $env:SYMBOLS_ARCHIVE_PATH `
+                  --repo $env:RELEASE_REPOSITORY `
+                  --title $env:RELEASE_TITLE `
+                  --notes $notes
+          } else {
+              gh release edit $env:RELEASE_TAG `
+                  --repo $env:RELEASE_REPOSITORY `
+                  --title $env:RELEASE_TITLE `
+                  --notes $notes
+
+              $release = gh release view $env:RELEASE_TAG --repo $env:RELEASE_REPOSITORY --json assets | ConvertFrom-Json
+              foreach ($asset in @($release.assets)) {
+                  gh release delete-asset $env:RELEASE_TAG $asset.name --repo $env:RELEASE_REPOSITORY --yes
+              }
+
+              gh release upload $env:RELEASE_TAG $env:RUNTIME_ARCHIVE_PATH $env:SYMBOLS_ARCHIVE_PATH `
+                  --repo $env:RELEASE_REPOSITORY `
+                  --clobber
+          }
+
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "Published snapshot assets to $env:RELEASE_REPOSITORY release '$env:RELEASE_TAG' for $env:PUBLISH_SHA: $env:RUNTIME_ARCHIVE_NAME, $env:SYMBOLS_ARCHIVE_NAME."
