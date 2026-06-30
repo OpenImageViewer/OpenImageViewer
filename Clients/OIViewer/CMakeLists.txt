@@ -34,15 +34,19 @@ endif()
 
 
 
-getGitHash(${CMAKE_CURRENT_SOURCE_DIR} GIT_HASH_ID)
-getGitBranch(${CMAKE_CURRENT_SOURCE_DIR} GIT_BRANCH)
-getGitCommitDate(${CMAKE_CURRENT_SOURCE_DIR} GIT_COMMIT_DATE)
-getGitRevCount(${CMAKE_CURRENT_SOURCE_DIR} GIT_REV_COUNT)
-
-add_compile_definitions(GIT_HASH_ID="${GIT_HASH_ID}"
-GIT_COMMIT_DATE="${GIT_COMMIT_DATE}"
-GIT_BRANCH="${GIT_BRANCH}"
-OIV_VERSION_REVISION="${GIT_REV_COUNT}") 
+if (NOT OIV_OFFICIAL_RELEASE)
+     if (OIV_GIT_SHORT_HASH STREQUAL "")
+          getGitShortHash(${CMAKE_CURRENT_SOURCE_DIR} OIV_GIT_SHORT_HASH)
+     endif()
+     string(LENGTH "${OIV_GIT_SHORT_HASH}" OIV_GIT_SHORT_HASH_LENGTH)
+     if (NOT OIV_GIT_SHORT_HASH MATCHES "^[0-9a-f]+$" OR OIV_GIT_SHORT_HASH_LENGTH LESS 8)
+          message(FATAL_ERROR
+               "OIV_GIT_SHORT_HASH must contain at least eight lowercase hexadecimal characters, "
+               "got '${OIV_GIT_SHORT_HASH}'."
+          )
+     endif()
+     add_compile_definitions(OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
+endif()
 
 set(ExternalFolder ../../External)
 set(TargetName OIViewer)

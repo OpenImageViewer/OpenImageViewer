@@ -484,19 +484,12 @@ namespace OIV
 
         OIV_RendererInitializationParams params = {};
 
-        auto GetVersionAsString = []
-        {
-            constexpr auto dot = OIV_TEXT(".");
-            OIVStringStream ss;
-            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_BUILD << dot
-               << OIV_VERSION_REVISION;
-            return ss.str();
-        };
-
         // TODO: add renderer properties to get a unique renderer name instead of hard coded "D3D11"
         OIVString appDataPath = LLUtils::StringUtility::ConvertString<OIVString>(
                                     LLUtils::PlatformUtility::GetAppDataFolder()) +
-                                +OIV_TEXT("/OIV/") + GetVersionAsString() + OIV_TEXT("/Renderer/D3D11/.");
+                                +OIV_TEXT("/OIV/") +
+                                LLUtils::StringUtility::ConvertString<OIVString>(FormatFullVersion(CurrentVersion)) +
+                                OIV_TEXT("/Renderer/D3D11/.");
         params.container      = fParent;
 
         params.dataPath = appDataPath.c_str();

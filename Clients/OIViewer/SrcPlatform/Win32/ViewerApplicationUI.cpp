@@ -180,16 +180,8 @@ namespace OIV
 
     LLUtils::native_string_type ViewerApplication::GetLogFilePath()
     {
-        auto GetVersionAsString = []
-        {
-            constexpr auto dot = OIV_TEXT(".");
-            OIVStringStream ss;
-            ss << OIV_VERSION_MAJOR << dot << OIV_VERSION_MINOR << dot << OIV_VERSION_BUILD << dot
-               << OIV_VERSION_REVISION;
-            return ss.str();
-        };
-
-        return GetAppDataFolder() + GetVersionAsString() + LLUTILS_TEXT("/oiv.log");
+        return GetAppDataFolder() + LLUtils::StringUtility::ToNativeString(FormatFullVersion(CurrentVersion)) +
+               LLUTILS_TEXT("/oiv.log");
     }
 
     void ViewerApplication::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args,
@@ -372,35 +364,33 @@ namespace OIV
 
     void ViewerApplication::UpdateTitle()
     {
-        const static LLUtils::native_string_type cachedVersionString =
-            OIV_TEXT("OpenImageViewer ") + std::to_wstring(OIV_VERSION_MAJOR) + L'.' +
-            std::to_wstring(OIV_VERSION_MINOR) +
-            (OIV_VERSION_REVISION != 0
-                 ? (LLUtils::native_string_type(LLUTILS_TEXT(".")) + LLUtils::StringUtility::ToNativeString(OIV_VERSION_REVISION))
-                 : LLUtils::native_string_type{})
-
-        // If not official release add revision and build number
-#if OIV_OFFICIAL_RELEASE == 0
-
-            + LLUTILS_TEXT(".") + WIDEN(GIT_HASH_ID) + LLUTILS_TEXT(".") + std::to_wstring(OIV_VERSION_BUILD)
-    #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
-            + OIV_TEXT(" | 64 bit")
-    #else
-            + OIV_TEXT(" | 32 bit")
-    #endif
-            + OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath())
-#else
+        const static LLUtils::native_string_type cachedVersionString = []
+        {
+#if OIV_OFFICIAL_RELEASE == 1
+            auto title = OIV_TEXT("OpenImageViewer ") +
+                         LLUtils::StringUtility::ToNativeString(FormatReleaseVersion(CurrentVersion));
     #ifdef OIV_RELEASE_SUFFIX
-            + OIV_RELEASE_SUFFIX
+            title += OIV_RELEASE_SUFFIX;
     #endif
+#else
+            auto title = OIV_TEXT("OpenImageViewer ") +
+                         LLUtils::StringUtility::ToNativeString(FormatFullVersion(CurrentVersion)) + LLUTILS_TEXT("-") +
+                         WIDEN(OIV_GIT_SHORT_HASH);
+
+    #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
+            title += OIV_TEXT(" | 64 bit");
+    #else
+            title += OIV_TEXT(" | 32 bit");
+    #endif
+            title += OIV_TEXT(" | ") + MessageHelper::GetFileTime(LLUtils::PlatformUtility::GetDllPath());
 #endif
 
-        // If not official build, i.e. from unofficial / unknown source, add an "UNOFFICIAL" remark.
 #if OIV_OFFICIAL_BUILD == 0
-
-            + OIV_TEXT(" | UNOFFICIAL")
+            title += OIV_TEXT(" | UNOFFICIAL");
 #endif
-            ;
+            return title;
+        }();
+
         LLUtils::native_string_type title;
         if (fImageState.GetOpenedImage() != nullptr)
         {

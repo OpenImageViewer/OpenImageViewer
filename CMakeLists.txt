@@ -67,13 +67,16 @@ endif()
 
 add_compile_definitions(OIV_OFFICIAL_RELEASE=${OIV_OFFICIAL_RELEASE})
 
-if (OIV_VERSION_BUILD)
-    add_compile_definitions(OIV_VERSION_BUILD=${OIV_VERSION_BUILD})
+set(OIV_VERSION_REVISION "" CACHE STRING "Git-derived OIViewer version revision")
+set(OIV_GIT_SHORT_HASH "" CACHE STRING "Git-derived OIViewer abbreviated commit hash")
+if (OIV_VERSION_REVISION STREQUAL "")
+    getGitRevision(${CMAKE_SOURCE_DIR} OIV_VERSION_REVISION)
 endif()
-
-if (OIV_VERSION_REVISION)
-    add_compile_definitions(OIV_VERSION_REVISION=${OIV_VERSION_REVISION})
+if (NOT OIV_VERSION_REVISION MATCHES "^[0-9]+$")
+    message(FATAL_ERROR "OIV_VERSION_REVISION must be a non-negative integer, got '${OIV_VERSION_REVISION}'.")
 endif()
+add_compile_definitions(OIV_VERSION_REVISION=${OIV_VERSION_REVISION})
+message(STATUS "OIViewer version revision: ${OIV_VERSION_REVISION}")
 
 if (OIV_RELEASE_SUFFIX)
   add_compile_definitions(OIV_RELEASE_SUFFIX=${OIV_RELEASE_SUFFIX})

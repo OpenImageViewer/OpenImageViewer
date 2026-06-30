@@ -15,28 +15,34 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 endfunction()
 
-function (getGitHash working_dir hash)
-    execute_process (COMMAND git rev-parse --short=8 HEAD WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE hash_temp)
-    string(REPLACE \n "" hash_temp ${hash_temp})
-    SET(${hash} ${hash_temp} PARENT_SCOPE)
+function (getGitShortHash working_dir output)
+    execute_process(
+        COMMAND git rev-parse --short=8 HEAD
+        WORKING_DIRECTORY ${working_dir}
+        OUTPUT_VARIABLE value
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE result
+    )
+    if (NOT result EQUAL 0 OR value STREQUAL "")
+        message(FATAL_ERROR "Failed to resolve the Git short hash in ${working_dir}.")
+    endif()
+    set(${output} ${value} PARENT_SCOPE)
 endfunction()
 
-
-function (getGitBranch working_dir branchName)
-    execute_process (COMMAND git branch "--format=%(refname:short)" WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE temp)
-    string(REPLACE \n "" temp ${temp})
-    SET(${branchName} ${temp} PARENT_SCOPE)
-endfunction()
-
-function (getGitCommitDate working_dir commitDate)
-    execute_process (COMMAND git log -1 "--date=format:%Y-%m-%d %H:%M:%S" --format=%cd WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE temp)
-    string(REPLACE \n "" temp ${temp})
-    SET(${commitDate} ${temp} PARENT_SCOPE)
-endfunction()
-
-function (getGitRevCount working_dir revCount)
-    execute_process (COMMAND git rev-list HEAD --count WORKING_DIRECTORY ${working_dir} OUTPUT_VARIABLE temp)
-    string(REPLACE \n "" temp ${temp})
-    SET(${revCount} ${temp} PARENT_SCOPE)
+function (getGitRevision working_dir output)
+    execute_process(
+        COMMAND git rev-list HEAD --count
+        WORKING_DIRECTORY ${working_dir}
+        OUTPUT_VARIABLE value
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE result
+    )
+    if (NOT result EQUAL 0 OR NOT value MATCHES "^[0-9]+$")
+        message(FATAL_ERROR
+            "Failed to resolve the Git revision in ${working_dir}. "
+            "Configure with -DOIV_VERSION_REVISION=<revision> when Git history is unavailable."
+        )
+    endif()
+    set(${output} ${value} PARENT_SCOPE)
 endfunction()
 
