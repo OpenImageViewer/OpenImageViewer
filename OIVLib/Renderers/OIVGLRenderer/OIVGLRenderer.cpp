@@ -242,6 +242,32 @@ void main()
         return 0;
     }
 
+    const char* OIVGLRenderer::GetGPUName() const
+    {
+        if (fGPUName.empty())
+        {
+            const GLubyte* name = glGetString(GL_RENDERER);
+            if (name != nullptr)
+                fGPUName = reinterpret_cast<const char*>(name);
+            else
+                fGPUName = "Unknown";
+        }
+        return fGPUName.c_str();
+    }
+
+    const char* OIVGLRenderer::GetAPIVersion() const
+    {
+        if (fAPIVersion.empty())
+        {
+            const GLubyte* version = glGetString(GL_VERSION);
+            if (version != nullptr)
+                fAPIVersion = reinterpret_cast<const char*>(version);
+            else
+                fAPIVersion = "Unknown";
+        }
+        return fAPIVersion.c_str();
+    }
+
     void OIVGLRenderer::RenderImages(OIV_Image_Render_mode renderMode)
     {
         for (auto& item : fImageEntries)

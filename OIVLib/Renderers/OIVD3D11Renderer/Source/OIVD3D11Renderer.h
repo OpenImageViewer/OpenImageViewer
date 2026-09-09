@@ -24,12 +24,19 @@ namespace OIV
         int AddRenderable(IRenderable* renderable) override;
         int RemoveRenderable(IRenderable* renderable) override;
 
+        const char* GetBackendName() const override { return "D3D11"; }
+        const char* GetGPUName() const override;
+        const char* GetAPIVersion() const override;
+        const char* GetDriverVersion() const override;
+
 #pragma endregion
 
 
     private:
         std::unique_ptr<D3D11Renderer> fD3D11Renderer;
-        
+        mutable std::string fGPUName;
+        mutable std::string fAPIVersion;
+        mutable std::string fDriverVersion;
     };
 
 }

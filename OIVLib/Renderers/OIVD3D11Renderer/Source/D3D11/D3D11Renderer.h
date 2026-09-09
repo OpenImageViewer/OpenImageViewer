@@ -72,10 +72,12 @@ namespace OIV
 
     class D3D11Renderer 
     {
-    
-    public:
-         D3D11Renderer();
-    public:
+      public:
+
+        D3D11Renderer();
+
+      public:
+
         int Init(const OIV_RendererInitializationParams& initParams);
         int SetViewParams(const ViewParameters& viewParams);
         void UpdateGpuParameters();
@@ -86,9 +88,13 @@ namespace OIV
         int AddRenderable(IRenderable* renderable);
         int RemoveRenderable(IRenderable* renderable);
         int SetBackgroundColor(int index, LLUtils::Color backgroundColor);
+        DXGI_ADAPTER_DESC GetAdapterDesc() const { return fDevice->GetAdapterDesc(); }
+        LARGE_INTEGER GetDriverVersion() const { return fDevice->GetDriverVersion(); }
 
-#pragma region //**** Private methods*****/
-    private: 
+#pragma region  //**** Private methods*****/
+
+      private:
+
         void ResizeBackBuffer(int x, int y);
         void CreateShaders();
         void CreateBuffers();
@@ -96,7 +102,9 @@ namespace OIV
         void SetDevicestate();
         void DrawImage(const ImageEntry& entry);
 #pragma endregion
-    private:
+
+      private:
+
         D3D11DeviceSharedPtr fDevice;
         D3D11ShaderUniquePtr fImageVertexShader;
         D3D11ShaderUniquePtr fImageFragmentShader;

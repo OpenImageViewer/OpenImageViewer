@@ -32,6 +32,11 @@ namespace OIV
         int AddRenderable(IRenderable* renderable) override;
         int RemoveRenderable(IRenderable* renderable) override;
 
+        const char* GetBackendName() const override { return "GL"; }
+        const char* GetGPUName() const override;
+        const char* GetAPIVersion() const override;
+        const char* GetDriverVersion() const override { return ""; }
+
       private:
 
         struct ImageEntry
@@ -67,5 +72,7 @@ namespace OIV
         float fGamma{1.0F};
         float fSaturation{1.0F};
         bool fShowGrid{};
+        mutable std::string fGPUName;
+        mutable std::string fAPIVersion;
     };
 }  // namespace OIV

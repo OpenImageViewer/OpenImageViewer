@@ -1,12 +1,11 @@
 #include "OIVD3D11Renderer.h"
 #include "D3D11/D3D11Renderer.h"
 
+#include <LLUtils/StringUtility.h>
+
 namespace OIV
 {
-    OIVD3D11Renderer::OIVD3D11Renderer() : fD3D11Renderer(std::make_unique<D3D11Renderer>())
-    {
-        
-    }
+    OIVD3D11Renderer::OIVD3D11Renderer() : fD3D11Renderer(std::make_unique<D3D11Renderer>()) {}
 
     int OIVD3D11Renderer::SetSelectionRect(VisualSelectionRect selectionRect)
     {
@@ -17,24 +16,24 @@ namespace OIV
         return fD3D11Renderer->Init(initParams);
     }
 
-     int OIVD3D11Renderer::SetViewParams(const ViewParameters& viewParams)
+    int OIVD3D11Renderer::SetViewParams(const ViewParameters& viewParams)
     {
-         return fD3D11Renderer->SetViewParams(viewParams);
+        return fD3D11Renderer->SetViewParams(viewParams);
     }
 
-     void OIVD3D11Renderer::UpdateGpuParameters()
+    void OIVD3D11Renderer::UpdateGpuParameters()
     {
-         fD3D11Renderer->UpdateGpuParameters();
+        fD3D11Renderer->UpdateGpuParameters();
     }
 
-     int OIVD3D11Renderer::Redraw()
+    int OIVD3D11Renderer::Redraw()
     {
-         return fD3D11Renderer->Redraw();
+        return fD3D11Renderer->Redraw();
     }
 
-     int OIVD3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
+    int OIVD3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
     {
-         return  fD3D11Renderer->SetFilterLevel(filterType);
+        return fD3D11Renderer->SetFilterLevel(filterType);
     }
 
     int OIVD3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
@@ -55,5 +54,46 @@ namespace OIV
     {
         return fD3D11Renderer->SetBackgroundColor(index, backgroundColor);
     }
-    
-}
+
+    const char* OIVD3D11Renderer::GetGPUName() const
+    {
+        if (fGPUName.empty())
+        {
+            const DXGI_ADAPTER_DESC desc = fD3D11Renderer->GetAdapterDesc();
+            fGPUName                     = LLUtils::StringUtility::ConvertString<std::string>(desc.Description);
+            if (fGPUName.empty())
+                fGPUName = "Unknown";
+        }
+        return fGPUName.c_str();
+    }
+
+    const char* OIVD3D11Renderer::GetAPIVersion() const
+    {
+        if (fAPIVersion.empty())
+        {
+            fAPIVersion = "11.0";
+        }
+        return fAPIVersion.c_str();
+    }
+
+    const char* OIVD3D11Renderer::GetDriverVersion() const
+    {
+        if (fDriverVersion.empty())
+        {
+            const LARGE_INTEGER version = fD3D11Renderer->GetDriverVersion();
+            if (version.QuadPart != 0)
+            {
+                fDriverVersion = std::to_string(HIWORD(version.HighPart)) + "." +
+                                 std::to_string(LOWORD(version.HighPart)) + "." +
+                                 std::to_string(HIWORD(version.LowPart)) + "." +
+                                 std::to_string(LOWORD(version.LowPart));
+            }
+            else
+            {
+                fDriverVersion = "Unknown";
+            }
+        }
+        return fDriverVersion.c_str();
+    }
+
+}  // namespace OIV

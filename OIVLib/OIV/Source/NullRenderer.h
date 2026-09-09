@@ -17,5 +17,7 @@ namespace OIV
 
         int AddRenderable([[maybe_unused]] IRenderable* renderable) override { return 0; }
         int RemoveRenderable([[maybe_unused]] IRenderable* renderable) override { return 0; }
+
+        const char* GetBackendName() const override { return "Null"; }
     };
 }

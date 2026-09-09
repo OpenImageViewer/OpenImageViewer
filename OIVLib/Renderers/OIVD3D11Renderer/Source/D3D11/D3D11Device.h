@@ -18,22 +18,32 @@ namespace OIV
             return fD3dContext.Get();
         }
 
-        ID3D11Device* GetdDevice()  const
+        ID3D11Device* GetdDevice() const { return fD3dDevice.Get(); }
+
+        IDXGIAdapter* GetAdapter() const { return fD3dAdapter.Get(); }
+
+        DXGI_ADAPTER_DESC GetAdapterDesc() const
         {
-            return fD3dDevice.Get();
+            DXGI_ADAPTER_DESC desc = {};
+            if (fD3dAdapter != nullptr)
+                fD3dAdapter->GetDesc(&desc);
+            return desc;
         }
 
-        IDXGISwapChain* GetSwapChain()  const
+        LARGE_INTEGER GetDriverVersion() const
         {
-            return fD3dSwapChain.Get();
+            LARGE_INTEGER version{};
+            if (fD3dAdapter != nullptr && FAILED(fD3dAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &version)))
+                version = {};
+            return version;
         }
+
+        IDXGISwapChain* GetSwapChain() const { return fD3dSwapChain.Get(); }
 
         void Create(HWND hwnd)
         {
-            fHWND = hwnd;
-            D3D_FEATURE_LEVEL requestedLevels[] = { D3D_FEATURE_LEVEL_11_0};
-			
-          
+            fHWND                               = hwnd;
+            D3D_FEATURE_LEVEL requestedLevels[] = {D3D_FEATURE_LEVEL_11_0};
 
             UINT createFlags = 0;
             createFlags |= D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -84,7 +94,7 @@ LLUTILS_DISABLE_WARNING_LANGUAGE_EXTENSION
 					if (SUCCEEDED(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void**>(dxgiAdapter.GetAddressOf()))))
 						if (SUCCEEDED(dxgiAdapter->GetParent(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(dxgiFactory.GetAddressOf()))))
 						{
-
+                            fD3dAdapter = dxgiAdapter;
 						}
 
 				if (dxgiFactory == nullptr)
@@ -128,11 +138,13 @@ LLUTILS_DISABLE_WARNING_POP
         OIV_D3D_SET_OBJECT_NAME(fD3dSwapChain, "D3D11 swap chain");
         OIV_D3D_SET_OBJECT_NAME(fD3dContext, "D3D11 context");
         }
+
     private:
         HWND fHWND = nullptr;
         ComPtr<IDXGISwapChain1> fD3dSwapChain;
         ComPtr<ID3D11DeviceContext> fD3dContext;
         ComPtr<ID3D11Device> fD3dDevice;
+        ComPtr<IDXGIAdapter> fD3dAdapter;
     };
 
 }
