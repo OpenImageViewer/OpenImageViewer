@@ -22,6 +22,7 @@ TEST_CASE("Linux resolves configured key names from LWS events", "[oiviewer][pla
         {"F1", LWS::KeyCode::F1},
         {"1", LWS::KeyCode::Digit1},
         {"Grave", LWS::KeyCode::Tilde},
+        {"Shift+Grave", LWS::KeyCode::Tilde, {.shift = true}},
         {"Control+Shift+O", LWS::KeyCode::O, {.control = true, .shift = true}},
         {"Alt+Enter", LWS::KeyCode::Enter, {.alt = true}},
         {"Shift+Escape", LWS::KeyCode::Escape, {.shift = true}},

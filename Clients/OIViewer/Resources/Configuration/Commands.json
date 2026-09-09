@@ -19,6 +19,12 @@
       "arguments": "type=settings"
     },
     {
+      "GroupID": "ShowSystemInfo",
+      "DisplayName": "Show system information",
+      "Name": "cmd_show_system_info",
+      "arguments": ""
+    },
+    {
       "GroupID": "OpenFile",
       "DisplayName": "Open file",
       "Name": "cmd_open_file",
