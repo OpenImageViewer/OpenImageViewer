@@ -33,19 +33,17 @@ else()
     message(FATAL_ERROR "Unsupported OIViewer platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-if(NOT OIV_OFFICIAL_RELEASE)
-    if(OIV_GIT_SHORT_HASH STREQUAL "")
-        getGitShortHash(${CMAKE_CURRENT_SOURCE_DIR} OIV_GIT_SHORT_HASH)
-    endif()
-    string(LENGTH "${OIV_GIT_SHORT_HASH}" OIV_GIT_SHORT_HASH_LENGTH)
-    if(NOT OIV_GIT_SHORT_HASH MATCHES "^[0-9a-f]+$" OR OIV_GIT_SHORT_HASH_LENGTH LESS 8)
-        message(FATAL_ERROR
-            "OIV_GIT_SHORT_HASH must contain at least eight lowercase hexadecimal characters, "
-            "got '${OIV_GIT_SHORT_HASH}'."
-        )
-    endif()
-    add_compile_definitions(OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
+if(OIV_GIT_SHORT_HASH STREQUAL "")
+    getGitShortHash(${CMAKE_CURRENT_SOURCE_DIR} OIV_GIT_SHORT_HASH)
 endif()
+string(LENGTH "${OIV_GIT_SHORT_HASH}" OIV_GIT_SHORT_HASH_LENGTH)
+if(NOT OIV_GIT_SHORT_HASH MATCHES "^[0-9a-f]+$" OR OIV_GIT_SHORT_HASH_LENGTH LESS 8)
+    message(FATAL_ERROR
+        "OIV_GIT_SHORT_HASH must contain at least eight lowercase hexadecimal characters, "
+        "got '${OIV_GIT_SHORT_HASH}'."
+    )
+endif()
+target_compile_definitions(${TargetName} PRIVATE OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE TRUE)
