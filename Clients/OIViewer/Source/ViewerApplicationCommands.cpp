@@ -1,4 +1,6 @@
 #include <iomanip>
+#include <LLUtils/StringUtility.h>
+#include <string>
 #include <filesystem>
 #include <thread>
 #include <future>
@@ -13,8 +15,6 @@
 
 #include <LLUtils/Exception.h>
 #include <LLUtils/FileHelper.h>
-#include <LLUtils/PlatformUtility.h>
-#include <LLUtils/StringUtility.h>
 #include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/FileSystemHelper.h>
 #include <LLUtils/Rect.h>
@@ -285,6 +285,49 @@ namespace OIV
         {
             ShowSettings();
         }
+    }
+
+    void ViewerApplication::CMD_ShowSystemInfo([[maybe_unused]] const CommandManager::CommandRequest& request,
+                                               [[maybe_unused]] CommandManager::CommandResult& result)
+    {
+        OIVTextImage* text = fLabelManager.GetTextLabel("systemInfo");
+        if (text != nullptr)
+        {
+            fLabelManager.Remove("systemInfo");
+            fRefreshOperation.Queue();
+            return;
+        }
+
+        text = fLabelManager.GetOrCreateTextLabel("systemInfo");
+
+#if defined(NDEBUG)
+        constexpr std::string_view buildType = "Release";
+#else
+        constexpr std::string_view buildType = "Debug";
+#endif
+
+        auto message = MessageHelper::CreateSystemInfoMessage({
+            .appName    = "OpenImageViewer",
+            .appVersion = OIV::FormatFullVersion(OIV::CurrentVersion),
+            .gitHash    = OIV_GIT_SHORT_HASH,
+            .buildType  = buildType,
+            .renderer   = OIV::ApiGlobal::sPictureRenderer->GetRenderer(),
+        });
+
+        text->SetText(message);
+        text->SetBackgroundColor({0, 0, 0, 216});
+        text->SetFontPath(LabelManager::sFixedFontPath);
+        text->SetFontSize(12);
+        text->SetOutlineWidth(2);
+        text->SetPosition({20, 60});
+        text->SetFilterType(OIV_Filter_type::FT_None);
+        text->SetImageRenderMode(IRM_Overlay);
+        text->SetScale({1.0, 1.0});
+        text->SetOpacity(1.0);
+        text->SetVisible(true);
+
+        if (text->IsDirty())
+            fRefreshOperation.Queue();
     }
 
     void ViewerApplication::CMD_OpenFile([[maybe_unused]] const CommandManager::CommandRequest& request,
@@ -696,6 +739,7 @@ namespace OIV
              {"cmd_view_state", std::bind(&ViewerApplication::CMD_ViewState, this, _1, _2)},
              {"cmd_toggle_correction", std::bind(&ViewerApplication::CMD_ToggleColorCorrection, this, _1, _2)},
              {"cmd_toggle_keybindings", std::bind(&ViewerApplication::CMD_ToggleKeyBindings, this, _1, _2)},
+             {"cmd_show_system_info", std::bind(&ViewerApplication::CMD_ShowSystemInfo, this, _1, _2)},
              {"cmd_axis_aligned_transform", std::bind(&ViewerApplication::CMD_AxisAlignedTransform, this, _1, _2)},
              {"cmd_open_file", std::bind(&ViewerApplication::CMD_OpenFile, this, _1, _2)},
              {"cmd_zoom", std::bind(&ViewerApplication::CMD_Zoom, this, _1, _2)},

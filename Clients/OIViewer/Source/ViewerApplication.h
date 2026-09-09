@@ -208,6 +208,7 @@ namespace OIV
         void CMD_Zoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ViewState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleKeyBindings(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void CMD_ShowSystemInfo(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_OpenFile(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_AxisAlignedTransform(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ToggleColorCorrection(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
