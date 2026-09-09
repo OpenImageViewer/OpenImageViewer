@@ -16,7 +16,7 @@ For more information visit [www.openimageviewer.com](https://www.openimageviewer
 
 ## Features
 
-* Hardware-accelerated rendering with D3D11 and OpenGL renderer support.
+- Vulkan, D3D11, and OpenGL rendering with hardware-first startup selection.
 * Fast folder browsing, sorting, slideshow playback, zooming, panning, and fullscreen viewing.
 * Keyboard-first operation with the active key bindings available from F1.
 * Image inspection tools including image information, texel grid, pixel inspection, and selection workflows.
@@ -104,6 +104,8 @@ cmake --build build --config Release
 ```
 
 The viewer executable and copied resources are generated under the build tree's `bin` directory.
+
+CMake can download the Vulkan build tools when needed. Install 7-Zip for SDK extraction, or provide an existing Vulkan SDK.
 
 ## Packaging
 

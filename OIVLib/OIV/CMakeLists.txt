@@ -77,3 +77,10 @@ if(OIV_BUILD_RENDERER_GL)
         OIVGLRenderer
     )
 endif()
+
+if(OIV_BUILD_RENDERER_VK)
+    target_link_libraries(${TargetName}
+    PRIVATE
+        OIVVKRenderer
+    )
+endif()
