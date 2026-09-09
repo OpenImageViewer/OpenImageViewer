@@ -67,6 +67,8 @@ endif()
 
 add_compile_definitions(OIV_OFFICIAL_RELEASE=${OIV_OFFICIAL_RELEASE})
 
+# Git metadata is resolved at configure time; refresh explicit overrides when HEAD changes.
+# If WSL cannot read a Windows worktree's Git paths, supply host values through these variables.
 set(OIV_VERSION_REVISION "" CACHE STRING "Git-derived OIViewer version revision")
 set(OIV_GIT_SHORT_HASH "" CACHE STRING "Git-derived OIViewer abbreviated commit hash")
 if (OIV_VERSION_REVISION STREQUAL "")
