@@ -1,19 +1,22 @@
-#include "ExceptionHandler.h"
 #include "Main.h"
-
-namespace
-{
-    class ExceptionRegistration final
-    {
-      public:
-
-        ExceptionRegistration() { OIV::RegisterExceptionhandler(); }
-        ~ExceptionRegistration() { OIV::RemoveExceptionHandler(); }
-    };
-}  // namespace
+#include <cstdlib>
+#include <iostream>
 
 int main(int argc, char* argv[])
 {
-    const ExceptionRegistration exceptionRegistration;
-    return RunViewer(CompileFilePathFromArguments(argc, argv));
+    try
+    {
+        auto parsed       = OIV::ParseCommandLine(argc, argv);
+        const auto result = std::holds_alternative<OIV::CommandLineExit>(parsed)
+                                ? std::get<OIV::CommandLineExit>(std::move(parsed))
+                                : RunViewer(std::get<OIV::CommandLineParameters>(parsed));
+        std::cout << result.standardOutput;
+        std::cerr << result.standardError;
+        return result.exitCode;
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "OIViewer: " << error.what() << '\n';
+        return EXIT_FAILURE;
+    }
 }

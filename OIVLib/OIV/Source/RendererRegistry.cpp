@@ -76,9 +76,9 @@ namespace OIV
         else if (!options.renderer && Metadata.empty())
             error = "No viewer renderer is built; Null is available only through explicit internal selection";
         else if (options.adapterIndex && *options.adapterIndex < 0)
-            error = "--adapter_index must be nonnegative";
+            error = "--adapter-index must be nonnegative";
         else if (!options.adapterIndex && options.adapterName && detail::TrimAdapterName(*options.adapterName).empty())
-            error = "--adapter_name requires a nonempty vendor or GPU-name substring";
+            error = "--adapter-name requires a nonempty vendor or GPU-name substring";
         else if (options.adapterIndex || options.adapterName)
         {
             const auto api = options.renderer       ? options.renderer

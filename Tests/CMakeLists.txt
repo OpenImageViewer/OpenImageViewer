@@ -26,6 +26,7 @@ target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTyp
 
 add_executable (${TargetName} ${sourceFiles})
 target_sources(${TargetName} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseGestureController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseMultiClickHandler.cpp
@@ -55,7 +56,7 @@ target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../OIVLib/OIV/Source)
 target_compile_definitions(${TargetName} PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
-target_link_libraries(${TargetName} PRIVATE Catch2::Catch2WithMain oivshared oivappcore ImageCodec tiff LWSLib)
+target_link_libraries(${TargetName} PRIVATE CLI11::CLI11 Catch2::Catch2WithMain oivshared oivappcore ImageCodec tiff LWSLib)
 
 if(OIV_BUILD_RENDERER_GL)
     target_compile_definitions(${TargetName} PRIVATE OIV_TEST_GL_RENDERER)

@@ -1,76 +1,74 @@
-#include "ExceptionHandler.h"
 #include "Main.h"
 #include "CopyDataProtocol.h"
 #include "ViewerApplication.h"
 
-#include <LLUtils/Exception.h>
 #include <LLUtils/FileSystemHelper.h>
-
 #include <Windows.h>
-#include <shellapi.h>
-
 #include <cstdlib>
 
 namespace
 {
-    class ExceptionRegistration final
+    bool ForwardFile(const LLUtils::native_string_type& input)
     {
-      public:
-
-        ExceptionRegistration() { OIV::RegisterExceptionhandler(); }
-        ~ExceptionRegistration() { OIV::RemoveExceptionHandler(); }
-    };
-
-    struct ExistingInstanceForwardingState
-    {
-        LWS::Handle targetWindow = 0;
-    };
-
-    void ForwardFileToExistingInstance(LWS::Handle targetWindow, const LLUtils::native_string_type& filePath)
-    {
-        COPYDATASTRUCT copyData{};
-        copyData.dwData = OIV::Win32::LoadFileCopyDataId;
-        copyData.cbData = static_cast<DWORD>((filePath.length() + 1) * sizeof(LLUtils::native_char_type));
-        copyData.lpData = const_cast<LLUtils::native_char_type*>(filePath.c_str());
-        SendMessage(reinterpret_cast<HWND>(targetWindow), WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&copyData));
+        const auto window = OIV::ViewerApplication::FindTrayBarWindow();
+        if (window == 0)
+            return false;
+        const auto path = LLUtils::FileSystemHelper::ResolveFullPath(input);
+        COPYDATASTRUCT data{};
+        data.dwData = OIV::Win32::LoadFileCopyDataId;
+        data.cbData = static_cast<DWORD>((path.size() + 1) * sizeof(wchar_t));
+        data.lpData = const_cast<wchar_t*>(path.c_str());
+        SendMessageW(reinterpret_cast<HWND>(window), WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data));
+        return true;
     }
 
-    int PlatformMain(int argc, const wchar_t* const* argv)
+    void WriteText(HANDLE stream, const std::string& text)
     {
-        const ExceptionRegistration exceptionRegistration;
-        try
+        if (stream == nullptr || stream == INVALID_HANDLE_VALUE || text.empty())
+            return;
+        DWORD mode{}, written{};
+        if (GetConsoleMode(stream, &mode))
         {
-            LLUtils::native_string_type filePath = CompileFilePathFromArguments(argc, argv);
-            ExistingInstanceForwardingState forwarding{.targetWindow = OIV::ViewerApplication::FindTrayBarWindow()};
-            if (!filePath.empty() && forwarding.targetWindow != 0)
+            const int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(),
+                                                 static_cast<int>(text.size()), nullptr, 0);
+            if (size > 0)
             {
-                filePath = LLUtils::FileSystemHelper::ResolveFullPath(filePath);
-                ForwardFileToExistingInstance(forwarding.targetWindow, filePath);
-                return EXIT_SUCCESS;
+                std::wstring wide(static_cast<size_t>(size), L'\0');
+                MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()),
+                                    wide.data(), size);
+                WriteConsoleW(stream, wide.data(), static_cast<DWORD>(wide.size()), &written, nullptr);
             }
-            return RunViewer(filePath);
         }
-        catch (const LLUtils::Exception&)
+        else
         {
-            return EXIT_FAILURE;
-        }
-        catch (...)
-        {
-            LL_EXCEPTION_DONT_THROW(LLUtils::Exception::ErrorCode::Unknown, "Unhandled entry-point exception");
-            return EXIT_FAILURE;
+            size_t offset = 0;
+            while (
+                offset < text.size() &&
+                WriteFile(stream, text.data() + offset, static_cast<DWORD>(text.size() - offset), &written, nullptr) &&
+                written != 0)
+                offset += written;
         }
     }
 }  // namespace
 
-int WINAPI wWinMain([[maybe_unused]] HINSTANCE instance, [[maybe_unused]] HINSTANCE previousInstance,
-                    [[maybe_unused]] PWSTR commandLine, [[maybe_unused]] int showCommand)
+// The manifest keeps desktop launches detached while terminal launches inherit their
+// console and redirected streams. No runtime console allocation or attachment is needed.
+int wmain(int argc, wchar_t* argv[])
 {
-    int argumentCount   = 0;
-    wchar_t** arguments = CommandLineToArgvW(GetCommandLineW(), &argumentCount);
-    if (arguments == nullptr)
-        return EXIT_FAILURE;
-
-    const int result = PlatformMain(argumentCount, arguments);
-    LocalFree(arguments);
-    return result;
+    OIV::CommandLineExit result;
+    try
+    {
+        auto parsed = OIV::ParseCommandLine(argc, argv);
+        if (auto* exit = std::get_if<OIV::CommandLineExit>(&parsed))
+            result = std::move(*exit);
+        else
+            result = RunViewer(std::get<OIV::CommandLineParameters>(parsed), ForwardFile);
+    }
+    catch (const std::exception& error)
+    {
+        result = {EXIT_FAILURE, {}, std::string("OIViewer: ") + error.what() + "\n"};
+    }
+    WriteText(GetStdHandle(STD_OUTPUT_HANDLE), result.standardOutput);
+    WriteText(GetStdHandle(STD_ERROR_HANDLE), result.standardError);
+    return result.exitCode;
 }

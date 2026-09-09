@@ -1,6 +1,5 @@
 #pragma once
+#include "CommandLine.h"
 
-#include <LLUtils/StringDefs.h>
-
-LLUtils::native_string_type CompileFilePathFromArguments(int argc, const LLUtils::native_char_type* const* argv);
-int RunViewer(const LLUtils::native_string_type& filePath);
+using ForwardFileCallback = bool (*)(const LLUtils::native_string_type&);
+OIV::CommandLineExit RunViewer(const OIV::CommandLineParameters& parameters, ForwardFileCallback forwardFile = nullptr);

@@ -80,7 +80,7 @@ namespace OIV
             {
                 if (factory->EnumAdapters1(static_cast<UINT>(adapterIndex), selected.GetAddressOf()) ==
                     DXGI_ERROR_NOT_FOUND)
-                    throw std::invalid_argument("--adapter_index is outside the D3D11 adapter list");
+                    throw std::invalid_argument("--adapter-index is outside the D3D11 adapter list");
                 if (!selected)
                     throw std::runtime_error("Could not enumerate the selected D3D11 adapter");
                 fGpuIndex = adapterIndex;
