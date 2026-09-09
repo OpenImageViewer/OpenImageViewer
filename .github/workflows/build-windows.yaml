@@ -10,7 +10,7 @@ jobs:
   build-linux-mingw64:
     runs-on: ubuntu-latest
     env:
-      BUILD_DIR: ${{ github.workspace }}/build
+      BUILD_DIR: ${{ github.workspace }}/build/windows-clang
 
     container:
       image: ghcr.io/openimageviewer/openimageviewer/oiv-builder-arch:latest
@@ -51,7 +51,7 @@ jobs:
   build-windows:
     runs-on: windows-2025-vs2026
     env:
-      BUILD_DIR: ${{ github.workspace }}/build
+      BUILD_DIR: ${{ github.workspace }}/build/windows-clang
 
     steps:
     - uses: actions/checkout@v4
@@ -65,10 +65,28 @@ jobs:
         path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
         key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
+    - name: Activate the Visual Studio development environment
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
     - name: Configure CMake
       run: >
-        cmake -B "$env:BUILD_DIR"
+        cmake -G Ninja -B "$env:BUILD_DIR"
         -S "$env:GITHUB_WORKSPACE"
+        -DCMAKE_C_COMPILER=clang-cl
+        -DCMAKE_CXX_COMPILER=clang-cl
+        -DCMAKE_BUILD_TYPE=Debug
 
     - name: Build
-      run: cmake --build "$env:BUILD_DIR" --config Release
+      run: cmake --build "$env:BUILD_DIR"
+
+    - name: Run renderer and CLI tests
+      shell: pwsh
+      run: |
+        & "$env:BUILD_DIR/bin/tests.exe"
+        if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+        & "$env:BUILD_DIR/bin/tests_vk_failures.exe"
+        if ($LASTEXITCODE -ne 0) { throw "Vulkan failure tests failed" }
+        & "$env:BUILD_DIR/bin/tests_vk_runtime_failure.exe"
+        if ($LASTEXITCODE -ne 0) { throw "Vulkan loader tests failed" }
