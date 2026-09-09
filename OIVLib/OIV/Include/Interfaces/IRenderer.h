@@ -20,6 +20,12 @@ namespace OIV
         virtual int AddRenderable(IRenderable* renderable) = 0;
         virtual int RemoveRenderable(IRenderable* renderable) = 0;
 
+        virtual const char* GetBackendName() const = 0;
+        virtual const char* GetGPUName() const { return ""; }
+        virtual const char* GetAPIVersion() const { return ""; }
+        virtual const char* GetDriverVersion() const { return ""; }
+        virtual int GetSelectedGPUIndex() const { return -1; }
+
         virtual ~IRenderer() {}
     };
 
