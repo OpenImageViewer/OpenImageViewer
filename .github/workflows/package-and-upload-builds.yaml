@@ -20,6 +20,7 @@ permissions:
   contents: read
 
 env:
+  VULKAN_SDK: ''
   PUBLISH_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
   OFFICIAL_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.official_release || false }}
 
@@ -68,9 +69,15 @@ jobs:
           # Pin the installer so release toolchain setup changes only through review.
           curl --proto '=https' --tlsv1.2 -fsSLo llvm.sh https://raw.githubusercontent.com/opencollab/llvm-jenkins.debian.net/c5ecff7c7208c8b5225e1f6e6ae6f2539e1d31ea/llvm.sh
           sudo bash llvm.sh 22
-          sudo apt-get install -y llvm-22 libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev p7zip-full wayland-protocols
+          sudo apt-get install -y llvm-22 libvulkan-dev libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev p7zip-full wayland-protocols
           echo "CC=clang-22" >> "$GITHUB_ENV"
           echo "CXX=clang++-22" >> "$GITHUB_ENV"
+
+      - name: Cache Vulkan SDK
+        uses: actions/cache@v4
+        with:
+          path: publish/_deps/vulkan-sdk
+          key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
       - name: Build release binaries
         shell: pwsh

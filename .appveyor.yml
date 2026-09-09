@@ -30,6 +30,11 @@ for:
            
           echo %generator%
 
+    install:
+      - ps: choco install vulkan-sdk --yes --no-progress
+      - ps: if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK installation failed" }
+      - ps: $env:VULKAN_SDK = (Get-ChildItem C:/VulkanSDK -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName
+
     before_build:
       - cmd: |-
           c:

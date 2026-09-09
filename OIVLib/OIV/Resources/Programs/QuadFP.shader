@@ -1,3 +1,88 @@
+#if defined(VK)
+#include "VKImage.shader"
+
+layout(set = 0, binding = 0) uniform sampler2D imageTexture;
+
+layout(location = 0) in vec2 coords;
+layout(location = 0) out vec4 outColor;
+
+vec3 saturate(vec3 color, float amount)
+{
+    const vec3 RGBWeights = vec3(0.299, 0.587, 0.114);
+    vec3 v = color * color * RGBWeights;
+    float luminance = sqrt(v.r + v.g + v.b);
+    return luminance + (color - luminance) * amount;
+}
+
+vec4 GetChecker(vec4 color1, vec4 color2, vec2 uv, vec2 viewportSize)
+{
+    ivec2 checkerPosition = ivec2(uv * viewportSize / 16.0);
+    return ((checkerPosition.x + checkerPosition.y) & 1) == 0 ? color1 : color2;
+}
+
+void DrawPixelGrid(vec2 imageSize, vec2 screenSize, vec2 screenUV, vec2 uvScale, vec2 uvOffset, inout vec4 texel)
+{
+    vec2 pixelDrawThreshold = vec2(8.0, 8.0);
+    vec2 minLineWidth = vec2(1.2, 1.2);
+    vec2 maxLineWidth = vec2(5.0, 5.0);
+
+    vec2 pixelSize = screenSize / imageSize / uvScale;
+    vec2 lineWidthInPixels = clamp(pixelSize / 40.0, minLineWidth, maxLineWidth);
+
+    vec2 offset = mod((uvOffset / uvScale), pixelSize);
+    if (pixelSize.x >= pixelDrawThreshold.x && pixelSize.y >= pixelDrawThreshold.y)
+    {
+        vec2 lineWidth = lineWidthInPixels / screenSize;
+        vec2 modaa = mod((screenUV + offset), pixelSize / screenSize);
+        if (modaa.x < lineWidth.x || modaa.y < lineWidth.y)
+            texel = vec4(1.0, 0.25, 0.25, 1.0);
+    }
+}
+
+void FillBackGround(vec2 screenUV, vec2 viewportSize, inout vec4 texel)
+{
+    texel = GetChecker(pushConstants.backgroundColor1, pushConstants.backgroundColor2, screenUV, viewportSize);
+}
+
+void DrawImage(vec2 screenUV, vec2 viewportSize, vec4 sampledTexel, inout vec4 texel)
+{
+    if (pushConstants.exposure != 1.0 || pushConstants.colorOffset != 0.0 || pushConstants.gamma != 1.0)
+        sampledTexel.xyz = pow(
+            clamp(sampledTexel.xyz * pushConstants.exposure + pushConstants.colorOffset, 0.0, 1.0),
+            vec3(1.0 / max(pushConstants.gamma, 0.0001)));
+    if (pushConstants.saturation != 1.0)
+        sampledTexel.xyz = saturate(sampledTexel.xyz, pushConstants.saturation);
+
+    vec4 checkerColor = GetChecker(pushConstants.transparencyColor1, pushConstants.transparencyColor2, screenUV, viewportSize);
+    texel = vec4(mix(checkerColor.rgb, sampledTexel.rgb, sampledTexel.a), pushConstants.opacity);
+}
+
+vec4 GetFinalTexel(vec2 inputUV, vec2 viewportSize, vec2 imageSize, vec2 imageScale, vec2 imageOffset, int showGrid)
+{
+    vec4 texel;
+    vec2 uvScale = viewportSize.xy / (imageSize.xy * imageScale);
+    vec2 offset = -imageOffset.xy / viewportSize.xy * uvScale;
+    vec2 uv = inputUV * uvScale + offset;
+
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+        FillBackGround(inputUV, viewportSize, texel);
+    else
+    {
+        vec4 sampledTexel = texture(imageTexture, uv);
+        DrawImage(inputUV, viewportSize, sampledTexel, texel);
+        if (showGrid == 1)
+            DrawPixelGrid(imageSize, viewportSize, inputUV, uvScale, offset, texel);
+    }
+
+    return texel;
+}
+
+void main()
+{
+    outColor = GetFinalTexel(coords, pushConstants.viewportSize, pushConstants.imageSize, pushConstants.imageScale,
+                             pushConstants.imageOffset, pushConstants.showGrid);
+}
+#else
 #if defined(HLSL) || defined(D3D11)
 	#define STATIC_CONST static const
 	#define SAMPLER2D Texture2D
@@ -6,9 +91,9 @@
 	#define STATIC_CONST const
 	#define SAMPLER2D sampler2D
 	#define SAMPLER_STATE float
-	#define float2 vec2 
-	#define float3 vec3 
-	#define float4 vec4 
+	#define float2 vec2
+	#define float3 vec3
+	#define float4 vec4
 	#define int2 ivec2
 	#define fmod mod
 	#define lerp mix
@@ -30,17 +115,17 @@ STATIC_CONST float4 BackgroundColor2 = darkBlue;
 
 //Globals
 
-cbuffer Globals_ : register(b2) 
+cbuffer Globals_ : register(b2)
 {
 	Globals globals;
 };
 
-cbuffer BaseImageData_ : register(b0) 
+cbuffer BaseImageData_ : register(b0)
 {
 	BaseImageData baseImageData;
 };
 
-cbuffer MainImageData : register(b1) 
+cbuffer MainImageData : register(b1)
 {
 	//------------------------
 	float4 uTransparencyColor1;
@@ -68,7 +153,7 @@ float4 SampleTexture(SAMPLER2D i_Tex, float2 coords)
 #elif GLSL
 	return texture(i_Tex, coords);
 #endif
-	
+
 }
 
 float4 GetChecker(float4 color1, float4 color2, float2 uv, float2 viewportSize)
@@ -107,7 +192,7 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 
 	float minImageScale = min(i_imageScale.x, i_imageScale.y);
 
-	
+
 	float2 pixelOnViewportNorm =  i_inputUV;
 	float2 imageOffsetNorm = i_viewportSize.zw * i_imageOffset;
 	float aspectRatioFactor = i_viewportSize.z / i_viewportSize.w;
@@ -119,15 +204,15 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 	float2 rdd = abs(pixelSizeNorm - dd);
 	float2 ddMin = float2(min(dd.x, rdd.x), min(dd.y, rdd.y));
 	float maxDistance = max(currentDistance.x  , currentDistance.y);
-	
+
 	//Fixed aspect ratio so width of grid lines would be the same for each axis.
 	if (aspectRatioFactor < 1)
 		ddMin.x /= aspectRatioFactor;
 	else
 		ddMin.y *= aspectRatioFactor;
-	
+
 	float minDD = min(ddMin.x , ddMin.y);
-	
+
 	if ( minDD < maxDistance)
 	{
 		float minImageScale = min(i_imageScale.x, i_imageScale.y);
@@ -140,16 +225,16 @@ void DrawPixelGrid2(  in    float2 i_imageSize
 
 		float3 finalGridColor;
 		if (uint(ddmod.x) == 0 && uint(ddmod.y) == 0)
- 			finalGridColor = gridBlendColor1; 
- 		else
- 			finalGridColor = gridBlendColor2;
+			finalGridColor = gridBlendColor1;
+		else
+			finalGridColor = gridBlendColor2;
 
 		finalGridColor = lerp(finalGridColor,gridBlendColor1,1.0 - i_originalSampledAlpha );
-			 
+
 		o_texel.rgb = lerp(o_texel.rgb, finalGridColor, pow(abs(alpha), blendDecay));
 		o_texel.a = 1.0;
 	}
-	
+
 }
 
 void DrawPixelGrid(
@@ -163,10 +248,10 @@ void DrawPixelGrid(
 		float2 pixelDrawThreshold = float2(1.5,1.5);
 		float2 minLineWidth = float2(1.2,1.2);
 		float2 maxLineWidth = float2(5,5);
-		
+
 		float2 pixelSize = screenSize / imageSize / uvScale;
 		float2 lineWidthInPixels = min(max(minLineWidth,pixelSize / 40.0),maxLineWidth) ;
-	
+
 		float2 oneOverPixelSize = 1.0 / pixelSize;
 		float2 factor2 = screenSize * oneOverPixelSize;
 		float2 offset = float2(0,0);
@@ -178,7 +263,7 @@ void DrawPixelGrid(
 			if (modaa.x < lineWidth.x || modaa.y < lineWidth.y )
 				texel = red;
 		}
-} 
+}
 
 
 void FillBackGround(float2 uv,float2 screenUV, float2 viewportSize, inout float4 texel)
@@ -209,7 +294,7 @@ float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize,
 	float2 uvScale =  i_viewportSize.xy / (i_imageSize.xy * i_imageScale);
 	float2 offset=  -i_ImageOffset.xy / i_viewportSize.xy * uvScale;
 	float2 uv = i_inputUV * uvScale  + offset;
-	
+
  if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
         FillBackGround(uv, i_inputUV, i_viewportSize.xy, texel);
     else
@@ -218,12 +303,12 @@ float4 GetFinalTexel(float2 i_inputUV,float4 i_viewportSize, float2 i_imageSize,
         DrawImage(uv, i_inputUV,uvScale, i_viewportSize.xy, i_imageSize, sampledTexel, texel);
         //if (i_showGrid == 1)
           //  DrawPixelGrid(i_imageSize, i_viewportSize.xy, i_inputUV, uvScale, offset, texel);
-	
+
 	if (i_showGrid == 1)
 		DrawPixelGrid2(i_imageSize,i_ImageOffset,i_imageScale ,i_viewportSize, i_inputUV, sampledTexel.a, texel);
-			
+
     }
-	
+
 	//texel.w = 1;
     return texel;
 }
@@ -248,12 +333,12 @@ void main(in ShaderIn input, out ShaderOut output)
 #else
 ////////////////////////
 ///OPENGL GLSL FRAGMENT SHADER
-///////////////////////
+/////////////////////////
 in vec2 coords;
 out vec4 outColor;
 void main()
 {
   outColor = GetFinalTexel(coords, uViewportSize, uImageSize,uScale, uImageOffset, uShowGrid);
 }
-
+#endif
 #endif

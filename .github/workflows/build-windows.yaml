@@ -3,6 +3,9 @@ name: Build Windows
 on:
   workflow_call:
 
+env:
+  VULKAN_SDK: ''
+
 jobs:
   build-linux-mingw64:
     runs-on: ubuntu-latest
@@ -24,6 +27,12 @@ jobs:
 
     - name: Trust checkout directory
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    - name: Cache Vulkan SDK
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
+        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
     - name: Configure CMake
       run: >
@@ -49,6 +58,12 @@ jobs:
       with:
         fetch-depth: 1
         submodules: recursive
+
+    - name: Cache Vulkan SDK
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
+        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
     - name: Configure CMake
       run: >

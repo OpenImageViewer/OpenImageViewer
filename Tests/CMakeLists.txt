@@ -1,8 +1,10 @@
 
 # Validate Debug/Ninja builds in build/windows-clang (Visual Studio dev shell) and build/linux-clang (WSL).
+# Build with: cmake --build build/windows-clang  OR  cmake --build build/linux-clang
+# Run tests, tests_font_encoding, and tests_vk_failures from that build's bin/ directory;
 # Windows also runs tests_vk_runtime_failure, with .exe suffixes on all four executables.
 # Renderer-policy changes need defaults, each renderer alone, Windows all-renderer, and test-only Null checks.
-
+# Restore the default renderer configuration afterward; CPU/software runs do not prove hardware presentation.
 file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.h"
     "./Source/*.cpp"
@@ -61,6 +63,56 @@ target_link_libraries(${TargetName} PRIVATE CLI11::CLI11 Catch2::Catch2WithMain 
 if(OIV_BUILD_RENDERER_GL)
     target_compile_definitions(${TargetName} PRIVATE OIV_TEST_GL_RENDERER)
     target_link_libraries(${TargetName} PRIVATE OIVGLRenderer)
+endif()
+
+if(OIV_BUILD_RENDERER_VK)
+    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_VK_RENDERER)
+    target_link_libraries(${TargetName} PRIVATE OIVVKRenderer)
+
+    if(WIN32)
+        # Provide the same loader object with an absent module name. The static renderer
+        # library then uses these symbols; installed system DLLs are never touched.
+        add_executable(tests_vk_runtime_failure
+            Vulkan/RuntimeFailureTests.cpp
+            ../Clients/OIViewer/Source/CommandLine.cpp
+            ../OIVLib/Renderers/OIVVKRenderer/Source/VKRuntimeWindows.cpp
+        )
+        target_compile_definitions(tests_vk_runtime_failure PRIVATE OIV_VK_TEST_MISSING_RUNTIME
+            $<TARGET_PROPERTY:OIVVKRenderer,COMPILE_DEFINITIONS>)
+        target_include_directories(tests_vk_runtime_failure PRIVATE
+            ../Clients/OIViewer/Source ../OIVLib/OIV/Source ../OIVLib/Renderers/OIVVKRenderer/Source)
+        target_link_libraries(tests_vk_runtime_failure PRIVATE oiv CLI11::CLI11 Catch2::Catch2WithMain Vulkan::Headers user32)
+        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+            target_link_options(tests_vk_runtime_failure PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+        elseif(MINGW)
+            target_link_options(tests_vk_runtime_failure PRIVATE "-mconsole" "-municode")
+        endif()
+    endif()
+
+    # Keep Vulkan failure doubles isolated from the normal renderer tests and the real Vulkan loader.
+    # They exercise failure control flow and resource lifetime; real driver presentation needs viewer smoke tests.
+    add_executable(tests_vk_failures
+        Vulkan/FailureTests.cpp
+        ../OIVLib/Renderers/OIVVKRenderer/Source/VKContext.cpp
+        ../OIVLib/Renderers/OIVVKRenderer/Source/VKPipeline.cpp
+        ../OIVLib/Renderers/OIVVKRenderer/Source/VKRenderer.cpp
+        ../OIVLib/Renderers/OIVVKRenderer/Source/VKTexture.cpp
+    )
+    add_dependencies(tests_vk_failures VKShaders)
+    target_compile_definitions(tests_vk_failures PRIVATE OIV_VK_TEST_DOUBLES $<TARGET_PROPERTY:OIVVKRenderer,COMPILE_DEFINITIONS>)
+    if(WIN32)
+        target_link_libraries(tests_vk_failures PRIVATE user32)
+    endif()
+    target_include_directories(tests_vk_failures PRIVATE
+        ../OIVLib/Renderers/OIVVKRenderer/Source
+        ../OIVLib/OIV/Include
+    )
+    target_link_libraries(tests_vk_failures PRIVATE Catch2::Catch2WithMain ImageCodec ImageUtil LLUtils::LLUtils Vulkan::Headers)
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_link_options(tests_vk_failures PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+    elseif(MINGW)
+        target_link_options(tests_vk_failures PRIVATE "-mconsole" "-municode")
+    endif()
 endif()
 
 if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")

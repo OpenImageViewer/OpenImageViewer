@@ -1199,9 +1199,22 @@ function Invoke-Package {
 
     Ensure-Directory $outputDir
 
-    $runtimePackageInputs = @($packageSpec.RuntimePatterns | ForEach-Object { Join-PathForward $Context.BinDir $_ })
+    $runtimePatterns = @($packageSpec.RuntimePatterns)
+    $requiredFiles = @($packageSpec.RequiredFiles)
+    $cache = Read-CMakeCache (Join-PathForward $Context.BuildDir "CMakeCache.txt")
+    if ($cache["OIV_BUILD_RENDERER_VK"] -match '^(1|ON|TRUE|YES|Y)$') {
+        $runtimePatterns += "ShaderCache"
+        $requiredFiles += @(
+            "ShaderCache/QuadVP.vert.spv",
+            "ShaderCache/QuadFP.frag.spv",
+            "ShaderCache/QuadSelectionFP.frag.spv",
+            "ShaderCache/QuadSimpleFP.frag.spv"
+        )
+    }
+
+    $runtimePackageInputs = @($runtimePatterns | ForEach-Object { Join-PathForward $Context.BinDir $_ })
     $symbolsPackageInputs  = @($packageSpec.SymbolPatterns  | ForEach-Object { Join-PathForward $Context.BinDir $_ })
-    $requiredRuntimeInputs = @($packageSpec.RequiredFiles   | ForEach-Object { Join-PathForward $Context.BinDir $_ })
+    $requiredRuntimeInputs = @($requiredFiles | ForEach-Object { Join-PathForward $Context.BinDir $_ })
 
     # Verify specific required named files exist.
     Assert-PackageInputs $requiredRuntimeInputs "runtime"

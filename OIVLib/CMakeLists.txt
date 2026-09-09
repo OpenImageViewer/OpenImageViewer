@@ -8,18 +8,25 @@ set(ExternalFolder ../External)
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(_default_d3d11 ON)
     set(_default_gl OFF)
+    set(_default_vk ON)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(_default_d3d11 OFF)
     set(_default_gl ON)
+    set(_default_vk ON)
 else()
     set(_default_d3d11 OFF)
     set(_default_gl OFF)
+    set(_default_vk OFF)
 endif()
 
+# Build inclusion is independent of runtime preference. Defaults are Vulkan+D3D11 on
+# Windows and Vulkan+GL on Linux. Optional Windows GL remains supported. Enabled
+# renderers require their dependencies; disable one explicitly with its option.
 # Runtime exhausts Hardware, Unknown, then Software, using Vulkan -> D3D11 -> GL
 # within each tier and omitting implementations not compiled into this library.
 option(OIV_BUILD_RENDERER_D3D11 "Build D3D11 renderer" ${_default_d3d11})
 option(OIV_BUILD_RENDERER_GL "Build OpenGL renderer" ${_default_gl})
+option(OIV_BUILD_RENDERER_VK "Build Vulkan renderer" ${_default_vk})
 
 if(OIV_BUILD_RENDERER_D3D11 AND NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
     message(FATAL_ERROR "D3D11 requires a Windows target. Set OIV_BUILD_RENDERER_D3D11=OFF.")
@@ -41,6 +48,9 @@ if(OIV_BUILD_RENDERER_D3D11)
 endif()
 if(OIV_BUILD_RENDERER_GL)
     include_directories(Renderers/OIVGLRenderer)
+endif()
+if(OIV_BUILD_RENDERER_VK)
+    include_directories(Renderers/OIVVKRenderer)
 endif()
 include_directories(${ExternalFolder}/ExoticNumbers/include)
 include_directories(${ExternalFolder}/ImageCodec/ImageCodec/Include)
