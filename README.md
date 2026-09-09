@@ -129,3 +129,12 @@ build\bin\tests.exe
 ## License
 
 OIV is distributed under the [OpenImageViewer License](LICENSE.md).
+
+## Command line
+
+```text
+OIViewer "path/to/image-or-folder"
+OIViewer --help
+```
+
+Use `--help` for available options, including renderer and GPU selection.

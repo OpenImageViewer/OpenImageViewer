@@ -1,5 +1,9 @@
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" >
    <asmv3:application>
+    <!-- Windows 11 24H2+: keep shell waiting without creating a console for Explorer launches. -->
+    <asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2024/WindowsSettings">
+      <consoleAllocationPolicy>detached</consoleAllocationPolicy>
+    </asmv3:windowsSettings>
     <asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
       <dpiAwareness>permonitorv2,permonitor,system</dpiAwareness>
     </asmv3:windowsSettings>

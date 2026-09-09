@@ -46,8 +46,12 @@ endif()
 target_compile_definitions(${TargetName} PRIVATE OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE TRUE)
+    # The console subsystem makes shells wait. The embedded detached-console policy
+    # prevents Explorer launches from allocating a console on Windows 11 24H2 and newer.
+    set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
     set(OIVIEWER_RESOURCE_FILE "${OIVIEWER_PLATFORM_DIR}/Resource.rc")
+    set_property(TARGET ${TargetName} APPEND PROPERTY LINK_DEPENDS
+        "${OIVIEWER_RESOURCE_FILE}" "${OIVIEWER_PLATFORM_DIR}/OIViewerManifest.xml")
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT MINGW)
@@ -64,7 +68,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT MINGW)
         COMMENT "Compiling resources"
     )
     if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:WINDOWS" "/MANIFEST:NO")
+        target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup" "/MANIFEST:NO")
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_custom_command(TARGET ${TargetName}
@@ -80,7 +84,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Compiling resources"
     )
-    target_link_options(${TargetName} PRIVATE "-mwindows" "-municode")
+    target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
 endif()
 
 target_include_directories(${TargetName} PRIVATE
@@ -101,6 +105,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 target_link_libraries(${TargetName} PRIVATE
+    CLI11::CLI11
     LLUtils::LLUtils
     ImageUtil
     oiv
