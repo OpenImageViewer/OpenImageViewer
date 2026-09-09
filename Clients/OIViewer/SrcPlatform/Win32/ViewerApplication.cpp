@@ -62,12 +62,12 @@ namespace OIV
             std::bind(&ViewerApplication::OnNotificationIcon, this, std::placeholders::_1));
     }
 
-    void ViewerApplication::InitializeRenderer()
+    void ViewerApplication::InitializeRenderer(const RendererOptions& rendering)
     {
         const auto canvasHandle = LWS::Win32::GetHwnd(fWindow.GetCanvasWindow());
         if (!canvasHandle.has_value())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to obtain the canvas window handle");
-        fRenderGateway->Initialize(reinterpret_cast<LWS::Handle>(*canvasHandle));
+        fRenderGateway->Initialize(reinterpret_cast<LWS::Handle>(*canvasHandle), nullptr, rendering);
     }
 
     WindowSizeDecision ViewerApplication::GetWindowSizeDecision(const CommandManager::CommandArgs& args) const

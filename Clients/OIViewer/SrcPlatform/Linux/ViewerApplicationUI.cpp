@@ -1,6 +1,5 @@
 #include "ViewerApplication.h"
 
-
 #include <LLUtils/Exception.h>
 
 namespace OIV

@@ -181,8 +181,6 @@ namespace OIV
             fMonitorProvider.UpdateFromWindow(fWindow.GetWindow());
         else if (std::holds_alternative<LWS::EventMouseMove>(eventData))
             UpdateTexelPos();
-        else if (std::holds_alternative<LWS::EventCloseRequested>(eventData))
-            CloseApplication(false);
         else if (std::holds_alternative<LWS::EventPaint>(eventData) && !fIsFirstFrameDisplayed)
         {
             fIsFirstFrameDisplayed = true;
@@ -204,7 +202,7 @@ namespace OIV
 
         std::ignore = fWindow.GetWindow().SetVisible(false);
         if (!closeToTray || FindTrayBarWindow() != 0)
-            std::ignore = fWindow.GetWindow().Destroy();
+            fPlatform.RequestQuit();
         else
             fWindow.SetIsTrayWindow(true);
 
@@ -212,12 +210,5 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be released.");
         if (!CloseHandle(mutex))
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Mutex cannot be closed.");
-    }
-
-    bool ViewerApplication::HandleMessages(const LWS::AnyEvent& eventData)
-    {
-        if (const auto* dragDropEvent = std::get_if<LWS::EventDragDropFile>(&eventData))
-            return HandleFileDragDropEvent(*dragDropEvent);
-        return HandleWinMessageEvent(eventData);
     }
 }  // namespace OIV

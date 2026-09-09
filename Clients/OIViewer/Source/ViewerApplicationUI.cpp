@@ -277,8 +277,8 @@ namespace OIV
         //
         // fRenderGateway->RegisterCallbacks(request);
 
-        LLUtils::Exception::OnException.Add([this](LLUtils::Exception::EventArgs args)
-                                            { HandleException(false, args, {}); });
+        fExceptionConnection = LLUtils::Exception::OnException.Connect([this](LLUtils::Exception::EventArgs args)
+                                                                       { HandleException(false, args, {}); });
     }
 
     void ViewerApplication::OnLabelRefreshRequest()

@@ -65,7 +65,7 @@
 
 namespace OIV
 {
-    void ViewerApplication::Init(LLUtils::native_string_type relativeFilePath)
+    void ViewerApplication::Init(LLUtils::native_string_type relativeFilePath, const RendererOptions& rendering)
     {
         using namespace std;
         using namespace placeholders;
@@ -81,21 +81,23 @@ namespace OIV
         if (isDirectory)
             fPendingFolderLoad = filePath;
 
-        future<bool> asyncResult;
+        // Declare metadata before the future so the worker finishes before it is destroyed
+        // during unwinding. The UI thread reads it only after future::get completes.
+        IMCodec::ItemMetaDataSharedPtr initialMetaData;
+        future<IMCodec::ImageSharedPtr> asyncResult;
 
         if (isInitialFileExists == true)
         {
             fIsTryToLoadInitialFile = true;
 
-            // if initial file is provided, load asynchronously.
+            // Decode pixels and metadata while the UI thread initializes the renderer.
+            // No OIV wrapper is constructed on the worker.
             asyncResult = async(launch::async,
-                                [&]() -> bool
+                                [this, &filePath, &initialMetaData]()
                                 {
-                                    fInitialFile = std::make_shared<OIVFileImage>(filePath);
-                                    return fInitialFile->Load(&fImageLoader,
-                                                              IMCodec::PluginTraverseMode::AnyPlugin |
-                                                                  IMCodec::PluginTraverseMode::AnyFileType) ==
-                                           RC_Success;
+                                    return DecodeFileImage(fImageLoader, filePath, initialMetaData,
+                                                           IMCodec::PluginTraverseMode::AnyPlugin |
+                                                               IMCodec::PluginTraverseMode::AnyFileType);
                                 });
         }
 
@@ -203,19 +205,19 @@ namespace OIV
         fMessageManager = std::make_unique<MessageManager>(fWindow.GetWindow(), &fLabelManager, 5,
                                                            [&]() -> void { fRefreshOperation.Queue(); });
 
-        InitializeRenderer();
+        // Stop LWS buffer attachments before the renderer takes ownership of the canvas. On Wayland,
+        // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
+        std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
+        InitializeRenderer(rendering);
 
         // Update oiv lib client size
         UpdateWindowSize();
         fWindow.ShowCanvas();
 
-        // Wait for initial file to finish loading
-        bool isInitialFileLoadedSuccesfuly = false;
+        IMCodec::ImageSharedPtr initialImage;
         if (asyncResult.valid())
-        {
-            asyncResult.wait();
-            isInitialFileLoadedSuccesfuly = asyncResult.get();
-        }
+            initialImage = asyncResult.get();
+        const bool isInitialFileLoadedSuccesfuly = initialImage != nullptr;
 
         // If there is no initial file or the file has failed to load, show the window now, otherwise show the window
         // after the image has rendered completely at the method FinalizeImageLoad.
@@ -233,8 +235,10 @@ namespace OIV
 
         if (isInitialFileLoadedSuccesfuly)
         {
-            LoadOivImage(fInitialFile);
-            fInitialFile.reset();
+            // Registration happens here on the UI thread, after the renderer is ready.
+            auto file = std::make_shared<OIVFileImage>(filePath, std::move(initialImage));
+            file->SetMetaData(std::move(initialMetaData));
+            LoadOivImage(std::move(file));
         }
     }
 
@@ -344,9 +348,6 @@ namespace OIV
 
         fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Add(
             std::bind(&ViewerApplication::OnImageSelectionChanged, this, std::placeholders::_1));
-
-        // renderer took over on the window, no need to erase background.
-        std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
 
         std::ignore = fContextMenuTimer.SetTargetWindow(&fWindow.GetWindow());
         fContextMenuTimer.SetCallback(MakeSafeCallback([this]() { OnContextMenuTimer(); }));

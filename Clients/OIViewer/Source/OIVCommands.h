@@ -104,14 +104,20 @@ namespace OIV
             OIV_CMD_SetSelectionRect_Request request = {-1, -1, -1, -1};
             ExecuteCommand(CommandExecute::OIV_CMD_SetSelectionRect, &request, &NullCommand);
         }
-        static void Init(std::size_t windowHandle, void* nativeDisplay)
+        static void Init(std::size_t windowHandle, void* nativeDisplay, const RendererOptions& rendering = {})
         {
-            // Init OIV renderer
+            // Preserve initialization diagnostics without changing the command API's result-code boundary.
+            std::exception_ptr error;
             CmdDataInit init{
-                .parentHandle  = windowHandle,
-                .nativeDisplay = nativeDisplay,
+                .parentHandle        = windowHandle,
+                .nativeDisplay       = nativeDisplay,
+                .rendering           = &rendering,
+                .initializationError = &error,
             };
-            if (ExecuteCommand(CommandExecute::CE_Init, &init, &NullCommand) != RC_Success)
+            const auto result = ExecuteCommand(CommandExecute::CE_Init, &init, &NullCommand);
+            if (error)
+                std::rethrow_exception(error);
+            if (result != RC_Success)
                 LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable initialize OIV library");
         }
     };
