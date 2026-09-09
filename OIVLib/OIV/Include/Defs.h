@@ -1,6 +1,7 @@
 
 #pragma once
 #include <cstdint>
+#include <exception>
 #include <Interfaces/RendererOptions.h>
 #include <LLUtils/Point.h>
 #include <LLUtils/Color.h>
@@ -521,6 +522,9 @@ typedef wchar_t OIVCHAR;
     {
         std::size_t parentHandle;
         void* nativeDisplay;
+        // Borrowed only for the synchronous initialization command.
+        const OIV::RendererOptions* rendering   = nullptr;
+        std::exception_ptr* initializationError = nullptr;
     };
 
     struct OIV_CMD_QueryImageInfo_Request

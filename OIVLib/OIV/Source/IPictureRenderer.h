@@ -21,7 +21,7 @@ namespace OIV
 
         virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
 
-        virtual int Init()                                             = 0;
+        virtual int Init(const RendererOptions& options = {})          = 0;
         virtual int SetParent(std::size_t handle, void* nativeDisplay) = 0;
         virtual int Refresh()                                          = 0;
 

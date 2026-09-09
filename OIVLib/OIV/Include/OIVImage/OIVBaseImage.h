@@ -10,7 +10,6 @@
 #include <Image.h>
 #include <Defs.h>
 #include <Interfaces/IRenderable.h>
-#include <mutex>
 
 namespace OIV
 {
@@ -27,12 +26,17 @@ namespace OIV
         GeneratedByLib
     };
 
+    // Construct, mutate, and destroy wrappers on the renderer's owner thread. Workers may
+    // retain the underlying IMCodec image data, but must not own an OIV wrapper's lifetime.
     class OIVBaseImage : public IRenderable
     {
       public:
 
         OIVBaseImage(ImageSource source);
         OIVBaseImage(ImageSource source, IMCodec::ImageSharedPtr image);
+        // Each wrapper owns one renderer registration and object ID.
+        OIVBaseImage(const OIVBaseImage&)            = delete;
+        OIVBaseImage& operator=(const OIVBaseImage&) = delete;
         ImageSource GetImageSource() const { return fSource; }
 
         LLUtils::native_string_type GetDescription() const
@@ -157,7 +161,6 @@ namespace OIV
         IMCodec::ImageSharedPtr fImage;
         bool fIsImageDirty = true;
         bool fIsDirty      = true;
-        std::mutex fRendererMutex;
         double fDisplayTime{};
         int64_t fNumUniqueColors = UniqueColorsUninitialized;
     };

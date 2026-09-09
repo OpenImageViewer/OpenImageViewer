@@ -1,5 +1,7 @@
 #include "ViewerApplication.h"
 
+#include <LWS/Platform.hpp>
+
 #include "ViewerApplicationPlatformState.h"
 #include "ViewerMouseInput.h"
 
@@ -86,9 +88,7 @@ namespace OIV
         if (std::holds_alternative<LWS::EventKeyDown>(eventData) || std::holds_alternative<LWS::EventKeyUp>(eventData))
             return handleKeyInput(eventData);
 
-        if (std::holds_alternative<LWS::EventCloseRequested>(eventData))
-            CloseApplication(false);
-        else if (std::holds_alternative<LWS::EventFocusGained>(eventData))
+        if (std::holds_alternative<LWS::EventFocusGained>(eventData))
             SetAppActive(true);
         else if (std::holds_alternative<LWS::EventFocusLost>(eventData))
         {
@@ -107,13 +107,6 @@ namespace OIV
     {
         if (closeToTray)
             LL_EXCEPTION_NOT_IMPLEMENT("Close-to-tray is not implemented on Linux");
-        std::ignore = fWindow.GetWindow().Destroy();
-    }
-
-    bool ViewerApplication::HandleMessages(const LWS::AnyEvent& eventData)
-    {
-        if (const auto* dragDropEvent = std::get_if<LWS::EventDragDropFile>(&eventData))
-            return HandleFileDragDropEvent(*dragDropEvent);
-        return HandleWinMessageEvent(eventData);
+        fPlatform.RequestQuit();
     }
 }  // namespace OIV

@@ -152,7 +152,7 @@ namespace OIV
         void OnLabelRefreshRequest();
         explicit ViewerApplication(LWS::PlatformContext& platform);
         ~ViewerApplication();
-        void Init(LLUtils::native_string_type filePath);
+        void Init(LLUtils::native_string_type filePath, const RendererOptions& rendering = {});
         void Run();
         static LLUtils::native_string_type GetAppDataFolder();
         static LWS::Handle FindTrayBarWindow();
@@ -333,7 +333,7 @@ namespace OIV
         void InitializeRawInput();
         [[nodiscard]] int GetRawNavigationDirection() const;
         void InitializeNotificationIcons();
-        void InitializeRenderer();
+        void InitializeRenderer(const RendererOptions& rendering);
         [[nodiscard]] WindowSizeDecision GetWindowSizeDecision(const CommandManager::CommandArgs& args) const;
         [[nodiscard]] LWS::Rect GetNotificationIconRect(LWS::NotificationIconGroup::IconID iconId) const;
         [[nodiscard]] static LLUtils::native_string_type GetApplicationModulePath();
@@ -363,9 +363,8 @@ namespace OIV
         MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
         MainWindow fWindow;
-        LWS::EventConnection fWindowConnection;
-        LWS::EventConnection fCanvasConnection;
-        LWS::EventConnection fPlatformConnection;
+        // Images release before the renderer, and the native canvas outlives both.
+        std::unique_ptr<IViewerRenderPort> fRenderGateway;
         AutoScrollUniquePtr fAutoScroll;
         RecursiveDelayedOp fRefreshOperation;
         RecursiveDelayedOp fPreserveImageSpaceSelection;
@@ -447,7 +446,6 @@ namespace OIV
         ImageState fImageState;
 
         CommandController fCommandController;
-        std::unique_ptr<IViewerRenderPort> fRenderGateway;
         std::unique_ptr<FreeType::FreeTypeConnector> fFreeType;
         LabelManager fLabelManager;
         KeyDoubleTap fDoubleTap;
@@ -492,9 +490,10 @@ namespace OIV
         }
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
-        std::shared_ptr<OIVFileImage> fInitialFile;
 
         ApplicationLog mLogFile{GetLogFilePath(), true};
+        // Disconnect after workers stop and before the log is destroyed.
+        LLUtils::Exception::OnExceptionEventType::Connection fExceptionConnection;
 
         struct MenuItemData
         {
@@ -517,5 +516,8 @@ namespace OIV
         ImageResidencyCache fImageResidencyCache;
         std::unique_ptr<IFileWatcher> fFileWatcher;
         std::unique_ptr<BrowseSessionController> fBrowseSessionController;
+        LWS::EventConnection fWindowConnection;
+        LWS::EventConnection fCanvasConnection;
+        LWS::EventConnection fPlatformConnection;
     };
 }  // namespace OIV

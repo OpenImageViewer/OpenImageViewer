@@ -749,16 +749,18 @@ namespace OIV
                 if (fCountingColorsThread.joinable())
                     fCountingColorsThread.join();
 
+                // Keep the wrapper alive on the UI thread. The worker owns only pixel data
+                // and returns the wrapper pointer as an identity token without dereferencing it.
                 fCountingImageColor   = openedImage;
                 fCountingColorsThread = std::thread(
-                    [&](OIVBaseImageSharedPtr image) -> void
+                    [this](IMCodec::ImageSharedPtr image, OIVBaseImage* source) -> void
                     {
-                        int64_t uniqueValues = PixelHelper::CountUniqueValues(image->GetImage());
+                        int64_t uniqueValues = PixelHelper::CountUniqueValues(image);
                         QueueUiCompletion(static_cast<std::underlying_type_t<InterThreadMessages>>(
                                               InterThreadMessages::CountColors),
-                                          CountColorsData{image.get(), uniqueValues});
+                                          CountColorsData{source, uniqueValues});
                     },
-                    fCountingImageColor);
+                    fCountingImageColor->GetImage(), fCountingImageColor.get());
             }
         }
     }

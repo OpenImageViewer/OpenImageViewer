@@ -60,6 +60,21 @@ namespace OIV
         return true;
     }
 
+    bool ViewerApplication::HandleMessages(const LWS::AnyEvent& eventData)
+    {
+        bool handled = true;
+        if (std::holds_alternative<LWS::EventCloseRequested>(eventData))
+        {
+            // Suppress native destruction until the renderer and its images have been released.
+            CloseApplication(false);
+        }
+        else if (const auto* dragDropEvent = std::get_if<LWS::EventDragDropFile>(&eventData))
+            handled = HandleFileDragDropEvent(*dragDropEvent);
+        else
+            handled = HandleWinMessageEvent(eventData);
+        return handled;
+    }
+
     bool ViewerApplication::HandleClientWindowMessages(const LWS::AnyEvent& eventData)
     {
         return ClientWindwMessage(eventData) != 0;

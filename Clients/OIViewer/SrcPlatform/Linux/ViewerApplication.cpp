@@ -67,11 +67,11 @@ namespace OIV
         fNotificationIconID = 0;
     }
 
-    void ViewerApplication::InitializeRenderer()
+    void ViewerApplication::InitializeRenderer(const RendererOptions& rendering)
     {
         auto& canvas = fWindow.GetCanvasWindow();
         fRenderGateway->Initialize(reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(canvas)),
-                                   *LWS::Wayland::GetDisplay(canvas));
+                                   *LWS::Wayland::GetDisplay(canvas), rendering);
     }
 
     WindowSizeDecision ViewerApplication::GetWindowSizeDecision(const CommandManager::CommandArgs& args) const
