@@ -32,12 +32,15 @@ namespace OIV
         int AddRenderable(IRenderable* renderable) override;
         int RemoveRenderable(IRenderable* renderable) override;
 
+        Acceleration GetAcceleration() const override { return fAcceleration; }
         const char* GetBackendName() const override { return "GL"; }
         const char* GetGPUName() const override;
         const char* GetAPIVersion() const override;
         const char* GetDriverVersion() const override { return ""; }
 
       private:
+
+        Acceleration fAcceleration = Acceleration::Unknown;
 
         struct ImageEntry
         {

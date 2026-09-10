@@ -5,14 +5,17 @@
 
 namespace OIV
 {
-    
+
     class OIVD3D11Renderer : public IRenderer
     {
-    public:
+      public:
+
         OIVD3D11Renderer();
-        
+
 #pragma region /****IRenderer Overrides************/
-    public:
+
+      public:
+
         int Init(const OIV_RendererInitializationParams& initParams) override;
         int SetViewParams(const ViewParameters& viewParams) override;
         void UpdateGpuParameters();
@@ -25,18 +28,21 @@ namespace OIV
         int RemoveRenderable(IRenderable* renderable) override;
 
         const char* GetBackendName() const override { return "D3D11"; }
+        std::vector<RendererAdapter> EnumerateAdapters() override { return D3D11Device::EnumerateAdapters(); }
+        Acceleration GetAcceleration() const override { return fD3D11Renderer->GetAcceleration(); }
+        int GetSelectedGPUIndex() const override;
         const char* GetGPUName() const override;
         const char* GetAPIVersion() const override;
         const char* GetDriverVersion() const override;
 
 #pragma endregion
 
+      private:
 
-    private:
         std::unique_ptr<D3D11Renderer> fD3D11Renderer;
         mutable std::string fGPUName;
         mutable std::string fAPIVersion;
         mutable std::string fDriverVersion;
     };
 
-}
+}  // namespace OIV

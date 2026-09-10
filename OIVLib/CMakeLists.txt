@@ -16,8 +16,23 @@ else()
     set(_default_gl OFF)
 endif()
 
+# Runtime exhausts Hardware, Unknown, then Software, using Vulkan -> D3D11 -> GL
+# within each tier and omitting implementations not compiled into this library.
 option(OIV_BUILD_RENDERER_D3D11 "Build D3D11 renderer" ${_default_d3d11})
 option(OIV_BUILD_RENDERER_GL "Build OpenGL renderer" ${_default_gl})
+
+if(OIV_BUILD_RENDERER_D3D11 AND NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    message(FATAL_ERROR "D3D11 requires a Windows target. Set OIV_BUILD_RENDERER_D3D11=OFF.")
+endif()
+if((OIV_BUILD_RENDERER_GL OR OIV_BUILD_RENDERER_VK) AND
+   NOT CMAKE_SYSTEM_NAME MATCHES "^(Windows|Linux)$")
+    message(FATAL_ERROR "GL/Vulkan support Windows and Linux targets only. Disable OIV_BUILD_RENDERER_GL and OIV_BUILD_RENDERER_VK.")
+endif()
+if(OIV_BUILD_CLIENT AND NOT (OIV_BUILD_RENDERER_D3D11 OR OIV_BUILD_RENDERER_GL OR OIV_BUILD_RENDERER_VK))
+    message(FATAL_ERROR "The viewer requires a real renderer. Enable OIV_BUILD_RENDERER_VK, OIV_BUILD_RENDERER_D3D11, or OIV_BUILD_RENDERER_GL; Null is test-only.")
+endif()
+message(STATUS "OIViewer renderers: Vulkan=${OIV_BUILD_RENDERER_VK}; D3D11=${OIV_BUILD_RENDERER_D3D11}; GL=${OIV_BUILD_RENDERER_GL}")
+
 
 
 include_directories(./OIV/Include)

@@ -1,4 +1,8 @@
 
+# Validate Debug/Ninja builds in build/windows-clang (Visual Studio dev shell) and build/linux-clang (WSL).
+# Windows also runs tests_vk_runtime_failure, with .exe suffixes on all four executables.
+# Renderer-policy changes need defaults, each renderer alone, Windows all-renderer, and test-only Null checks.
+
 file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.h"
     "./Source/*.cpp"
