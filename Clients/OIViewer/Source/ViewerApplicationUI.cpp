@@ -67,6 +67,19 @@
 
 namespace OIV
 {
+    ViewerApplication::~ViewerApplication()
+    {
+        fIsShuttingDown = true;
+        fRefreshTimer.Enable(false);
+        {
+            // Producers snapshot this token under the same lock before posting UI work.
+            const std::scoped_lock lock(fUiCompletionMutex);
+            fUiLifetime.reset();
+        }
+        if (fCountingColorsThread.joinable())
+            fCountingColorsThread.join();
+    }
+
     void ViewerApplication::SetImageInfoVisible(bool visible)
     {
         if (visible != fImageInfoVisible)
