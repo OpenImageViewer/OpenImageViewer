@@ -173,6 +173,9 @@ add_compile_definitions(UNICODE _UNICODE)
 include_directories(./Extensions)
 
 add_subdirectory(./External/LLUtils)
+# Dependencies also carry older nested LLUtils copies. Use one implementation in
+# every translation unit, including consumers with explicit nested include paths.
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/External/LLUtils/Include")
 
 set(LWS_BUILD_TESTS OFF CACHE BOOL "Build LWS tests" FORCE)
 add_subdirectory(./External/LWS)

@@ -13,6 +13,13 @@ if(NOT TARGET Catch2::Catch2WithMain)
     add_subdirectory(${ExternalFolder}/catch2 ./external/catch2)
 endif()
 
+# FreeType's native PNG dependency and ImageCodec's APNG library export overlapping
+# symbols on Linux. Exercise the font boundary in its own executable.
+add_executable(tests_font_encoding FontEncoding/TestFontEncoding.cpp)
+target_include_directories(tests_font_encoding PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
+target_compile_definitions(tests_font_encoding PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
+target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTypeWrapper LLUtils::LLUtils)
+
 add_executable (${TargetName} ${sourceFiles})
 target_sources(${TargetName} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp
@@ -54,7 +61,9 @@ endif()
 if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:CONSOLE")
     target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup")
+    target_link_options(tests_font_encoding PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
 elseif(MINGW)
     set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
     target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
+    target_link_options(tests_font_encoding PRIVATE "-mconsole" "-municode")
 endif()
