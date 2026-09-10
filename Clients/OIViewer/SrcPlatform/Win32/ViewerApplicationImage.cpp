@@ -78,17 +78,18 @@ namespace OIV
             LoadOivImage(std::make_shared<OIVBaseImage>(ImageSource::Clipboard, image));
             clipboardType = ClipboardDataType::Image;
         }
-        else if (formatType == CF_UNICODETEXT || formatType == CF_TEXT)
+        // Windows synthesizes CF_UNICODETEXT from CF_TEXT/CF_OEMTEXT, so legacy text is supported here.
+        // https://learn.microsoft.com/en-us/windows/win32/dataxchg/clipboard-formats#synthesized-clipboard-formats
+        // Clipboard buffers are untrusted: require whole UTF-16 units and a terminator inside the buffer.
+        else if (formatType == CF_UNICODETEXT && buffer.size() >= sizeof(wchar_t) &&
+                 buffer.size() % sizeof(wchar_t) == 0)
         {
-            LLUtils::native_string_type text;
-            if (formatType == CF_UNICODETEXT)
-                text = reinterpret_cast<const wchar_t*>(buffer.data());
-            else
-                text = LLUtils::StringUtility::ToWString(reinterpret_cast<const char*>(buffer.data()));
-
-            if (!text.empty())
+            const std::wstring_view text(reinterpret_cast<const wchar_t*>(buffer.data()),
+                                         buffer.size() / sizeof(wchar_t));
+            const auto terminator = text.find(L'\0');
+            if (terminator != std::wstring_view::npos && terminator != 0)
             {
-                LoadClipboardText(text);
+                LoadClipboardText(LLUtils::native_string_type(text.substr(0, terminator)));
                 clipboardType = ClipboardDataType::Text;
             }
         }

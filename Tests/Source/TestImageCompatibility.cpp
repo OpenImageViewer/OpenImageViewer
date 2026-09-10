@@ -297,3 +297,57 @@ TEST_CASE("ImageOpenController rejects bad ImageMagick corpus files", "[ImageCom
         }
     }
 }
+
+TEST_CASE("ImageLoader selects codecs from native filesystem extensions", "[ImageCompatibility][Integration][string]")
+{
+    IMCodec::ImageLoader loader;
+    if (loader.GetFirstPlugin(LLUTILS_TEXT("jpg")) == IMCodec::PluginID{})
+        SKIP("JPEG decoding is not configured");
+
+    const auto fixture = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
+                         "External/ImageCodec/Example/cat.jpg";
+    REQUIRE(std::filesystem::exists(fixture));
+    struct TemporaryDirectory
+    {
+        std::filesystem::path path = std::filesystem::temp_directory_path() /
+                                     ("oiv-extension-" +
+                                      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+                                      ".jpg");
+        TemporaryDirectory() { REQUIRE(std::filesystem::create_directory(path)); }
+        ~TemporaryDirectory()
+        {
+            std::error_code error;
+            std::filesystem::remove_all(path, error);
+        }
+    } temporary;
+
+    const std::array cases{
+        std::pair{std::filesystem::path(u8"photo-\u00e9-\u05d0-\U0001f4f7.JPG"), true},
+        std::pair{std::filesystem::path(".photo.jpg"), true},
+        std::pair{std::filesystem::path(".jpg"), false},
+        std::pair{std::filesystem::path("photo"), false},
+    };
+    for (const auto& [name, expectedSuccess] : cases)
+    {
+        const auto path = temporary.path / name;
+        std::filesystem::copy_file(fixture, path);
+        IMCodec::ImageSharedPtr image;
+        const auto result = loader.Decode(path.native(), IMCodec::ImageLoadFlags::None, {},
+                                          IMCodec::PluginTraverseMode::NoTraverse, image);
+        if (expectedSuccess)
+        {
+            REQUIRE(result == IMCodec::ImageResult::Success);
+            REQUIRE(image != nullptr);
+            CHECK(HasNonZeroDimensions(image));
+        }
+        else
+            CHECK(result == IMCodec::ImageResult::UnknownError);
+    }
+#if LLUTILS_PLATFORM == LLUTILS_PLATFORM_LINUX
+    const auto rawPath = temporary.path / std::string("photo-\xff.jpg");
+    std::filesystem::copy_file(fixture, rawPath);
+    IMCodec::ImageSharedPtr image;
+    CHECK(loader.Decode(rawPath.native(), IMCodec::ImageLoadFlags::None, {}, IMCodec::PluginTraverseMode::NoTraverse,
+                        image) == IMCodec::ImageResult::Success);
+#endif
+}
