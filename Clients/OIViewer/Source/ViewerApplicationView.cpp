@@ -463,16 +463,14 @@ namespace OIV
 
     void ViewerApplication::UpdateWindowSize()
     {
-        const LWS::PixelSize size = fWindow.GetCanvasPixelSize();
         const auto clientArea     = fWindow.GetCanvasWindow().GetClientAreaSize();
-
-        if (size.x > 0 && size.y > 0 && clientArea.has_value())  // window might be minimized or unconfigured.
+        const LWS::PixelSize size = clientArea.value_or(LWS::ClientAreaSize{}).pixels;
+        fRenderGateway->SetViewportSize(size);
+        if (size.x > 0 && size.y > 0)
         {
             const LWS::ContentScale scale = clientArea->Scale();
             fDPIadjustmentFactor          = {scale.x, scale.y};
             fLabelManager.SetContentScale(scale);
-            fRenderGateway->SetViewportSize(*clientArea);
-            // UpdateCanvasSize();
             AutoPlaceImage();
             const LLUtils::PointI32 point{size.x, size.y};
             fVirtualStatusBar.ClientSizeChanged(point);

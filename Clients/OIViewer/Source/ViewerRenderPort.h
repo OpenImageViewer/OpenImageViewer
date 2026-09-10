@@ -25,7 +25,7 @@ namespace OIV
         virtual void ClearSelectionRect()                                                        = 0;
         virtual ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure)       = 0;
         virtual ResultCode SetTexelGrid(const CmdRequestTexelGrid& grid)                         = 0;
-        virtual ResultCode SetViewportSize(const LWS::ClientAreaSize& size)                           = 0;
+        virtual ResultCode SetViewportSize(const LWS::PixelSize& size)                           = 0;
         virtual ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) = 0;
     };
 
@@ -93,11 +93,11 @@ namespace OIV
             return OIVCommands::ExecuteCommand(CE_TexelGrid, &request, &OIVCommands::NullCommand);
         }
 
-        ResultCode SetViewportSize(const LWS::ClientAreaSize& size) override
+        ResultCode SetViewportSize(const LWS::PixelSize& size) override
         {
             if (fViewportSize == size)
                 return RC_Success;
-            CmdSetClientSizeRequest request{static_cast<uint16_t>(size.pixels.x), static_cast<uint16_t>(size.pixels.y)};
+            CmdSetClientSizeRequest request{static_cast<uint16_t>(size.x), static_cast<uint16_t>(size.y)};
             const ResultCode result = OIVCommands::ExecuteCommand(CMD_SetClientSize, &request,
                                                                   &OIVCommands::NullCommand);
             if (result == RC_Success)
@@ -115,7 +115,7 @@ namespace OIV
 
         bool fPresentationReady;
         bool fRefreshPending{};
-        std::optional<LWS::ClientAreaSize> fViewportSize;
+        std::optional<LWS::PixelSize> fViewportSize;
         bool fInitializationAttempted{};
     };
 }  // namespace OIV
