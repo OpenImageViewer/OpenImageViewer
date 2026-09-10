@@ -88,6 +88,8 @@ namespace OIV
         int AddRenderable(IRenderable* renderable);
         int RemoveRenderable(IRenderable* renderable);
         int SetBackgroundColor(int index, LLUtils::Color backgroundColor);
+        Acceleration GetAcceleration() const { return fDevice->GetAcceleration(); }
+        int GetSelectedGPUIndex() const { return fDevice->GetSelectedGPUIndex(); }
         DXGI_ADAPTER_DESC GetAdapterDesc() const { return fDevice->GetAdapterDesc(); }
         LARGE_INTEGER GetDriverVersion() const { return fDevice->GetDriverVersion(); }
 

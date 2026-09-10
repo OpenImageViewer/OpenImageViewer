@@ -1,6 +1,7 @@
 
 #pragma once
 #include <cstdint>
+#include <Interfaces/RendererOptions.h>
 #include <LLUtils/Point.h>
 #include <LLUtils/Color.h>
 
@@ -145,6 +146,10 @@ typedef wchar_t OIVCHAR;
         size_t container;
         void* nativeDisplay;
         const OIVCHAR* dataPath;
+        int gpuIndex            = -1;
+        const char* adapterName = nullptr;
+        // Startup binds a classified candidate; empty retains direct-backend automatic behavior.
+        std::optional<OIV::Acceleration> acceleration;
     };
 
     struct OIV_RECT_I

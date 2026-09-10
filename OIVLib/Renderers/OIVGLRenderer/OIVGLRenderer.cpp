@@ -1,4 +1,5 @@
 #include "OIVGLRenderer.h"
+#include "GLAcceleration.h"
 
 #include <ImageUtil/ImageUtil.h>
 
@@ -162,6 +163,9 @@ void main()
 
     int OIVGLRenderer::Init(const OIV_RendererInitializationParams& initParams)
     {
+        if (initParams.gpuIndex >= 0 || initParams.adapterName != nullptr)
+            throw std::invalid_argument(
+                "GL uses the platform-selected adapter; explicit adapter selection is unsupported");
         fContext.Init(initParams.container, initParams.nativeDisplay);
         glewExperimental      = GL_TRUE;
         const GLenum glewCode = glewInit();
@@ -171,6 +175,9 @@ void main()
 
         // GLEW can leave GL_INVALID_ENUM behind while probing a compatibility context.
         glGetError();
+        const auto* vendor   = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+        const auto* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+        fAcceleration        = ClassifyGLAcceleration(vendor ? vendor : "", renderer ? renderer : "");
         PrepareResources();
         return 0;
     }

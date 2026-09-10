@@ -55,6 +55,11 @@ namespace OIV
         return fD3D11Renderer->SetBackgroundColor(index, backgroundColor);
     }
 
+    int OIVD3D11Renderer::GetSelectedGPUIndex() const
+    {
+        return fD3D11Renderer->GetSelectedGPUIndex();
+    }
+
     const char* OIVD3D11Renderer::GetGPUName() const
     {
         if (fGPUName.empty())
