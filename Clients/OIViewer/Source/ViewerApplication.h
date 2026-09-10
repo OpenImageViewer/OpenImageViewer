@@ -475,25 +475,19 @@ namespace OIV
         template <typename T>
         void QueueUiCompletion(uint16_t id, T&& value)
         {
-            bool scheduleDrain = false;
-            {
-                const std::scoped_lock lock(fUiCompletionMutex);
-                fUiCompletions.push_back(EventData{id, std::forward<T>(value)});
-                if (!fUiDrainScheduled)
-                {
-                    fUiDrainScheduled = true;
-                    scheduleDrain     = true;
-                }
-            }
+            std::unique_lock lock(fUiCompletionMutex);
+            const bool scheduleDrain = fUiCompletions.empty();
+            fUiCompletions.push_back(EventData{id, std::forward<T>(value)});
             if (scheduleDrain)
             {
-                const std::weak_ptr lifetime = fUiLifetime;
-                std::ignore                  = fPlatform.PostTask(
-                    [this, lifetime]
-                    {
-                        if (lifetime.lock() != nullptr)
-                            DrainUiCompletions();
-                    });
+                auto drain = [this, lifetime = std::weak_ptr(fUiLifetime)]
+                {
+                    if (lifetime.lock() != nullptr)
+                        DrainUiCompletions();
+                };
+                // Let an immediately awakened UI thread drain without waiting on the producer.
+                lock.unlock();
+                std::ignore = fPlatform.PostTask(std::move(drain));
             }
         }
 
@@ -519,7 +513,6 @@ namespace OIV
         std::shared_ptr<UiLifetime> fUiLifetime{std::make_shared<UiLifetime>()};
         std::mutex fUiCompletionMutex;
         std::vector<EventData> fUiCompletions;
-        bool fUiDrainScheduled{};
         std::atomic_bool fIsShuttingDown = false;
         ImageResidencyCache fImageResidencyCache;
         std::unique_ptr<IFileWatcher> fFileWatcher;

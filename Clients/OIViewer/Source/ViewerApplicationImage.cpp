@@ -67,7 +67,6 @@ namespace OIV
         {
             const std::scoped_lock lock(fUiCompletionMutex);
             completions.swap(fUiCompletions);
-            fUiDrainScheduled = false;
         }
         for (const auto& completion : completions)
             OnMessageFromBackgroundThread(completion);
