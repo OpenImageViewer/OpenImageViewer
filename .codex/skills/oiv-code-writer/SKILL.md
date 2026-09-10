@@ -11,7 +11,7 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 
 1. Treat the repository root as the base for all paths and use repo-relative paths in plans and summaries.
 2. Inspect nearby code before editing and match local ownership, naming, and layering.
-3. Improve touched code incrementally; avoid broad drive-by rewrites.
+3. Actively inspect new and modified code for clearer modern C++/STL expressions and opportunities to move computation to compile time. Keep improvements local to the requested work; avoid broad drive-by rewrites.
 4. Format changed C++ files with the repository `.clang-format`.
 5. Add or update focused tests under `Tests` when changed behavior is not already proven by existing coverage or enforced compile-time contracts.
 6. Do not reduce existing test coverage unless the user explicitly requests it.
@@ -54,13 +54,14 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 - Keep new public and internal API surface to the minimum required for the requested functionality: use the fewest necessary types, functions, methods, parameters, overloads, callbacks, and configuration options, and keep implementation details private.
 - Prefer one focused, concise interface when it can provide the required functionality. Do not add convenience variants, extensibility points, or generalized hooks for hypothetical callers; preserve existing APIs unless the task explicitly authorizes their removal.
 - Add only code required by current behavior. Remove includes, fields, functions, branches, and other state made unused by the change.
-- Use advanced C++ and STL utilities to remove real boilerplate, duplication, verbose loops, or error-prone branching; do not use clever constructs that hide intent or fight the surrounding style.
+- Actively seek modern C++ language features, keywords, standard algorithms, ranges, and utilities that express intent more directly and remove boilerplate in new and modified code. Apply this to runtime code as well as compile-time code.
+- Replace manual loops, searches, branching, and repetitive operations when the standard facility makes the code clearer and simpler while preserving behavior and performance. Prefer meaningful simplification over fewer lines; avoid clever constructs that hide intent or fight the surrounding style.
 - Prefer a single exit point for simple, routine control flow. Structure the function with `if`/`else`, scoped branches, or a result variable, and place its `return` at the end so readers can identify the exit without searching for mid-function returns.
 - Reserve early `return` for exceptional or unrecoverable paths, or cases where a single exit would materially reduce clarity or safety, such as excessive nesting, RAII/resource safety, or complete `switch` case handlers. Do not use early returns for ordinary branching merely because they shorten the function.
 - Avoid `break` from loops in the same spirit. Prefer loop conditions, sentinel/result variables, extracted predicates, or STL/ranges algorithms when they keep intent clear.
 - Allow loop `break` when it is the clearest mechanism, such as search completion, parser/state-machine termination, a `switch` inside a loop, error termination, or performance-sensitive loops where alternatives obscure the code.
 - Do not mechanically rewrite existing code solely to remove early exits; apply this guidance to new or touched code when it improves clarity.
-- Use C++26 features only when the active build configuration supports them.
+- Use modern language and standard-library features, including C++26 features, only when the active compiler, standard library, and build configuration support them.
 - Use designated initializers when the compiler and surrounding code support them cleanly. By default, put each `.field = value` assignment on its own line.
 - For arrays or collections of repeated struct entries, each element may put its designated initializer on one line when the repeated pattern is clearer.
 - If line breaks would make designated-initializer structure inconsistent across collection entries, format every entry consistently with one line per initialized field.
@@ -77,6 +78,14 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 - Do not add production functions solely to satisfy tests or expose internals to tests. Test through behavior-facing APIs unless a helper has clear production value.
 - Before implementing helper or utility logic, search the relevant first-party modules for equivalent functionality. Reuse or appropriately extend an existing helper when its behavior, ownership, layering, and performance fit; do not duplicate the same implementation.
 - When no suitable helper exists, prefer a local helper only when repeated non-trivial blocks perform the same sequence of operations or checks and the helper can be named after the behavior it provides.
+
+## Compile-Time Evaluation
+
+- Actively identify computations, constants, tables, and decisions in new and modified code whose required inputs and operations permit compile-time evaluation. Perform eligible work at compile time; retain runtime execution for runtime-dependent work.
+- Prefer `consteval` for functions when all intended calls can and should execute at compile time.
+- Use `constexpr` when the same operation needs both compile-time and runtime use. Preserve existing runtime-capable contracts.
+- Where compile-time evaluation must be guaranteed, use a constant-expression context such as a `constexpr` initializer or `static_assert`. Declaring a function `constexpr` alone does not guarantee compile-time execution.
+- Use `if constexpr` for appropriate compile-time-dependent branches. Keep improvements local and simple; do not introduce templates, abstractions, or duplicated implementations solely to force compile-time evaluation.
 
 ## Performance
 
