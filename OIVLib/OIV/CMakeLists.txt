@@ -63,7 +63,6 @@ if(OIV_BUILD_RENDERER_D3D11)
     target_link_libraries(${TargetName}
     PRIVATE
         OIVD3D11Renderer
-        delayimp
     )
 endif()
 
