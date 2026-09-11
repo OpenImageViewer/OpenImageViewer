@@ -1,142 +1,144 @@
 # Open Image Viewer
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/22d2c9bc0fa149fcaf0b84e009839fa9)](https://app.codacy.com/gh/OpenImageViewer/OpenImageViewer?utm_source=github.com&utm_medium=referral&utm_content=OpenImageViewer/OpenImageViewer&utm_campaign=Badge_Grade_Dashboard)
-[![Windows MSVC build](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml/badge.svg)](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/22d2c9bc0fa149fcaf0b84e009839fa9)](https://app.codacy.com/gh/OpenImageViewer/OpenImageViewer)
+[![Windows build](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml/badge.svg)](https://github.com/OpenImageViewer/OpenImageViewer/actions/workflows/build-windows.yaml)
 
-**Open Image Viewer** is a hardware-accelerated, open-source C++26 image viewer focused on accurate image presentation, fast navigation, and efficient keyboard-driven workflows.
+**Open Image Viewer (OIViewer)** is a hardware-accelerated C++26 image viewer for Windows and Linux, built for accurate display, fast browsing, and keyboard-driven use.
 
-It aims to present images accurately instead of simply displaying image data through the monitor color space.
+Simplicity and performance guide its design. OIViewer embraces modern operating systems, graphics APIs, and C++ features, adopting technologies that are generally available on its CI servers.
 
-For more information visit [www.openimageviewer.com](https://www.openimageviewer.com).
+[Website](https://www.openimageviewer.com) · [Downloads](https://github.com/OpenImageViewer/OpenImageViewer/releases) · [A word from the author](https://www.openimageviewer.com/#word)
 
-[A Word from the author](http://www.openimageviewer.com/#word)  
-[Highlights and features](http://www.openimageviewer.com/#features)
-
-![Selection rect demonstration with Open Image Viewer](https://i.ibb.co/NZXpb2W/cut.gif "Preview")
+![Selection demonstration](https://i.ibb.co/NZXpb2W/cut.gif)
 
 ## Features
 
-- Vulkan, D3D11, and OpenGL rendering with hardware-first startup selection.
-* Fast folder browsing, sorting, slideshow playback, zooming, panning, and fullscreen viewing.
-* Keyboard-first operation with the active key bindings available from F1.
-* Image inspection tools including image information, texel grid, pixel inspection, and selection workflows.
-* Common image actions such as crop, copy selection, paste image, rotation, flipping, and color correction.
-* Codecs and third-party dependencies are built from source via repository submodules.
+- Fast browsing with read-ahead loading, sorting, and slideshows.
+- Zoom, pan, fullscreen, automatic scrolling, and high-DPI support.
+- Animated GIF, APNG, and WebP playback, plus subimage navigation.
+- Texel grids, pixel values, image properties, and EXIF metadata.
+- Gamma, exposure, saturation, grayscale, transparency, and filtering controls.
+- Selection, cropping, rotation, flipping, clipboard support, and saving.
+- Vulkan, Direct3D 11, and OpenGL backends with automatic GPU selection.
+- Configurable keyboard shortcuts and commands; press **F1** for active bindings.
 
-## Supported Platforms
+### Image formats
 
-Windows is the supported viewer target. 64-bit builds are the official release path. 32-bit builds may compile and run but are not part of the official release flow.
+- **Common images:** JPEG (JPG/JPEG/JIF/JPE), PNG/APNG, GIF, WebP, TIFF (TIF/TIFF), and Windows/OS/2 BMP.
+- **Documents, textures, and icons:** Photoshop PSD/PSB, DirectDraw Surface DDS, Windows icons (ICO/ICON), and cursors (CUR).
+- **Other raster formats:** JPEG XR (JXR/WDP/HDP), Kodak Photo CD (PCD), ZSoft Paintbrush (PCX), portable graymaps (PGM/PGMRAW) and pixmaps (PPM/PPMRAW) in ASCII or binary form, Targa (TGA/TARGA), Sun Raster (RAS), Amiga IFF/LBM, SGI (SGI/RGB/RGBA/BW), Macintosh PICT (PICT/PCT/PIC), Dr. Halo (CUT), and X11 Pixmap (XPM).
+- **Camera RAW:** the RAW codec lists 3FR, ARW, BAY, BMQ, CAP, CINE, CR2, CRW, CS1, DC2, DCR, DRF, DSC, DNG, ERF, FFF, IA, IIQ, K25, KC2, KDC, MDC, MEF, MOS, MRW, NEF, NRW, ORF, PEF, PTX, PXN, QTK, RAF, RAW, RDC, RW2, RWL, RWZ, SR2, SRF, SRW, STI, and X3F. The bundled LibRaw version also implements Canon CR3 decoding. Compatibility depends on the camera model and encoding.
+- **Save:** JPEG (JPG/JPEG) and PNG.
 
-The Linux Wayland viewer is available as an experimental, unofficial target. Core library and test builds may be
-configured with `-DOIV_BUILD_CLIENT=OFF` when a viewer executable is not required.
+## Getting started
 
-### Window and rendering coordinates
+Download a package from [GitHub Releases](https://github.com/OpenImageViewer/OpenImageViewer/releases), extract it, and launch OIViewer. Press **Ctrl+O** or pass an image or folder on the [command line](#command-line).
 
-OIViewer configures the same logical client area on every window-system backend. Its initial `946 x 602` client size
-uses 96-DPI logical units and is calibrated to approximate the historical `1200 x 800` native Win32 window at 125%
-scaling. The complete outer size remains an operating-system decision and can vary with DPI, theme, and decoration
-policy. The image sidebar reserves 160 logical layout units, corresponding to 200 native pixels at the 125% reference;
-Win32 privately subtracts its native scrollbar width from the child client area so the complete sidebar still occupies
-that allocation. Its font, row, and displayed-thumbnail dimensions use the same reference calibration so DPI scaling
-does not enlarge the historical sidebar presentation.
+Scroll to zoom, right-drag to pan, **Alt+left-drag** to select, and **Shift+scroll** to browse images. **Alt+scroll** switches subimages; middle-click toggles automatic scrolling.
 
-Window layout and input enter through LWS logical coordinates. Rendering uses the exact framebuffer size reported in
-the same `ClientAreaSize` snapshot, and OIViewer converts pointer positions to that framebuffer coordinate space before
-applying image transforms. This keeps the renderer, zoom/pan calculations, and high-DPI presentation consistent
-without a platform-specific outer-window sizing API.
+### Common shortcuts
 
-On Wayland, logical units are compositor surface coordinates rather than physical-monitor DPI. OIViewer uses
-`wp_fractional_scale_v1` with `wp_viewporter` when available and otherwise uses the entered outputs' integer scale.
-Scale-matched buffers keep 100% image zoom pixel-accurate; the compositor controls top-level placement and may adjust
-the requested logical size. OIViewer sets its Wayland app ID, while compositor window icons come from the matching
-installed desktop-file metadata rather than an icon attached to the window.
+These are the shipped defaults; press **F1** for the full list of active bindings.
 
-### Windows Runtime Notes
-
-Windows 7 SP1, 8, 8.1, 10, and 11 are supported targets.
-
-When using Windows 7 SP1, install:
-
-* [KB2670838 - Windows 7 platform update](https://www.microsoft.com/en-us/download/details.aspx?id=36805)
-* [KB4019990 - D3DCompiler_47](https://www.catalog.update.microsoft.com/Search.aspx?q=4019990)
-* [Universal C runtime](https://support.microsoft.com/en-us/topic/update-for-universal-c-runtime-in-windows-c0514201-7fe6-95a3-b0a5-287930f3560c)
-
-## Build From Source
-
-### Prerequisites
-
-* Git
-* CMake 3.24 or newer
-* Windows SDK
-* One supported Windows build setup:
-  * Ninja with a C++26-capable clang/clang-cl or MSVC toolchain
-  * Visual Studio Build Tools 2026 or newer with MSVC
-
-Recommended Windows development stack: CMake, Ninja, clang-cl, VS Code, and the Windows SDK. This stack does not require Visual Studio Build Tools or MSVC.
-
-### Clone
-
-```powershell
-git clone --recursive --depth 1 https://github.com/OpenImageViewer/OpenImageViewer.git
-cd OpenImageViewer
-```
-
-If the repository was cloned without submodules, initialize them before configuring:
-
-```powershell
-git submodule update --init --recursive
-```
-
-### Configure and Build
-
-Run one of the following from an environment where the selected compiler and Windows SDK are available.
-
-```powershell
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
-
-Or use the Visual Studio generator:
-
-```powershell
-cmake -S . -B build
-cmake --build build --config Release
-```
-
-The viewer executable and copied resources are generated under the build tree's `bin` directory.
-
-CMake can download the Vulkan build tools when needed. Install 7-Zip for SDK extraction, or provide an existing Vulkan SDK.
-
-## Packaging
-
-For a release-style package, run:
-
-```powershell
-.\publish.ps1
-```
-
-The publish script uses Ninja internally and requires 7-Zip when packaging is enabled.
-On Linux, invoke it as `pwsh ./publish.ps1`. The script verifies that `7z` is available before
-configuring and produces a Linux `.7z` runtime package after building OIViewer.
-
-## Tests
-
-Tests are built by default with the main CMake configuration.
-
-```powershell
-cmake --build build --target tests
-build\bin\tests.exe
-```
-
-## License
-
-OIV is distributed under the [OpenImageViewer License](LICENSE.md).
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl+O** | Open an image |
+| **Left / Right** or **Page Up / Page Down** | Previous / next image in the folder |
+| **Home / End** | First / last image in the folder |
+| **Space** | Start or stop the slideshow |
+| **Alt+Enter** | Toggle fullscreen |
+| **Numpad \* / Numpad /** | Original size / fit to window |
+| **G** | Toggle the texel grid |
+| **Grave (`)** | Toggle image information |
+| **Ctrl+C / Ctrl+V** | Copy the selected area / paste an image |
+| **C** | Crop to the selected area |
+| **H / V** | Flip horizontally / vertically |
+| **Ctrl+S** | Save an image |
+| **Ctrl+F1 / Ctrl+F2 / Ctrl+F3** | Sort by name / modification date / extension |
 
 ## Command line
 
 ```text
 OIViewer "path/to/image-or-folder"
+OIViewer --renderer Vulkan "photo.jpg"
 OIViewer --help
 ```
 
-Use `--help` for available options, including renderer and GPU selection.
+With no graphics options, **Windows prefers Vulkan, then D3D11**, and **Linux prefers Vulkan, then GL**. These are also the renderers included in default builds. Windows can include OpenGL as a final choice.
+
+## Configuration
+
+Edit the files in `Resources/Configuration` beside the executable, then restart OIViewer:
+
+- [Settings.json](Clients/OIViewer/Resources/Configuration/Settings.json): viewing and browsing settings.
+- [KeyBindings.json](Clients/OIViewer/Resources/Configuration/KeyBindings.json): keyboard shortcuts.
+- [Commands.json](Clients/OIViewer/Resources/Configuration/Commands.json): command definitions.
+
+Automatic reloading of externally modified images is supported on Windows only.
+
+## Runtime requirements
+
+64-bit Windows or Linux x86_64, with a driver supporting Vulkan 1.1+, Direct3D 11, or OpenGL 3.0+, as included in the build.
+
+- **Windows:** 7 SP1, 8, 8.1, 10, or 11. Windows 11 24H2 or newer is recommended.
+- **Linux:** official binaries require glibc 2.39+ and a Wayland desktop.
+
+Windows 7 SP1 also requires the [platform update](https://www.microsoft.com/en-us/download/details.aspx?id=36805), [D3DCompiler_47](https://www.catalog.update.microsoft.com/Search.aspx?q=4019990), and [Universal C runtime](https://support.microsoft.com/en-us/topic/update-for-universal-c-runtime-in-windows-c0514201-7fe6-95a3-b0a5-287930f3560c).
+
+## Build from source
+
+Use Git, CMake 3.24+, Ninja, and a C++26-capable toolchain. **Clang/clang-cl 21 or newer** is recommended.
+
+```sh
+git clone --recursive https://github.com/OpenImageViewer/OpenImageViewer.git
+cd OpenImageViewer
+```
+
+For an existing checkout, initialize dependencies with `git submodule update --init --recursive`.
+
+### Windows
+
+Install the Windows SDK and use an x64 Visual Studio developer shell:
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release `
+    -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
+cmake --build build --parallel
+```
+
+MSVC with Visual Studio 2026 or newer is also supported. For its generator, omit the Ninja and Clang options and build with `cmake --build build --config Release` in a separate build directory.
+
+CMake can download Vulkan build tools; install 7-Zip for extraction or provide an existing Vulkan SDK.
+
+### Linux
+
+Install development packages for GTK 3, Wayland, X11, OpenGL/EGL, and Vulkan, plus `pkg-config` and Wayland protocol tools.
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build --parallel
+```
+
+Output is in `build/bin`, or `build/bin/Release` with a Visual Studio generator. See the [CI workflows](.github/workflows) for dependency setup.
+
+### Build options
+
+Pass `-DNAME=ON` or `-DNAME=OFF` to CMake:
+
+| Option | Purpose |
+| --- | --- |
+| `OIV_BUILD_TESTS` | Build test binaries; default `ON` |
+| `OIV_BUILD_RENDERER_VK` | Vulkan |
+| `OIV_BUILD_RENDERER_D3D11` | Direct3D 11; Windows only |
+| `OIV_BUILD_RENDERER_GL` | OpenGL |
+
+Default renderers are listed [above](#command-line); keep at least one enabled. Codec switches are documented in [ImageCodec's CMake configuration](External/ImageCodec/CMakeLists.txt).
+
+## Packaging
+
+Run `./publish.ps1` (`pwsh ./publish.ps1` on Linux) to create a `.7z` package. It uses Ninja and `RelWithDebInfo`, builds in `publish`, and requires 7-Zip. Add `-EnablePackage $false` to build without an archive.
+
+## License
+
+OIViewer is distributed under the [OpenImageViewer License](LICENSE.md), which permits sharing and modification with attribution for noncommercial use.
