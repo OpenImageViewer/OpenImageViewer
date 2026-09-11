@@ -16,6 +16,7 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 5. Add or update focused tests under `Tests` when changed behavior is not already proven by existing coverage or enforced compile-time contracts.
 6. Do not reduce existing test coverage unless the user explicitly requests it.
 7. Keep line endings consistent with the files being edited and the active repository formatting tools.
+8. Before finishing, review comments in the changed code. Fill gaps in explanations of nontrivial behavior and check that they progress naturally from relevant design choices through purpose to what the code does. Keep this review local to the requested work.
 
 ## Commit Messages
 
@@ -102,14 +103,17 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 - Choose the narrowest meaningful `LLUtils::Exception::ErrorCode`; use `LL_EXCEPTION_DONT_THROW` only when reporting an error without unwinding is the intended behavior.
 - Keep a standard-library or foreign exception when an API, framework, test, or third-party boundary requires that exact exception type, or when reaching LLUtils would introduce a new or cumbersome dependency. Catching `std::exception` at a boundary remains appropriate when failures from standard-library or external code must also be handled.
 - Do not add an LLUtils dependency solely to replace a standard exception without first checking the target's existing dependency graph and nearby conventions.
-- Prefer expressive names, narrow types, and clear structure. Use comments to preserve information that the code cannot make obvious, not to compensate for unclear code.
+- Actively document new and modified nontrivial code with concise explanations of its role in the surrounding flow, even when the individual statements are straightforward. Reuse or improve an existing explanation rather than duplicating it.
+- Write comments as a natural, top-down explanation. Start with the design choice and its rationale when applicable, explain the purpose it serves, then describe what the code does to achieve it. Connect these ideas narratively; avoid rigid "Design / Purpose / Implementation" labels and omit layers that add no useful information. Do not invent design rationale.
+- Place the overview above the relevant type, function, or cohesive block. Explain finer details beside the code they concern, building on the overview without repeating it. For multi-step logic, connect the major stages with short block comments. Prefer one explanation per concept over comments on individual statements; one or two sentences usually suffice.
+- Keep expressive names, narrow types, and clear structure. Comments should add context, rationale, or a useful overview rather than paraphrase names or compensate for unclear code.
 - Document a function contract when callers cannot readily infer it from the signature and implementation. Capture the relevant input assumptions, supported-use boundaries, invariants, ownership and lifetime, side effects, ordering or threading requirements, platform assumptions, and performance decisions. Do not require Doxygen or a comment for every function.
 - Explain non-obvious logic and design choices at the narrowest relevant scope. Connect the reason for a choice to the behavior or invariant it preserves, especially when a simpler-looking alternative would be incorrect.
 - When an implementation is intentionally limited, partial, or scoped to current use cases, document that design decision at the narrowest relevant scope. State the supported scope, what a full or more comprehensive implementation would require, and why that work is deferred or not justified now.
 - Record surprising user-visible precedence, cancellation, or interaction rules beside the decision that enforces them, and encode the same contract in focused tests when practical.
 - Document workarounds and exceptional platform or framework handling with the external constraint that requires them and a removal condition when useful.
 - When nearby behavior changes, revalidate its comments and update or remove anything stale, contradictory, or no longer useful.
-- Do not narrate obvious statements, branches, or control flow.
+- Leave trivial accessors, wrappers, and self-explanatory operations uncommented. Do not narrate code line by line or impose a comment quota; add comments where they help a reader understand the behavior.
 
 ## Testing
 
