@@ -21,11 +21,11 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 ## Commit Messages
 
 - When the user asks to commit code, inspect the final diff and status immediately before committing.
-- Write a short subject followed by a prose body that highlights the current change.
-- Write highlights as complete sentences; separate related highlights with periods or semicolons according to context.
-- Do not use bullet lists in commit-message highlights.
-- Cover every meaningful changed area in the highlights, including code, tests, config, docs, generated files, and cleanup.
-- Avoid vague wording such as `misc fixes` or `updates` when multiple concrete changes exist.
+- Write a short subject followed by a concise, narrative body. Prefer one paragraph of two to four sentences, with less for simple changes and more only when necessary.
+- Explain the problem or purpose, the resulting behavior, and the key implementation choice needed to understand the change. Do not repeat the subject.
+- Cover materially distinct changes, grouping related code, tests, documentation, and cleanup by purpose rather than listing each file or edit.
+- Include technical details, compatibility implications, and test coverage when they help explain correctness or a non-obvious design decision. Summarize related tests together.
+- Use complete, naturally connected sentences without bullet lists. Remove repetition, incidental mechanics, and vague wording.
 
 ## Module Boundaries
 
