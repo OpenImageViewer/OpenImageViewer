@@ -155,7 +155,9 @@ void main()
         fProgram->SetUniform1I("imageTexture", 0);
 
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // The canvas is cleared opaque. Blend translucent images into its colors while
+        // preserving that alpha, so Wayland never composites the desktop through an overlay.
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
     }
 
     int OIVGLRenderer::Init(const OIV_RendererInitializationParams& initParams)

@@ -14,6 +14,7 @@
 
     #include <algorithm>
     #include <array>
+    #include <cstdlib>
     #include <utility>
 
 namespace
@@ -22,7 +23,11 @@ namespace
     {
       public:
 
-        explicit TestRenderable(IMCodec::ImageSharedPtr image = {}) : fImage(std::move(image)) {}
+        explicit TestRenderable(IMCodec::ImageSharedPtr image = {}, OIV_Image_Render_mode mode = IRM_MainImage,
+                                uint32_t id = 1)
+            : fImage(std::move(image)), fMode(mode), fId(id)
+        {
+        }
 
         double GetOpacity() const override { return 1.0; }
         LLUtils::PointF64 GetScale() const override { return {1.0, 1.0}; }
@@ -30,8 +35,8 @@ namespace
         IMCodec::ImageSharedPtr GetImage() override { return fImage; }
         OIV_Filter_type GetFilterType() const override { return FT_Linear; }
         bool GetVisible() const override { return true; }
-        uint32_t GetID() const override { return 1; }
-        OIV_Image_Render_mode GetImageRenderMode() const override { return IRM_MainImage; }
+        uint32_t GetID() const override { return fId; }
+        OIV_Image_Render_mode GetImageRenderMode() const override { return fMode; }
         bool GetIsImageDirty() const override { return fImageDirty; }
         void ClearImageDirty() override { fImageDirty = false; }
         void PreRender() override {}
@@ -39,20 +44,24 @@ namespace
       private:
 
         IMCodec::ImageSharedPtr fImage;
+        OIV_Image_Render_mode fMode;
+        uint32_t fId;
         bool fImageDirty = fImage != nullptr;
     };
 
-    IMCodec::ImageSharedPtr CreateTransparentImage()
+    IMCodec::ImageSharedPtr CreateBlackImage(uint8_t alpha = 0, uint32_t size = 1)
     {
         auto imageItem                                = std::make_shared<IMCodec::ImageItem>();
         imageItem->itemType                           = IMCodec::ImageItemType::Image;
-        imageItem->descriptor.width                   = 1;
-        imageItem->descriptor.height                  = 1;
-        imageItem->descriptor.rowPitchInBytes         = 4;
+        imageItem->descriptor.width                   = size;
+        imageItem->descriptor.height                  = size;
+        imageItem->descriptor.rowPitchInBytes         = size * 4;
         imageItem->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_R8_G8_B8_A8;
         imageItem->descriptor.texelFormatStorage      = IMCodec::TexelFormat::I_R8_G8_B8_A8;
-        imageItem->data.Allocate(4);
-        std::fill_n(imageItem->data.data(), 4, std::byte{});
+        imageItem->data.Allocate(size * size * 4);
+        std::fill_n(imageItem->data.data(), imageItem->data.size(), std::byte{});
+        for (size_t offset = 3; offset < imageItem->data.size(); offset += 4)
+            imageItem->data.data()[offset] = static_cast<std::byte>(alpha);
         return std::make_shared<IMCodec::Image>(imageItem, IMCodec::ImageItemType::Unknown);
     }
 
@@ -78,7 +87,7 @@ TEST_CASE("OpenGL renderer factory implements the current renderer contract", "[
 }
 
     #if defined(LWS_HAS_WAYLAND_BACKEND)
-TEST_CASE("OpenGL renderer draws canvas, background checkers, and selection", "[renderer][opengl][wayland]")
+TEST_CASE("OpenGL renderer draws canvas, selection, and overlays with opaque output", "[renderer][opengl][wayland]")
 {
     LWS::PlatformContext platform;
     if (platform.Init({.backend = LWS::BackendId::Wayland}) != LWS::Result::Success)
@@ -120,7 +129,7 @@ TEST_CASE("OpenGL renderer draws canvas, background checkers, and selection", "[
 
     REQUIRE(renderer->SetBackgroundColor(0, {255, 0, 0}) == 0);
     REQUIRE(renderer->SetBackgroundColor(1, {0, 0, 255}) == 0);
-    TestRenderable image(CreateTransparentImage());
+    TestRenderable image(CreateBlackImage());
     REQUIRE(renderer->AddRenderable(&image) == 0);
     REQUIRE(renderer->Redraw() == 0);
     const auto backgroundFirst         = ReadPixel(8, 8);
@@ -143,6 +152,32 @@ TEST_CASE("OpenGL renderer draws canvas, background checkers, and selection", "[
     REQUIRE(renderer->Redraw() == 0);
     REQUIRE(ReadPixel(8, 8) != backgroundFirst);
 
+    REQUIRE(renderer->SetSelectionRect({{-1, -1}, {-1, -1}}) == 0);
+    // Image info uses alpha 127; F1 and system info use 216. Check RGB blending and
+    // final window alpha independently, including redraws and transparent/opaque endpoints.
+    for (const uint8_t alpha : {0, 127, 216, 255})
+    {
+        CAPTURE(alpha);
+        TestRenderable overlay(CreateBlackImage(alpha, 64), IRM_Overlay, 2);
+        REQUIRE(renderer->AddRenderable(&overlay) == 0);
+        for (int frame = 0; frame < 2; ++frame)
+        {
+            REQUIRE(renderer->Redraw() == 0);
+            const auto first   = ReadPixel(8, 8);
+            const auto second  = ReadPixel(24, 8);
+            const int expected = 255 - alpha;
+            CHECK(std::abs(static_cast<int>(first[0]) - expected) <= 1);
+            CHECK(first[1] == 0);
+            CHECK(first[2] == 0);
+            CHECK(first[3] == 255);
+            CHECK(second[0] == 0);
+            CHECK(second[1] == 0);
+            CHECK(std::abs(static_cast<int>(second[2]) - expected) <= 1);
+            CHECK(second[3] == 255);
+        }
+        REQUIRE(renderer->RemoveRenderable(&overlay) == 0);
+    }
+    REQUIRE(glGetError() == GL_NO_ERROR);
     REQUIRE(renderer->RemoveRenderable(&image) == 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDeleteTextures(1, &colorTexture);
