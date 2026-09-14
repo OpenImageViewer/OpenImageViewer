@@ -19,7 +19,7 @@ Simplicity and performance guide its design. OIViewer embraces modern operating 
 - Texel grids, pixel values, image properties, and EXIF metadata.
 - Gamma, exposure, saturation, grayscale, transparency, and filtering controls.
 - Selection, cropping, rotation, flipping, clipboard support, and saving.
-- Vulkan, Direct3D 11, and OpenGL backends with automatic GPU selection.
+- Direct3D 11, Vulkan, and OpenGL backends with automatic GPU selection.
 - Configurable keyboard shortcuts and commands; press **F1** for active bindings.
 
 ### Image formats
@@ -64,7 +64,7 @@ OIViewer --renderer Vulkan "photo.jpg"
 OIViewer --help
 ```
 
-With no graphics options, **Windows prefers Vulkan, then D3D11**, and **Linux prefers Vulkan, then GL**. These are also the renderers included in default builds. Windows can include OpenGL as a final choice.
+With no graphics options, **Windows prefers D3D11, then Vulkan**, and **Linux prefers Vulkan, then GL**. These are also the renderers included in default builds. Windows can include OpenGL as a final choice.
 
 ## Configuration
 
@@ -78,7 +78,7 @@ Automatic reloading of externally modified images is supported on Windows only.
 
 ## Runtime requirements
 
-64-bit Windows or Linux x86_64, with a driver supporting Vulkan 1.1+, Direct3D 11, or OpenGL 3.0+, as included in the build.
+64-bit Windows or Linux x86_64, with a driver supporting Direct3D 11, Vulkan 1.1+, or OpenGL 3.0+, as included in the build.
 
 - **Windows:** 7 SP1, 8, 8.1, 10, or 11. Windows 11 24H2 or newer is recommended.
 - **Linux:** official binaries require glibc 2.39+ and a Wayland desktop.
@@ -129,8 +129,8 @@ Pass `-DNAME=ON` or `-DNAME=OFF` to CMake:
 | Option | Purpose |
 | --- | --- |
 | `OIV_BUILD_TESTS` | Build test binaries; default `ON` |
-| `OIV_BUILD_RENDERER_VK` | Vulkan |
 | `OIV_BUILD_RENDERER_D3D11` | Direct3D 11; Windows only |
+| `OIV_BUILD_RENDERER_VK` | Vulkan |
 | `OIV_BUILD_RENDERER_GL` | OpenGL |
 
 Default renderers are listed [above](#command-line); keep at least one enabled. Codec switches are documented in [ImageCodec's CMake configuration](External/ImageCodec/CMakeLists.txt).

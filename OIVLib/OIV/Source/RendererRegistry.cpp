@@ -1,9 +1,9 @@
 #include "RendererSelection.h"
-#if OIV_BUILD_RENDERER_VK
-    #include <OIVVKRendererFactory.h>
-#endif
 #if OIV_BUILD_RENDERER_D3D11
     #include <OIVD3D11RendererFactory.h>
+#endif
+#if OIV_BUILD_RENDERER_VK
+    #include <OIVVKRendererFactory.h>
 #endif
 #if OIV_BUILD_RENDERER_GL
     #include <OIVGLRendererFactory.h>
@@ -13,14 +13,15 @@ namespace OIV
 {
     namespace
     {
-        // A single API order serves both targets; CMake rejects D3D11 outside Windows.
+        // Prefer D3D11 on Windows. CMake excludes it elsewhere, leaving Vulkan before GL on Linux.
+        // Startup selection and command-line help share this ordered table.
         constexpr std::array<RendererBackend, OIV_BUILD_RENDERER_VK + OIV_BUILD_RENDERER_D3D11 + OIV_BUILD_RENDERER_GL>
             Backends{{
-#if OIV_BUILD_RENDERER_VK
-                {{RendererType::Vulkan, "Vulkan", true}, &VKRendererFactory::Create},
-#endif
 #if OIV_BUILD_RENDERER_D3D11
                 {{RendererType::D3D11, "D3D11", true}, &D3D11RendererFactory::Create},
+#endif
+#if OIV_BUILD_RENDERER_VK
+                {{RendererType::Vulkan, "Vulkan", true}, &VKRendererFactory::Create},
 #endif
 #if OIV_BUILD_RENDERER_GL
                 {{RendererType::OpenGL, "GL", false}, &GLRendererFactory::Create},
