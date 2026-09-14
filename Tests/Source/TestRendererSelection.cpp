@@ -111,6 +111,36 @@ TEST_CASE("Startup exhausts hardware before software and discovers lazily", "[re
     }
 }
 
+TEST_CASE("D3D11 preference preserves hardware priority and Vulkan fallback", "[renderer][policy]")
+{
+    Fixture state;
+    state.backends[0].adapters = {Adapter(0, Acceleration::Hardware)};
+    state.backends[1].adapters = {Adapter(0, Acceleration::Hardware)};
+    std::string_view expected  = "D3D11";
+    SECTION("D3D11 hardware succeeds") {}
+    SECTION("D3D11 hardware initialization fails")
+    {
+        state.backends[1].failures = {0};
+        expected                   = "Vulkan";
+    }
+    SECTION("D3D11 discovery fails")
+    {
+        state.backends[1].discoveryFails = true;
+        expected                         = "Vulkan";
+    }
+    SECTION("Vulkan hardware precedes D3D11 software")
+    {
+        state.backends[1].adapters.front().acceleration = Acceleration::Software;
+        expected                                        = "Vulkan";
+    }
+    const std::array preferred{Backends[1], Backends[0], Backends[2]};
+    const auto selected = SelectRenderer(preferred, {}, {});
+    CHECK(selected->GetBackendName() == expected);
+    CHECK(selected->GetAcceleration() == Acceleration::Hardware);
+    CHECK(state.backends[0].discoveries == (expected == "Vulkan" ? 1 : 0));
+    CHECK(state.backends[2].discoveries == 0);
+}
+
 TEST_CASE("Unknown GL precedes software but never confirmed hardware", "[renderer][policy]")
 {
     Fixture state;
@@ -215,6 +245,11 @@ TEST_CASE("Missing runtime falls back automatically and explicit Vulkan fails", 
                       Catch::Matchers::ContainsSubstring("runtime unavailable"));
     if (GetDefaultRenderer() == RendererType::Vulkan)
         CHECK_THROWS(SelectRenderer(Backends, {.adapterIndex = 0}, {}));
+    else if (GetDefaultRenderer() == RendererType::D3D11)
+    {
+        const auto selected = SelectRenderer(Backends, {.adapterIndex = 0}, {});
+        CHECK(std::string(selected->GetBackendName()) == "D3D11");
+    }
 }
 
 TEST_CASE("Adapter matching uses vendor IDs and preserves UTF-8", "[renderer][policy]")

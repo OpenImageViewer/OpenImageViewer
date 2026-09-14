@@ -4,6 +4,7 @@
 # Run tests, tests_font_encoding, and tests_vk_failures from that build's bin/ directory;
 # Windows also runs tests_vk_runtime_failure, with .exe suffixes on all four executables.
 # Renderer-policy changes need defaults, each renderer alone, Windows all-renderer, and test-only Null checks.
+# Expect D3D11 -> Vulkan -> GL on Windows and Vulkan -> GL on Linux, omitting unbuilt APIs.
 # Restore the default renderer configuration afterward; CPU/software runs do not prove hardware presentation.
 file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.h"

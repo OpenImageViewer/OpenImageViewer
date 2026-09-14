@@ -26,10 +26,11 @@ TEST_CASE("Missing Vulkan runtime is cached and explicit selection fails", "[vul
                           Catch::Matchers::ContainsSubstring("Vulkan runtime could not be loaded"));
     CHECK_THROWS_WITH(OIV::SelectRenderer(OIV::GetRendererBackends(), {.renderer = OIV::RendererType::Vulkan}, {}),
                       Catch::Matchers::ContainsSubstring("Vulkan runtime could not be loaded"));
-    CHECK_THROWS_WITH(OIV::SelectRenderer(OIV::GetRendererBackends(), {.adapterIndex = 0}, {}),
-                      Catch::Matchers::ContainsSubstring("Vulkan runtime could not be loaded"));
+    if (OIV::GetDefaultRenderer() == OIV::RendererType::Vulkan)
+        CHECK_THROWS_WITH(OIV::SelectRenderer(OIV::GetRendererBackends(), {.adapterIndex = 0}, {}),
+                          Catch::Matchers::ContainsSubstring("Vulkan runtime could not be loaded"));
 }
-TEST_CASE("Missing Vulkan runtime permits real D3D11 startup", "[vulkan][loader][d3d11]")
+TEST_CASE("Default and indexed D3D11 startup do not require Vulkan", "[vulkan][loader][d3d11]")
 {
     if (!OIV::IsRendererAvailable(OIV::RendererType::D3D11))
         SKIP("D3D11 is not compiled into this configuration");
@@ -50,7 +51,10 @@ TEST_CASE("Missing Vulkan runtime permits real D3D11 startup", "[vulkan][loader]
         .container = reinterpret_cast<size_t>(window.handle),
         .dataPath  = path.c_str(),
     };
-    const auto renderer = OIV::SelectRenderer(OIV::GetRendererBackends(), {}, params);
-    CHECK(std::string(renderer->GetBackendName()) == "D3D11");
-    CHECK(renderer->GetAcceleration() != OIV::Acceleration::Unknown);
+    for (const auto& options : {OIV::RendererOptions{}, OIV::RendererOptions{.adapterIndex = 0}})
+    {
+        const auto renderer = OIV::SelectRenderer(OIV::GetRendererBackends(), options, params);
+        CHECK(std::string(renderer->GetBackendName()) == "D3D11");
+        CHECK(renderer->GetAcceleration() != OIV::Acceleration::Unknown);
+    }
 }

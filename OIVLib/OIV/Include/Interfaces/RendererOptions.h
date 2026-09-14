@@ -66,9 +66,10 @@ namespace OIV
         std::optional<int> adapterIndex;
     };
 
-    // Constant metadata from this library's build; no graphics runtime is loaded or queried.
+    // Metadata follows runtime preference: D3D11 -> Vulkan -> GL on Windows, Vulkan -> GL on Linux.
+    // Omit APIs not compiled into this library; no graphics runtime is loaded or queried.
     std::span<const RendererInfo> GetBuiltRenderers();
-    // First compiled API; automatic startup may select another after probing the machine.
+    // First available API in the above order; automatic startup may select another after probing the machine.
     RendererType GetDefaultRenderer();
     bool IsRendererAvailable(RendererType renderer);
     std::string ValidateRendererOptions(const RendererOptions& options);

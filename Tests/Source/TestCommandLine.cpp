@@ -136,12 +136,18 @@ TEST_CASE("Renderer validation reflects builds and never ignores explicit adapte
     CHECK(OIV::ValidateRendererOptions({.adapterName = "GPU"}).empty() == supportsSelection);
 }
 
-TEST_CASE("CLI help advertises only compiled APIs in compiled order", "[cli][renderer]")
+TEST_CASE("CLI help and default renderer follow platform preference", "[cli][renderer]")
 {
     const auto help = std::get<OIV::CommandLineExit>(Parse({LLUTILS_TEXT("--help")})).standardOutput;
     CHECK(help.starts_with("OpenImageViewer Version " + OIV::FormatFullVersion(OIV::CurrentVersion) + "\n"));
     CHECK(help.contains("Choose the drawing software:"));
     CHECK(help.contains("Choose the graphics card:"));
+    std::vector<OIV::RendererType> expected;
+    for (const auto type : {OIV::RendererType::D3D11, OIV::RendererType::Vulkan, OIV::RendererType::OpenGL})
+        if (OIV::IsRendererAvailable(type))
+            expected.push_back(type);
+    CHECK(std::ranges::equal(OIV::GetBuiltRenderers(), expected, {}, &OIV::RendererInfo::type));
+    CHECK(OIV::GetDefaultRenderer() == (expected.empty() ? OIV::RendererType::Null : expected.front()));
     std::string order;
     for (const auto& info : OIV::GetBuiltRenderers())
     {
@@ -150,6 +156,8 @@ TEST_CASE("CLI help advertises only compiled APIs in compiled order", "[cli][ren
         order += info.name;
     }
     CHECK(help.contains("Available renderers, in preferred order: " + (order.empty() ? "none" : order) + "."));
+    const std::string defaultName = expected.empty() ? "none" : std::string(OIV::GetBuiltRenderers().front().name);
+    CHECK(help.contains("Without --renderer, it uses " + defaultName + "."));
     for (const auto& [name, type] :
          std::array{std::pair{"GL", OIV::RendererType::OpenGL}, std::pair{"D3D11", OIV::RendererType::D3D11},
                     std::pair{"Vulkan", OIV::RendererType::Vulkan}})
