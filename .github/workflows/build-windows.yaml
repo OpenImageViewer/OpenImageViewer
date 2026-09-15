@@ -49,9 +49,11 @@ jobs:
       run: cmake --build "$BUILD_DIR" -- -j$(nproc)
 
   build-windows:
+    name: Windows (all renderers)
     runs-on: windows-2025-vs2026
     env:
       BUILD_DIR: ${{ github.workspace }}/build/windows-clang
+      CMAKE_GENERATOR: Ninja
 
     steps:
     - uses: actions/checkout@v4
@@ -77,6 +79,9 @@ jobs:
         -DCMAKE_C_COMPILER=clang-cl
         -DCMAKE_CXX_COMPILER=clang-cl
         -DCMAKE_BUILD_TYPE=Debug
+        -DOIV_BUILD_RENDERER_D3D11=ON
+        -DOIV_BUILD_RENDERER_VK=ON
+        -DOIV_BUILD_RENDERER_GL=ON
 
     - name: Build
       run: cmake --build "$env:BUILD_DIR"
