@@ -348,7 +348,7 @@ TEST_CASE("ViewCommandPolicy parses view command arguments", "[AppCore]")
 {
     const auto zoom = OIV::ViewCommandPolicy::ParseZoom(
         OIV::CommandManager::CommandArgs::FromString("val=1.25;cx=10;cy=20"));
-    REQUIRE(zoom.amount == Catch::Approx(1.25));
+    REQUIRE(zoom.steps == Catch::Approx(1.25));
     REQUIRE(zoom.centerX == 10);
     REQUIRE(zoom.centerY == 20);
 

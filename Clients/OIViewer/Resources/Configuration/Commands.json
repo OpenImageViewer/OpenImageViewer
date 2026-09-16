@@ -238,13 +238,13 @@
       "GroupID": "ZoomIn",
       "DisplayName": "Zoom in",
       "Name": "cmd_zoom",
-      "arguments": "val=0.1"
+      "arguments": "val=0.5"
     },
     {
       "GroupID": "ZoomOut",
       "DisplayName": "Zoom out",
       "Name": "cmd_zoom",
-      "arguments": "val=-0.1"
+      "arguments": "val=-0.5"
     },
     {
       "GroupID": "ViewOriginalSize",

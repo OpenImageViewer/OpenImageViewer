@@ -14,7 +14,8 @@ namespace OIV
 {
     struct ZoomCommand
     {
-        double amount   = 0.0;
+        // cmd_zoom val is measured in steps, with 1.0 corresponding to one wheel detent.
+        double steps    = 0.0;
         int32_t centerX = -1;
         int32_t centerY = -1;
     };

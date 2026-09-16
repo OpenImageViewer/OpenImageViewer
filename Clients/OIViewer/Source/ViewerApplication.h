@@ -245,8 +245,9 @@ namespace OIV
         void ToggleGrid();
         void UpdateRenderViewParams();
         void Pan(const LLUtils::PointF64& panAmount);
-        void Zoom(double precentage, int zoomX = -1, int zoomY = -1);
-        void ZoomInternal(double amount, int zoomX, int zoomY);
+        // One wheel step is one logical detent; fractional steps are supported.
+        void Zoom(double wheelSteps, int zoomX = -1, int zoomY = -1);
+        void ZoomInternal(double steps, int zoomX, int zoomY);
         void FitToClientAreaAndCenter();
         LLUtils::PointF64 GetImageSize(ImageSizeType type);
         void SetImageSpaceSelection(const LLUtils::RectI32& rect);
@@ -441,7 +442,8 @@ namespace OIV
         OIV_CMD_ColorExposure_Request fLastColorExposure           = fColorExposure;
         VirtualStatusBar fVirtualStatusBar;
 
-        AdaptiveMotion fAdaptiveZoom         = AdaptiveMotion(1.0, 0.6, 1.0);
+        static constexpr double ZoomAmountPerWheelStep = 0.2;
+        AdaptiveMotion fAdaptiveZoom{ZoomAmountPerWheelStep, 0.6, 1.0};
         AdaptiveMotion fAdaptivePanLeftRight = AdaptiveMotion(1.6, 1.0, 5.2);
         AdaptiveMotion fAdaptivePanUpDown    = AdaptiveMotion(1.6, 1.0, 5.2);
         ImageState fImageState;
