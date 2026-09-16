@@ -7,6 +7,7 @@
 #include "OIV.h"
 #include <OIVImage/OIVBaseImage.h>
 #include <OIVImage/OIVFileImage.h>
+#include <OIVImage/OIVTextImage.h>
 #include <filesystem>
 #include <fstream>
 #include <future>
@@ -206,4 +207,44 @@ TEST_CASE("Decoded file data preserves EXIF orientation and failed-load behavior
     CHECK(metaData == nullptr);
     OIV::OIVFileImage failed(unsupported.native());
     CHECK(failed.Load(&loader, IMCodec::PluginTraverseMode::NoTraverse) == RC_FileNotSupported);
+}
+
+TEST_CASE("Rendered text becomes clean and reuses its bitmap until content changes", "[renderer][text]")
+{
+    ScopedApi api;
+    FreeType::FreeTypeConnector connector;
+    OIV::OIVTextImage text(&connector);
+    const auto font = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
+                      "Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf";
+    text.SetFontPath(font.native());
+    text.SetFontSize(24);
+    text.SetDPI(96, 96);
+    text.SetText(LLUTILS_TEXT("OIV"));
+    CHECK(text.IsDirty());
+    const auto metrics = text.GetMetrics();
+    CHECK(text.IsDirty());  // Measuring still leaves the bitmap pending.
+    text.PreRender();
+    REQUIRE(text.GetImage() != nullptr);
+    CHECK_FALSE(text.IsDirty());
+    CHECK(metrics.pixelSize.x == text.GetImage()->GetWidth());
+    CHECK(metrics.pixelSize.y == text.GetImage()->GetHeight());
+    const auto bitmap = text.GetImage();
+
+    text.SetFontSize(24);
+    text.SetDPI(96, 96);
+    text.SetText(LLUTILS_TEXT("OIV"));
+    CHECK_FALSE(text.IsDirty());
+    text.SetPosition({10, 20});
+    CHECK(text.IsDirty());
+    text.PreRender();
+    CHECK_FALSE(text.IsDirty());
+    CHECK(text.GetImage() == bitmap);
+
+    text.SetFontSize(14);
+    CHECK(text.IsDirty());
+    text.GetMetrics();
+    CHECK(text.IsDirty());
+    text.PreRender();
+    CHECK_FALSE(text.IsDirty());
+    CHECK(text.GetImage() != bitmap);
 }

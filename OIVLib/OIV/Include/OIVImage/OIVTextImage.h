@@ -3,7 +3,6 @@
 #include <LLUtils/StringDefs.h>
 #include "OIVBaseImage.h"
 #include <LLUtils/BitFlags.h>
-#include <LLUtils/Templates.h>
 #include <FreeTypeWrapper/FreeTypeConnector.h>
 
 namespace FreeType
@@ -36,6 +35,7 @@ namespace OIV
     {
         uint32_t rowHeight;
         uint32_t totalRows;
+        LLUtils::PointI32 pixelSize{};
     };
 
     class OIVTextImage : public OIVBaseImage
@@ -45,7 +45,7 @@ namespace OIV
             None    = 0,
             Metrics = 1 << 0,
             Bitmap  = 1 << 1,
-            All     = LLUtils::GetMaxBitsMask<uint32_t>()
+            All     = Metrics | Bitmap
         };
         LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DirtyFlags);
 
