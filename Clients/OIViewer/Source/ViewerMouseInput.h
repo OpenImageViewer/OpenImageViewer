@@ -28,8 +28,7 @@ namespace OIV
 
       private:
 
-        static constexpr double ZoomAmountPerWheelStep = 0.2;
-        static constexpr uint32_t ContextMenuDelayMs   = 500;
+        static constexpr uint32_t ContextMenuDelayMs = 500;
 
         void ApplyDecision(const MouseGestureController::Decision& decision);
         [[nodiscard]] MouseGestureController::ButtonContext GetButtonContext(LWS::MouseButton button) const;

@@ -160,11 +160,11 @@ namespace OIV
             else if (mouseInside && fOwner.fPlatform.IsKeyPressed(LWS::KeyCode::Shift).value_or(false))
                 fOwner.ExecutePredefinedCommand(steps > 0.0 ? "PreviousImageInFolder" : "NextImageInFolder");
             else if (rightCaptured)
-                fOwner.Zoom(steps * ZoomAmountPerWheelStep);
+                fOwner.Zoom(steps);
             else if (mouseInside)
             {
                 const auto position = fOwner.fWindow.GetCanvasMousePosition();
-                fOwner.Zoom(steps * ZoomAmountPerWheelStep, position.x, position.y);
+                fOwner.Zoom(steps, position.x, position.y);
             }
         }
     }

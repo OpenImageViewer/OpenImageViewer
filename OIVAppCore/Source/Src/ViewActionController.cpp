@@ -40,7 +40,21 @@ namespace OIV
 
     double ViewActionController::RelativeZoom(double currentScale, double adaptiveAmount)
     {
-        return adaptiveAmount > 0 ? currentScale * (1 + adaptiveAmount) : currentScale / (1 - adaptiveAmount);
+        constexpr double OriginalScale = 1.0;
+        constexpr double SnapTolerance = 0.03;
+        double predictedScale          = adaptiveAmount > 0 ? currentScale * (1 + adaptiveAmount)
+                                                            : currentScale / (1 - adaptiveAmount);
+
+        // Directional bounds include both entering the snap range and crossing beyond it.
+        // Strict movement checks let the next event leave 100% and keep zero movement unchanged.
+        const bool snapFromBelow = currentScale < OriginalScale && predictedScale > currentScale &&
+                                   predictedScale >= OriginalScale - SnapTolerance;
+        const bool snapFromAbove = currentScale > OriginalScale && predictedScale < currentScale &&
+                                   predictedScale <= OriginalScale + SnapTolerance;
+        if (snapFromBelow || snapFromAbove)
+            predictedScale = OriginalScale;
+
+        return predictedScale;
     }
 
     bool ViewActionController::ShouldPreserveOffsetLockForZoom(int32_t clientX, int32_t clientY)

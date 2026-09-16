@@ -200,22 +200,22 @@ namespace OIV
             SetOffset(panAmount * fDPIadjustmentFactor + fImageState.GetOffset());
     }
 
-    void ViewerApplication::Zoom(double amount, int zoomX, int zoomY)
+    void ViewerApplication::Zoom(double wheelSteps, int zoomX, int zoomY)
     {
         if (IsImageOpen())
         {
             CommandManager::CommandRequest request;
             request.displayName = "Zoom";
             request.args        = CommandManager::CommandArgs::FromString(
-                "val=" + std::to_string(amount) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY));
+                "val=" + std::to_string(wheelSteps) + ";cx=" + std::to_string(zoomX) + ";cy=" + std::to_string(zoomY));
             request.commandName = "cmd_zoom";
             ExecuteCommand(request);
         }
     }
 
-    void ViewerApplication::ZoomInternal(double amount, int zoomX, int zoomY)
+    void ViewerApplication::ZoomInternal(double steps, int zoomX, int zoomY)
     {
-        const double adaptiveAmount = fAdaptiveZoom.Add(amount);
+        const double adaptiveAmount = fAdaptiveZoom.Add(steps);
         const double adjustedAmount = ViewActionController::RelativeZoom(GetScale(), adaptiveAmount);
         SetZoomInternal(adjustedAmount, zoomX, zoomY);
     }

@@ -66,7 +66,7 @@ namespace OIV
         if (IsImageOpen())
         {
             const ZoomCommand command = ViewCommandPolicy::ParseZoom(request.args);
-            ZoomInternal(command.amount, command.centerX, command.centerY);
+            ZoomInternal(command.steps, command.centerX, command.centerY);
             result.resValue = ViewCommandPolicy::FormatZoomResult(GetScale());
         }
     }
