@@ -278,6 +278,7 @@ namespace OIV
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
+        void UpdateWelcomeMessageLayout();
         const LLUtils::native_string_type& GetOpenedFileName() const;
         bool IsImageOpen() const;
         bool IsOpenedImageIsAFile() const;
@@ -423,6 +424,8 @@ namespace OIV
         bool fImageInfoVisible       = false;
         bool fIsActive               = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};
+        LLUtils::PointI32 fWelcomeMessageReferenceSize{};
+        LLUtils::PointI32 fWelcomeMessageReferenceDPI{};
         IMCodec::ImageLoader fImageLoader;
         std::unique_ptr<ImageOpenController> fImageOpenController;
         // LWS::ClipboardFormatType fRTFFormatID {};

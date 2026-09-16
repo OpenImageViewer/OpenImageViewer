@@ -471,6 +471,7 @@ namespace OIV
             const LWS::ContentScale scale = clientArea->Scale();
             fDPIadjustmentFactor          = {scale.x, scale.y};
             fLabelManager.SetContentScale(scale);
+            UpdateWelcomeMessageLayout();
             AutoPlaceImage();
             const LLUtils::PointI32 point{size.x, size.y};
             fVirtualStatusBar.ClientSizeChanged(point);

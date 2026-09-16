@@ -55,14 +55,13 @@ namespace OIV
         }
     }
 
-
     TextMetrics OIVTextImage::GetMetrics()
     {
         UpdateTextMetrics();
-        return { fCachedTextMetrics.rowHeight,static_cast<uint32_t>(  fCachedTextMetrics.lineMetrics.size())};
+        return {fCachedTextMetrics.rowHeight,
+                static_cast<uint32_t>(fCachedTextMetrics.lineMetrics.size()),
+                {fCachedTextMetrics.rect.GetWidth(), fCachedTextMetrics.rect.GetHeight()}};
     }
-
-    
 
     IMCodec::ImageSharedPtr OIVTextImage::CreateText()
     {

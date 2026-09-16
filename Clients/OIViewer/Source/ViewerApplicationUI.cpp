@@ -588,33 +588,60 @@ namespace OIV
 
     void ViewerApplication::ShowWelcomeMessage()
     {
-        using namespace std;
-
-        string message = "<textcolor=#4a80e2>Welcome to <textcolor=#dd0f1d>OIV\n"
-                         "<textcolor=#25bc25>Drag <textcolor=#4a80e2>here an image to start\n"
-                         "Press <textcolor=#25bc25>F1<textcolor=#4a80e2> to show key bindings";
-
         OIVTextImage* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
-
-        LLUtils::native_string_type wmsg;
-        wmsg += LLUtils::StringUtility::ToNativeString(message);
-
-        welcomeMessage->SetText(wmsg);
+        welcomeMessage->SetText(
+            LLUTILS_TEXT("<textcolor=#4a80e2>Welcome to <textcolor=#ff0000>O<textcolor=#00ff00>I<textcolor=#0000ff>V\n"
+                         "<textcolor=#25bc25>Drag <textcolor=#4a80e2>here an image to start\n"
+                         "Press <textcolor=#25bc25>F1<textcolor=#4a80e2> to show key bindings"));
         welcomeMessage->SetBackgroundColor(LLUtils::Color(0));
-        welcomeMessage->SetFontPath(LabelManager::sFontPath);
-        welcomeMessage->SetFontSize(44);
         welcomeMessage->SetOutlineWidth(3);
 
-        welcomeMessage->Create();
-        // get the text size to reposition on screen
-        using namespace LLUtils;
-        const LWS::PixelSize canvasSize = fWindow.GetCanvasPixelSize();
-        PointI32 clientSize{canvasSize.x, canvasSize.y};
-        PointI32 center = (clientSize - static_cast<PointI32>(welcomeMessage->GetImage()->GetDimensions())) / 2;
-        welcomeMessage->SetPosition(static_cast<PointF64>(center));
+        UpdateWelcomeMessageLayout();
+    }
 
-        if (welcomeMessage->IsDirty())
-            fRefreshOperation.Queue();
+    void ViewerApplication::UpdateWelcomeMessageLayout()
+    {
+        using namespace LLUtils;
+        if (OIVTextImage* welcomeMessage = fLabelManager.GetTextLabel("welcomeMessage"); welcomeMessage != nullptr)
+        {
+            constexpr uint16_t referenceFontSize = 24;
+            constexpr uint16_t maximumFontSize   = 44;
+            constexpr uint16_t minimumFontSize   = 14;
+            constexpr double canvasCoverage      = 0.9;
+
+            const PointI32 dpi{
+                static_cast<int32_t>(std::lround(fDPIadjustmentFactor.x * 96.0)),
+                static_cast<int32_t>(std::lround(fDPIadjustmentFactor.y * 96.0)),
+            };
+            // The message and styling are fixed, so cache one moderate-size measurement per DPI and scale its bounds
+            // during ordinary window resizes.
+            if (fWelcomeMessageReferenceSize == PointI32::Zero || fWelcomeMessageReferenceDPI != dpi)
+            {
+                welcomeMessage->SetFontSize(referenceFontSize);
+                fWelcomeMessageReferenceSize = welcomeMessage->GetMetrics().pixelSize;
+                fWelcomeMessageReferenceDPI  = dpi;
+            }
+
+            const LWS::PixelSize canvasSize = fWindow.GetCanvasPixelSize();
+            const double fitScale           = std::min({
+                static_cast<double>(maximumFontSize) / referenceFontSize,
+                canvasSize.x * canvasCoverage / fWelcomeMessageReferenceSize.x,
+                canvasSize.y * canvasCoverage / fWelcomeMessageReferenceSize.y,
+            });
+            const auto fontSize             = static_cast<uint16_t>(referenceFontSize * fitScale);
+            const bool isVisible            = fontSize >= minimumFontSize;
+            welcomeMessage->SetVisible(isVisible);
+            if (isVisible)
+            {
+                welcomeMessage->SetFontSize(fontSize);
+                const PointI32 textSize = welcomeMessage->GetMetrics().pixelSize;
+                welcomeMessage->SetPosition(
+                    static_cast<PointF64>((PointI32{canvasSize.x, canvasSize.y} - textSize) / 2));
+            }
+
+            if (welcomeMessage->IsDirty())
+                fRefreshOperation.Queue();
+        }
     }
 
     void ViewerApplication::UnloadWelcomeMessage()
