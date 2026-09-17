@@ -63,8 +63,9 @@ namespace OIV
                                                      });
                                                  return result;
                                              });
-        if (connection.has_value())
-            fPlatformConnection = std::move(*connection);
+        if (!connection.has_value())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to register required window listener");
+        fPlatformConnection = std::move(*connection);
         fRawInputState->rawInput.AddDevice(RawInput::UsagePage::GenericDesktopControls,
                                            RawInput::GenericDesktopControlsUsagePage::Mouse,
                                            RawInput::Flags::EnableBackground);

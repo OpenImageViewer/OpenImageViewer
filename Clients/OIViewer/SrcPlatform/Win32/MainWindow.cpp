@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 
+#include <LLUtils/Exception.h>
 #include "Resource.h"
 
 #include <Windows.h>
@@ -44,8 +45,9 @@ namespace OIV
         auto connection = fWindow.Listen(
             [this](const LWS::AnyEvent& eventData)
             { return HandleWindowEvent(eventData) ? LWS::EventResponse::Handled : LWS::EventResponse::Unhandled; });
-        if (connection.has_value())
-            fEventConnection = std::move(*connection);
+        if (!connection.has_value())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to register required window listener");
+        fEventConnection = std::move(*connection);
     }
 
     MainWindow::~MainWindow() = default;

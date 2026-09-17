@@ -127,8 +127,8 @@ namespace OIV
                                                   ? (multiFullScreen ? LWS::WindowMode::FullscreenAllMonitors
                                                                      : LWS::WindowMode::Fullscreen)
                                                   : LWS::WindowMode::Windowed;
-        std::ignore                         = fWindow.GetWindow().SetWindowMode(requestedMode);
-        Center();
+        if (fWindow.GetWindow().SetWindowMode(requestedMode) == LWS::Result::Success)
+            Center();
         fRefreshOperation.End();
     }
 

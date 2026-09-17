@@ -286,10 +286,12 @@ namespace OIV
 
         fDoubleTap.callback = [this]()
         {
-            std::ignore     = fWindow.GetWindow().SetAlwaysOnTop(true);
-            fTopMostCounter = 3;
-            SetTopMostUserMesage();
-            fTimerTopMostRetention.SetInterval(1000);
+            if (fWindow.GetWindow().SetAlwaysOnTop(true) == LWS::Result::Success)
+            {
+                fTopMostCounter = 3;
+                SetTopMostUserMesage();
+                fTimerTopMostRetention.SetInterval(1000);
+            }
         };
 
         const ImageFormatCatalog imageFormatCatalog = ImageFormatCatalogPolicy::Build(

@@ -1,5 +1,6 @@
 #include "ImageControl.h"
 
+#include <LLUtils/Exception.h>
 #include <Windows.h>
 
 #include <LWS/Win32/WindowExtensions.hpp>
@@ -101,8 +102,9 @@ namespace OIV
                                                  }
                                                  return std::nullopt;
                                              });
-        if (connection.has_value())
-            fPlatformConnection = std::move(*connection);
+        if (!connection.has_value())
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to register required window listener");
+        fPlatformConnection = std::move(*connection);
     }
 
     void ImageControl::RefreshScrollInfo()
