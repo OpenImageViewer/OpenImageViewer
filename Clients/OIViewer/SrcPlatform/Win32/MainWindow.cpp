@@ -64,8 +64,8 @@ namespace OIV
         RECT clientRect{};
         GetWindowRect(window, &windowRect);
         GetClientRect(window, &clientRect);
-        const auto clientArea        = fImageControl.GetWindow().GetClientAreaSize();
-        const double scale           = clientArea.has_value() ? clientArea->Scale().x : 1.0;
+        const auto clientArea        = fImageControl.GetWindow().GetClientAreaMetrics();
+        const double scale           = clientArea.Scale().value_or(LWS::ContentScale{}).x;
         const int32_t nonClientWidth = static_cast<int32_t>(
             std::lround(((windowRect.right - windowRect.left) - (clientRect.right - clientRect.left)) / scale));
         return std::max(layoutWidth - nonClientWidth, 1);
@@ -137,8 +137,8 @@ namespace OIV
         {
             RECT statusBarRect{};
             GetWindowRect(fNativeState->statusBar, &statusBarRect);
-            const auto clientArea = fWindow.GetClientAreaSize();
-            const double scale    = clientArea.has_value() ? clientArea->Scale().y : 1.0;
+            const auto clientArea = fWindow.GetClientAreaMetrics();
+            const double scale    = clientArea.Scale().value_or(LWS::ContentScale{}).y;
             canvasSize.y -= static_cast<int32_t>(std::lround((statusBarRect.bottom - statusBarRect.top) / scale));
         }
     }

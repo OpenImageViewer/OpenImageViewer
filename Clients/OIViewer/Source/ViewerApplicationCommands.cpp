@@ -361,7 +361,7 @@ namespace OIV
                         break;
                 }
 
-                auto result = PlatformFileDialog::Show(LWS::FileDialogType::SaveFile, fSaveComDlgFilters.GetFilters(),
+                auto result = PlatformFileDialog::Show(LWS::FileDialogType::SaveFile, fSaveComDlgFilters,
                                                        LLUTILS_TEXT("Save an image"), fWindow.GetWindow(),
                                                        LLUTILS_TEXT("*.") + fDefaultSaveFileExtension,
                                                        fDefaultSaveFileFormatIndex, defaultFileName, saveFilePath);
@@ -392,7 +392,7 @@ namespace OIV
         else
         {
             LLUtils::native_string_type openFilePath;
-            auto result = PlatformFileDialog::Show(LWS::FileDialogType::OpenFile, fOpenComDlgFilters.GetFilters(),
+            auto result = PlatformFileDialog::Show(LWS::FileDialogType::OpenFile, fOpenComDlgFilters,
                                                    LLUTILS_TEXT("Open image"), fWindow.GetWindow(), {}, 0, {},
                                                    openFilePath);
 
@@ -445,18 +445,18 @@ namespace OIV
                 // Use native maximization for "Window size entire screen" to preserve the normal restore placement.
                 // Resizing to the monitor bounds would also fill the usable area, but overwrite that placement
                 // and lose the expected maximize/restore behavior.
-                applied = fWindow.GetWindow().RequestMaximize();
+                applied = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Maximized);
                 break;
             case WindowSizeMode::Windowed:
                 applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Windowed);
                 if (applied == LWS::Result::Success)
                     applied = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Restored);
                 if (applied == LWS::Result::Success)
-                    applied = fWindow.GetWindow().SetPlacement(
+                    applied = fWindow.GetWindow().RequestPlacement(
                         {.position   = fPlatform.Supports(LWS::PlatformFeature::AbsoluteWindowPosition).value_or(false)
                                            ? std::optional(decision.position)
                                            : std::nullopt,
-                         .clientSize = {decision.size.x, decision.size.y}});
+                         .clientSize = LWS::LogicalSize{decision.size.x, decision.size.y}});
                 break;
             case WindowSizeMode::None:
                 break;

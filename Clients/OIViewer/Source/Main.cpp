@@ -6,6 +6,7 @@
 #ifdef LWS_HAS_WIN32_BACKEND
     #include <LWS/Win32/Platform.hpp>
 #endif
+
 #include <cstdlib>
 #include <stdexcept>
 
@@ -55,13 +56,23 @@ OIV::CommandLineExit RunViewer(const OIV::CommandLineParameters& parameters, For
                     LL_EXCEPTION_DONT_THROW(LLUtils::Exception::ErrorCode::Unknown, "Unhandled UI callback exception");
                 }
             });
+        LWS::LoopResult loopResult;
         {
             OIV::ViewerApplication viewerApplication(platform);
             viewerApplication.Init(parameters.inputPath.value_or(LLUtils::native_string_type{}), parameters.rendering);
-            viewerApplication.Run();
+            loopResult = viewerApplication.Run();
         }
         if (platform.Shutdown() != LWS::Result::Success)
             throw std::runtime_error("Unable to shut down the LWS platform");
+        if (loopResult == LWS::LoopResult::Failed)
+        {
+            // The context retains its diagnostic after application and backend cleanup.
+            const auto& failure = *platform.GetFailure();
+            return {EXIT_FAILURE,
+                    {},
+                    "LWS backend failure: " + failure.operation + " (native error " +
+                        std::to_string(failure.nativeError) + ")\n"};
+        }
         return {};
     }
     catch (const std::exception& exception)

@@ -67,9 +67,13 @@ namespace OIV
         {
             const std::scoped_lock lock(fUiCompletionMutex);
             completions.swap(fUiCompletions);
+            fUiDrainScheduled = false;
         }
         for (const auto& completion : completions)
-            OnMessageFromBackgroundThread(completion);
+        {
+            if (!fIsShuttingDown)
+                OnMessageFromBackgroundThread(completion);
+        }
     }
 
     void ViewerApplication::AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
@@ -176,7 +180,7 @@ namespace OIV
 
     bool ViewerApplication::LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
-        const auto clientSize = fWindow.GetWindow().GetClientSize();
+        const auto clientSize = fWindow.GetWindow().GetClientAreaMetrics().logical;
         return ProcessImageLoadResult(fImageOpenController->LoadFile(
             filePath, loaderFlags, ImageLoadContext{static_cast<int>(clientSize.x), static_cast<int>(clientSize.y)}));
     }
@@ -728,7 +732,7 @@ namespace OIV
     bool ViewerApplication::LoadFileOrFolder(const LLUtils::native_string_type& filePath,
                                              IMCodec::PluginTraverseMode traverseMode)
     {
-        const auto clientSize = fWindow.GetWindow().GetClientSize();
+        const auto clientSize = fWindow.GetWindow().GetClientAreaMetrics().logical;
         return ProcessImageLoadResult(fImageOpenController->LoadFileOrFolder(
             filePath, traverseMode, ImageLoadContext{static_cast<int>(clientSize.x), static_cast<int>(clientSize.y)}));
     }

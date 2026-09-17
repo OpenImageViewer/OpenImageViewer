@@ -36,8 +36,7 @@ namespace
         return {};
     }
 
-    void AddFilters(GtkFileChooser* chooser, const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
-                    uint32_t filterIndex)
+    void AddFilters(GtkFileChooser* chooser, const LWS::ListFileDialogFilters& filters, uint32_t filterIndex)
     {
         GtkFileFilter* selectedFilter{};
         for (size_t index = 0; index < filters.size(); ++index)
@@ -74,8 +73,7 @@ namespace
         }
     }
 
-    DialogSelection ShowGtkDialog(LWS::FileDialogType dialogType,
-                                  const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
+    DialogSelection ShowGtkDialog(LWS::FileDialogType dialogType, const LWS::ListFileDialogFilters& filters,
                                   const LWS::file_dialog_string_type& title,
                                   const LWS::file_dialog_string_type& defaultExtension, uint32_t filterIndex,
                                   const LWS::file_dialog_string_type& defaultFileName, bool allowMultiple)
@@ -134,7 +132,7 @@ namespace
 namespace OIV
 {
     LWS::FileDialogResult PlatformFileDialog::Show(LWS::FileDialogType dialogType,
-                                                   const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
+                                                   const LWS::ListFileDialogFilters& filters,
                                                    const LWS::file_dialog_string_type& title,
                                                    [[maybe_unused]] LWS::Window& ownerWindow,
                                                    const LWS::file_dialog_string_type& defaultExtension,
@@ -149,7 +147,7 @@ namespace OIV
     }
 
     LWS::FileDialogResult PlatformFileDialog::Show(LWS::FileDialogType dialogType,
-                                                   const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
+                                                   const LWS::ListFileDialogFilters& filters,
                                                    const LWS::file_dialog_string_type& title,
                                                    [[maybe_unused]] LWS::Window& ownerWindow,
                                                    const LWS::file_dialog_string_type& defaultExtension,

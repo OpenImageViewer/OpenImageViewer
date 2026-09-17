@@ -94,7 +94,7 @@ namespace OIV
         const auto topLeft     = toLogical({monitor.rcWork.left, monitor.rcWork.top});
         const auto bottomRight = toLogical({monitor.rcWork.right, monitor.rcWork.bottom});
         const auto position    = toLogical({windowRect.left, windowRect.top});
-        const auto size        = window.GetClientSize();
+        const auto size        = window.GetClientAreaMetrics().logical;
         return ViewCommandPolicy::DecideWindowSize(args, {size.x, size.y}, position,
                                                    {topLeft.x, topLeft.y, bottomRight.x, bottomRight.y});
     }
@@ -104,8 +104,8 @@ namespace OIV
         return fNativeWindowState->notificationIcons.GetIconRect(iconId);
     }
 
-    void ViewerApplication::Run()
+    LWS::LoopResult ViewerApplication::Run()
     {
-        fPlatform.RunMessageLoop();
+        return fPlatform.RunMessageLoop();
     }
 }  // namespace OIV
