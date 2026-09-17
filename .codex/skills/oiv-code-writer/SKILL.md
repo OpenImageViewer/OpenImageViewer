@@ -18,12 +18,40 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 7. Keep line endings consistent with the files being edited and the active repository formatting tools.
 8. Before finishing, review comments in the changed code. Fill gaps in explanations of nontrivial behavior and check that they progress naturally from relevant design choices through purpose to what the code does. Keep this review local to the requested work.
 
+## Build Directories
+
+- Reuse stable build directories across requests to preserve CMake configuration, dependency builds, object files, and incremental-build caches. Do not create a fresh build tree for each request, task, branch, commit, or timestamp.
+- Name build trees `build/<os>-<compiler>-<configuration>`, using lowercase OS, compiler-family, and configuration names, such as `windows-clang-debug`, `windows-msvc-release`, or `linux-gcc-release`. Select the compiler from the requested or active toolchain. The usual Clang defaults are:
+
+| Platform | Debug | Release |
+| --- | --- | --- |
+| Windows | `build/windows-clang-debug` | `build/windows-clang-release` |
+| Linux | `build/linux-clang-debug` | `build/linux-clang-release` |
+
+- Prefer a compatible existing stable tree over creating a duplicate solely to adopt these names. In this workspace, `build/windows-clang` and `build/linux-clang` are established Debug trees; check their `CMakeCache.txt` before reuse.
+- Keep Debug and Release builds separate. Build only the needed targets incrementally with `cmake --build <directory> --target <targets>`; reconfigure or clean only when a concrete configuration or build problem requires it.
+- Use another build tree only when explicitly requested or required by an incompatible toolchain, generator, or isolated build configuration. Give it a stable purpose-based name and reuse it on subsequent requests.
+
+## Commit Structure
+
+- Default to one coherent purpose per commit. Separate independent features, fixes, tooling, and workflow changes unless the user explicitly requests a combined commit. "Commit pending changes" specifies scope, not commit count; honor explicit scope and grouping instructions.
+- Keep implementation, regression tests, necessary documentation, and supporting refactoring for the same purpose together. Do not split a coherent change merely because it spans files, directories, or code and documentation.
+- Before staging, map each proposed commit subject to its paths or hunks. Order dependencies so intermediate commits remain buildable and testable. The list of reviewed files is not itself a commit boundary.
+- Briefly announce the proposed groups before staging. Choose clear groups autonomously; ask only when scope or grouping is genuinely ambiguous, without adding routine confirmation steps.
+- Stage one group at a time and inspect its staged diff and status immediately before committing. Check that it implements one purpose and includes its necessary companions, even when the whole working tree has already passed review. Use bulk staging only after establishing that all included changes belong to that group.
+- Validate each group at the appropriate scope. Reuse applicable verification results and stable build caches; do not repeat full builds for independent script or skill changes when focused checks suffice.
+
+| Pending work or request | Commit grouping |
+| --- | --- |
+| One feature spanning modules, tests, and documentation | One coherent commit |
+| An independent feature, startup benchmark, and skill update | Three commits |
+| An explicit request for one combined commit | One commit covering the requested scope |
+
 ## Commit Messages
 
-- When the user asks to commit code, inspect the final diff and status immediately before committing.
 - Write a short subject followed by a concise, narrative body. Prefer one paragraph of two to four sentences, with less for simple changes and more only when necessary.
 - Explain the problem or purpose, the resulting behavior, and the key implementation choice needed to understand the change. Do not repeat the subject.
-- Cover materially distinct changes, grouping related code, tests, documentation, and cleanup by purpose rather than listing each file or edit.
+- Explain materially distinct aspects of the commit's purpose together, grouping related implementation, tests, documentation, and cleanup rather than listing each file or edit.
 - Include technical details, compatibility implications, and test coverage when they help explain correctness or a non-obvious design decision. Summarize related tests together.
 - Use complete, naturally connected sentences without bullet lists. Remove repetition, incidental mechanics, and vague wording.
 
@@ -126,7 +154,7 @@ Use this skill as the repo-local coding standard for OIViewer C++ work.
 ### OIViewer Smoke Testing
 
 - For changes that affect startup, image loading, folder browsing, file watching, shutdown, or Win32 UI behavior, run the built viewer manually before finishing.
-- Prefer the active build output; use `build/codex-ClangCl-22.1/bin/OIViewer.exe` when that build tree is being used.
+- Run the viewer from the selected stable build tree and configuration: `<build-directory>/bin/OIViewer.exe` on Windows or `<build-directory>/bin/OIViewer` on Linux.
 - Run first with no command-line parameter and verify startup does not crash.
 - Run with `External/ImageCodec/Example/cat.jpg` and verify image-load startup does not crash.
 - Run with `External/ImageCodec/External/FreeImageRe/TestAPI` and verify folder-load startup does not crash.
