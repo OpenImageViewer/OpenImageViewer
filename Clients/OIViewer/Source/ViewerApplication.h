@@ -154,7 +154,7 @@ namespace OIV
         explicit ViewerApplication(LWS::PlatformContext& platform);
         ~ViewerApplication();
         void Init(LLUtils::native_string_type filePath, const RendererOptions& rendering = {});
-        void Run();
+        LWS::LoopResult Run();
         static LLUtils::native_string_type GetAppDataFolder();
         static LWS::Handle FindTrayBarWindow();
 
@@ -338,6 +338,7 @@ namespace OIV
         [[nodiscard]] int GetRawNavigationDirection() const;
         void InitializeNotificationIcons();
         void InitializeRenderer(const RendererOptions& rendering);
+        void ReleaseWindowResources();
         [[nodiscard]] WindowSizeDecision GetWindowSizeDecision(const CommandManager::CommandArgs& args) const;
         [[nodiscard]] LWS::Rect GetNotificationIconRect(LWS::NotificationIconGroup::IconID iconId) const;
         [[nodiscard]] static LLUtils::native_string_type GetApplicationModulePath();
@@ -367,7 +368,7 @@ namespace OIV
         MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
         MainWindow fWindow;
-        // Images release before the renderer, and the native canvas outlives both.
+        // Native rendering stops before window teardown. Images release before this gateway destroys the API.
         std::unique_ptr<IViewerRenderPort> fRenderGateway;
         AutoScrollUniquePtr fAutoScroll;
         RecursiveDelayedOp fRefreshOperation;
@@ -460,8 +461,8 @@ namespace OIV
         LLUtils::native_string_type fCurrentFolderWatched;
         std::set<LLUtils::native_string_type> fKnownFileTypesSet;
         LLUtils::native_string_type fKnownFileTypes;
-        LWS::FileDialogFilterBuilder fOpenComDlgFilters;
-        LWS::FileDialogFilterBuilder fSaveComDlgFilters;
+        LWS::ListFileDialogFilters fOpenComDlgFilters;
+        LWS::ListFileDialogFilters fSaveComDlgFilters;
         LLUtils::native_string_type fDefaultSaveFileExtension = LLUTILS_TEXT("png");
         int16_t fDefaultSaveFileFormatIndex                   = -1;
         LLUtils::native_string_type fPendingFolderLoad;
@@ -480,27 +481,43 @@ namespace OIV
         template <typename T>
         void QueueUiCompletion(uint16_t id, T&& value)
         {
-            std::unique_lock lock(fUiCompletionMutex);
-            const bool scheduleDrain = fUiCompletions.empty();
-            fUiCompletions.push_back(EventData{id, std::forward<T>(value)});
+            if (fIsShuttingDown)
+                return;
+            bool scheduleDrain = false;
+            {
+                const std::scoped_lock lock(fUiCompletionMutex);
+                fUiCompletions.push_back(EventData{id, std::forward<T>(value)});
+                if (!fUiDrainScheduled)
+                {
+                    fUiDrainScheduled = true;
+                    scheduleDrain     = true;
+                }
+            }
             if (scheduleDrain)
             {
-                auto drain = [this, lifetime = std::weak_ptr(fUiLifetime)]
+                const auto lifetime = fUiWeakLifetime;
+                const auto posted   = fPlatform.PostTask(
+                    [this, lifetime]
+                    {
+                        if (lifetime.lock() != nullptr)
+                            DrainUiCompletions();
+                    });
+                if (posted != LWS::Result::Success)
                 {
-                    if (lifetime.lock() != nullptr)
-                        DrainUiCompletions();
-                };
-                // Let an immediately awakened UI thread drain without waiting on the producer.
-                lock.unlock();
-                std::ignore = fPlatform.PostTask(std::move(drain));
+                    // A failed post owns no drain callback. Retain results for a subsequent producer to retry;
+                    // teardown releases them even when the context can no longer accept work.
+                    const std::scoped_lock lock(fUiCompletionMutex);
+                    fUiDrainScheduled = false;
+                }
             }
         }
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 
         ApplicationLog mLogFile{GetLogFilePath(), true};
-        // Disconnect after workers stop and before the log is destroyed.
+        // Global publishers outlive this application; disconnect before the logging and window members are released.
         LLUtils::Exception::OnExceptionEventType::Connection fExceptionConnection;
+        EventManager::MonitorChangeEvent::Connection fMonitorConnection;
 
         struct MenuItemData
         {
@@ -517,8 +534,10 @@ namespace OIV
         {
         };
         std::shared_ptr<UiLifetime> fUiLifetime{std::make_shared<UiLifetime>()};
+        const std::weak_ptr<UiLifetime> fUiWeakLifetime{fUiLifetime};
         std::mutex fUiCompletionMutex;
         std::vector<EventData> fUiCompletions;
+        bool fUiDrainScheduled{};
         std::atomic_bool fIsShuttingDown = false;
         ImageResidencyCache fImageResidencyCache;
         std::unique_ptr<IFileWatcher> fFileWatcher;

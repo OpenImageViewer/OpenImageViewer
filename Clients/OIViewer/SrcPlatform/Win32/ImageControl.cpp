@@ -53,7 +53,7 @@ namespace OIV
         HPEN verticalPen      = nullptr;
         HPEN verticalPen2     = nullptr;
 
-        void Draw(HDC deviceContext, const ImageList& imageList, const LWS::ClientAreaSize& size) const;
+        void Draw(HDC deviceContext, const ImageList& imageList, const LWS::ClientAreaMetrics& size) const;
     };
 
     ImageControl::ImageControl(LWS::PlatformContext& platform) : fWindow(platform)
@@ -72,9 +72,10 @@ namespace OIV
                                              {
                                                  if (const auto* paint = std::get_if<LWS::Win32::PaintEvent>(&event))
                                                  {
-                                                     const auto size = fWindow.GetClientAreaSize();
-                                                     if (size.has_value())
-                                                         fNativeState->Draw(paint->deviceContext, fImageList, *size);
+                                                     const auto size = fWindow.GetClientAreaMetrics();
+                                                     if (size.pixels.has_value() && size.pixels->x > 0 &&
+                                                         size.pixels->y > 0)
+                                                         fNativeState->Draw(paint->deviceContext, fImageList, size);
                                                      return 0;
                                                  }
                                                  if (const auto* scroll = std::get_if<LWS::Win32::VerticalScrollEvent>(
@@ -112,7 +113,7 @@ namespace OIV
         const auto window = LWS::Win32::GetHwnd(fWindow);
         if (!window.has_value())
             return;
-        fImageList.SetViewportHeight(fWindow.GetClientSize().y);
+        fImageList.SetViewportHeight(fWindow.GetClientAreaMetrics().logical.y);
         const size_t deltaElements = fImageList.GetNumberOfElements() - fImageList.GetNumberOfDisplayedElements();
         SCROLLINFO info{};
         info.cbSize = sizeof(info);
@@ -167,7 +168,7 @@ namespace OIV
     }
 
     void ImageControl::NativeState::Draw(HDC deviceContext, const ImageList& imageList,
-                                         const LWS::ClientAreaSize& clientArea) const
+                                         const LWS::ClientAreaMetrics& clientArea) const
     {
         const LWS::LogicalSize size = clientArea.logical;
         if (deviceContext == nullptr || size.x <= 0 || size.y <= 0)
@@ -176,7 +177,7 @@ namespace OIV
         const int savedState = SaveDC(deviceContext);
         SetMapMode(deviceContext, MM_ANISOTROPIC);
         SetWindowExtEx(deviceContext, size.x, size.y, nullptr);
-        SetViewportExtEx(deviceContext, clientArea.pixels.x, clientArea.pixels.y, nullptr);
+        SetViewportExtEx(deviceContext, clientArea.pixels->x, clientArea.pixels->y, nullptr);
 
         constexpr int imageDestWidth  = 51;
         constexpr int imageDestHeight = 51;

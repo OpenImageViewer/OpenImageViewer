@@ -69,15 +69,11 @@ namespace OIV
 {
     ViewerApplication::~ViewerApplication()
     {
-        fIsShuttingDown = true;
-        fRefreshTimer.Enable(false);
-        {
-            // Producers snapshot this token under the same lock before posting UI work.
-            const std::scoped_lock lock(fUiCompletionMutex);
-            fUiLifetime.reset();
-        }
+        ReleaseWindowResources();
         if (fCountingColorsThread.joinable())
             fCountingColorsThread.join();
+        // Keep application members and listener registrations alive throughout native window cleanup.
+        std::ignore = fWindow.GetWindow().Destroy();
     }
 
     void ViewerApplication::SetImageInfoVisible(bool visible)
@@ -152,8 +148,26 @@ namespace OIV
         mLogFile.Log(ss.str());
     }
 
+    void ViewerApplication::ReleaseWindowResources()
+    {
+        // Stop callbacks before native rendering, including timers entered through nested dispatch. The gateway
+        // stays alive until images and queued results are destroyed; only then may it release the global API.
+        if (!fIsShuttingDown.exchange(true))
+        {
+            fUiLifetime.reset();
+            fRefreshTimer.Enable(false);
+            fMouseInput->Cancel();
+            if (fAutoScroll != nullptr && fAutoScroll->IsAutoScrolling())
+                fAutoScroll->ToggleAutoScroll();
+            if (fRenderGateway != nullptr)
+                ApiGlobal::sPictureRenderer->Shutdown();
+        }
+    }
+
     bool ViewerApplication::HandleEventCallback(const std::function<bool()>& callback) noexcept
     {
+        if (fIsShuttingDown)
+            return true;
         try
         {
             return callback();
@@ -254,7 +268,7 @@ namespace OIV
                                          { SetUserMessage(message); });
 
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
-        EventManager::GetSingleton().MonitorChange.Add(
+        fMonitorConnection = EventManager::GetSingleton().MonitorChange.Connect(
             std::bind(&ViewerApplication::OnMonitorChanged, this, std::placeholders::_1));
 
         // OIV library exception forwarding is disabled because LLUtils::Exception::OnException is global.
@@ -518,10 +532,12 @@ namespace OIV
 
     void ViewerApplication::OnNotificationIcon(LWS::NotificationIconGroup::NotificationIconEventArgs args)
     {
+        if (fIsShuttingDown)
+            return;
         switch (args.action)
         {
             case LWS::NotificationIconGroup::NotificationIconAction::Select:
-                if (!fWindow.GetWindow().GetVisible() ||
+                if (!fWindow.GetWindow().IsVisible() ||
                     fWindow.GetWindow().GetShowState() == LWS::WindowShowState::Minimized)
                 {
                     std::ignore = fWindow.GetWindow().SetVisible(true);

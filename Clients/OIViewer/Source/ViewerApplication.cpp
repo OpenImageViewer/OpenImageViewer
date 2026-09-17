@@ -144,6 +144,8 @@ namespace OIV
         auto windowConnection = fWindow.GetWindow().Listen(
             [this](const LWS::AnyEvent& eventData)
             {
+                if (std::holds_alternative<LWS::EventWindowDestroying>(eventData))
+                    ReleaseWindowResources();
                 if (std::holds_alternative<LWS::EventWindowDestroyed>(eventData))
                     fPlatform.RequestQuit();
                 return HandleEventCallback([&]() { return HandleMessages(eventData); }) ? LWS::EventResponse::Handled
@@ -152,6 +154,8 @@ namespace OIV
         auto canvasConnection = fWindow.GetCanvasWindow().Listen(
             [this](const LWS::AnyEvent& eventData)
             {
+                if (std::holds_alternative<LWS::EventWindowDestroying>(eventData))
+                    ReleaseWindowResources();
                 return HandleEventCallback([&]() { return HandleClientWindowMessages(eventData); })
                            ? LWS::EventResponse::Handled
                            : LWS::EventResponse::Unhandled;
@@ -297,8 +301,8 @@ namespace OIV
         const ImageFormatCatalog imageFormatCatalog = ImageFormatCatalogPolicy::Build(
             fImageLoader.GetImageCodec().GetPluginsInfo());
 
-        LWS::FileDialogFilterBuilder::ListFileDialogFilters readFilters;
-        LWS::FileDialogFilterBuilder::ListFileDialogFilters writeFilters;
+        LWS::ListFileDialogFilters readFilters;
+        LWS::ListFileDialogFilters writeFilters;
 
         for (const ImageFormatFilter& filter : imageFormatCatalog.readFilters)
             readFilters.push_back({filter.description, filter.extensions});
@@ -311,8 +315,8 @@ namespace OIV
         fDefaultSaveFileExtension   = imageFormatCatalog.defaultSaveFileExtension;
         fDefaultSaveFileFormatIndex = imageFormatCatalog.defaultSaveFileFormatIndex;
 
-        fOpenComDlgFilters = LWS::FileDialogFilterBuilder(readFilters);
-        fSaveComDlgFilters = LWS::FileDialogFilterBuilder(writeFilters);
+        fOpenComDlgFilters = std::move(readFilters);
+        fSaveComDlgFilters = std::move(writeFilters);
 
         if (fFileWatcher != nullptr)
         {

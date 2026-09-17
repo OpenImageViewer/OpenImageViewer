@@ -16,6 +16,14 @@
 #include <type_traits>
 #include <latch>
 #include <thread>
+#include <LWS/Platform.hpp>
+#include <LWS/Window.hpp>
+#ifdef LWS_HAS_WIN32_BACKEND
+    #include <LWS/Win32/Platform.hpp>
+    #include <LWS/Win32/WindowExtensions.hpp>
+#elif defined(LWS_HAS_WAYLAND_BACKEND)
+    #include <LWS/Wayland/WindowExtensions.hpp>
+#endif
 
 namespace
 {
@@ -378,4 +386,85 @@ TEST_CASE("Renderer without exception callbacks leaves worker reporting independ
     worker.request_stop();
     worker.join();
     CHECK(notifications > 0);
+}
+
+// Run explicitly with a native window backend and an available renderer.
+TEST_CASE("Renderer shutdown releases native state and exception registrations", "[.][renderer][native-lifecycle]")
+{
+    ScopedApi api;
+    LWS::PlatformContext platform;
+#ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+#else
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Wayland}) == LWS::Result::Success);
+#endif
+    LWS::Window window(platform);
+    REQUIRE(window.Create() == LWS::Result::Success);
+    auto& renderer = *OIV::ApiGlobal::sPictureRenderer;
+    struct Cleanup
+    {
+        OIV::IPictureRenderer& renderer;
+        ~Cleanup() { renderer.Shutdown(); }
+    } cleanup{renderer};
+    void* nativeDisplay = nullptr;
+#ifdef LWS_HAS_WIN32_BACKEND
+    const auto handle = LWS::Win32::GetHwnd(window);
+    REQUIRE(handle);
+#else
+    const auto handle  = LWS::Wayland::GetSurface(window);
+    const auto display = LWS::Wayland::GetDisplay(window);
+    REQUIRE(handle);
+    REQUIRE(display);
+    nativeDisplay = *display;
+#endif
+    REQUIRE(renderer.SetParent(reinterpret_cast<std::size_t>(*handle), nativeDisplay) == 0);
+    REQUIRE(renderer.Init() == 0);
+    REQUIRE(renderer.GetRenderer() != nullptr);
+    SECTION("Native cleanup precedes window destruction and allows later image release")
+    {
+        auto image    = std::make_shared<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib);
+        bool released = false;
+        auto listener = window.Listen(
+            [&](const LWS::AnyEvent& event)
+            {
+                if (std::holds_alternative<LWS::EventWindowDestroying>(event))
+                {
+                    renderer.Shutdown();
+                    released = renderer.GetRenderer() == nullptr;
+                }
+                return LWS::EventResponse::Unhandled;
+            });
+        REQUIRE(listener);
+        REQUIRE(window.Destroy() == LWS::Result::Success);
+        REQUIRE(released);
+        image.reset();
+        REQUIRE(renderer.GetRenderer() == nullptr);
+    }
+    SECTION("Exception forwarding is disconnected and can be reinitialized")
+    {
+        unsigned notifications = 0;
+        const OIV_CMD_RegisterCallbacks_Request callbacks{
+            .OnException = [](OIV_Exception_Args, void* user) { ++*static_cast<unsigned*>(user); },
+            .userPointer = &notifications,
+        };
+        const LLUtils::Exception::EventArgs event{.errorCode = LLUtils::Exception::ErrorCode::RuntimeError};
+        REQUIRE(renderer.RegisterCallbacks(callbacks) == ResultCode::RC_Success);
+        LLUtils::Exception::OnException.Raise(event);
+        REQUIRE(notifications == 1);
+
+        renderer.Shutdown();
+        renderer.Shutdown();
+        REQUIRE(renderer.GetRenderer() == nullptr);
+        // Reinstalling the callback proves shutdown removed the subscription, rather than just clearing it.
+        REQUIRE(renderer.RegisterCallbacks(callbacks) == ResultCode::RC_Success);
+        LLUtils::Exception::OnException.Raise(event);
+        REQUIRE(notifications == 1);
+
+        REQUIRE(renderer.SetParent(reinterpret_cast<std::size_t>(*handle), nativeDisplay) == 0);
+        REQUIRE(renderer.Init() == 0);
+        LLUtils::Exception::OnException.Raise(event);
+        REQUIRE(notifications == 2);
+        renderer.Shutdown();
+    }
 }

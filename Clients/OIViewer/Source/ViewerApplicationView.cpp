@@ -463,14 +463,15 @@ namespace OIV
 
     void ViewerApplication::UpdateWindowSize()
     {
-        const auto clientArea     = fWindow.GetCanvasWindow().GetClientAreaSize();
-        const LWS::PixelSize size = clientArea.value_or(LWS::ClientAreaSize{}).pixels;
+        const auto clientArea     = fWindow.GetCanvasWindow().GetClientAreaMetrics();
+        const auto scale          = clientArea.Scale();
+        const LWS::PixelSize size = clientArea.pixels.value_or(LWS::PixelSize{});
+        // Forward zero extents as well: minimized or unconfigured canvases must suspend presentation.
         fRenderGateway->SetViewportSize(size);
-        if (size.x > 0 && size.y > 0)
+        if (scale.has_value() && size.x > 0 && size.y > 0)
         {
-            const LWS::ContentScale scale = clientArea->Scale();
-            fDPIadjustmentFactor          = {scale.x, scale.y};
-            fLabelManager.SetContentScale(scale);
+            fDPIadjustmentFactor = {scale->x, scale->y};
+            fLabelManager.SetContentScale(*scale);
             UpdateWelcomeMessageLayout();
             AutoPlaceImage();
             const LLUtils::PointI32 point{size.x, size.y};

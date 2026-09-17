@@ -32,7 +32,7 @@ namespace OIV
 
     void ImageControl::RefreshScrollInfo()
     {
-        fImageList.SetViewportHeight(fWindow.GetClientSize().y);
+        fImageList.SetViewportHeight(fWindow.GetClientAreaMetrics().logical.y);
         RequestRepaint();
     }
 
@@ -79,14 +79,14 @@ namespace OIV
 
     void ImageControl::NativeState::Draw(ImageControl& owner, const ImageList& imageList)
     {
-        if (!owner.GetWindow().GetVisible())
+        if (!owner.GetWindow().IsVisible())
             return;
 
-        const LWS::LogicalSize size = owner.GetWindow().GetClientSize();
-        const auto clientArea       = owner.GetWindow().GetClientAreaSize();
-        if (!clientArea.has_value())
+        const auto clientArea = owner.GetWindow().GetClientAreaMetrics();
+        if (!clientArea.pixels.has_value())
             return;
-        const LWS::PixelSize framebuffer = clientArea->pixels;
+        const LWS::LogicalSize size      = clientArea.logical;
+        const LWS::PixelSize framebuffer = *clientArea.pixels;
         if (size.x <= 0 || size.y <= 0 || framebuffer.x <= 0 || framebuffer.y <= 0 ||
             framebuffer.x > std::numeric_limits<int>::max() / 4 ||
             static_cast<size_t>(framebuffer.x) >
@@ -104,7 +104,8 @@ namespace OIV
                                                                        CAIRO_FORMAT_ARGB32, framebuffer.x,
                                                                        framebuffer.y, static_cast<int>(stride));
         cairo_t* context         = cairo_create(surface);
-        const LWS::ContentScale scale = clientArea->Scale();
+        // Positive logical dimensions and available pixels were checked before creating the drawing surface.
+        const LWS::ContentScale scale = *clientArea.Scale();
         cairo_scale(context, scale.x, scale.y);
         cairo_set_source_rgb(context, 0.96, 0.97, 0.92);
         cairo_paint(context);

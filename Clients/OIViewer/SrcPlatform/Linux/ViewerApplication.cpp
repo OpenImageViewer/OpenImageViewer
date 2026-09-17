@@ -83,9 +83,9 @@ namespace OIV
                                               .top    = workAreaTopLeft.y,
                                               .right  = workAreaBottomRight.x,
                                               .bottom = workAreaBottomRight.y};
-        const LWS::LogicalSize currentSize = fWindow.GetWindow().GetClientSize();
-        return ViewCommandPolicy::DecideWindowSize(args, {currentSize.x, currentSize.y},
-                                                   fWindow.GetWindow().GetPosition().value_or(LWS::Point{}), workArea);
+        const auto placement               = fWindow.GetWindow().GetPlacement();
+        return ViewCommandPolicy::DecideWindowSize(args, {placement.clientSize.x, placement.clientSize.y},
+                                                   placement.position.value_or(LWS::Point{}), workArea);
     }
 
     LWS::Rect ViewerApplication::GetNotificationIconRect(
@@ -94,8 +94,8 @@ namespace OIV
         LL_EXCEPTION_NOT_IMPLEMENT("Notification icons are not implemented on Linux");
     }
 
-    void ViewerApplication::Run()
+    LWS::LoopResult ViewerApplication::Run()
     {
-        fPlatform.RunMessageLoop();
+        return fPlatform.RunMessageLoop();
     }
 }  // namespace OIV

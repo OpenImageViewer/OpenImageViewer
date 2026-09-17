@@ -3,7 +3,7 @@
 namespace OIV
 {
     LWS::FileDialogResult PlatformFileDialog::Show(LWS::FileDialogType dialogType,
-                                                   const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
+                                                   const LWS::ListFileDialogFilters& filters,
                                                    const LWS::file_dialog_string_type& title, LWS::Window& ownerWindow,
                                                    const LWS::file_dialog_string_type& defaultExtension,
                                                    uint32_t filterIndex, LWS::file_dialog_string_type defaultFileName,
@@ -14,7 +14,7 @@ namespace OIV
     }
 
     LWS::FileDialogResult PlatformFileDialog::Show(LWS::FileDialogType dialogType,
-                                                   const LWS::FileDialogFilterBuilder::ListFileDialogFilters& filters,
+                                                   const LWS::ListFileDialogFilters& filters,
                                                    const LWS::file_dialog_string_type& title, LWS::Window& ownerWindow,
                                                    const LWS::file_dialog_string_type& defaultExtension,
                                                    uint32_t filterIndex, LWS::file_dialog_string_type defaultFileName,

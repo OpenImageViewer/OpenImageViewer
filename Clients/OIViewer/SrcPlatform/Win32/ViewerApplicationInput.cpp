@@ -172,7 +172,7 @@ namespace OIV
     {
         if (const auto* button = std::get_if<LWS::EventMouseButton>(&eventData))
         {
-            const auto canvasSize  = fWindow.GetCanvasWindow().GetClientSize();
+            const auto canvasSize  = fWindow.GetCanvasWindow().GetClientAreaMetrics().logical;
             const bool mouseInside = button->position.x >= 0 && button->position.y >= 0 &&
                                      button->position.x < canvasSize.x && button->position.y < canvasSize.y;
             fMouseInput->SetButton(button->button, button->pressed, mouseInside);
