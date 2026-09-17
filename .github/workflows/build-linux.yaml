@@ -79,4 +79,5 @@ jobs:
     - name: Run tests
       run: |
         "$BUILD_DIR/bin/tests"
+        "$BUILD_DIR/bin/tests_font_encoding"
         "$BUILD_DIR/bin/tests_vk_failures"

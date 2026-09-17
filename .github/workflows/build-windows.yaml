@@ -91,6 +91,8 @@ jobs:
       run: |
         & "$env:BUILD_DIR/bin/tests.exe"
         if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+        & "$env:BUILD_DIR/bin/tests_font_encoding.exe"
+        if ($LASTEXITCODE -ne 0) { throw "Font tests failed" }
         & "$env:BUILD_DIR/bin/tests_vk_failures.exe"
         if ($LASTEXITCODE -ne 0) { throw "Vulkan failure tests failed" }
         & "$env:BUILD_DIR/bin/tests_vk_runtime_failure.exe"
