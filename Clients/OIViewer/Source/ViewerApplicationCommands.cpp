@@ -432,34 +432,38 @@ namespace OIV
     {
         const WindowSizeDecision decision = GetWindowSizeDecision(request.args);
 
+        LWS::Result applied = LWS::Result::Success;
         switch (decision.mode)
         {
             case WindowSizeMode::Fullscreen:
-                std::ignore = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Fullscreen);
+                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Fullscreen);
                 break;
             case WindowSizeMode::MultiFullscreen:
-                std::ignore = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::FullscreenAllMonitors);
+                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::FullscreenAllMonitors);
                 break;
             case WindowSizeMode::Maximized:
                 // Use native maximization for "Window size entire screen" to preserve the normal restore placement.
                 // Resizing to the monitor bounds would also fill the usable area, but overwrite that placement
                 // and lose the expected maximize/restore behavior.
-                std::ignore = fWindow.GetWindow().RequestMaximize();
+                applied = fWindow.GetWindow().RequestMaximize();
                 break;
             case WindowSizeMode::Windowed:
-                std::ignore = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Windowed);
-                std::ignore = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Restored);
-
-                std::ignore = fWindow.GetWindow().SetPlacement(
-                    {.position   = fPlatform.Supports(LWS::PlatformFeature::AbsoluteWindowPosition).value_or(false)
-                                       ? std::optional(decision.position)
-                                       : std::nullopt,
-                     .clientSize = {decision.size.x, decision.size.y}});
+                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Windowed);
+                if (applied == LWS::Result::Success)
+                    applied = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Restored);
+                if (applied == LWS::Result::Success)
+                    applied = fWindow.GetWindow().SetPlacement(
+                        {.position   = fPlatform.Supports(LWS::PlatformFeature::AbsoluteWindowPosition).value_or(false)
+                                           ? std::optional(decision.position)
+                                           : std::nullopt,
+                         .clientSize = {decision.size.x, decision.size.y}});
                 break;
             case WindowSizeMode::None:
                 break;
         }
 
+        if (applied != LWS::Result::Success)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "The requested window mode is unavailable");
         result.resValue = LLUtils::StringUtility::ToNativeString(request.displayName);
     }
 

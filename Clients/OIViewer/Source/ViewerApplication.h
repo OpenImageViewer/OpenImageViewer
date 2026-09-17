@@ -2,6 +2,7 @@
 
 #include <Defs.h>
 #include <LLUtils/Utility.h>
+#include <LLUtils/Exception.h>
 #include <LLUtils/Rect.h>
 #include <LLUtils/EnumClassBitwise.h>
 
