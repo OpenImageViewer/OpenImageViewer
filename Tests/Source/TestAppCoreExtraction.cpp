@@ -1887,38 +1887,45 @@ TEST_CASE("BrowseSessionController skips invalid requested files before committi
     OIV::FileSorter sorter;
     OIV::ImageResidencyCache residency(
         std::make_unique<SelectiveResidencyProcessor>(std::set<LLUtils::native_string_type>{fileC.native()}), 1);
-    OIV::BrowseSessionController* controllerPtr = nullptr;
     std::mutex resultMutex;
     std::condition_variable resultCv;
-    std::vector<LLUtils::native_string_type> loadedFiles;
+    std::vector<OIV::BrowseSessionController::BrowseCandidateCompletion> completions;
 
     OIV::BrowseSessionController controller(
         &watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
         [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
         [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
         {
-            const auto result = controllerPtr->OnBrowseCandidateReady(completion);
-            if (result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage)
             {
-                {
-                    std::lock_guard lock(resultMutex);
-                    loadedFiles.push_back(result.fileName);
-                }
-                resultCv.notify_all();
+                std::lock_guard lock(resultMutex);
+                completions.push_back(completion);
             }
+            resultCv.notify_all();
         });
-    controllerPtr = &controller;
 
     REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
     REQUIRE(controller.IsCurrentFile(fileA.native()));
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(controller.IsCurrentFile(fileA.native()));
 
-    std::unique_lock lock(resultMutex);
-    REQUIRE(resultCv.wait_for(
-        lock, std::chrono::milliseconds(500),
-        [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileC.native()) != loadedFiles.end(); }));
-    lock.unlock();
+    // Deliver completions on the caller thread, as the application's posted callbacks do.
+    // Background processing must not race the intermediate current-file assertion above.
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+    bool displayed      = false;
+    while (!displayed)
+    {
+        std::unique_lock lock(resultMutex);
+        REQUIRE(resultCv.wait_until(lock, deadline, [&] { return !completions.empty(); }));
+        auto completion = std::move(completions.front());
+        completions.erase(completions.begin());
+        lock.unlock();
+        const auto result = controller.OnBrowseCandidateReady(completion);
+        displayed         = result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage;
+        if (displayed)
+            REQUIRE(result.fileName == fileC.native());
+        else
+            REQUIRE(controller.IsCurrentFile(fileA.native()));
+    }
     REQUIRE(controller.IsCurrentFile(fileC.native()));
 }
 
