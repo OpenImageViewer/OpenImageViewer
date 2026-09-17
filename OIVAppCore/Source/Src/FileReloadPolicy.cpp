@@ -35,8 +35,14 @@ namespace OIV
                 fPendingReloadFile = openedFile;
                 return ReloadAction::Defer;
             case FileReloadMode::Confirmation:
+                // Consume the request before a modal prompt can reactivate its owner and ask again.
+                if (appActive)
+                {
+                    fPendingReloadFile.clear();
+                    return ReloadAction::AskUser;
+                }
                 fPendingReloadFile = openedFile;
-                return appActive ? ReloadAction::AskUser : ReloadAction::Defer;
+                return ReloadAction::Defer;
             case FileReloadMode::None:
                 break;
         }
@@ -49,16 +55,17 @@ namespace OIV
         if (!HasPendingReloadFor(requestedFile))
             return ReloadAction::None;
 
+        // Native activation may reenter before the prompt returns; this request is already being handled.
+        fPendingReloadFile.clear();
         if (fMode == FileReloadMode::Confirmation)
             return ReloadAction::AskUser;
 
-        fPendingReloadFile.clear();
         return fMode == FileReloadMode::None ? ReloadAction::None : ReloadAction::RequestNow;
     }
 
     ReloadAction FileReloadPolicy::ConfirmReload(bool accepted)
     {
-        fPendingReloadFile.clear();
+        // A newer change may have been deferred while the user answered the previous prompt.
         return accepted ? ReloadAction::RequestNow : ReloadAction::None;
     }
 }  // namespace OIV

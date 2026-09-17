@@ -836,6 +836,47 @@ TEST_CASE("FileReloadPolicy owns confirmation pending state", "[AppCore]")
     REQUIRE(policy.GetPendingReloadFile().empty());
 }
 
+TEST_CASE("FileReloadPolicy consumes confirmation before native window reactivation", "[AppCore]")
+{
+    OIV::FileReloadPolicy policy;
+    policy.SetMode(OIV::FileReloadMode::Confirmation);
+
+    SECTION("A deferred request is consumed before showing its prompt")
+    {
+        REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), false) == OIV::ReloadAction::Defer);
+        REQUIRE(policy.OnPendingReloadRequested(LLUTILS_TEXT("b.png")) == OIV::ReloadAction::None);
+        REQUIRE(policy.HasPendingReloadFor(LLUTILS_TEXT("a.png")));
+        REQUIRE(policy.OnPendingReloadRequested(LLUTILS_TEXT("a.png")) == OIV::ReloadAction::AskUser);
+    }
+    SECTION("An immediate prompt leaves no deferred request")
+    {
+        REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), true) == OIV::ReloadAction::AskUser);
+    }
+    SECTION("An immediate prompt consumes an earlier deferred change")
+    {
+        REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), false) == OIV::ReloadAction::Defer);
+        REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), true) == OIV::ReloadAction::AskUser);
+    }
+
+    // Native dialog dismissal can reactivate the owner before ConfirmReload returns the user's answer.
+    REQUIRE_FALSE(policy.HasPendingReloadFor(LLUTILS_TEXT("a.png")));
+    REQUIRE(policy.OnPendingReloadRequested(LLUTILS_TEXT("a.png")) == OIV::ReloadAction::None);
+    REQUIRE(policy.ConfirmReload(true) == OIV::ReloadAction::RequestNow);
+    REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), false) == OIV::ReloadAction::Defer);
+    REQUIRE(policy.HasPendingReloadFor(LLUTILS_TEXT("a.png")));
+}
+
+TEST_CASE("FileReloadPolicy preserves changes received while confirmation is open", "[AppCore]")
+{
+    OIV::FileReloadPolicy policy;
+    const bool accepted = GENERATE(false, true);
+    REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("a.png"), true) == OIV::ReloadAction::AskUser);
+    REQUIRE(policy.OnCurrentFileChanged(LLUTILS_TEXT("b.png"), false) == OIV::ReloadAction::Defer);
+    REQUIRE(policy.ConfirmReload(accepted) == (accepted ? OIV::ReloadAction::RequestNow : OIV::ReloadAction::None));
+    REQUIRE(policy.HasPendingReloadFor(LLUTILS_TEXT("b.png")));
+    REQUIRE(policy.OnPendingReloadRequested(LLUTILS_TEXT("b.png")) == OIV::ReloadAction::AskUser);
+}
+
 TEST_CASE("AppSettingsPolicy parses typed settings values", "[AppCore]")
 {
     REQUIRE(OIV::AppSettingsPolicy::ParseIntegral(LLUTILS_TEXT("42")) == 42);
