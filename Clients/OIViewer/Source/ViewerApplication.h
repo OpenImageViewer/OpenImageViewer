@@ -495,9 +495,8 @@ namespace OIV
             }
             if (scheduleDrain)
             {
-                const auto lifetime = fUiWeakLifetime;
-                const auto posted   = fPlatform.PostTask(
-                    [this, lifetime]
+                const auto posted = fPlatform.PostTask(
+                    [this, lifetime = fUiWeakLifetime]
                     {
                         if (lifetime.lock() != nullptr)
                             DrainUiCompletions();
