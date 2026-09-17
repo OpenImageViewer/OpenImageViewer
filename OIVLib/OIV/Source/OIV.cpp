@@ -324,7 +324,7 @@ namespace OIV
         if (fIsInitialized)
             fRenderer->RemoveRenderable(renderable);
         else
-            fPendingRenderables.erase(std::find(fPendingRenderables.begin(), fPendingRenderables.end(), renderable));
+            std::erase(fPendingRenderables, renderable);
 
         return ResultCode::RC_Success;
     }
@@ -422,6 +422,8 @@ namespace OIV
     ResultCode OIV::RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks)
     {
         fCallBacks = callbacks;
+        if (fIsInitialized)
+            ConnectExceptionCallback();
         return RC_Success;
     }
 
@@ -446,6 +448,31 @@ namespace OIV
         fImageManager.RemoveImage(handle);
 
         return result;*/
+    }
+
+    void OIV::ConnectExceptionCallback()
+    {
+        // The viewer handles exceptions directly while decoder workers may still be reporting them.
+        // Leave the single-threaded global event untouched unless an API client requests this bridge.
+        // Once installed, keep it until shutdown so replacing callbacks cannot invalidate active dispatch.
+        if (fCallBacks.OnException != nullptr && !fExceptionConnection)
+        {
+            fExceptionConnection = LLUtils::Exception::OnException.Connect(
+                [this](LLUtils::Exception::EventArgs args)
+                {
+                    if (fCallBacks.OnException != nullptr)
+                    {
+                        auto formattedcallStack      = LLUtils::Exception::FormatStackTrace(args.stackTrace);
+                        OIV_Exception_Args localArgs = {};
+                        localArgs.errorCode          = static_cast<int>(args.errorCode);
+                        localArgs.callstack          = formattedcallStack.c_str();
+                        localArgs.description        = args.description.c_str();
+                        localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
+                        localArgs.functionName       = args.functionName.c_str();
+                        fCallBacks.OnException(localArgs, fCallBacks.userPointer);
+                    }
+                });
+        }
     }
 
     int OIV::Init(const RendererOptions& options)
@@ -475,27 +502,25 @@ namespace OIV
             fRenderer = SelectRenderer(GetRendererBackends(), options, params);
         }
         // Expected candidate failures are collected by startup, without application dialogs.
-        fExceptionConnection = LLUtils::Exception::OnException.Connect(
-            [this](LLUtils::Exception::EventArgs args)
-            {
-                if (fCallBacks.OnException != nullptr)
-                {
-                    auto formattedcallStack      = LLUtils::Exception::FormatStackTrace(args.stackTrace);
-                    OIV_Exception_Args localArgs = {};
-                    localArgs.errorCode          = static_cast<int>(args.errorCode);
-                    localArgs.callstack          = formattedcallStack.c_str();
-                    localArgs.description        = args.description.c_str();
-                    localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
-                    localArgs.functionName       = args.functionName.c_str();
-                    fCallBacks.OnException(localArgs, fCallBacks.userPointer);
-                }
-            });
+        ConnectExceptionCallback();
 
         for (const auto renderable : fPendingRenderables)
             fRenderer->AddRenderable(renderable);
         fPendingRenderables.clear();
         fIsInitialized = true;
         return 0;
+    }
+
+    void OIV::Shutdown() noexcept
+    {
+        fExceptionConnection.Disconnect();
+        // Release native rendering before the window, but retain the API's image manager until images are gone.
+        // Late image destruction uses the pre-initialization registration path instead of the released renderer.
+        fIsInitialized = false;
+        fRenderer.reset();
+        fParent        = 0;
+        fNativeDisplay = nullptr;
+        fCallBacks     = {};
     }
 
     int OIV::SetParent(std::size_t handle, void* nativeDisplay)

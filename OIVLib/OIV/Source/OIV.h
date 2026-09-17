@@ -7,7 +7,6 @@
 #include <set>
 #include <ImageUtil/AxisAlignedTransform.h>
 
-
 namespace OIV
 {
     class OIV  : public IPictureRenderer
@@ -42,6 +41,7 @@ namespace OIV
         ResultCode SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
 
         int Init(const RendererOptions& options = {}) override;
+        void Shutdown() noexcept override;
         int SetParent(std::size_t handle, void* nativeDisplay) override;
         int Refresh() override;
 
@@ -65,7 +65,9 @@ namespace OIV
 
 #pragma region //-------------Private member fields------------------
 
-    private:
+      private:
+
+        void ConnectExceptionCallback();
 
         static constexpr std::array<uint8_t, 6> sShades
         {

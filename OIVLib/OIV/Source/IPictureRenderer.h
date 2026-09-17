@@ -22,6 +22,8 @@ namespace OIV
         virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
 
         virtual int Init(const RendererOptions& options = {})          = 0;
+        // Idempotent. Stop rendering before window/display teardown; images may outlive shutdown.
+        virtual void Shutdown() noexcept                               = 0;
         virtual int SetParent(std::size_t handle, void* nativeDisplay) = 0;
         virtual int Refresh()                                          = 0;
 
