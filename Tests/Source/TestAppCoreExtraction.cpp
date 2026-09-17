@@ -1130,14 +1130,29 @@ TEST_CASE("Event connection ownership can move and disconnect explicitly", "[App
     LLUtils::Event<void()> event;
     int count = 0;
 
-    auto connection      = event.Connect([&] { ++count; });
+    LLUtils::Event<void()>::Connection empty;
+    REQUIRE_FALSE(empty);
+    auto connection = event.Connect([&] { ++count; });
+    static_assert(noexcept(static_cast<bool>(connection)));
+    REQUIRE(connection);
     auto movedConnection = std::move(connection);
+    REQUIRE_FALSE(connection);
+    REQUIRE(movedConnection);
+
+    empty = std::move(movedConnection);
+    REQUIRE_FALSE(movedConnection);
+    REQUIRE(empty);
+    movedConnection = std::move(empty);
+    REQUIRE_FALSE(empty);
+    REQUIRE(movedConnection);
 
     event.Raise();
     REQUIRE(count == 1);
 
     movedConnection.Disconnect();
+    REQUIRE_FALSE(movedConnection);
     movedConnection.Disconnect();
+    REQUIRE_FALSE(movedConnection);
     event.Raise();
 
     REQUIRE(count == 1);
