@@ -104,6 +104,8 @@ namespace OIV
     {
         if (fBrowseSessionController != nullptr)
             fBrowseSessionController->InvalidateCurrent();
+        fSequencerTimer.SetInterval(0);
+        fSequencerPolicy.Reset();
         fImageState.ClearAll();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
@@ -239,9 +241,10 @@ namespace OIV
 
         fFileDisplayTimer.Start();
 
-        fCurrentFrame          = 0;
-        fCurrentSequencerSpeed = 1.0;
-        fQueueImageInfoLoad    = GetImageInfoVisible();
+        fSequencerTimer.SetInterval(0);
+        fCurrentFrame = 0;
+        fSequencerPolicy.Reset(oivImage->GetImage());
+        fQueueImageInfoLoad = GetImageInfoVisible();
         SetImageInfoVisible(false);
         SetResamplingEnabled(false);
         fImageState.SetOpenedImage(oivImage);
@@ -294,11 +297,15 @@ namespace OIV
             fQueueImageInfoLoad = false;
         }
 
-        // if sub images of main image are animation frame, start sequencer, otherwise make sure it's stopped
-        fSequencerTimer.SetInterval(fImageState.GetOpenedImage()->GetImage()->GetSubImageGroupType() ==
-                                            IMCodec::ImageItemType::AnimationFrame
-                                        ? 1
-                                        : 0);
+        // Frame zero is already displayed by ImageState. Time its full duration and advance to
+        // frame one on the first tick; even speed input before that tick now preserves progress.
+        if (oivImage->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame &&
+            oivImage->GetImage()->GetNumSubImages() != 0)
+        {
+            const auto& firstFrame = oivImage->GetImage()->GetSubImage(0);
+            fCurrentFrame          = SequencerPolicy::NextFrame(0, oivImage->GetImage()->GetNumSubImages());
+            fSequencerTimer.SetInterval(fSequencerPolicy.StartFrame(firstFrame->GetAnimationData().delayMilliseconds));
+        }
     }
 
     void ViewerApplication::UpdateOpenImageUI()

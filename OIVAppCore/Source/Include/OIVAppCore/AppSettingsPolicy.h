@@ -3,6 +3,7 @@
 #include <LLUtils/StringDefs.h>
 
 #include <OIVAppCore/FileReloadPolicy.h>
+#include <OIVAppCore/SequencerPolicy.h>
 #include <OIVShared/FileSorter.h>
 
 #include <LLUtils/EnumClassBitwise.h>
@@ -42,6 +43,9 @@ namespace OIV
             MinImageSize,
             SlideshowInterval,
             QuickBrowseDelay,
+            AnimationMinFrameInterval,
+            AnimationSlowFrameInterval,
+            AnimationSlowSpeedPercent,
             AutoScrollDeadZoneRadius,
             AutoScrollSpeedFactorIn,
             AutoScrollSpeedFactorOut,
@@ -74,6 +78,10 @@ namespace OIV
         static double ParseFloat(const LLUtils::native_string_type& value);
         static bool ParseBool(const LLUtils::native_string_type& value);
         static Action ParseAction(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value);
+
+        // Returns true for animation actions, including invalid values that leave the staged
+        // settings unchanged. Staging a file reload does not alter playback or reset its motion.
+        static bool StageAnimationSetting(const Action& action, SequencerPolicy::Settings& settings);
 
         static ParsedSetting<DeletedFileRemovalMode> ParseDeletedFileRemovalMode(
             const LLUtils::native_string_type& value);

@@ -28,6 +28,11 @@ target_compile_definitions(tests_font_encoding PRIVATE OIV_TEST_SOURCE_DIR=\"${C
 target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTypeWrapper LLUtils::LLUtils)
 
 add_executable (${TargetName} ${sourceFiles})
+# Exercise NaN/infinity rejection and overflowing frame durations with IEEE semantics.
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set_source_files_properties(Source/TestSequencer.cpp Source/TestUnitFormatter.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+endif()
+
 target_sources(${TargetName} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp

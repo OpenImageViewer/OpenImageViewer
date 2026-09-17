@@ -90,7 +90,11 @@ namespace OIV
             AddRow(rows, "File path", {filePath.native()});
 
             const uintmax_t fileSize = std::filesystem::file_size(filePath);
-            AddRow(rows, "File size", {UnitFormatter::FormatUnit(fileSize, UnitType::BinaryDataShort, 0, 0)});
+            AddRow(rows, "File size",
+                   {UnitFormatter::FormatUnit(fileSize, UnitType::BinaryDataShort,
+                                              {
+                                                  .precision = 0,
+                                              })});
             AddRow(rows, "File date", {FormatFileTime(filePath)});
 
             const uint32_t bitmapSize          = rasterized->GetImage()->GetTotalSizeOfImageTexels();

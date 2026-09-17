@@ -1,6 +1,8 @@
 #include <LLUtils/StringDefs.h>
 #include <OIVAppCore/AppSettingsPolicy.h>
 
+#include <cmath>
+
 namespace OIV
 {
     int64_t AppSettingsPolicy::ParseIntegral(const LLUtils::native_string_type& value)
@@ -33,6 +35,40 @@ namespace OIV
             return {ActionType::SlideshowInterval, 0.0, ParseIntegral(value)};
         if (key == LLUTILS_TEXT("viewsettings/quickbrowsedelay"))
             return {ActionType::QuickBrowseDelay, 0.0, ParseIntegral(value)};
+        if (key == LLUTILS_TEXT("animation/minframeintervalms") ||
+            key == LLUTILS_TEXT("animation/slowframeintervalms") || key == LLUTILS_TEXT("animation/slowspeedpercent"))
+        {
+            // Settings JSON can represent milliseconds as either 3 or 3.0. Reject fractional,
+            // malformed and nonfinite values before converting them to the typed action.
+            Action action;
+            try
+            {
+                size_t end          = 0;
+                const double parsed = std::stod(value, &end);
+                if (end == value.size() && std::isfinite(parsed) && parsed > 0.0)
+                {
+                    if (key == LLUTILS_TEXT("animation/slowspeedpercent"))
+                    {
+                        if (parsed <= 100.0)
+                            action = {ActionType::AnimationSlowSpeedPercent, parsed};
+                    }
+                    else if (parsed <= SequencerPolicy::MaxTimerIntervalMs && std::trunc(parsed) == parsed)
+                    {
+                        action = {key == LLUTILS_TEXT("animation/minframeintervalms")
+                                      ? ActionType::AnimationMinFrameInterval
+                                      : ActionType::AnimationSlowFrameInterval,
+                                  0.0, static_cast<int64_t>(parsed)};
+                    }
+                }
+            }
+            catch (const std::invalid_argument&)
+            {
+            }
+            catch (const std::out_of_range&)
+            {
+            }
+            return action;
+        }
         if (key == LLUTILS_TEXT("autoscroll/deadzoneradius"))
             return {ActionType::AutoScrollDeadZoneRadius, 0.0, ParseIntegral(value)};
         if (key == LLUTILS_TEXT("autoscroll/speedfactorin"))
@@ -105,6 +141,30 @@ namespace OIV
             return {ActionType::BiggestSubImageOnLoad, 0.0, 0, ParseBool(value)};
 
         return {};
+    }
+
+    bool AppSettingsPolicy::StageAnimationSetting(const Action& action, SequencerPolicy::Settings& settings)
+    {
+        auto candidate = settings;
+        bool handled   = true;
+        switch (action.type)
+        {
+            case ActionType::AnimationMinFrameInterval:
+                candidate.minFrameIntervalMs = static_cast<uint32_t>(action.integralValue);
+                break;
+            case ActionType::AnimationSlowFrameInterval:
+                candidate.slowFrameIntervalMs = static_cast<uint32_t>(action.integralValue);
+                break;
+            case ActionType::AnimationSlowSpeedPercent:
+                candidate.slowSpeedPercent = action.floatValue;
+                break;
+            default:
+                handled = false;
+                break;
+        }
+        if (handled && candidate.IsValid())
+            settings = candidate;
+        return handled;
     }
 
     ParsedSetting<DeletedFileRemovalMode> AppSettingsPolicy::ParseDeletedFileRemovalMode(

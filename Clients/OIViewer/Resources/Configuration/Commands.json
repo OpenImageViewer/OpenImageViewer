@@ -360,13 +360,13 @@
       "GroupID": "AnimationSpeedUp",
       "DisplayName": "Animation speed up",
       "Name": "cmd_sequencer",
-      "arguments": "cmd=changespeed;amount=5"
+      "arguments": "cmd=changespeed;amount=1"
     },
     {
       "GroupID": "AnimationSpeedDown",
       "DisplayName": "Animation speed down",
       "Name": "cmd_sequencer",
-      "arguments": "cmd=changespeed;amount=-5"
+      "arguments": "cmd=changespeed;amount=-1"
     },
     {
       "GroupID": "FirstImageInFolder",

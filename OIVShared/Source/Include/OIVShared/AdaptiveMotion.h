@@ -1,5 +1,6 @@
 #pragma once
 #include <LLUtils/StopWatch.h>
+#include <LLUtils/MathUtil.h>
 
 #include <algorithm>
 #include <cmath>
@@ -17,23 +18,29 @@ namespace OIV
         double fDeclerationFactor;
         double fTime = 0.0;
 
-    public:
+      public:
+
         AdaptiveMotion(double baseStep = 1.0, double acceleration = 1.0, double deceleration = 1.0)
         {
-            fStep = baseStep;
+            fStep               = baseStep;
             fAccelerationFactor = acceleration;
-            fDeclerationFactor = deceleration;
+            fDeclerationFactor  = deceleration;
         }
 
-        AdaptiveMotion(double baseStep,
-                       double acceleration,
-                       double deceleration,
+        AdaptiveMotion(double baseStep, double acceleration, double deceleration,
                        std::function<double()> elapsedSecondsProvider)
         {
-            fStep = baseStep;
-            fAccelerationFactor = acceleration;
-            fDeclerationFactor = deceleration;
+            fStep                   = baseStep;
+            fAccelerationFactor     = acceleration;
+            fDeclerationFactor      = deceleration;
             fElapsedSecondsProvider = std::move(elapsedSecondsProvider);
+        }
+
+        // A new interaction or a reached boundary must not inherit accumulated acceleration.
+        void Reset()
+        {
+            fTime = 0.0;
+            stopwatch.Start();
         }
 
         double Add(double amount)
@@ -43,15 +50,13 @@ namespace OIV
             fTime -= GetElapsedSeconds() * DeltaDirection * fDeclerationFactor;
             stopwatch.Start();
             fTime = DeltaDirection > 0 ? std::max(fTime, 0.0) : std::min(fTime, 0.0);
-            fTime += amount  * fStep;
+            fTime += amount * fStep;
             return GetVelocity(fTime);
         }
 
-    private:
-        double GetAcceleration() const
-        {
-            return fAccelerationFactor;
-        }
+      private:
+
+        double GetAcceleration() const { return fAccelerationFactor; }
 
         double GetElapsedSeconds()
         {
@@ -63,8 +68,8 @@ namespace OIV
 
         double GetVelocity(double time) const
         {
-            //Velocity = Acceleration * Time^2
-            return  std::abs(GetAcceleration() * time * time) * LLUtils::Math::Sign(time);
+            // Velocity = Acceleration * Time^2
+            return std::abs(GetAcceleration() * time * time) * LLUtils::Math::Sign(time);
         }
     };
-}
+}  // namespace OIV

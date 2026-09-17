@@ -195,15 +195,24 @@ namespace OIV
         fSequencerTimer.SetCallback(MakeSafeCallback(
             [this]()
             {
-                auto currentImage = fImageState.GetOpenedImage()->GetImage()->GetSubImage(fCurrentFrame);
-                fImageState.SetImageChainRoot(
-                    std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
-
-                fSequencerTimer.SetInterval(SequencerPolicy::FrameIntervalMs(
-                    currentImage->GetAnimationData().delayMilliseconds, fCurrentSequencerSpeed));
-                fCurrentFrame = SequencerPolicy::NextFrame(fCurrentFrame,
-                                                           fImageState.GetOpenedImage()->GetImage()->GetNumSubImages());
-                RefreshImage();
+                const auto now = SequencerPolicy::Clock::now();
+                if (const auto remaining = fSequencerPolicy.RemainingFrameMs(now); remaining != 0)
+                {
+                    // A queued tick may predate a speed/settings change. The policy deadline,
+                    // rather than the old platform notification, decides when this frame ends.
+                    fSequencerTimer.SetInterval(remaining);
+                }
+                else
+                {
+                    auto currentImage = fImageState.GetOpenedImage()->GetImage()->GetSubImage(fCurrentFrame);
+                    fImageState.SetImageChainRoot(
+                        std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
+                    fSequencerTimer.SetInterval(
+                        fSequencerPolicy.StartFrame(currentImage->GetAnimationData().delayMilliseconds, now));
+                    fCurrentFrame = SequencerPolicy::NextFrame(
+                        fCurrentFrame, fImageState.GetOpenedImage()->GetImage()->GetNumSubImages());
+                    RefreshImage();
+                }
             }));
 
         fMessageManager = std::make_unique<MessageManager>(fWindow.GetWindow(), &fLabelManager, 5,

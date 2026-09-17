@@ -494,10 +494,21 @@ namespace OIV
         {
             if (SequencerPolicy::IsChangeSpeedCommand(request.args))
             {
-                fCurrentSequencerSpeed = SequencerPolicy::ApplySpeedChange(
-                    fCurrentSequencerSpeed, SequencerPolicy::ParseSpeedChangePercent(request.args));
-                result.resValue = SequencerPolicy::FormatSpeed(fCurrentSequencerSpeed);
+                auto change = fSequencerPolicy.ChangeSpeed(SequencerPolicy::ParseSpeedChangePercent(request.args));
+                if (change.retimed)
+                    UpdateSequencerInterval();
+                result.resValue = std::move(change.message);
             }
+        }
+    }
+
+    void ViewerApplication::UpdateSequencerInterval()
+    {
+        if (fSequencerTimer.GetInterval() != 0)
+        {
+            // Retiming has already preserved the unplayed fraction. A due frame needs a prompt
+            // callback; zero would stop the platform timer instead of advancing the animation.
+            fSequencerTimer.SetInterval(std::max(1u, fSequencerPolicy.RemainingFrameMs()));
         }
     }
 

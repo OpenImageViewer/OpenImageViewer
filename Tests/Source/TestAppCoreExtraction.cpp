@@ -303,8 +303,11 @@ TEST_CASE("AdaptiveMotion can use deterministic elapsed time", "[AppCore][Shared
 
 TEST_CASE("UnitFormatter formats binary and decimal units", "[Shared]")
 {
-    REQUIRE(OIV::UnitFormatter::FormatUnit(2048, OIV::UnitType::BinaryDataShort, 1, 0) == LLUTILS_TEXT("2.0KB"));
-    REQUIRE(OIV::UnitFormatter::FormatUnit(1500, OIV::UnitType::Distance, 2, 0) == LLUTILS_TEXT("1.50 meters"));
+    REQUIRE(OIV::UnitFormatter::FormatUnit(2048, OIV::UnitType::BinaryDataShort,
+                                           {
+                                               .precision = 1,
+                                           }) == LLUTILS_TEXT("2.0KB"));
+    REQUIRE(OIV::UnitFormatter::FormatUnit(1500, OIV::UnitType::Distance, {}) == LLUTILS_TEXT("1.50 meters"));
 }
 
 TEST_CASE("CommandManager dispatches predefined command groups", "[AppCore]")

@@ -28,6 +28,7 @@
 #include "ContextMenu.h"
 #include "ViewerRenderPort.h"
 #include <OIVAppCore/AppSettingsPolicy.h>
+#include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/FolderFileList.h>
 #include <OIVAppCore/FileReloadPolicy.h>
 #include <OIVAppCore/BrowseSessionController.h>
@@ -232,6 +233,7 @@ namespace OIV
         void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
         void OnRefresh();
         void OnRefreshTimer();
+        void UpdateSequencerInterval();
         void OnPreserveSelectionRect();
         LWS::Handle GetWindowHandle() const;
         void UpdateTitle();
@@ -379,7 +381,7 @@ namespace OIV
         bool fReloadSettingsFileIfChanged             = false;
         IFileWatcher::FolderID fCOnfigurationFolderID = 0;
         int fCurrentFrame                             = 0;
-        double fCurrentSequencerSpeed                 = 1.0;
+        SequencerPolicy fSequencerPolicy;
         OIVBaseImageSharedPtr fCountingImageColor;
         std::atomic_bool fIsColorThreadRunning = false;
         std::thread fCountingColorsThread;
@@ -470,6 +472,7 @@ namespace OIV
         LWS::NotificationIconGroup::IconID fNotificationIconID;
         std::unique_ptr<MessageManager> fMessageManager;
         void OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value);
+        void ApplySetting(const AppSettingsPolicy::Action& action);
         void LoadSettings();
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const;

@@ -454,8 +454,11 @@ namespace OIV
     void ViewerApplication::OnSettingChange(const LLUtils::native_string_type& key,
                                             const LLUtils::native_string_type& value)
     {
-        const AppSettingsPolicy::Action action = AppSettingsPolicy::ParseAction(key, value);
+        ApplySetting(AppSettingsPolicy::ParseAction(key, value));
+    }
 
+    void ViewerApplication::ApplySetting(const AppSettingsPolicy::Action& action)
+    {
         switch (action.type)
         {
             case AppSettingsPolicy::ActionType::MaxZoom:
@@ -478,6 +481,16 @@ namespace OIV
             case AppSettingsPolicy::ActionType::QuickBrowseDelay:
                 fQuickBrowseDelay = static_cast<uint16_t>(action.integralValue);
                 break;
+            case AppSettingsPolicy::ActionType::AnimationMinFrameInterval:
+            case AppSettingsPolicy::ActionType::AnimationSlowFrameInterval:
+            case AppSettingsPolicy::ActionType::AnimationSlowSpeedPercent:
+            {
+                auto settings = fSequencerPolicy.GetSettings();
+                AppSettingsPolicy::StageAnimationSetting(action, settings);
+                if (fSequencerPolicy.SetSettings(settings))
+                    UpdateSequencerInterval();
+                break;
+            }
             case AppSettingsPolicy::ActionType::AutoScrollDeadZoneRadius:
                 fAutoScroll->SetDeadZoneRadius(static_cast<int32_t>(action.integralValue));
                 break;
@@ -524,10 +537,19 @@ namespace OIV
 
     void ViewerApplication::LoadSettings()
     {
-        auto settings = ConfigurationLoader::LoadSettings();
-        for (const auto& pair : settings)
-            OnSettingChange(LLUtils::StringUtility::ToNativeString(pair.first),
-                            LLUtils::StringUtility::ToNativeString(pair.second));
+        const auto settings = ConfigurationLoader::LoadSettings();
+        auto animation      = fSequencerPolicy.GetSettings();
+        for (const auto& [key, value] : settings)
+        {
+            const auto action = AppSettingsPolicy::ParseAction(LLUtils::StringUtility::ToNativeString(key),
+                                                               LLUtils::StringUtility::ToNativeString(value));
+            if (!AppSettingsPolicy::StageAnimationSetting(action, animation))
+                ApplySetting(action);
+        }
+        // Limits depend on the whole set. Intermediate settings can otherwise clamp a speed
+        // that is valid under the final values, and rearm the timer multiple times per reload.
+        if (fSequencerPolicy.SetSettings(animation))
+            UpdateSequencerInterval();
     }
 
     void ViewerApplication::OnNotificationIcon(LWS::NotificationIconGroup::NotificationIconEventArgs args)

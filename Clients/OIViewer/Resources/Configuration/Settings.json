@@ -16,6 +16,11 @@
       "y": 0.25
     }
   },
+  "animation": {
+    "minframeintervalms": 3,
+    "slowframeintervalms": 10000,
+    "slowspeedpercent": 1.0
+  },
   "autoscroll": {
     "deadzoneradius": 10.0,
     "speedfactorin": 0.4,
