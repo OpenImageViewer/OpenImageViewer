@@ -14,6 +14,8 @@
 #include <array>
 #include <iterator>
 #include <type_traits>
+#include <latch>
+#include <thread>
 
 namespace
 {
@@ -247,4 +249,133 @@ TEST_CASE("Rendered text becomes clean and reuses its bitmap until content chang
     text.PreRender();
     CHECK_FALSE(text.IsDirty());
     CHECK(text.GetImage() != bitmap);
+}
+
+TEST_CASE("Explicit renderer shutdown preserves the API until surviving images are released", "[renderer][lifetime]")
+{
+    ScopedApi api;
+    const bool fail = GENERATE(false, true);
+    {
+        OIV::OivRenderGateway gateway;
+        auto image = std::make_unique<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib);
+        if (fail)
+            REQUIRE_THROWS(gateway.Initialize(0, nullptr, {.renderer = static_cast<OIV::RendererType>(-1)}));
+        else
+            REQUIRE_NOTHROW(gateway.Initialize(0, nullptr, {.renderer = OIV::RendererType::Null}));
+
+        auto* renderer = OIV::ApiGlobal::sPictureRenderer.get();
+        renderer->Shutdown();
+        renderer->Shutdown();
+        CHECK(renderer->GetRenderer() == nullptr);
+        REQUIRE(OIV::ApiGlobal::sPictureRenderer.get() == renderer);
+        image.reset();
+
+        // The API remains usable for registration and another initialization after native shutdown.
+        OIV::OIVBaseImage laterImage(OIV::ImageSource::GeneratedByLib);
+        REQUIRE(renderer->Init({.renderer = OIV::RendererType::Null}) == 0);
+        REQUIRE(renderer->GetRenderer() != nullptr);
+        renderer->Shutdown();
+    }
+    CHECK(OIV::ApiGlobal::sPictureRenderer == nullptr);
+}
+
+TEST_CASE("Explicit renderer shutdown disconnects callbacks before reinitialization", "[renderer][lifetime]")
+{
+    ScopedApi api;
+    auto& renderer         = *OIV::ApiGlobal::sPictureRenderer;
+    unsigned notifications = 0;
+    const OIV_CMD_RegisterCallbacks_Request callbacks{
+        .OnException = [](OIV_Exception_Args, void* user) { ++*static_cast<unsigned*>(user); },
+        .userPointer = &notifications,
+    };
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    REQUIRE(notifications == 1);
+    renderer.Shutdown();
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(notifications == 1);
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(notifications == 2);
+    renderer.Shutdown();
+}
+
+TEST_CASE("Renderer exception callbacks can be registered and replaced across initialization", "[renderer][lifetime]")
+{
+    ScopedApi api;
+    auto& renderer                = *OIV::ApiGlobal::sPictureRenderer;
+    const bool registerBeforeInit = GENERATE(false, true);
+    unsigned first                = 0;
+    unsigned second               = 0;
+    OIV_CMD_RegisterCallbacks_Request callbacks{
+        .OnException = [](OIV_Exception_Args, void* user) { ++*static_cast<unsigned*>(user); },
+        .userPointer = &first,
+    };
+    if (registerBeforeInit)
+        REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 0);
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    if (!registerBeforeInit)
+        REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 1);
+
+    callbacks.userPointer = &second;
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 1);
+    CHECK(second == 1);
+    REQUIRE(renderer.RegisterCallbacks({}) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(second == 1);
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(second == 2);
+
+    renderer.Shutdown();
+    callbacks.userPointer = &first;
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 1);
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 2);
+    CHECK(second == 2);
+    renderer.Shutdown();
+    renderer.Shutdown();
+    LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+    CHECK(first == 2);
+}
+
+TEST_CASE("Renderer without exception callbacks leaves worker reporting independent of shutdown",
+          "[renderer][lifetime]")
+{
+    ScopedApi api;
+    auto& renderer         = *OIV::ApiGlobal::sPictureRenderer;
+    unsigned notifications = 0;
+    auto observer = LLUtils::Exception::OnException.Connect([&](LLUtils::Exception::EventArgs) { ++notifications; });
+    std::latch started(1);
+    std::jthread worker(
+        [&](std::stop_token stop)
+        {
+            LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+            started.count_down();
+            while (!stop.stop_requested())
+                LLUtils::Exception::OnException.Raise(LLUtils::Exception::EventArgs{});
+        });
+    started.wait();
+    // The viewer does not request the API bridge. Its renderer lifecycle must leave the
+    // single-threaded global event alone while a decoder worker reports exceptions.
+    constexpr unsigned lifecycleCount = 1000;
+    for (unsigned iteration = 0; iteration < lifecycleCount; ++iteration)
+    {
+        REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+        renderer.Shutdown();
+    }
+    worker.request_stop();
+    worker.join();
+    CHECK(notifications > 0);
 }
