@@ -332,6 +332,74 @@ TEST_CASE("DDS legacy expansion falls back to an owning load", "[ImageCompatibil
     }
 }
 
+TEST_CASE("DDS retained input keeps every mip alive and detaches on mutation", "[ImageCompatibility][DDS]")
+{
+    using namespace IMCodec;
+    std::array<uint8_t, 84> pixels{};  // 4x4, 2x2, 1x1 RGBA
+    for (size_t i = 0; i < pixels.size(); ++i)
+        pixels[i] = static_cast<uint8_t>(i);
+    const auto bytes                              = MakeDDS(0, pixels, 4, 4, 3, 28);
+    auto input                                    = std::make_shared<LLUtils::Buffer>(bytes.data(), bytes.size());
+    std::weak_ptr<const LLUtils::Buffer> lifetime = input;
+    const auto* payload                           = input->data() + 148;
+    ImageSharedPtr image;
+    {
+        ImageLoader loader;
+        REQUIRE(loader.DecodeOwned(input, ImageLoadFlags::None, {}, LLUTILS_TEXT("dds"), PluginTraverseMode::NoTraverse,
+                                   image) == ImageResult::Success);
+    }
+    REQUIRE(image->GetBuffer() == payload);
+    REQUIRE(image->GetSubImage(0)->GetBuffer() == payload + 64);
+    auto tail = image->GetSubImage(1);
+    REQUIRE(tail->GetBuffer() == payload + 80);
+    auto clone = image->GetImageItem()->data;
+    REQUIRE(std::as_const(clone).data() != payload);
+    REQUIRE(std::memcmp(std::as_const(clone).data(), payload, 64) == 0);
+    auto* writable = image->GetImageItem()->data.data();
+    REQUIRE(writable != payload);
+    writable[0] = std::byte{255};
+    REQUIRE(payload[0] == std::byte{0});
+    REQUIRE(image->GetBuffer()[0] == std::byte{255});
+    input.reset();
+    image.reset();
+    REQUIRE_FALSE(lifetime.expired());
+    REQUIRE(tail->GetBuffer()[0] == std::byte{80});
+    tail.reset();
+    REQUIRE(lifetime.expired());
+}
+
+TEST_CASE("DDS file pixels survive file truncation and deletion", "[ImageCompatibility][DDS]")
+{
+    using namespace IMCodec;
+    constexpr size_t baseBytes = 512 * 512 * 4;
+    constexpr size_t mipBytes  = 256 * 256 * 4;
+    std::vector<uint8_t> pixels(baseBytes + mipBytes);
+    for (size_t i = 0; i < pixels.size(); ++i)
+        pixels[i] = static_cast<uint8_t>(i * 17);
+    auto bytes = MakeDDS(0, pixels, 512, 512, 2, 28);
+    WriteUint32(bytes, 8, 0x2100f);  // Canonical uncompressed mip chain with row pitch.
+    WriteUint32(bytes, 20, 512 * 4);
+    const auto path = std::filesystem::temp_directory_path() / "oiv-dds-retained-lifetime.dds";
+    {
+        std::ofstream file(path, std::ios::binary);
+        file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+    }
+    ImageLoader loader;
+    ImageSharedPtr image;
+    const auto name = LLUtils::StringUtility::ConvertString<string_type>(path.native());
+    REQUIRE(loader.Decode(name, ImageLoadFlags::None, {}, PluginTraverseMode::NoTraverse, image) ==
+            ImageResult::Success);
+    {
+        std::ofstream truncate(path, std::ios::binary | std::ios::trunc);
+    }
+    std::filesystem::remove(path);
+    REQUIRE(std::memcmp(image->GetBuffer(), pixels.data(), baseBytes) == 0);
+    REQUIRE(std::memcmp(image->GetSubImage(0)->GetBuffer(), pixels.data() + baseBytes, mipBytes) == 0);
+    const auto* retained = image->GetBuffer();
+    REQUIRE(image->GetImageItem()->data.data() != retained);  // The file path actually retained immutable input.
+    REQUIRE(std::memcmp(image->GetBuffer(), pixels.data(), baseBytes) == 0);
+}
+
 TEST_CASE("DDS legacy packed conversion preserves alpha across a full mip chain", "[ImageCompatibility][DDS]")
 {
     using namespace IMCodec;
@@ -351,4 +419,21 @@ TEST_CASE("DDS legacy packed conversion preserves alpha across a full mip chain"
                                 [](std::byte value) { return value == std::byte{255}; }));
         }
     }
+}
+
+TEST_CASE("Empty image buffers copy and detach without zero-sized aligned allocation", "[DDS]")
+{
+    using namespace IMCodec;
+    ImageBuffer empty;
+    ImageBuffer copy = empty;
+    REQUIRE(copy.size() == 0);
+    REQUIRE(copy.data() == nullptr);
+    copy.Allocate(0);
+    REQUIRE(copy.data() == nullptr);
+    auto input                                 = std::make_shared<LLUtils::Buffer>(1);
+    std::weak_ptr<const LLUtils::Buffer> owner = input;
+    empty.Retain(input, input->data(), 0);
+    input.reset();
+    REQUIRE(empty.data() == nullptr);
+    REQUIRE(owner.expired());
 }
