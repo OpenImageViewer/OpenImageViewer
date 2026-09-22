@@ -522,3 +522,35 @@ TEST_CASE("Empty image buffers copy and detach without zero-sized aligned alloca
     REQUIRE(ImageBufferPool::AcquireInput(0)->data() == nullptr);
     REQUIRE(ImageBufferPool(0).Acquire(0).data() == nullptr);
 }
+
+TEST_CASE("DDS large parallel strips preserve partial block rows", "[ImageCompatibility][DDS]")
+{
+    using namespace IMCodec;
+    constexpr uint32_t width = 2053, height = 2057;
+    const size_t blocks = ((width + 3) / 4) * ((height + 3) / 4);
+    for (const bool signedBC5 : {false, true})
+    {
+        const size_t blockBytes = signedBC5 ? 16 : 8;
+        std::vector<uint8_t> pixels(blocks * blockBytes);
+        for (size_t i = 0; i < pixels.size(); i += blockBytes)
+        {
+            if (signedBC5)
+            {
+                pixels[i]     = 129;
+                pixels[i + 8] = 127;
+            }
+            else
+                pixels[i + 1] = 0xf8;
+        }
+        ImageSharedPtr image;
+        REQUIRE(DecodeDDS(MakeDDS(0, pixels, width, height, 1, signedBC5 ? 84 : 71), image) == ImageResult::Success);
+        const std::array<float, 3> expectedFloat{-1.f, 1.f, 0.f};
+        const std::array<uint8_t, 4> expectedByte{255, 0, 0, 255};
+        const auto* expected = signedBC5 ? reinterpret_cast<const void*>(expectedFloat.data()) : expectedByte.data();
+        const size_t stride  = signedBC5 ? sizeof(expectedFloat) : sizeof(expectedByte);
+        bool equal           = true;
+        for (size_t i = 0; i < size_t(width) * height && equal; ++i)
+            equal = std::memcmp(image->GetBuffer() + i * stride, expected, stride) == 0;
+        REQUIRE(equal);
+    }
+}
