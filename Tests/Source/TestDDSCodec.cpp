@@ -368,6 +368,73 @@ TEST_CASE("DDS retained input keeps every mip alive and detaches on mutation", "
     REQUIRE(lifetime.expired());
 }
 
+TEST_CASE("Image buffers recycle only after the final image owner and preserve move semantics", "[DDS]")
+{
+    using namespace IMCodec;
+    auto pool  = std::make_shared<ImageBufferPool>(1024);
+    auto first = std::make_shared<ImageItem>();
+    first->data.Allocate(1024, pool);
+    auto* address    = first->data.data();
+    address[0]       = std::byte{42};
+    auto secondOwner = first;
+    first.reset();
+    ImageBuffer other;
+    other.Allocate(1024, pool);
+    REQUIRE(other.data() != address);
+    REQUIRE(secondOwner->data.data()[0] == std::byte{42});
+    secondOwner.reset();
+    ImageBuffer reused;
+    reused.Allocate(1024, pool);
+    REQUIRE(reused.data() == address);
+    REQUIRE(reused.data()[0] == std::byte{42});
+    ImageBuffer moved(std::move(reused));
+    REQUIRE(moved.data() == address);
+    REQUIRE(reused.size() == 0);
+    reused = std::move(moved);
+    REQUIRE(reused.data() == address);
+    REQUIRE(moved.size() == 0);
+    // A pool can disappear from the codec while a live buffer still owns its state.
+    std::weak_ptr<ImageBufferPool> lifetime = pool;
+    pool.reset();
+    REQUIRE_FALSE(lifetime.expired());
+    reused.Free();
+    other.Free();
+    REQUIRE(lifetime.expired());
+}
+
+TEST_CASE("Image buffer pool bounds idle bytes and supports concurrent owners", "[DDS]")
+{
+    using namespace IMCodec;
+    auto pool = std::make_shared<ImageBufferPool>(128);
+    ImageBuffer a, b;
+    a.Allocate(128, pool);
+    b.Allocate(64, pool);
+    auto* first = a.data();
+    a.Free();  // fills the budget
+    b.Free();  // cannot displace the retained 128-byte buffer
+    a.Allocate(128, pool);
+    REQUIRE(a.data() == first);
+    std::atomic<bool> valid{true};
+    std::vector<std::jthread> threads;
+    for (int thread = 0; thread < 4; ++thread)
+        threads.emplace_back(
+            [pool, thread, &valid]
+            {
+                for (size_t i = 0; i < 1000; ++i)
+                {
+                    ImageBuffer buffer;
+                    buffer.Allocate(64, pool);
+                    std::fill_n(buffer.data(), 64, static_cast<std::byte>(thread));
+                    std::this_thread::yield();
+                    if (!std::all_of(std::as_const(buffer).data(), std::as_const(buffer).data() + 64,
+                                     [thread](std::byte value) { return value == static_cast<std::byte>(thread); }))
+                        valid = false;
+                }
+            });
+    threads.clear();
+    REQUIRE(valid);
+}
+
 TEST_CASE("DDS file pixels survive file truncation and deletion", "[ImageCompatibility][DDS]")
 {
     using namespace IMCodec;
@@ -421,6 +488,22 @@ TEST_CASE("DDS legacy packed conversion preserves alpha across a full mip chain"
     }
 }
 
+TEST_CASE("Shared DDS input storage returns to the pool after its final owner", "[DDS]")
+{
+    using namespace IMCodec;
+    constexpr size_t size = ImageBufferPool::MinimumPooledBytes + 148;
+    auto input            = ImageBufferPool::AcquireInput(size);
+    auto* address         = input->data();
+    ImageBuffer surface;
+    surface.Retain(input, address + 148, size - 148);
+    input.reset();
+    auto other = ImageBufferPool::AcquireInput(size);
+    REQUIRE(other->data() != address);
+    surface.Free();
+    auto recycled = ImageBufferPool::AcquireInput(size);
+    REQUIRE(recycled->data() == address);
+}
+
 TEST_CASE("Empty image buffers copy and detach without zero-sized aligned allocation", "[DDS]")
 {
     using namespace IMCodec;
@@ -436,4 +519,6 @@ TEST_CASE("Empty image buffers copy and detach without zero-sized aligned alloca
     input.reset();
     REQUIRE(empty.data() == nullptr);
     REQUIRE(owner.expired());
+    REQUIRE(ImageBufferPool::AcquireInput(0)->data() == nullptr);
+    REQUIRE(ImageBufferPool(0).Acquire(0).data() == nullptr);
 }
