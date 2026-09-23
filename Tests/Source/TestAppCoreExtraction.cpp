@@ -305,7 +305,7 @@ TEST_CASE("UnitFormatter formats binary and decimal units", "[Shared]")
 {
     REQUIRE(OIV::UnitFormatter::FormatUnit(2048, OIV::UnitType::BinaryDataShort,
                                            {
-                                               .precision = 1,
+                                               .decimalPlaces = 1,
                                            }) == LLUTILS_TEXT("2.0KB"));
     REQUIRE(OIV::UnitFormatter::FormatUnit(1500, OIV::UnitType::Distance, {}) == LLUTILS_TEXT("1.50 meters"));
 }

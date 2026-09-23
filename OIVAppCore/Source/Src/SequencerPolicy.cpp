@@ -132,7 +132,7 @@ namespace OIV
             const double interval = limit == Limit::Minimum
                                         ? FrameIntervalMs(fFrameDelays->longest, fSpeed, fSettings.minFrameIntervalMs)
                                         : fSettings.minFrameIntervalMs;
-            result.message        = FormatSpeed(fSpeed, limit, interval, UnitFormatter::Precision::predictive,
+            result.message        = FormatSpeed(fSpeed, limit, interval, UnitFormatter::PrecisionMode::step_aware,
                                                 std::abs(percent));
         }
         return result;
@@ -219,17 +219,17 @@ namespace OIV
     }
 
     LLUtils::native_string_type SequencerPolicy::FormatSpeed(double speed, Limit limit, double frameIntervalMs,
-                                                             UnitFormatter::Precision precision, double stepPercent)
+                                                             UnitFormatter::PrecisionMode precision, double stepPercent)
     {
         const double percentage = speed * 100.0;
         // Predict one fixed input step in either direction, independent of motion acceleration,
         // snapping, and playback caps, so blocked input still has meaningful display precision.
         // Steps above 100% need no finer precision; cap them to avoid overflowing the prediction.
-        const auto number = UnitFormatter::FormatUnit(percentage, UnitType::Undefined,
+        const auto number = UnitFormatter::FormatUnit(percentage, UnitType::Undecorated,
                                                       {
-                                                          .precision     = 2,
+                                                          .decimalPlaces = 2,
                                                           .precisionMode = precision,
-                                                          .nextChange    = percentage *
+                                                          .stepSize      = percentage *
                                                                            std::min(std::abs(stepPercent) / 100.0, 1.0),
                                                       });
         auto message = std::format(LLUTILS_TEXT("<textcolor=#ff8930>Animation speed<textcolor=#7672ff> ({}%)"), number);

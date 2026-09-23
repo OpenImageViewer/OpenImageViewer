@@ -93,7 +93,7 @@ namespace OIV
             AddRow(rows, "File size",
                    {UnitFormatter::FormatUnit(fileSize, UnitType::BinaryDataShort,
                                               {
-                                                  .precision = 0,
+                                                  .decimalPlaces = 0,
                                               })});
             AddRow(rows, "File date", {FormatFileTime(filePath)});
 

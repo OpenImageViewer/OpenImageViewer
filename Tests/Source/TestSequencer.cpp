@@ -304,10 +304,10 @@ TEST_CASE("Animation percentages add only the precision needed to display nonzer
                        OIV::SequencerPolicy::Limit::Maximum})
     {
         const auto message   = OIV::SequencerPolicy::FormatSpeed(speed, limit, 3,
-                                                                 OIV::UnitFormatter::Precision::first_non_zero);
+                                                                 OIV::UnitFormatter::PrecisionMode::preserve_nonzero);
         const auto firstLine = message.substr(0, message.find(LLUTILS_TEXT('\n')));
         REQUIRE(firstLine == OIV::SequencerPolicy::FormatSpeed(speed, OIV::SequencerPolicy::Limit::None, 0,
-                                                               OIV::UnitFormatter::Precision::first_non_zero));
+                                                               OIV::UnitFormatter::PrecisionMode::preserve_nonzero));
         REQUIRE((message.find(LLUTILS_TEXT('\n')) != LLUtils::native_string_type::npos) ==
                 (limit != OIV::SequencerPolicy::Limit::None));
         REQUIRE(message.find(LLUtils::native_string_type(LLUTILS_TEXT("(")) + expected) !=
@@ -505,7 +505,7 @@ TEST_CASE("Animation reset clears timing and finite timer bounds exclude reserve
     REQUIRE(policy.RemainingFrameMs(start) == 0);
 }
 
-TEST_CASE("Predictive animation precision follows the fixed command step", "[AppCore][Sequencer]")
+TEST_CASE("Step-aware animation precision follows the fixed command step", "[AppCore][Sequencer]")
 {
     const auto [speed, step, expected] = GENERATE(table<double, double, const LLUtils::native_char_type*>({
         {1.0, 1.0, LLUTILS_TEXT("(100.00%)")},
@@ -519,7 +519,7 @@ TEST_CASE("Predictive animation precision follows the fixed command step", "[App
                        OIV::SequencerPolicy::Limit::Maximum})
     {
         const auto message = OIV::SequencerPolicy::FormatSpeed(speed, limit, 3,
-                                                               OIV::UnitFormatter::Precision::predictive, step);
+                                                               OIV::UnitFormatter::PrecisionMode::step_aware, step);
         REQUIRE(message.find(expected) != LLUtils::native_string_type::npos);
     }
 
@@ -530,5 +530,5 @@ TEST_CASE("Predictive animation precision follows the fixed command step", "[App
     REQUIRE(down.message == OIV::SequencerPolicy::FormatSpeed(policy.GetSpeed()));
     const auto up = policy.ChangeSpeed(0.1);
     REQUIRE(up.message == OIV::SequencerPolicy::FormatSpeed(policy.GetSpeed(), OIV::SequencerPolicy::Limit::None, 0,
-                                                            OIV::UnitFormatter::Precision::predictive, 0.1));
+                                                            OIV::UnitFormatter::PrecisionMode::step_aware, 0.1));
 }

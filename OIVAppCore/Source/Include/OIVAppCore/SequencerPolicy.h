@@ -81,7 +81,8 @@ namespace OIV
         // Precision applies to the displayed percentage; prediction uses an unaccelerated +/-stepPercent.
         static LLUtils::native_string_type FormatSpeed(
             double speed, Limit limit = Limit::None, double frameIntervalMs = 0.0,
-            UnitFormatter::Precision precision = UnitFormatter::Precision::predictive, double stepPercent = 1.0);
+            UnitFormatter::PrecisionMode precision = UnitFormatter::PrecisionMode::step_aware,
+            double stepPercent                     = 1.0);
         static uint32_t NextFrame(uint32_t currentFrame, uint32_t frameCount);
         // speed must be finite and positive; minFrameIntervalMs must be in [1, MaxTimerIntervalMs]. The policy
         // enforces these at input/settings boundaries, leaving only bounded arithmetic per frame.
