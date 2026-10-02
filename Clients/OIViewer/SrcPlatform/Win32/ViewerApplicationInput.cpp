@@ -69,7 +69,7 @@ namespace OIV
         fRawInputState->rawInput.AddDevice(RawInput::UsagePage::GenericDesktopControls,
                                            RawInput::GenericDesktopControlsUsagePage::Mouse,
                                            RawInput::Flags::EnableBackground);
-        fRawInputState->rawInput.OnInput.Add(
+        fRawInputState->inputSubscription = fRawInputState->rawInput.OnInput.Subscribe(
             [this](const RawInput::RawInputEvent& event)
             {
                 HandleEventCallback(

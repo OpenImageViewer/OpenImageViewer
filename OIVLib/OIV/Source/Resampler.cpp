@@ -1,3 +1,4 @@
+#include <LLUtils/Thread.h>
 #include "Resampler.h"
 #include <algorithm>
 #include <cmath>
@@ -132,8 +133,8 @@ namespace OIV
 		{
 			fTasks[i] = templateTask;;
 			fTasks[i].TaskID = i;
-			fThreads[i] = std::thread(std::bind(&Resampler::ResampleThreadEntryPoint, this, std::placeholders::_1), &fTasks[i]);
-		}
+            fThreads[i]      = LLUtils::StartThread(&Resampler::ResampleThreadEntryPoint, this, &fTasks[i]);
+        }
 
 		for (int i = 0; i < totalThreads; i++)
 			fThreads[i].join();

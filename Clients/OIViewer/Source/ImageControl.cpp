@@ -7,7 +7,7 @@ namespace OIV
 {
     void ImageControl::InitializeEvents()
     {
-        fImageList.Changed.Add(
+        fImageListSubscription = fImageList.Changed.Subscribe(
             [this](ImageList::ChangeType change)
             {
                 switch (change)

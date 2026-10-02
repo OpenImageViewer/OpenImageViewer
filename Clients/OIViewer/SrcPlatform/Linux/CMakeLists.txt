@@ -7,7 +7,6 @@ endif()
 target_link_libraries(OIViewer PRIVATE PkgConfig::GTK3)
 
 target_sources(OIViewer PRIVATE
-    ApplicationLog.cpp
     ClipboardSetup.cpp
     ContextMenuBackend.cpp
     EntryPoint.cpp

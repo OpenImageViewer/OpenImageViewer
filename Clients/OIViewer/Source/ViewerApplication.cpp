@@ -275,8 +275,6 @@ namespace OIV
 
     void ViewerApplication::PostInitOperations()
     {
-        mLogFile.Register();
-
         std::ignore = fTimerTopMostRetention.SetTargetWindow(&fWindow.GetWindow());
         fTimerTopMostRetention.SetCallback(MakeSafeCallback([this]() { ProcessTopMost(); }));
 
@@ -329,7 +327,7 @@ namespace OIV
 
         if (fFileWatcher != nullptr)
         {
-            fFileWatcher->GetFileChangedEvent().Add(
+            fFileWatchSubscription = fFileWatcher->GetFileChangedEvent().Subscribe(
                 std::bind(&ViewerApplication::OnFileChanged, this, std::placeholders::_1));
         }
 
@@ -361,7 +359,7 @@ namespace OIV
 
         AddCommandsAndKeyBindings();
 
-        fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Add(
+        fImageSelectionSubscription = fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Subscribe(
             std::bind(&ViewerApplication::OnImageSelectionChanged, this, std::placeholders::_1));
 
         std::ignore = fContextMenuTimer.SetTargetWindow(&fWindow.GetWindow());

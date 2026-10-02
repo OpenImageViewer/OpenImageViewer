@@ -178,8 +178,6 @@ namespace OIV
       private:  // methods
 
         LLUtils::native_string_type GetLogFilePath();
-        void HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args,
-                             LLUtils::native_string_type seperatedCallStack);
 #pragma region platform event handling
         bool handleKeyInput(const LWS::AnyEvent& eventData);
         std::intptr_t ClientWindwMessage(const LWS::AnyEvent& eventData);
@@ -516,10 +514,11 @@ namespace OIV
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 
-        ApplicationLog mLogFile{GetLogFilePath(), true};
-        // Global publishers outlive this application; disconnect before the logging and window members are released.
-        LLUtils::Exception::OnExceptionEventType::Connection fExceptionConnection;
-        EventManager::MonitorChangeEvent::Connection fMonitorConnection;
+        std::shared_ptr<ApplicationLog> mLogFile = std::make_shared<ApplicationLog>(GetLogFilePath(), true);
+        // Global publishers outlive this application; unsubscribe before the logging and window members are released.
+        LLUtils::Exception::OnExceptionEventType::Subscription fExceptionSubscription;
+        EventManager::MonitorChangeEvent::Subscription fMonitorSubscription;
+        ImageList::ImageSelectionChangEvent::Subscription fImageSelectionSubscription;
 
         struct MenuItemData
         {
@@ -543,6 +542,7 @@ namespace OIV
         std::atomic_bool fIsShuttingDown = false;
         ImageResidencyCache fImageResidencyCache;
         std::unique_ptr<IFileWatcher> fFileWatcher;
+        IFileWatcher::OnFileChangedEventArgsEvent::Subscription fFileWatchSubscription;
         std::unique_ptr<BrowseSessionController> fBrowseSessionController;
         LWS::EventConnection fWindowConnection;
         LWS::EventConnection fCanvasConnection;

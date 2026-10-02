@@ -34,6 +34,10 @@ namespace OIV
 
         virtual ~IFileWatcher() = default;
 
+        // Stop delivery and drain callbacks before unsubscribing from the single-threaded
+        // event. Call from the controlling thread; folder registrations remain until cleanup.
+        virtual void StopNotifications() = 0;
+
         virtual bool IsFolderRegistered(const LLUtils::native_string_type& folder) const = 0;
         virtual FolderID AddFolder(const LLUtils::native_string_type& folder)            = 0;
         virtual void RemoveFolder(FolderID folderID)                                     = 0;

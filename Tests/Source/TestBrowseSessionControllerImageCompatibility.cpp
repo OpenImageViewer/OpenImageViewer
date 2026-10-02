@@ -26,6 +26,8 @@ namespace
     {
       public:
 
+        void StopNotifications() override {}
+
         bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override { return fFolder == folder; }
 
         FolderID AddFolder(const LLUtils::native_string_type& folder) override

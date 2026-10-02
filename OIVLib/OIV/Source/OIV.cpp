@@ -39,6 +39,11 @@ namespace OIV
 
     }  // namespace
 
+    OIV::~OIV()
+    {
+        Shutdown();
+    }
+
     IRenderer* OIV::GetRenderer()
     {
         return fRenderer.get();
@@ -421,7 +426,10 @@ namespace OIV
 
     ResultCode OIV::RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks)
     {
+        const std::lock_guard lock(*fExceptionMutex);
         fCallBacks = callbacks;
+        if (fExceptionState)
+            fExceptionState->callbacks = callbacks;
         if (fIsInitialized)
             ConnectExceptionCallback();
         return RC_Success;
@@ -452,26 +460,37 @@ namespace OIV
 
     void OIV::ConnectExceptionCallback()
     {
-        // The viewer handles exceptions directly while decoder workers may still be reporting them.
-        // Leave the single-threaded global event untouched unless an API client requests this bridge.
-        // Once installed, keep it until shutdown so replacing callbacks cannot invalidate active dispatch.
-        if (fCallBacks.OnException != nullptr && !fExceptionConnection)
+        // Callers hold fExceptionMutex. No bridge is installed unless a client requests it.
+        // Each initialization gets a fresh state: old snapshots remain disabled forever.
+        if (fCallBacks.OnException != nullptr && !fExceptionSubscription)
         {
-            fExceptionConnection = LLUtils::Exception::OnException.Connect(
-                [this](LLUtils::Exception::EventArgs args)
+            auto state           = std::make_shared<ExceptionCallbackState>(ExceptionCallbackState{
+                .mutex     = fExceptionMutex,
+                .callbacks = fCallBacks,
+            });
+            fExceptionSubscription = LLUtils::Exception::OnException.Subscribe(
+                [state](const LLUtils::Exception::EventArgs& args)
                 {
-                    if (fCallBacks.OnException != nullptr)
+                    const std::lock_guard lock(*state->mutex);
+                    if (state->enabled && state->callbacks.OnException != nullptr)
                     {
-                        auto formattedcallStack      = LLUtils::Exception::FormatStackTrace(args.stackTrace);
-                        OIV_Exception_Args localArgs = {};
-                        localArgs.errorCode          = static_cast<int>(args.errorCode);
-                        localArgs.callstack          = formattedcallStack.c_str();
-                        localArgs.description        = args.description.c_str();
-                        localArgs.systemErrorMessage = args.systemErrorMessage.c_str();
-                        localArgs.functionName       = args.functionName.c_str();
-                        fCallBacks.OnException(localArgs, fCallBacks.userPointer);
+                        const auto stack       = LLUtils::Exception::FormatStackTrace(args.stackTrace);
+                        const auto description = LLUtils::StringUtility::ToNativeString(args.description);
+                        const auto systemError = LLUtils::StringUtility::ToNativeString(args.systemErrorMessage);
+                        const auto function    = LLUtils::StringUtility::ToNativeString(args.functionName);
+                        const OIV_Exception_Args localArgs{
+                            .errorCode          = static_cast<int>(args.errorCode),
+                            .description        = description.c_str(),
+                            .systemErrorMessage = systemError.c_str(),
+                            .callstack          = stack.c_str(),
+                            .functionName       = function.c_str(),
+                        };
+                        // Snapshot this pair before reentrant user code can replace it.
+                        const auto callback = state->callbacks;
+                        callback.OnException(localArgs, callback.userPointer);
                     }
                 });
+            fExceptionState = std::move(state);
         }
     }
 
@@ -501,19 +520,30 @@ namespace OIV
             // Only a successfully initialized renderer receives the images queued during startup.
             fRenderer = SelectRenderer(GetRendererBackends(), options, params);
         }
-        // Expected candidate failures are collected by startup, without application dialogs.
-        ConnectExceptionCallback();
-
         for (const auto renderable : fPendingRenderables)
             fRenderer->AddRenderable(renderable);
         fPendingRenderables.clear();
-        fIsInitialized = true;
+        {
+            const std::lock_guard lock(*fExceptionMutex);
+            fIsInitialized = true;
+            // Candidate failures are collected by startup before enabling the API bridge.
+            ConnectExceptionCallback();
+        }
         return 0;
     }
 
     void OIV::Shutdown() noexcept
     {
-        fExceptionConnection.Disconnect();
+        // Disabling under the invocation lock drains another thread's active callback.
+        // Callbacks must not wait for a thread performing shutdown or replacement.
+        const std::lock_guard lock(*fExceptionMutex);
+        if (fExceptionState)
+        {
+            fExceptionState->enabled   = false;
+            fExceptionState->callbacks = {};
+            fExceptionState.reset();
+        }
+        fExceptionSubscription.Unsubscribe();
         // Release native rendering before the window, but retain the API's image manager until images are gone.
         // Late image destruction uses the pre-initialization registration path instead of the released renderer.
         fIsInitialized = false;

@@ -31,6 +31,7 @@ namespace OIV
 
         ViewerApplication& owner;
         LInput::RawInput rawInput;
+        LInput::RawInput::OnInputType::Subscription inputSubscription;
         LInput::KeyBindings<BindingElement> keyBindings;
     };
 
@@ -39,6 +40,7 @@ namespace OIV
         explicit NativeWindowState(LWS::PlatformContext& platform) : notificationIcons(platform) {}
 
         LWS::NotificationIconGroup notificationIcons;
+        LWS::NotificationIconGroup::NotificationIconEvent::Subscription notificationSubscription;
         HMODULE settingsModule                    = nullptr;
         DLL_DIRECTORY_COOKIE settingsDllDirectory = nullptr;
     };

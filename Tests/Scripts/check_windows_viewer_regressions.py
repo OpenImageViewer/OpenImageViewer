@@ -14,6 +14,8 @@ import subprocess
 import tempfile
 import time
 
+from check_exception_reporting import windows_dialogs
+
 WM_CLOSE, WM_KEYDOWN, WM_KEYUP = 0x10, 0x100, 0x101
 VK_RIGHT = 0x27
 SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE = 3, 6, 9
@@ -164,13 +166,31 @@ def main():
     fixture = (root / "External/ImageCodec/Example/cat.jpg").resolve(strict=True)
     if args.renderer and args.renderer.casefold() in ("d3d11", "vulkan"):
         # A valid but absent adapter fails after window creation, while initial image decoding may be active.
-        failed = subprocess.run([str(executable), "--renderer", args.renderer, "--adapter-index", str(2**31 - 1),
-                                 str(fixture)], cwd=executable.parent, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, timeout=20)
-        if failed.returncode != 1:
-            raise RuntimeError(f"Renderer initialization failure exited {failed.returncode}: "
-                               + failed.stdout.decode(errors="replace")[-2000:])
-        print(f"PASS {args.renderer}: failed initialization exits cleanly", flush=True)
+        with tempfile.TemporaryFile() as output:
+            failed = subprocess.Popen(
+                [str(executable), "--renderer", args.renderer, "--adapter-index", str(2**31 - 1), str(fixture)],
+                cwd=executable.parent, stdout=output, stderr=subprocess.STDOUT)
+            dialogs = {}
+            try:
+                deadline = time.monotonic() + 20
+                while failed.poll() is None and time.monotonic() < deadline:
+                    for handle, contents in windows_dialogs(failed.pid):
+                        if len(contents) > len(dialogs.get(handle, "")):
+                            dialogs[handle] = contents
+                    time.sleep(0.03)
+                if failed.poll() is None:
+                    raise RuntimeError("Renderer failure did not exit after dismissing its terminal dialog")
+                output.seek(0)
+                text = output.read().decode("utf-8", errors="replace")
+                expected = "No eligible renderer could initialize"
+                if failed.returncode != 1 or len(dialogs) != 1 or expected not in next(iter(dialogs.values())):
+                    raise RuntimeError(f"Renderer initialization failure exited {failed.returncode}: "
+                                       + text[-2000:] + repr(dialogs))
+            finally:
+                if failed.poll() is None:
+                    failed.kill()
+                failed.wait()
+        print(f"PASS {args.renderer}: failed initialization reports once and exits cleanly", flush=True)
     exercise(executable, args.renderer, "empty", None)
     exercise(executable, args.renderer, "image", fixture, "cat.jpg")
     corpus = (root / "External/ImageCodec/External/FreeImageRe/TestAPI").resolve(strict=True)

@@ -5,6 +5,8 @@
 #include "Resampler.h"
 #include <LLUtils/Exception.h>
 #include <set>
+#include <mutex>
+#include <memory>
 #include <ImageUtil/AxisAlignedTransform.h>
 
 namespace OIV
@@ -13,8 +15,9 @@ namespace OIV
     {
       public:
 
-        // Exception callbacks capture this instance, so its address must remain stable.
+        // Renderer/image ownership remains tied to this instance.
         OIV()                      = default;
+        ~OIV() override;
         OIV(const OIV&)            = delete;
         OIV& operator=(const OIV&) = delete;
 
@@ -69,6 +72,17 @@ namespace OIV
 
         void ConnectExceptionCallback();
 
+        // Share the lock with snapshots so callbacks can outlive the OIV object without
+        // retaining it. Recursive locking permits same-thread callback replacement/shutdown.
+        struct ExceptionCallbackState
+        {
+            std::shared_ptr<std::recursive_mutex> mutex;
+            OIV_CMD_RegisterCallbacks_Request callbacks{};
+            bool enabled = true;
+        };
+        const std::shared_ptr<std::recursive_mutex> fExceptionMutex = std::make_shared<std::recursive_mutex>();
+        std::shared_ptr<ExceptionCallbackState> fExceptionState;
+
         static constexpr std::array<uint8_t, 6> sShades
         {
              255
@@ -112,7 +126,7 @@ namespace OIV
         Resampler fResampler;
         std::vector<IRenderable*> fPendingRenderables;
         bool fIsInitialized = false;
-        LLUtils::Exception::OnExceptionEventType::Connection fExceptionConnection;
+        LLUtils::Exception::OnExceptionEventType::Subscription fExceptionSubscription;
 #pragma endregion
     };
 }  // namespace OIV

@@ -1,9 +1,15 @@
 #include "Main.h"
+#include "ExceptionHandler.h"
+#include <LLUtils/Exception.h>
 #include <cstdlib>
 #include <iostream>
 
 int main(int argc, char* argv[])
 {
+    if (const auto result = OIV::RunExceptionDialog(argc, argv))
+        return *result;
+    LLUtils::Exception::RegisterMainThread();
+    const OIV::ExceptionRegistration exceptionRegistration;
     try
     {
         auto parsed       = OIV::ParseCommandLine(argc, argv);
@@ -14,9 +20,9 @@ int main(int argc, char* argv[])
         std::cerr << result.standardError;
         return result.exitCode;
     }
-    catch (const std::exception& error)
+    catch (...)
     {
-        std::cerr << "OIViewer: " << error.what() << '\n';
+        OIV::ReportUnhandledException(std::current_exception());
         return EXIT_FAILURE;
     }
 }

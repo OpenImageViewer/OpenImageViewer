@@ -1,4 +1,6 @@
 #include "Main.h"
+#include "ExceptionHandler.h"
+#include <LLUtils/Exception.h>
 #include "CopyDataProtocol.h"
 #include "ViewerApplication.h"
 
@@ -55,20 +57,23 @@ namespace
 // console and redirected streams. No runtime console allocation or attachment is needed.
 int wmain(int argc, wchar_t* argv[])
 {
-    OIV::CommandLineExit result;
+    LLUtils::Exception::RegisterMainThread();
+    const OIV::ExceptionRegistration exceptionRegistration;
     try
     {
+        OIV::CommandLineExit result;
         auto parsed = OIV::ParseCommandLine(argc, argv);
         if (auto* exit = std::get_if<OIV::CommandLineExit>(&parsed))
             result = std::move(*exit);
         else
             result = RunViewer(std::get<OIV::CommandLineParameters>(parsed), ForwardFile);
+        WriteText(GetStdHandle(STD_OUTPUT_HANDLE), result.standardOutput);
+        WriteText(GetStdHandle(STD_ERROR_HANDLE), result.standardError);
+        return result.exitCode;
     }
-    catch (const std::exception& error)
+    catch (...)
     {
-        result = {EXIT_FAILURE, {}, std::string("OIViewer: ") + error.what() + "\n"};
+        OIV::ReportUnhandledException(std::current_exception());
+        return EXIT_FAILURE;
     }
-    WriteText(GetStdHandle(STD_OUTPUT_HANDLE), result.standardOutput);
-    WriteText(GetStdHandle(STD_ERROR_HANDLE), result.standardError);
-    return result.exitCode;
 }

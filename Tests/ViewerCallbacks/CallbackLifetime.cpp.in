@@ -1,0 +1,112 @@
+// The script inserts the production MakeSafeCallback definition below. This fixture isolates its owner boundary;
+// it does not reproduce the callback implementation or instantiate the full viewer/graphics stack.
+#include <LWS/Platform.hpp>
+#include <LWS/Win32/Platform.hpp>
+
+#include <cstdlib>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <utility>
+
+namespace
+{
+    bool ownerAlive         = false;
+    unsigned ownerCalls     = 0;
+    unsigned bodyCalls      = 0;
+    unsigned reportedErrors = 0;
+
+    void Check(bool condition, const char* message)
+    {
+        if (!condition)
+        {
+            std::cerr << "FAIL: " << message << '\n';
+            std::exit(1);
+        }
+    }
+}  // namespace
+
+class ViewerApplication
+{
+  public:
+
+    ViewerApplication() { ownerAlive = true; }
+    ~ViewerApplication()
+    {
+        Invalidate();
+        ownerAlive = false;
+    }
+
+    void Invalidate() { fUiLifetime.reset(); }
+    std::function<void()> MakeSafeCallback(std::function<void()> callback);
+
+  private:
+
+    bool HandleEventCallback(const std::function<bool()>& callback) noexcept
+    {
+        // Inspect only fixture globals before recording owner access: expired callbacks must never enter here.
+        Check(ownerAlive, "callback accessed its destroyed owner");
+        ++ownerCalls;
+        try
+        {
+            return callback();
+        }
+        catch (...)
+        {
+            ++reportedErrors;
+            return true;
+        }
+    }
+
+    struct UiLifetime
+    {
+    };
+    std::shared_ptr<UiLifetime> fUiLifetime{std::make_shared<UiLifetime>()};
+    const std::weak_ptr<UiLifetime> fUiWeakLifetime{fUiLifetime};
+};
+
+// @MAKE_SAFE_CALLBACK@
+
+int main(int argc, char**)
+{
+    Check(LWS::Win32::BootstrapProcess() == LWS::Result::Success, "Win32 bootstrap");
+    LWS::PlatformContext platform;
+    Check(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success, "platform initialization");
+    {
+        ViewerApplication viewer;
+        auto callback = viewer.MakeSafeCallback([] { ++bodyCalls; });
+        Check(platform.PostTask(callback) == LWS::Result::Success, "post live callback");
+        Check(platform.ProcessMessages() == LWS::LoopResult::Continue, "drain live callback");
+        Check(bodyCalls == 1 && ownerCalls == 1, "live callback runs once");
+
+        // Timer users can invoke the same factory result directly; their error boundary must remain in use.
+        viewer.MakeSafeCallback([] { throw std::runtime_error("fixture callback"); })();
+        Check(reportedErrors == 1 && ownerCalls == 2, "live callback preserves exception handling");
+
+        viewer.Invalidate();
+        if (argc == 1)
+        {
+            Check(platform.PostTask(callback) == LWS::Result::Success, "post invalidated callback");
+            Check(platform.ProcessMessages() == LWS::LoopResult::Continue, "drain invalidated callback");
+            callback();
+            Check(bodyCalls == 1 && ownerCalls == 2, "early invalidation rejects callback before owner access");
+        }
+    }
+    std::weak_ptr<int> capture;
+    {
+        auto viewer       = std::make_unique<ViewerApplication>();
+        auto ownedCapture = std::make_shared<int>();
+        capture           = ownedCapture;
+        Check(platform.PostTask(viewer->MakeSafeCallback([ownedCapture] { ++bodyCalls; })) == LWS::Result::Success,
+              "post callback before quit");
+        platform.RequestQuit();
+        Check(platform.RunMessageLoop() == LWS::LoopResult::Quit, "quit leaves callback pending");
+        Check(bodyCalls == 1 && ownerCalls == 2 && !capture.expired(), "quit has not drained callback");
+        viewer.reset();
+    }
+    Check(platform.Shutdown() == LWS::Result::Success, "normal shutdown drains after owner destruction");
+    Check(bodyCalls == 1 && ownerCalls == 2, "destroyed owner is never accessed");
+    Check(capture.expired(), "shutdown releases skipped callback captures");
+    std::cout << "PASS: live, exception, invalidated, and destroyed-owner callbacks; real LWS quit/shutdown drain\n";
+}
