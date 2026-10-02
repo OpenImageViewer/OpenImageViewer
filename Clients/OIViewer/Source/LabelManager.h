@@ -48,5 +48,6 @@ namespace OIV
         std::tuple<uint16_t, uint16_t> fDPI{96, 96};
         TextLabels fTextLabels;
         FreeType::FreeTypeConnector* fFreeType;
+        EventManager::MonitorChangeEvent::Subscription fMonitorSubscription;
     };
 }  // namespace OIV

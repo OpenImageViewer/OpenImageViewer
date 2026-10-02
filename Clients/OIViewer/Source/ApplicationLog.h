@@ -1,28 +1,25 @@
 #pragma once
-
 #include <LLUtils/StringDefs.h>
-
-#include <memory>
+#include <mutex>
+#include <string_view>
 
 namespace OIV
 {
+    // An independently owned sink lets an in-flight exception observer finish after UI teardown.
     class ApplicationLog final
     {
       public:
 
         ApplicationLog(LLUtils::native_string_type logPath, bool clear);
-        ~ApplicationLog();
-
         ApplicationLog(const ApplicationLog&)            = delete;
         ApplicationLog& operator=(const ApplicationLog&) = delete;
 
-        void Register();
-        void Log(const LLUtils::native_string_type& message);
-        [[nodiscard]] const LLUtils::native_string_type& GetLogPath() const;
+        void Log(std::string_view message);
+        [[nodiscard]] const LLUtils::native_string_type& GetLogPath() const noexcept { return fLogPath; }
 
       private:
 
-        struct NativeState;
-        std::unique_ptr<NativeState> fNativeState;
+        const LLUtils::native_string_type fLogPath;
+        std::mutex fMutex;
     };
 }  // namespace OIV

@@ -39,5 +39,6 @@ namespace OIV
         ViewerApplication& fOwner;
         MouseGestureController fController;
         MouseMultiClickHandler fMultiClick;
+        decltype(MouseMultiClickHandler::OnMouseClickEvent)::Subscription fMultiClickSubscription;
     };
 }  // namespace OIV

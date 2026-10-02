@@ -77,7 +77,7 @@ TEST_CASE("Unused render gateway leaves the API available", "[renderer][lifetime
     CHECK(OIV::ApiGlobal::sPictureRenderer != nullptr);
 }
 
-TEST_CASE("Renderer shutdown disconnects its global exception subscription", "[renderer][lifetime]")
+TEST_CASE("Renderer shutdown unsubscribes its global exception subscription", "[renderer][lifetime]")
 {
     ScopedApi api;
     const OIV::RendererOptions options{.renderer = OIV::RendererType::Null};
@@ -287,7 +287,7 @@ TEST_CASE("Explicit renderer shutdown preserves the API until surviving images a
     CHECK(OIV::ApiGlobal::sPictureRenderer == nullptr);
 }
 
-TEST_CASE("Explicit renderer shutdown disconnects callbacks before reinitialization", "[renderer][lifetime]")
+TEST_CASE("Explicit renderer shutdown unsubscribes callbacks before reinitialization", "[renderer][lifetime]")
 {
     ScopedApi api;
     auto& renderer         = *OIV::ApiGlobal::sPictureRenderer;
@@ -364,7 +364,7 @@ TEST_CASE("Renderer without exception callbacks leaves worker reporting independ
     ScopedApi api;
     auto& renderer         = *OIV::ApiGlobal::sPictureRenderer;
     unsigned notifications = 0;
-    auto observer = LLUtils::Exception::OnException.Connect([&](LLUtils::Exception::EventArgs) { ++notifications; });
+    auto observer = LLUtils::Exception::OnException.Subscribe([&](LLUtils::Exception::EventArgs) { ++notifications; });
     std::latch started(1);
     std::jthread worker(
         [&](std::stop_token stop)
@@ -376,7 +376,7 @@ TEST_CASE("Renderer without exception callbacks leaves worker reporting independ
         });
     started.wait();
     // The viewer does not request the API bridge. Its renderer lifecycle must leave the
-    // single-threaded global event alone while a decoder worker reports exceptions.
+    // global event independent of renderer lifecycle while a decoder worker reports exceptions.
     constexpr unsigned lifecycleCount = 1000;
     for (unsigned iteration = 0; iteration < lifecycleCount; ++iteration)
     {
@@ -441,7 +441,7 @@ TEST_CASE("Renderer shutdown releases native state and exception registrations",
         image.reset();
         REQUIRE(renderer.GetRenderer() == nullptr);
     }
-    SECTION("Exception forwarding is disconnected and can be reinitialized")
+    SECTION("Exception forwarding is unsubscribed and can be reinitialized")
     {
         unsigned notifications = 0;
         const OIV_CMD_RegisterCallbacks_Request callbacks{
@@ -467,4 +467,109 @@ TEST_CASE("Renderer shutdown releases native state and exception registrations",
         REQUIRE(notifications == 2);
         renderer.Shutdown();
     }
+}
+
+TEST_CASE("Shutdown leaves old exception snapshots disabled across reinitialization", "[renderer][lifetime][exception]")
+{
+    ScopedApi api;
+    auto& renderer = *OIV::ApiGlobal::sPictureRenderer;
+    std::latch entered(1), resume(1);
+    auto blocker = LLUtils::Exception::OnException.Subscribe(
+        [&](const LLUtils::Exception::EventArgs&)
+        {
+            entered.count_down();
+            resume.wait();
+        });
+    unsigned oldCalls = 0, newCalls = 0;
+    OIV_CMD_RegisterCallbacks_Request callbacks{
+        .OnException = [](OIV_Exception_Args, void* user) { ++*static_cast<unsigned*>(user); },
+        .userPointer = &oldCalls,
+    };
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    REQUIRE(renderer.RegisterCallbacks(callbacks) == RC_Success);
+    std::jthread worker([] { LLUtils::Exception::OnException.Raise({}); });
+    entered.wait();
+    blocker.Unsubscribe();
+    renderer.Shutdown();
+    callbacks.userPointer = &newCalls;
+    renderer.RegisterCallbacks(callbacks);
+    const auto result = renderer.Init({.renderer = OIV::RendererType::Null});
+    resume.count_down();
+    worker.join();
+    REQUIRE(result == 0);
+    CHECK(oldCalls == 0);
+    CHECK(newCalls == 0);
+    LLUtils::Exception::OnException.Raise({});
+    CHECK(newCalls == 1);
+}
+
+TEST_CASE("Renderer shutdown drains an active exception callback", "[renderer][lifetime][exception]")
+{
+    ScopedApi api;
+    auto& renderer = *OIV::ApiGlobal::sPictureRenderer;
+    struct Context
+    {
+        std::latch entered{1}, resume{1};
+        bool finished = false;
+    } context;
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    REQUIRE(renderer.RegisterCallbacks({
+                .OnException =
+                    [](OIV_Exception_Args, void* user)
+                {
+                    auto& context = *static_cast<Context*>(user);
+                    context.entered.count_down();
+                    context.resume.wait();
+                    context.finished = true;
+                },
+                .userPointer = &context,
+            }) == RC_Success);
+    std::jthread worker([] { LLUtils::Exception::OnException.Raise({}); });
+    context.entered.wait();
+    std::latch shutdownStarted(1);
+    auto shutdown = std::async(std::launch::async,
+                               [&]
+                               {
+                                   shutdownStarted.count_down();
+                                   renderer.Shutdown();
+                                   return context.finished;
+                               });
+    shutdownStarted.wait();
+    const bool waiting = shutdown.wait_for(std::chrono::milliseconds(20)) == std::future_status::timeout;
+    context.resume.count_down();
+    worker.join();
+    CHECK(shutdown.get());
+    CHECK(waiting);
+    LLUtils::Exception::OnException.Raise({});
+}
+
+TEST_CASE("Exception bridge supports reentrant clearing and preserves native Unicode",
+          "[renderer][lifetime][exception]")
+{
+    ScopedApi api;
+    auto& renderer = *OIV::ApiGlobal::sPictureRenderer;
+    struct Context
+    {
+        OIV::IPictureRenderer& renderer;
+        std::string description;
+        unsigned calls = 0;
+    } context{renderer};
+    REQUIRE(renderer.Init({.renderer = OIV::RendererType::Null}) == 0);
+    REQUIRE(renderer.RegisterCallbacks({
+                .OnException =
+                    [](OIV_Exception_Args args, void* user)
+                {
+                    auto& context       = *static_cast<Context*>(user);
+                    context.description = LLUtils::StringUtility::ToAString(args.description);
+                    ++context.calls;
+                    context.renderer.RegisterCallbacks({});
+                    context.renderer.Shutdown();
+                },
+                .userPointer = &context,
+            }) == RC_Success);
+    LLUtils::Exception::OnException.Raise({.description = "image \xe2\x82\xac \xf0\x9f\x8c\x8d"});
+    CHECK(context.description == "image \xe2\x82\xac \xf0\x9f\x8c\x8d");
+    CHECK(context.calls == 1);
+    LLUtils::Exception::OnException.Raise({});
+    CHECK(context.calls == 1);
 }

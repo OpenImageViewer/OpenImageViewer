@@ -85,5 +85,6 @@ namespace OIV
         int32_t fMarginLeft  = 20;
         int32_t fMarginTop   = 20;
         int32_t fMarginRight = 20;
+        EventManager::SizeChangeEvent::Subscription fSizeSubscription;
     };
 }  // namespace OIV

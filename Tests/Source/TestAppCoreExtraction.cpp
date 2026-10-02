@@ -42,7 +42,6 @@
 #include <Image.h>
 #include <IImageCodec.h>
 #include <ImageItem.h>
-#include <LLUtils/Event.h>
 #include <LLUtils/StringUtility.h>
 #include <OIVImage/OIVFileImage.h>
 
@@ -65,6 +64,8 @@ namespace
     class FakeFileWatcher : public OIV::IFileWatcher
     {
       public:
+
+        void StopNotifications() override {}
 
         bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override { return fFolder == folder; }
 
@@ -1147,166 +1148,6 @@ TEST_CASE("FileSorter orders files by name and extension", "[AppCore][Shared]")
 
     sorter.SetSortType(OIV::FileSorter::SortType::Extension);
     REQUIRE(sorter(jpg, png));
-}
-
-TEST_CASE("Event connection disconnects lambda listeners", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void(int)> event;
-    int firstCount  = 0;
-    int secondCount = 0;
-
-    auto firstConnection  = event.Connect([&](int value) { firstCount += value; });
-    auto secondConnection = event.Connect([&](int value) { secondCount += value; });
-
-    event.Raise(2);
-    REQUIRE(firstCount == 2);
-    REQUIRE(secondCount == 2);
-
-    firstConnection.Disconnect();
-    event.Raise(3);
-
-    REQUIRE(firstCount == 2);
-    REQUIRE(secondCount == 5);
-}
-
-TEST_CASE("Event connection ownership can move and disconnect explicitly", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void()> event;
-    int count = 0;
-
-    LLUtils::Event<void()>::Connection empty;
-    REQUIRE_FALSE(empty);
-    auto connection = event.Connect([&] { ++count; });
-    static_assert(noexcept(static_cast<bool>(connection)));
-    REQUIRE(connection);
-    auto movedConnection = std::move(connection);
-    REQUIRE_FALSE(connection);
-    REQUIRE(movedConnection);
-
-    empty = std::move(movedConnection);
-    REQUIRE_FALSE(movedConnection);
-    REQUIRE(empty);
-    movedConnection = std::move(empty);
-    REQUIRE_FALSE(empty);
-    REQUIRE(movedConnection);
-
-    event.Raise();
-    REQUIRE(count == 1);
-
-    movedConnection.Disconnect();
-    REQUIRE_FALSE(movedConnection);
-    movedConnection.Disconnect();
-    REQUIRE_FALSE(movedConnection);
-    event.Raise();
-
-    REQUIRE(count == 1);
-}
-
-TEST_CASE("Event connection disconnects automatically on destruction", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void()> event;
-    int count = 0;
-
-    {
-        auto connection = event.Connect([&] { ++count; });
-        event.Raise();
-        REQUIRE(count == 1);
-    }
-
-    event.Raise();
-    REQUIRE(count == 1);
-}
-
-TEST_CASE("Event connection can disconnect while event is being raised", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void()> event;
-    LLUtils::Event<void()>::Connection skippedConnection;
-    LLUtils::Event<void()>::Connection selfConnection;
-    std::vector<int> order;
-    int selfCount = 0;
-
-    auto firstConnection = event.Connect(
-        [&]
-        {
-            order.push_back(1);
-            skippedConnection.Disconnect();
-        });
-    skippedConnection = event.Connect([&] { order.push_back(2); });
-    selfConnection    = event.Connect(
-        [&]
-        {
-            ++selfCount;
-            selfConnection.Disconnect();
-        });
-
-    event.Raise();
-
-    REQUIRE(order == std::vector<int>{1});
-    REQUIRE(selfCount == 1);
-
-    order.clear();
-    event.Raise();
-
-    REQUIRE(order == std::vector<int>{1});
-    REQUIRE(selfCount == 1);
-}
-
-TEST_CASE("Event connection handles nested raises without compacting early", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void()> event;
-    LLUtils::Event<void()>::Connection skippedConnection;
-    int firstCount  = 0;
-    int secondCount = 0;
-
-    auto firstConnection = event.Connect(
-        [&]
-        {
-            ++firstCount;
-
-            if (firstCount == 1)
-            {
-                skippedConnection.Disconnect();
-                event.Raise();
-            }
-        });
-    skippedConnection = event.Connect([&] { ++secondCount; });
-
-    event.Raise();
-
-    firstConnection.Disconnect();
-    event.Raise();
-
-    REQUIRE(firstCount == 2);
-    REQUIRE(secondCount == 0);
-}
-
-TEST_CASE("Event connection restores raise state when listener throws", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void()> event;
-    int count = 0;
-
-    auto throwingConnection = event.Connect([] { throw std::runtime_error("event failure"); });
-    auto countConnection    = event.Connect([&] { ++count; });
-
-    REQUIRE_THROWS_AS(event.Raise(), std::runtime_error);
-
-    throwingConnection.Disconnect();
-    event.Raise();
-
-    REQUIRE(count == 1);
-
-    countConnection.Disconnect();
-}
-
-TEST_CASE("Event Add keeps fire-and-forget listener compatibility", "[AppCore][LLUtils]")
-{
-    LLUtils::Event<void(int)> event;
-    int count = 0;
-
-    event.Add([&](int value) { count += value; });
-    event.Raise(4);
-
-    REQUIRE(count == 4);
 }
 
 TEST_CASE("FolderFileList updates the current folder list from explicit file changes", "[AppCore]")

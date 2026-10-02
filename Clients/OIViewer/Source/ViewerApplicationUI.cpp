@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include "ViewerApplication.h"
+#include "HandledException.h"
 
 #include <Version.h>
 
@@ -72,6 +73,9 @@ namespace OIV
         ReleaseWindowResources();
         if (fCountingColorsThread.joinable())
             fCountingColorsThread.join();
+        // Drain file notifications before the owned subscription can modify the event registry.
+        if (fFileWatcher != nullptr)
+            fFileWatcher->StopNotifications();
         // Keep application members and listener registrations alive throughout native window cleanup.
         std::ignore = fWindow.GetWindow().Destroy();
     }
@@ -120,34 +124,6 @@ namespace OIV
                LLUTILS_TEXT("/oiv.log");
     }
 
-    void ViewerApplication::HandleException(bool isFromLibrary, LLUtils::Exception::EventArgs args,
-                                            LLUtils::native_string_type seperatedCallStack)
-    {
-        LLUtils::native_stringstream ss;
-        LLUtils::native_string_type source = isFromLibrary ? LLUTILS_TEXT("OIV library") : LLUTILS_TEXT("OIV viewer");
-        const LLUtils::native_string_type introMessage = LLUtils::Exception::ExceptionErrorCodeToString(
-                                                             args.errorCode) +
-                                                         LLUTILS_TEXT(" exception has occured at ") +
-                                                         args.functionName + LLUTILS_TEXT(" at ") + source +
-                                                         LLUTILS_TEXT(".\nDescription: ") + args.description;
-        ss << LLUTILS_TEXT(
-            "\n==================================================================================================\n");
-        ss << introMessage << std::endl;
-
-        if (args.systemErrorMessage.empty() == false)
-            ss << LLUTILS_TEXT("System error: ") << args.systemErrorMessage;
-
-        ss << LLUTILS_TEXT("call stack:") << std::endl;
-
-        if (seperatedCallStack.empty() == true)
-            ss << LLUtils::Exception::FormatStackTrace(
-                args.stackTrace, args.exceptionmode == LLUtils::Exception::Mode::Error ? 3 : 0xFFF);
-        else
-            ss << seperatedCallStack;
-
-        mLogFile.Log(ss.str());
-    }
-
     void ViewerApplication::ReleaseWindowResources()
     {
         // Stop callbacks before native rendering, including timers entered through nested dispatch. The gateway
@@ -172,32 +148,26 @@ namespace OIV
         {
             return callback();
         }
-        catch (const LLUtils::Exception&)
-        {
-            return true;
-        }
-        catch (const std::exception& exception)
-        {
-            LL_EXCEPTION_DONT_THROW(LLUtils::Exception::ErrorCode::RuntimeError, exception.what());
-            return true;
-        }
         catch (...)
         {
-            LL_EXCEPTION_DONT_THROW(LLUtils::Exception::ErrorCode::Unknown, "Unhandled native callback exception");
+            ReportHandledException(std::current_exception());
             return true;
         }
     }
 
     std::function<void()> ViewerApplication::MakeSafeCallback(std::function<void()> callback)
     {
-        return [this, callback = std::move(callback)]()
+        return [this, lifetime = fUiWeakLifetime, callback = std::move(callback)]()
         {
-            HandleEventCallback(
-                [&]()
-                {
-                    callback();
-                    return true;
-                });
+            // Normal platform shutdown drains tasks after the viewer is destroyed. Both run on the UI thread,
+            // so checking the token before any owner access is sufficient; it need not retain the viewer.
+            if (!lifetime.expired())
+                HandleEventCallback(
+                    [&]()
+                    {
+                        callback();
+                        return true;
+                    });
         };
     }
 
@@ -268,31 +238,13 @@ namespace OIV
                                          { SetUserMessage(message); });
 
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
-        fMonitorConnection = EventManager::GetSingleton().MonitorChange.Connect(
+        fMonitorSubscription = EventManager::GetSingleton().MonitorChange.Subscribe(
             std::bind(&ViewerApplication::OnMonitorChanged, this, std::placeholders::_1));
 
-        // OIV library exception forwarding is disabled because LLUtils::Exception::OnException is global.
-        // Registering this callback logs the same crash once through the library bridge and once through the viewer.
-        // OIV_CMD_RegisterCallbacks_Request request;
-        //
-        // request.OnException = [](OIV_Exception_Args args, void* userPointer)
-        // {
-        //     using namespace std;
-        //     // Convert from C to C++
-        //     LLUtils::Exception::EventArgs localArgs;
-        //     localArgs.errorCode = static_cast<LLUtils::Exception::ErrorCode>(args.errorCode);
-        //     localArgs.functionName = args.functionName;
-        //
-        //     localArgs.description = args.description;
-        //     localArgs.systemErrorMessage = args.systemErrorMessage;
-        //     reinterpret_cast<ViewerApplication*>(userPointer)->HandleException(true, localArgs, args.callstack);
-        // };
-        // request.userPointer = this;
-        //
-        // fRenderGateway->RegisterCallbacks(request);
-
-        fExceptionConnection = LLUtils::Exception::OnException.Connect([this](LLUtils::Exception::EventArgs args)
-                                                                       { HandleException(false, args, {}); });
+        // The global observer may already be in another thread's snapshot during teardown.
+        // Retain only its sink, so it never touches a partially destroyed application.
+        fExceptionSubscription = LLUtils::Exception::OnException.Subscribe(
+            [log = mLogFile](const LLUtils::Exception::EventArgs& args) { log->Log(LLUtils::FormatException(args)); });
     }
 
     void ViewerApplication::OnLabelRefreshRequest()

@@ -20,7 +20,7 @@ TEST_CASE("ImageList keeps portable selection state", "[oiviewer][platform]")
 {
     ImageList imageList;
     int selectedIndex        = -1;
-    auto selectionConnection = imageList.ImageSelectionChanged.Connect(
+    auto selectionSubscription = imageList.ImageSelectionChanged.Subscribe(
         [&](const ImageList::ImageSelectionChangeArgs& args) { selectedIndex = args.imageIndex; });
 
     imageList.SetImage({.index = 0, .title = LLUTILS_TEXT("first")});
@@ -42,8 +42,8 @@ TEST_CASE("ImageList scrolls selection coordinates and clears state", "[oiviewer
     imageList.SetImage({.index = 2, .title = LLUTILS_TEXT("third")});
     imageList.SetViewportHeight(100);
     bool scrollPositionChanged = false;
-    imageList.Changed.Add([&](ImageList::ChangeType change)
-                          { scrollPositionChanged = change == ImageList::ChangeType::ScrollPosition; });
+    auto subscription          = imageList.Changed.Subscribe(
+        [&](ImageList::ChangeType change) { scrollPositionChanged = change == ImageList::ChangeType::ScrollPosition; });
 
     imageList.Scroll(1);
     REQUIRE(imageList.GetScrollPosition() == 1);
@@ -113,8 +113,8 @@ TEST_CASE("ContextMenu supports both viewer item models", "[oiviewer][platform]"
 TEST_CASE("Linux context-menu presentation reports NotImplemented", "[oiviewer][platform]")
 {
     LLUtils::Exception::ErrorCode errorCode = LLUtils::Exception::ErrorCode::Unspecified;
-    auto exceptionConnection = LLUtils::Exception::OnException.Connect([&](const LLUtils::Exception::EventArgs& args)
-                                                                       { errorCode = args.errorCode; });
+    auto exceptionSubscription              = LLUtils::Exception::OnException.Subscribe(
+        [&](const LLUtils::Exception::EventArgs& args) { errorCode = args.errorCode; });
     LWS::PlatformContext platform;
     if (platform.Init({.backend = LWS::BackendId::Wayland}) != LWS::Result::Success)
         SKIP("No Wayland compositor is available");

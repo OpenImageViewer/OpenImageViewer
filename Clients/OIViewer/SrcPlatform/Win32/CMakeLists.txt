@@ -1,7 +1,6 @@
 target_compile_definitions(OIViewer PRIVATE OIVIEWER_PLATFORM_WIN32)
 
 target_sources(OIViewer PRIVATE
-    ApplicationLog.cpp
     ClipboardSetup.cpp
     ContextMenuBackend.cpp
     CopyDataProtocol.h

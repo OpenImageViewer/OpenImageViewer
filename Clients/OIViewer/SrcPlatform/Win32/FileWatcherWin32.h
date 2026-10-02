@@ -1,5 +1,6 @@
 #pragma once
 
+#include <LLUtils/Thread.h>
 #include <Windows.h>
 
 #include <thread>
@@ -87,8 +88,8 @@ namespace OIV
                                      "Can not associate completion port with the directory.");
 
                     if (fFileWatchThread.native_handle() == std::thread::native_handle_type{})
-                        fFileWatchThread = std::thread(
-                            std::bind(&FileWatcherWin32::CompletionPortStatusEntryPoint, this));
+                        fFileWatchThread = LLUtils::StartThread(&FileWatcherWin32::CompletionPortStatusEntryPoint,
+                                                                this);
                 }
 
                 return folderID;
@@ -132,7 +133,7 @@ namespace OIV
 
             static VOID CALLBACK WakeAlertableWait(ULONG_PTR) {}
 
-            void Shutdown()
+            void StopNotifications() override
             {
                 fShutdownRequested.store(true);
                 if (fFileWatchThread.joinable())
@@ -144,7 +145,11 @@ namespace OIV
                     // wait for background thread to close.
                     fFileWatchThread.join();
                 }
+            }
 
+            void Shutdown()
+            {
+                StopNotifications();
                 RemoveAll();
                 if (fCompletionPortHandle != nullptr)
                 {

@@ -23,7 +23,7 @@ TEST_CASE("Mouse multi-click emits the configured press count", "[input][mouse]"
 
     OIV::MouseMultiClickHandler handler(platform, 500, 2);
     std::optional<OIV::MouseMultiClickHandler::EventArgs> emitted;
-    handler.OnMouseClickEvent.Add([&](const auto& event) { emitted = event; });
+    auto subscription = handler.OnMouseClickEvent.Subscribe([&](const auto& event) { emitted = event; });
 
     handler.SetButtonState(LWS::MouseButton::Left, true);
     handler.SetButtonState(LWS::MouseButton::Left, false);

@@ -10,6 +10,7 @@
 #include <mutex>
 
 #include "Task.h"
+#include <LLUtils/Thread.h>
 #include <OIVShared/ThreadSafeUniqueIdProvider.h>
 
 template <typename Request, typename Response>
@@ -25,9 +26,10 @@ class PriorityTaskExecutor
         ProcessFn process)
         : fProcess(std::move(process))
     {
+        fWorkers.reserve(threadCount);
         for (size_t i = 0; i < threadCount; ++i)
         {
-            fWorkers.emplace_back([this] { WorkerLoop(); });
+            fWorkers.push_back(LLUtils::StartThread([this] { WorkerLoop(); }));
         }
     }
 

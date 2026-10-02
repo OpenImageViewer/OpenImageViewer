@@ -1,3 +1,4 @@
+#include <LLUtils/Thread.h>
 #include <array>
 #include <iomanip>
 #include <filesystem>
@@ -763,7 +764,7 @@ namespace OIV
                 // Keep the wrapper alive on the UI thread. The worker owns only pixel data
                 // and returns the wrapper pointer as an identity token without dereferencing it.
                 fCountingImageColor   = openedImage;
-                fCountingColorsThread = std::thread(
+                fCountingColorsThread = LLUtils::StartThread(
                     [this](IMCodec::ImageSharedPtr image, OIVBaseImage* source) -> void
                     {
                         int64_t uniqueValues = PixelHelper::CountUniqueValues(image);

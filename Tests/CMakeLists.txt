@@ -34,6 +34,7 @@ if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 endif()
 
 target_sources(${TargetName} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ApplicationLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseGestureController.cpp
@@ -129,4 +130,27 @@ elseif(MINGW)
     set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
     target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
     target_link_options(tests_font_encoding PRIVATE "-mconsole" "-municode")
+endif()
+
+# Fatal behavior and allocation failures run in isolated children, using the real platform reporter.
+if(WIN32)
+    set(OIV_EXCEPTION_PLATFORM Win32)
+else()
+    set(OIV_EXCEPTION_PLATFORM Linux)
+endif()
+add_executable(tests_exception_process
+    Exception/FailureProcess.cpp
+    ../Clients/OIViewer/Source/ExceptionReporting.cpp
+    ../Clients/OIViewer/SrcPlatform/${OIV_EXCEPTION_PLATFORM}/ExceptionHandler.cpp)
+target_include_directories(tests_exception_process PRIVATE
+    ../Clients/OIViewer/Source ../Clients/OIViewer/SrcPlatform/${OIV_EXCEPTION_PLATFORM})
+target_link_libraries(tests_exception_process PRIVATE LLUtils::LLUtils)
+if(WIN32)
+    target_link_libraries(tests_exception_process PRIVATE user32 shell32 ole32)
+else()
+    target_link_libraries(tests_exception_process PRIVATE PkgConfig::GTK3)
+
+    # Observe and dismiss the real GTK dialog in subprocess tests without adding production test hooks.
+    add_library(tests_exception_dialog_probe SHARED Exception/LinuxDialogProbe.cpp)
+    target_link_libraries(tests_exception_dialog_probe PRIVATE PkgConfig::GTK3 ${CMAKE_DL_LIBS})
 endif()

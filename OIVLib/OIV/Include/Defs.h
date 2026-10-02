@@ -187,7 +187,7 @@ typedef wchar_t OIVCHAR;
         ImageHandle imageHandle;
     };
 
-
+    // Text pointers are borrowed for the synchronous callback only.
     struct OIV_Exception_Args
     {
         int errorCode;
@@ -197,6 +197,9 @@ typedef wchar_t OIVCHAR;
         const LLUtils::native_char_type* functionName;
     };
 
+    // Exception callbacks run on the emitting thread. Replacement/shutdown waits for an
+    // active callback on another thread; callbacks must not wait for that controlling thread.
+    // Same-thread replacement/shutdown is supported, but the current callback must still finish.
     struct OIV_CMD_RegisterCallbacks_Request
     {
         void(*OnException) (OIV_Exception_Args, void*);

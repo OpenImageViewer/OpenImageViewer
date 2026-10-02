@@ -14,7 +14,7 @@ namespace OIV
         std::ignore = fFadeTimer.SetTargetWindow(&associatedWindow);
         fFadeTimer.SetCallback(std::bind(&MessageManager::OnTimer, this));
 
-        EventManager::GetSingleton().SizeChange.Add(
+        fSizeSubscription = EventManager::GetSingleton().SizeChange.Subscribe(
             std::bind(&MessageManager::OnWindowSizeChange, this, std::placeholders::_1));
     }
 

@@ -37,6 +37,7 @@ namespace OIV
         LWS::Window fWindow;
         ImageList fImageList;
         std::unique_ptr<NativeState> fNativeState;
+        ImageList::ChangedEvent::Subscription fImageListSubscription;
         LWS::EventConnection fEventConnection;
         LWS::EventConnection fPlatformConnection;
     };

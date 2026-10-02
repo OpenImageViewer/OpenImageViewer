@@ -58,8 +58,9 @@ namespace OIV
     {
         fNotificationIconID = fNativeWindowState->notificationIcons.AddIconResource(IDI_APP_ICON,
                                                                                     LLUTILS_TEXT("Open Image Viewer"));
-        fNativeWindowState->notificationIcons.OnNotificationIconEvent.Add(
-            std::bind(&ViewerApplication::OnNotificationIcon, this, std::placeholders::_1));
+        fNativeWindowState->notificationSubscription =
+            fNativeWindowState->notificationIcons.OnNotificationIconEvent.Subscribe(
+                std::bind(&ViewerApplication::OnNotificationIcon, this, std::placeholders::_1));
     }
 
     void ViewerApplication::InitializeRenderer(const RendererOptions& rendering)

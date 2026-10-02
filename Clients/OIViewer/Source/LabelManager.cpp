@@ -9,7 +9,7 @@ namespace OIV
 
     LabelManager::LabelManager(FreeType::FreeTypeConnector* freeType)
     {
-        EventManager::GetSingleton().MonitorChange.Add(
+        fMonitorSubscription = EventManager::GetSingleton().MonitorChange.Subscribe(
             std::bind(&LabelManager::OnMonitorChange, this, std::placeholders::_1));
         fFreeType = freeType;
     }

@@ -10,7 +10,8 @@ namespace OIV
 {
     ViewerMouseInput::ViewerMouseInput(ViewerApplication& owner) : fOwner(owner), fMultiClick(owner.fPlatform, 500, 2)
     {
-        fMultiClick.OnMouseClickEvent.Add([this](const auto& event) { OnMultiClick(event); });
+        fMultiClickSubscription = fMultiClick.OnMouseClickEvent.Subscribe([this](const auto& event)
+                                                                          { OnMultiClick(event); });
     }
 
     void ViewerMouseInput::SetButton(LWS::MouseButton button, bool pressed, bool mouseInside)

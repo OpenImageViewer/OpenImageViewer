@@ -2,7 +2,6 @@
 
 #include "ViewerApplicationPlatformState.h"
 
-#include <LLUtils/Logging/Logger.h>
 #include <LLUtils/PlatformUtility.h>
 
 #include <Windows.h>
@@ -25,8 +24,7 @@ namespace OIV
         const path cliAdapterPath  = netsettingsPath / "CliAdapter.dll";
         if (!exists(cliAdapterPath))
         {
-            LLUtils::Logger::GetSingleton().Log(
-                LLUtils::native_string_type(LLUTILS_TEXT("Cannot load Netsettings extension, not found")));
+            mLogFile->Log("Cannot load Netsettings extension, not found\n");
             return;
         }
 
@@ -36,9 +34,8 @@ namespace OIV
         fNativeWindowState->settingsModule = LoadLibrary(cliAdapterPath.c_str());
         if (fNativeWindowState->settingsModule == nullptr)
         {
-            LLUtils::Logger::GetSingleton().Log(
-                LLUtils::native_string_type(LLUTILS_TEXT("Cannot load Netsettings extension, error: ")) +
-                LLUtils::PlatformUtility::GetLastErrorAsString<wchar_t>());
+            const auto error = LLUtils::PlatformUtility::GetLastErrorAsString<char>();
+            mLogFile->Log("Cannot load Netsettings extension, error: " + error + "\n");
             return;
         }
 

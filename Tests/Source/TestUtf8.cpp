@@ -22,6 +22,8 @@ namespace
     static_assert(!CanConvert<std::string, std::u16string>);
     static_assert(!CanConvert<std::string, int>);
     static_assert(std::is_same_v<decltype(StringUtility::ToAString("")), const char*>);
+    static_assert(StringUtility::IsValidUtf8("ASCII \xf0\x9f\x8c\x8d"));
+    static_assert(!StringUtility::IsValidUtf8("\xed\xa0\x80"));
 
     struct LocaleRestore
     {
@@ -70,6 +72,9 @@ TEST_CASE("Conversions preserve lengths and only transcode at byte wide boundari
     const std::wstring wide(L"a\0b", 3);
     const std::u8string utf8(u8"a\0b", 3);
     CHECK(StringUtility::ConvertString<std::wstring>(bytes) == wide);
+    CHECK(StringUtility::IsValidUtf8(bytes));
+    CHECK(StringUtility::IsValidUtf8("a\0b"sv));
+    CHECK(StringUtility::IsValidUtf8({}));
     CHECK(StringUtility::ConvertString<std::wstring>(std::string_view(bytes)) == wide);
     CHECK(StringUtility::ConvertString<std::string>(wide) == bytes);
     CHECK(StringUtility::ConvertString<std::u8string>(wide) == utf8);
@@ -122,6 +127,7 @@ TEST_CASE("Transcoding rejects malformed Unicode", "[string][utf8]")
     for (const auto bytes : invalid)
     {
         CAPTURE(bytes.size());
+        CHECK_FALSE(StringUtility::IsValidUtf8(bytes));
         CHECK_THROWS_AS(StringUtility::ConvertString<std::wstring>(bytes), std::invalid_argument);
         CHECK_THROWS_AS(StringUtility::ConvertString<std::wstring>(StringUtility::ConvertString<std::u8string>(bytes)),
                         std::invalid_argument);
