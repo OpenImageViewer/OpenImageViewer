@@ -174,6 +174,14 @@ setCommonCompileParameters()
 add_compile_definitions(UNICODE _UNICODE)
 include_directories(./Extensions)
 
+# Provide one Catch2 instance for library and application tests before LLUtils registers its suite.
+if(OIV_BUILD_TESTS)
+    enable_testing()
+    if(NOT TARGET Catch2::Catch2WithMain)
+        add_subdirectory(External/catch2 "${CMAKE_BINARY_DIR}/Tests/external/catch2")
+    endif()
+endif()
+set(LLUTILS_BUILD_TESTS ${OIV_BUILD_TESTS})
 add_subdirectory(./External/LLUtils)
 # Dependencies also carry older nested LLUtils copies. Use one implementation in
 # every translation unit, including consumers with explicit nested include paths.

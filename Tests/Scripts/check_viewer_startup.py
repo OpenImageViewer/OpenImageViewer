@@ -12,6 +12,7 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
+    parser.add_argument("--renderer", choices=("D3D11", "Vulkan", "GL"), help="explicit renderer also prevents file forwarding to an existing viewer")
     args = parser.parse_args()
     executable = args.executable.resolve(strict=True)
     root = Path(__file__).resolve().parents[2]
@@ -24,7 +25,7 @@ def main():
     for label, path in inputs:
         if path is not None:
             path = path.resolve(strict=True)
-        command = [str(executable)] + ([str(path)] if path is not None else [])
+        command = [str(executable)] + (["--renderer", args.renderer] if args.renderer else []) + ([str(path)] if path is not None else [])
         process = subprocess.Popen(
             command, cwd=executable.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )

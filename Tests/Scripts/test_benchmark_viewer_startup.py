@@ -65,6 +65,21 @@ class StartupBenchmarkTests(unittest.TestCase):
         with self.assertRaisesRegex(benchmark.StartupError, "Output closed before"):
             self.measure("print('[VK] Selected GPU: Test GPU',flush=True)")
 
+    def test_file_readiness_uses_producer_time_and_ignores_other_processes(self):
+        from datetime import datetime, timezone
+        root = Path(self.directory.name)
+        folder = root / "version"
+        folder.mkdir()
+        start_wall = benchmark.time.time_ns()
+        stamp_ns = start_wall + 100_000_000
+        stamp = datetime.fromtimestamp(stamp_ns / 1_000_000_000, timezone.utc)
+        text = stamp.strftime("[%Y-%m-%d][%H:%M:%S.") + f"{stamp.microsecond // 1000:03d}][Info]Selected Vulkan adapter 0 (GPU) [Hardware]\n"
+        (folder / "oiv.42.session.1.log").write_text(text.replace("Selected Vulkan adapter 0 (GPU) [Hardware]", "Selected GPU: discovery only") + text, encoding="utf-8")
+        self.assertIsNone(benchmark.file_readiness(root, 43, start_wall, 1_000_000))
+        timestamp, line = benchmark.file_readiness(root, 42, start_wall, 1_000_000)
+        self.assertAlmostEqual((timestamp - 1_000_000) / 1_000_000, 100, delta=1)
+        self.assertIsNotNone(benchmark.READY_PATTERN.fullmatch(line))
+
     def test_statistics_preserve_noise_and_single_sample_uncertainty(self):
         stable = benchmark.summarize([{"elapsed_ms": value} for value in (99, 100, 101)])
         self.assertEqual(stable["median_ms"], 100)

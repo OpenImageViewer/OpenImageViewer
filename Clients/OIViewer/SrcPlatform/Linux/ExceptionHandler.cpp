@@ -1,5 +1,6 @@
 #include "ExceptionHandler.h"
 #include <gtk/gtk.h>
+#include <LLUtils/Emergency.h>
 
 #include <cerrno>
 #include <cstdlib>
@@ -21,7 +22,15 @@ namespace OIV
     {
         if (message.empty())
             message = Fallback;
-        std::ignore = ::write(STDERR_FILENO, message.data(), message.size());
+        // Emergency owns file and stderr output. Each write is bounded, while the whole report and its
+        // original view remain intact for the dialog. POSIX destinations concatenate the UTF-8 byte chunks.
+        auto remaining = message;
+        while (!remaining.empty())
+        {
+            const auto chunk = remaining.substr(0, LLUtils::EmergencyDetail::Emergency::MaxMessageBytes);
+            LLUtils::EmergencyDetail::Emergency::Write(chunk);
+            remaining.remove_prefix(chunk.size());
+        }
 
         // A fatal error may come from a worker or from GTK itself. Re-exec into a fresh process so the
         // dialog owns its UI thread and inherits no toolkit locks. No shell or optional dialog utility is used.

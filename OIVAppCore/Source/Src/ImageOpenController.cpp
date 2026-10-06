@@ -1,9 +1,19 @@
 #include <OIVAppCore/ImageOpenController.h>
 
 #include <LLUtils/StringDefs.h>
+#include <LLUtils/Logging/Logger.h>
 
 #include <filesystem>
 #include <utility>
+
+namespace
+{
+    LLUtils::LogCategory ImageOpenLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("ImageOpen");
+        return category;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -43,6 +53,11 @@ namespace OIV
                                                   IMCodec::PluginTraverseMode traverseMode,
                                                   const ImageLoadContext& context)
     {
+        auto id = context.operationId.value ? context.operationId : LLUtils::OperationScope::Current();
+        if (!id.value)
+            id = LLUtils::OperationId::Create();
+        const LLUtils::OperationScope operation(id);
+        LL_LOG(ImageOpenLog(), LLUtils::LogLevel::Info, "Opening {}", LLUtils::StringUtility::ToAString(filePath));
         const LLUtils::native_string_type normalizedPath = std::filesystem::path(filePath).lexically_normal().native();
         if (fBrowseSessionController != nullptr)
             fBrowseSessionController->BeginDirectOpen(normalizedPath);
@@ -51,13 +66,17 @@ namespace OIV
         const auto image    = fileLoadResult.image != nullptr ? fileLoadResult.image->GetImage() : nullptr;
 
         return ImageLoadResult{ClassifyLoadResult(fileLoadResult.resultCode, image), fileLoadResult.resultCode,
-                               normalizedPath, std::move(fileLoadResult.image)};
+                               normalizedPath, std::move(fileLoadResult.image), id};
     }
 
     ImageLoadResult ImageOpenController::LoadFileOrFolder(const LLUtils::native_string_type& filePath,
                                                           IMCodec::PluginTraverseMode traverseMode,
                                                           const ImageLoadContext& context)
     {
+        auto id = context.operationId.value ? context.operationId : LLUtils::OperationScope::Current();
+        if (!id.value)
+            id = LLUtils::OperationId::Create();
+        const LLUtils::OperationScope operation(id);
         if (std::filesystem::is_directory(filePath))
         {
             const bool folderLoadQueued = fBrowseSessionController != nullptr &&
@@ -66,7 +85,7 @@ namespace OIV
             return ImageLoadResult{folderLoadQueued ? ImageLoadStatus::FolderLoadQueued
                                                     : ImageLoadStatus::NoSupportedFiles,
                                    folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
-                                   std::filesystem::path(filePath).lexically_normal().native(), nullptr};
+                                   std::filesystem::path(filePath).lexically_normal().native(), nullptr, id};
         }
 
         return LoadFile(filePath, traverseMode, context);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <LLUtils/StringDefs.h>
+#include <LLUtils/Logging/OperationContext.h>
 
 #include <OIVAppCore/BrowseSessionController.h>
 
@@ -28,6 +29,7 @@ namespace OIV
     {
         int canvasWidth  = 0;
         int canvasHeight = 0;
+        LLUtils::OperationId operationId;
     };
 
     struct ImageFileLoadResult
@@ -42,6 +44,8 @@ namespace OIV
         ResultCode resultCode  = ResultCode::RC_UknownError;
         LLUtils::native_string_type normalizedPath;
         std::shared_ptr<OIVFileImage> image;
+
+        LLUtils::OperationId operationId;
 
         bool DecodeSucceeded() const;
     };

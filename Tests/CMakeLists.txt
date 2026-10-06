@@ -16,10 +16,6 @@ cmake_path(ABSOLUTE_PATH ExternalFolder NORMALIZE OUTPUT_VARIABLE ExternalFolder
 
 set(TargetName tests)
 
-if(NOT TARGET Catch2::Catch2WithMain)
-    add_subdirectory(${ExternalFolder}/catch2 ./external/catch2)
-endif()
-
 # FreeType's native PNG dependency and ImageCodec's APNG library export overlapping
 # symbols on Linux. Exercise the font boundary in its own executable.
 add_executable(tests_font_encoding FontEncoding/TestFontEncoding.cpp)
@@ -34,7 +30,6 @@ if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
 endif()
 
 target_sources(${TargetName} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ApplicationLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseGestureController.cpp
@@ -122,15 +117,15 @@ if(OIV_BUILD_RENDERER_VK)
     endif()
 endif()
 
-if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    target_link_options(${TargetName} PRIVATE "/SUBSYSTEM:CONSOLE")
-    target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup")
-    target_link_options(tests_font_encoding PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-elseif(MINGW)
-    set_target_properties(${TargetName} PROPERTIES WIN32_EXECUTABLE FALSE)
-    target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
-    target_link_options(tests_font_encoding PRIVATE "-mconsole" "-municode")
-endif()
+# The shared Catch2 runner uses wmain under the root Unicode definitions.
+foreach(testTarget IN ITEMS ${TargetName} tests_font_encoding tests_logging tests_utilities)
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_link_options(${testTarget} PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+    elseif(MINGW)
+        set_target_properties(${testTarget} PROPERTIES WIN32_EXECUTABLE FALSE)
+        target_link_options(${testTarget} PRIVATE "-mconsole" "-municode")
+    endif()
+endforeach()
 
 # Fatal behavior and allocation failures run in isolated children, using the real platform reporter.
 if(WIN32)

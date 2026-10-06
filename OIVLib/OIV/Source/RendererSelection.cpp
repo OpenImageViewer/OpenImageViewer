@@ -2,8 +2,17 @@
 #include <LLUtils/StringUtility.h>
 #include <array>
 #include <cassert>
-#include <iostream>
+#include <LLUtils/Logging/Logger.h>
 #include <stdexcept>
+
+namespace
+{
+    LLUtils::LogCategory RendererLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("Renderer");
+        return category;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -35,7 +44,7 @@ namespace OIV
         std::string failures;
         const auto record = [&](std::string message)
         {
-            std::cerr << "[Renderer] " << message << '\n';
+            LL_LOG(RendererLog(), LLUtils::LogLevel::Warning, "{}", message);
             failures += "\n  " + message;
         };
         for (const auto tier : AccelerationOrder)
@@ -112,8 +121,8 @@ namespace OIV
                             }
                             else
                             {
-                                std::cerr << "[Renderer] Selected " << description << " ["
-                                          << GetAccelerationName(actual) << "]\n";
+                                LL_LOG(RendererLog(), LLUtils::LogLevel::Info, "Selected {} [{}]", description,
+                                       GetAccelerationName(actual));
                                 selected = std::move(renderer);
                             }
                         }

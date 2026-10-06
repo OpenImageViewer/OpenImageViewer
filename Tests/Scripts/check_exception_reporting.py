@@ -76,6 +76,7 @@ def main():
         parser.error("--linux-dialog-probe is Linux-only")
     scenarios = {
         "standard": "standard failure",
+        "long-unicode": "long report begin",
         "unknown": "Unknown/non-standard",
         "system": "system failure",
         "llutils": "original image failure",
@@ -104,6 +105,9 @@ def main():
         dialogs = {}
         with tempfile.TemporaryDirectory(prefix="oiv-exception-dialog-") as dialog_dir, tempfile.TemporaryFile() as output:
             environment = os.environ.copy()
+            emergency_path = Path(dialog_dir) / "emergency.log"
+            if scenario in ("native", "native-short-record", "long-unicode"):
+                environment["OIV_TEST_EMERGENCY_LOG"] = str(emergency_path)
             if os.name != "nt":
                 if probe:
                     environment["LD_PRELOAD"] = str(probe)
@@ -133,6 +137,7 @@ def main():
             process.wait()
             output.seek(0)
             text = output.read().decode("utf-8", errors="replace")
+            emergency_text = emergency_path.read_text(encoding="utf-8") if emergency_path.exists() else ""
             if probe:
                 dialogs = {path.stem: path.read_text(encoding="utf-8") for path in Path(dialog_dir).glob("*.txt")}
                 closed_dialogs = {path.stem for path in Path(dialog_dir).glob("*.closed")}
@@ -149,6 +154,12 @@ def main():
                 if probe:
                     passed = passed and next(iter(dialogs.values()), "").startswith("OIViewer - Unhandled exception\n")
                     passed = passed and set(dialogs) == closed_dialogs
+            if scenario in ("native", "native-short-record", "long-unicode"):
+                passed = passed and expected in emergency_text
+            if scenario == "long-unicode":
+                reports = (text, emergency_text, *dialogs.values())
+                passed = passed and all("🌍" in report and "long report end" in report and
+                                        report.count(expected) == 1 for report in reports)
             if scenario in ("duplicate", "concurrent", "cpp-then-native"):
                 passed = passed and text.count(expected) == 1
             if scenario in ("llutils", "worker-llutils"):

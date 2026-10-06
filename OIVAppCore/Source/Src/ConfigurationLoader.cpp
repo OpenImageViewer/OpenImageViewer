@@ -1,3 +1,4 @@
+#include <LLUtils/Logging/Logger.h>
 #include <OIVAppCore/ConfigurationLoader.h>
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
@@ -5,8 +6,16 @@
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
-#include <iostream>
 #include <stack>
+
+namespace
+{
+    LLUtils::LogCategory SettingsLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("Settings");
+        return category;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -155,9 +164,7 @@ namespace OIV
         }
         catch (const nlohmann::detail::exception& exception)
         {
-            // TODO: Route this through LLUtils::Logger once its logging backends and timestamp formatting compile
-            // cross-platform.
-            std::clog << exception.what() << '\n';
+            LL_LOG(SettingsLog(), LLUtils::LogLevel::Warning, "{}", exception.what());
         }
         catch (...)
         {
