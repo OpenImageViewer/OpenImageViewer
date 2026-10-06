@@ -1,6 +1,6 @@
 """Measure OIViewer launch-to-renderer-ready startup on Windows and Linux.
 
-Requires Python 3.9+ and an OIViewer build that logs '[Renderer] Selected ...'.
+Requires Python 3.9+. Reads the current session log or legacy renderer-ready console output.
 This measures successful renderer initialization, not first-image presentation.
 Each sample launches and then terminates its own viewer process.
 """
@@ -10,6 +10,7 @@ from collections import deque
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import platform
 import queue
@@ -30,12 +31,40 @@ class StartupError(RuntimeError):
     """Startup failed, timed out, or selected an unexpected renderer."""
 
 
-def measure_startup(command, cwd, renderer, timeout):
-    """Time process creation through receipt of the existing renderer-ready log.
+FILE_READY_PATTERN = re.compile(r"^\[([0-9-]+)\]\[([0-9:.]+)\]\[Info\](Selected .*)$")
+
+
+def default_log_root():
+    if sys.platform == "win32":
+        return Path(os.environ["APPDATA"]) / "OIV"
+    return Path(os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")) / "OIV"
+
+
+def file_readiness(root, pid, start_wall_ns, start_ns):
+    if root is not None:
+        for path in root.glob(f"*/oiv.{pid}.*.log"):
+            try:
+                if path.stat().st_mtime_ns + 1_000_000_000 < start_wall_ns:
+                    continue
+                for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+                    match = FILE_READY_PATTERN.fullmatch(line)
+                    if match and READY_PATTERN.fullmatch("[Renderer] " + match[3]):
+                        timestamp = datetime.fromisoformat(f"{match[1]}T{match[2]}+00:00").timestamp()
+                        elapsed_ns = round(timestamp * 1_000_000_000) - start_wall_ns
+                        if elapsed_ns >= 0:
+                            return start_ns + elapsed_ns, "[Renderer] " + match[3]
+            except OSError:
+                continue
+    return None
+
+
+def measure_startup(command, cwd, renderer, timeout, log_root=None):
+    """Measure renderer-ready time from console receipt or the file record's producer timestamp.
 
     Drain output on a reader thread so startup cannot block on a full pipe on
     either platform. Only the process created here is stopped, including on
-    timeout or interruption. Cleanup time is outside the measurement.
+    timeout or interruption. Cleanup time is outside the measurement. File mode uses
+    UTC producer timestamps with millisecond resolution, excluding gated-flush observation delay.
     """
     messages = queue.Queue()
     tail = deque(maxlen=40)
@@ -50,6 +79,7 @@ def measure_startup(command, cwd, renderer, timeout):
         finally:
             messages.put((time.perf_counter_ns(), None))
 
+    start_wall_ns = time.time_ns()
     start_ns = time.perf_counter_ns()
     try:
         process = subprocess.Popen(
@@ -72,9 +102,14 @@ def measure_startup(command, cwd, renderer, timeout):
             if remaining <= 0:
                 raise StartupError(f"No renderer-ready message within {timeout:g} seconds")
             try:
-                timestamp_ns, line = messages.get(timeout=remaining)
+                timestamp_ns, line = messages.get(timeout=min(remaining, .05) if log_root else remaining)
+                measurement = "output_receipt"
             except queue.Empty:
-                raise StartupError(f"No renderer-ready message within {timeout:g} seconds") from None
+                ready = file_readiness(log_root, process.pid, start_wall_ns, start_ns)
+                if ready is None:
+                    continue
+                timestamp_ns, line = ready
+                measurement = "producer_timestamp_utc_milliseconds"
             if timestamp_ns > deadline_ns:
                 raise StartupError(f"Renderer-ready message arrived after the {timeout:g}-second timeout")
             if line is None:
@@ -90,6 +125,7 @@ def measure_startup(command, cwd, renderer, timeout):
                     raise StartupError(f"Viewer exited during startup (exit code {process.returncode})")
                 result = {
                     "pid": process.pid,
+                    "measurement": measurement,
                     "elapsed_ms": (timestamp_ns - start_ns) / 1_000_000,
                     "ready_message": line,
                     "acceleration": match[2],
@@ -166,6 +202,7 @@ def write_report(path, report):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
+    parser.add_argument("--log-root", type=Path, default=default_log_root(), help="application log root for current builds")
     parser.add_argument("--input", type=Path, help="optional image or folder")
     parser.add_argument(
         "--renderers", nargs="+", choices=("D3D11", "Vulkan", "GL"),
@@ -228,7 +265,7 @@ def main(argv=None):
                     command += ["--adapter-index", str(args.adapter_index)]
                 if input_path is not None:
                     command += ["--", str(input_path)]
-                sample = measure_startup(command, executable.parent, renderer, args.timeout)
+                sample = measure_startup(command, executable.parent, renderer, args.timeout, args.log_root)
                 sample.update(renderer=renderer, run=round_index + 1, command=command)
                 report["samples"].append(sample)
                 write_report(output, report)

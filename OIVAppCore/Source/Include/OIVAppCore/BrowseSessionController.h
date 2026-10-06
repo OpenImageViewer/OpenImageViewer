@@ -25,6 +25,7 @@ namespace OIV
             LLUtils::native_string_type fileName;
             IMCodec::ImageSharedPtr image;
             bool folderLoad = false;
+            LLUtils::OperationId operationId;
         };
 
         enum class BrowseSessionAction
@@ -77,6 +78,7 @@ namespace OIV
             // a candidate succeeds.
             bool active     = false;
             bool folderLoad = false;
+            LLUtils::OperationId operationId;
             // Async candidates carry this generation so completions from older requests are ignored.
             std::uint64_t generation                          = 0;
             FolderFileList::index_type requestedIndex         = FolderFileList::IndexStart;

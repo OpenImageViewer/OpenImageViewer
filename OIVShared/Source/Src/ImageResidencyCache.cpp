@@ -1,4 +1,14 @@
+#include <LLUtils/Logging/Logger.h>
 #include <OIVShared/ImageResidencyCache.h>
+
+namespace
+{
+    LLUtils::LogCategory ResidencyLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("ImageResidency");
+        return category;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -37,16 +47,23 @@ namespace OIV
 
     TicketID ImageResidencyCache::SubmitTask(const ImageResidencyCacheKey& key, std::uint64_t version)
     {
-        TicketID task      = fTaskExecutor.Submit(ImageResidencyCacheTaskRequest{key, version}, 0);
-        fPendingTasks[key] = PendingTask{task, version};
+        auto id = LLUtils::OperationScope::Current();
+        if (!id.value)
+            id = LLUtils::OperationId::Create();
+        TicketID task      = fTaskExecutor.Submit(ImageResidencyCacheTaskRequest{key, version, id}, 0);
+        fPendingTasks[key] = PendingTask{task, version, id};
         return task;
     }
 
     ImageResidencyCacheValue ImageResidencyCache::ProcessTask(const ImageResidencyCacheTaskRequest& request)
     {
+        const LLUtils::OperationScope operation(request.operationId);
+        LL_LOG(ResidencyLog(), LLUtils::LogLevel::Debug, "Decode request version {}", request.version);
         ImageResidencyCacheValue value{};
         const bool requestSucceeded = fResidencyProcessor->ProcessResidencyRequest(request.key, value);
 
+        LL_LOG(ResidencyLog(), requestSucceeded ? LLUtils::LogLevel::Debug : LLUtils::LogLevel::Warning,
+               "Decode version {} completed: {}", request.version, requestSucceeded);
         std::lock_guard lock(fMutex);
         const auto pendingTaskIt    = fPendingTasks.find(request.key);
         const bool isCurrentRequest = pendingTaskIt != fPendingTasks.end() &&
@@ -69,13 +86,20 @@ namespace OIV
     {
         const ImageResidencyCacheKey key{filePath, itemType};
 
-        std::lock_guard lock(fMutex);
+        std::unique_lock lock(fMutex);
         if (fResidentCache.HasResident(key))
             return TicketID::FromValue(fResidentCache.GetResident(key));
 
         auto taskIt = fPendingTasks.find(key);
         if (taskIt != fPendingTasks.end())
-            return taskIt->second.task;
+        {
+            const auto sharedId = taskIt->second.operationId;
+            const auto task     = taskIt->second.task;
+            lock.unlock();
+            LL_LOG(ResidencyLog(), LLUtils::LogLevel::Debug, "Request associated with shared decode operation {}",
+                   sharedId.value);
+            return task;
+        }
 
         fResidentCache.SetPending(key);
         return SubmitTask(key, ++fNextRequestVersion);

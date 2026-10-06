@@ -20,7 +20,7 @@
 #include <OIVShared/FileSorter.h>
 #include <OIVShared/RecursiveDelayOp.h>
 
-#include "ApplicationLog.h"
+#include <LLUtils/Logging/Logger.h>
 #include "OIVImage/OIVBaseImage.h"
 #include "LabelManager.h"
 #include "VirtualStatusBar.h"
@@ -69,6 +69,7 @@ namespace OIV
     {
         uint16_t id;
         std::any data;
+        LLUtils::OperationId operationId;
     };
 
     class ViewerMouseInput;
@@ -177,7 +178,6 @@ namespace OIV
 
       private:  // methods
 
-        LLUtils::native_string_type GetLogFilePath();
 #pragma region platform event handling
         bool handleKeyInput(const LWS::AnyEvent& eventData);
         std::intptr_t ClientWindwMessage(const LWS::AnyEvent& eventData);
@@ -487,7 +487,7 @@ namespace OIV
             bool scheduleDrain = false;
             {
                 const std::scoped_lock lock(fUiCompletionMutex);
-                fUiCompletions.push_back(EventData{id, std::forward<T>(value)});
+                fUiCompletions.push_back(EventData{id, std::forward<T>(value), LLUtils::OperationScope::Current()});
                 if (!fUiDrainScheduled)
                 {
                     fUiDrainScheduled = true;
@@ -514,9 +514,6 @@ namespace OIV
 
         std::unique_ptr<ContextMenu<int>> fNotificationContextMenu;
 
-        std::shared_ptr<ApplicationLog> mLogFile = std::make_shared<ApplicationLog>(GetLogFilePath(), true);
-        // Global publishers outlive this application; unsubscribe before the logging and window members are released.
-        LLUtils::Exception::OnExceptionEventType::Subscription fExceptionSubscription;
         EventManager::MonitorChangeEvent::Subscription fMonitorSubscription;
         ImageList::ImageSelectionChangEvent::Subscription fImageSelectionSubscription;
 

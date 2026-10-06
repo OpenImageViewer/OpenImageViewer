@@ -327,6 +327,9 @@ namespace OIV
             return false;
 
         PendingBrowseRequest pending;
+        pending.operationId = LLUtils::OperationScope::Current();
+        if (!pending.operationId.value)
+            pending.operationId = LLUtils::OperationId::Create();
         pending.active                 = true;
         pending.folderLoad             = folderLoad;
         pending.generation             = ++fNextPendingGeneration;
@@ -355,14 +358,16 @@ namespace OIV
         if (fPendingBrowseRequest.active == false || fCandidateImageReadyCallback == nullptr)
             return;
 
+        const LLUtils::OperationScope operation(fPendingBrowseRequest.operationId);
         fBrowseResidencyController.RequestCandidateResidency(
             fPendingBrowseRequest.requestedFile, fPendingBrowseRequest.requestedIndex, fPendingBrowseRequest.generation,
-            [callback = fCandidateImageReadyCallback, folderLoad = fPendingBrowseRequest.folderLoad](
-                std::uint64_t generation, std::ptrdiff_t index, const LLUtils::native_string_type& fileName,
-                IMCodec::ImageSharedPtr image)
+            [callback = fCandidateImageReadyCallback, folderLoad = fPendingBrowseRequest.folderLoad,
+             operationId = fPendingBrowseRequest.operationId](std::uint64_t generation, std::ptrdiff_t index,
+                                                              const LLUtils::native_string_type& fileName,
+                                                              IMCodec::ImageSharedPtr image)
             {
                 callback(BrowseCandidateCompletion{generation, static_cast<FolderFileList::index_type>(index), fileName,
-                                                   std::move(image), folderLoad});
+                                                   std::move(image), folderLoad, operationId});
             });
     }
 

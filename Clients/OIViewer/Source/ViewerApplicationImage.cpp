@@ -73,7 +73,10 @@ namespace OIV
         for (const auto& completion : completions)
         {
             if (!fIsShuttingDown)
+            {
+                const LLUtils::OperationScope operation(completion.operationId);
                 OnMessageFromBackgroundThread(completion);
+            }
         }
     }
 
@@ -190,6 +193,8 @@ namespace OIV
 
     bool ViewerApplication::ProcessImageLoadResult(const ImageLoadResult& loadResult)
     {
+        const LLUtils::OperationScope operation(loadResult.operationId.value ? loadResult.operationId
+                                                                             : LLUtils::OperationScope::Current());
         if (loadResult.status == ImageLoadStatus::FolderLoadQueued)
             return true;
 

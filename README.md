@@ -139,6 +139,11 @@ Default renderers are listed [above](#command-line); keep at least one enabled. 
 
 Run `./publish.ps1` (`pwsh ./publish.ps1` on Linux) to create a `.7z` package. It uses Ninja and `RelWithDebInfo`, builds in `publish`, and requires 7-Zip. Add `-EnablePackage $false` to build without an archive.
 
+## Logging
+
+OIViewer initializes the LLUtils logging runtime before its components and drains it during shutdown. See the
+[logging documentation](logging.md) for configuration, custom sinks, diagnostic history, and operation correlation.
+
 ## License
 
 OIViewer is distributed under the [OpenImageViewer License](LICENSE.md), which permits sharing and modification with attribution for noncommercial use.

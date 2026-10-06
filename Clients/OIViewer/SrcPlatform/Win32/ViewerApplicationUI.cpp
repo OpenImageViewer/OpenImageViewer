@@ -8,6 +8,15 @@
 
 #include <filesystem>
 
+namespace
+{
+    LLUtils::LogCategory SettingsLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("Settings");
+        return category;
+    }
+}  // namespace
+
 namespace OIV
 {
     void ViewerApplication::ShowSettings()
@@ -24,7 +33,7 @@ namespace OIV
         const path cliAdapterPath  = netsettingsPath / "CliAdapter.dll";
         if (!exists(cliAdapterPath))
         {
-            mLogFile->Log("Cannot load Netsettings extension, not found\n");
+            LL_LOG(SettingsLog(), LLUtils::LogLevel::Warning, "Cannot load Netsettings extension, not found");
             return;
         }
 
@@ -35,7 +44,7 @@ namespace OIV
         if (fNativeWindowState->settingsModule == nullptr)
         {
             const auto error = LLUtils::PlatformUtility::GetLastErrorAsString<char>();
-            mLogFile->Log("Cannot load Netsettings extension, error: " + error + "\n");
+            LL_LOG(SettingsLog(), LLUtils::LogLevel::Warning, "Cannot load Netsettings extension: {}", error);
             return;
         }
 

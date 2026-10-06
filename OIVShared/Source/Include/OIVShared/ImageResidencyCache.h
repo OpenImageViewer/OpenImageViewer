@@ -3,6 +3,7 @@
 #include <OIVShared/ResidentCache.h>
 #include <LLUtils/EnumClassBitwise.h>
 #include <LLUtils/StringDefs.h>
+#include <LLUtils/Logging/OperationContext.h>
 #include <IImagePlugin.h>
 #include <ImageLoader.h>
 #include <cstdint>
@@ -41,6 +42,7 @@ namespace OIV
     {
         ImageResidencyCacheKey key;
         std::uint64_t version = 0;
+        LLUtils::OperationId operationId;
     };
 
     using TaskExecutorType = PriorityTaskExecutor<ImageResidencyCacheTaskRequest, ImageResidencyCacheValue>;
@@ -75,6 +77,7 @@ namespace OIV
         {
             TicketID task;
             std::uint64_t version = 0;
+            LLUtils::OperationId operationId;
         };
 
         static size_t GetWorkerCount(size_t threadCount);

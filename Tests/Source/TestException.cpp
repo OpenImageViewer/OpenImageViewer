@@ -3,7 +3,8 @@
 #include <LLUtils/ExceptionFormatter.h>
 #include <LLUtils/Thread.h>
 #include "HandledException.h"
-#include "ApplicationLog.h"
+#include <LLUtils/Logging/Logger.h>
+#include <LLUtils/Logging/LogFileSink.h>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -370,22 +371,23 @@ TEST_CASE("Worker launch preserves ownership and inherited termination policy", 
     CHECK(result == 17);
 }
 
-TEST_CASE("The exception log survives unsubscribe and preserves concurrent UTF-8 writes", "[exception][lifetime]")
+TEST_CASE("Logger drains concurrent UTF-8 output and stale exception snapshots release sinks", "[exception][lifetime]")
 {
-    const auto path = std::filesystem::temp_directory_path() /
-                      ("oiv-exception-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
-                       ".log");
-    struct RemoveLog
+    const auto folder = std::filesystem::temp_directory_path() /
+                        ("oiv-exception-log-" +
+                         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(folder);
+    struct Cleanup
     {
         std::filesystem::path path;
-        ~RemoveLog()
+        ~Cleanup()
         {
+            if (LLUtils::Logger::IsActive())
+                LLUtils::Logger::Shutdown();
             std::error_code error;
-            std::filesystem::remove(path, error);
+            std::filesystem::remove_all(path, error);
         }
-    } removeLog{path};
-    auto log                                    = std::make_shared<OIV::ApplicationLog>(path.native(), true);
-    std::weak_ptr<OIV::ApplicationLog> lifetime = log;
+    } cleanup{folder};
     std::latch entered(1), resume(1);
     auto blocker = Exception::OnException.Subscribe(
         [&](const auto&)
@@ -393,30 +395,37 @@ TEST_CASE("The exception log survives unsubscribe and preserves concurrent UTF-8
             entered.count_down();
             resume.wait();
         });
-    auto observer          = Exception::OnException.Subscribe([log](const auto& args) { log->Log(args.description); });
-    const std::string line = "image \xf0\x9f\x8c\x8d\n";
-    const Exception::EventArgs args{.description = line};
-    std::jthread notification([&] { Exception::OnException.Raise(args); });
+    auto sink = std::make_shared<LLUtils::FileLogSink>(LLUtils::LogFileOptions{.path = folder / "exception"});
+    std::weak_ptr<LLUtils::FileLogSink> lifetime = sink;
+    LLUtils::LoggerOptions options;
+    options.format.pattern = "{message}";
+    options.sinks.push_back({std::move(sink)});
+    REQUIRE(LLUtils::Logger::Initialize(std::move(options)) == LLUtils::LogResult::Success);
+    const auto category = LLUtils::Logger::RegisterCategory("Test.Exception");
+    std::jthread notification([] { Exception::OnException.Raise(Exception::EventArgs{.description = "late"}); });
     entered.wait();
     blocker.Unsubscribe();
-    observer.Unsubscribe();
     auto secondWriter = LLUtils::StartThread(
-        [log, line]
+        [category]
         {
             for (unsigned index = 0; index < 20; ++index)
-                log->Log(line);
+                LL_LOG(category, LLUtils::LogLevel::Info, "image \xf0\x9f\x8c\x8d");
         });
-    log.reset();
-    CHECK_FALSE(lifetime.expired());
+    secondWriter.join();
+    CHECK(LLUtils::Logger::Shutdown() == LLUtils::LogResult::Success);
+    CHECK(lifetime.expired());
     resume.count_down();
     notification.join();
-    secondWriter.join();
-    CHECK(lifetime.expired());
-    std::ifstream stream(path, std::ios::binary);
-    std::string content(std::istreambuf_iterator<char>{stream}, {});
+    std::string content;
+    for (const auto& entry : std::filesystem::directory_iterator(folder))
+        if (entry.path().extension() == ".log")
+        {
+            std::ifstream stream(entry.path(), std::ios::binary);
+            content.append(std::istreambuf_iterator<char>{stream}, {});
+        }
     std::string expected;
-    for (unsigned index = 0; index < 21; ++index)
-        expected += line;
+    for (unsigned index = 0; index < 20; ++index)
+        expected += "image \xf0\x9f\x8c\x8d\r\n";
     CHECK(content == expected);
 }
 

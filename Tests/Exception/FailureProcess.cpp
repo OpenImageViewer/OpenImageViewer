@@ -2,6 +2,7 @@
 #include "HandledException.h"
 #include <LLUtils/ExceptionFormatter.h>
 #include <LLUtils/Thread.h>
+#include <LLUtils/Logging/Logger.h>
 
 #include <atomic>
 #include <barrier>
@@ -123,6 +124,13 @@ int main(int argc, char* argv[])
     if (scenario == "abort-policy")
         _set_abort_behavior(_WRITE_ABORT_MSG | _CALL_REPORTFAULT, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
+    if (const char* emergency = std::getenv("OIV_TEST_EMERGENCY_LOG"))
+    {
+        LLUtils::LoggerOptions options;
+        options.emergencyPath = emergency;
+        if (LLUtils::Logger::Initialize(std::move(options)) != LLUtils::LogResult::Success)
+            return 3;
+    }
     const OIV::ExceptionRegistration handlers;
     try
     {
@@ -137,6 +145,13 @@ int main(int argc, char* argv[])
             return (_set_abort_behavior(0, 0) & mask) == _CALL_REPORTFAULT ? EXIT_SUCCESS : EXIT_FAILURE;
         }
 #endif
+        if (scenario == "long-unicode")
+        {
+            std::string message = "long report begin " + std::string(255, 'x');
+            message += "\xf0\x9f\x8c\x8d";  // Supplementary Unicode scalar near a conversion boundary.
+            message += std::string(1800, 'x') + " long report end";
+            throw std::runtime_error(message);
+        }
         if (scenario == "standard")
             throw std::runtime_error("standard failure");
         if (scenario == "unknown")

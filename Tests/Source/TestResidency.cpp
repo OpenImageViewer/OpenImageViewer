@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <latch>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -38,6 +39,7 @@ namespace
         bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey&,
                                      OIV::ImageResidencyCacheValue& outValue) override
         {
+            fOperationId = LLUtils::OperationScope::Current().value;
             ++fCallCount;
 
             std::unique_lock lock(fMutex);
@@ -74,15 +76,17 @@ namespace
         }
 
         int GetCallCount() const { return fCallCount.load(); }
+        LLUtils::OperationId GetOperationId() const { return {fOperationId.load()}; }
 
         void SetShouldSucceed(bool shouldSucceed) { fShouldSucceed = shouldSucceed; }
 
       private:
 
         IMCodec::ImageSharedPtr fImage;
-        bool fShouldBlock                = false;
-        std::atomic<int> fCallCount      = 0;
-        std::atomic<bool> fShouldSucceed = true;
+        bool fShouldBlock                       = false;
+        std::atomic<std::uint64_t> fOperationId = 0;
+        std::atomic<int> fCallCount             = 0;
+        std::atomic<bool> fShouldSucceed        = true;
 
         std::mutex fMutex;
         std::condition_variable fStartedCv;
@@ -742,4 +746,41 @@ TEST_CASE("BrowseResidencyController keeps scanning folder failures until a cand
     REQUIRE(folderReadyResults.front().first == LLUTILS_TEXT("folder-a\\b"));
     REQUIRE(folderReadyResults.front().second != nullptr);
     REQUIRE(processorPtr->GetCallCount() == 2);
+}
+
+TEST_CASE("Shared decode retains its operation while coroutine callbacks restore each request",
+          "[Residency][operation]")
+{
+    auto processor = std::make_unique<FakeResidencyProcessor>(CreateTestImage(), true);
+    auto* observed = processor.get();
+    OIV::ImageResidencyCache residency(std::move(processor), 1);
+    OIV::BrowseResidencyController controller(residency, {}, {});
+    const auto first = LLUtils::OperationId::Create(), second = LLUtils::OperationId::Create();
+    std::mutex mutex;
+    std::latch ready(2);
+    std::vector<LLUtils::OperationId> completed;
+    const auto callback = [&](auto, auto, const auto&, auto)
+    {
+        const std::lock_guard lock(mutex);
+        completed.push_back(LLUtils::OperationScope::Current());
+        ready.count_down();
+    };
+    {
+        const LLUtils::OperationScope operation(first);
+        controller.RequestCandidateResidency(LLUTILS_TEXT("shared"), 0, 1, callback);
+    }
+    observed->WaitUntilStarted();
+    {
+        const LLUtils::OperationScope operation(second);
+        controller.RequestCandidateResidency(LLUTILS_TEXT("shared"), 1, 2, callback);
+    }
+    CHECK(observed->GetOperationId() == first);
+    CHECK(LLUtils::OperationScope::Current().value == 0);
+    observed->Release();
+    ready.wait();
+    const std::lock_guard lock(mutex);
+    REQUIRE(completed.size() == 2);
+    CHECK(completed[0] == first);
+    CHECK(completed[1] == second);
+    CHECK(observed->GetCallCount() == 1);
 }

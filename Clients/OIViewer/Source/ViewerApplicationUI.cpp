@@ -118,12 +118,6 @@ namespace OIV
                         LLUtils::StringUtility::ToNativeString(std::wstring(args->val)));
     }
 
-    LLUtils::native_string_type ViewerApplication::GetLogFilePath()
-    {
-        return GetAppDataFolder() + LLUtils::StringUtility::ToNativeString(FormatFullVersion(CurrentVersion)) +
-               LLUTILS_TEXT("/oiv.log");
-    }
-
     void ViewerApplication::ReleaseWindowResources()
     {
         // Stop callbacks before native rendering, including timers entered through nested dispatch. The gateway
@@ -240,11 +234,6 @@ namespace OIV
         // LLUtils::Exception::SetThrowErrorsInDebug(false);
         fMonitorSubscription = EventManager::GetSingleton().MonitorChange.Subscribe(
             std::bind(&ViewerApplication::OnMonitorChanged, this, std::placeholders::_1));
-
-        // The global observer may already be in another thread's snapshot during teardown.
-        // Retain only its sink, so it never touches a partially destroyed application.
-        fExceptionSubscription = LLUtils::Exception::OnException.Subscribe(
-            [log = mLogFile](const LLUtils::Exception::EventArgs& args) { log->Log(LLUtils::FormatException(args)); });
     }
 
     void ViewerApplication::OnLabelRefreshRequest()

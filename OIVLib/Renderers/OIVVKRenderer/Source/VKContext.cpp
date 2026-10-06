@@ -1,3 +1,4 @@
+#include <LLUtils/Logging/Logger.h>
 #include "VKContext.h"
 #include "VKCommon.h"
 #include <Interfaces/RendererOptions.h>
@@ -7,6 +8,15 @@
 #include <iostream>
 #include <array>
 #include <stdexcept>
+
+namespace
+{
+    LLUtils::LogCategory VulkanLog()
+    {
+        static const auto category = LLUtils::Logger::RegisterCategory("Renderer.Vulkan");
+        return category;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -279,8 +289,8 @@ namespace OIV
                              : selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
                                  ? "discrete GPU preferred"
                                  : "first available GPU (no discrete GPU found)";
-        std::cerr << "[VK] Selected GPU: " << selectedProperties.deviceName << " (index " << fGpuIndex << ", " << reason
-                  << ")" << std::endl;
+        LL_LOG(VulkanLog(), LLUtils::LogLevel::Info, "Selected GPU: {} (index {}, {})", selectedProperties.deviceName,
+               fGpuIndex, reason);
     }
 
     bool VKContext::IsPhysicalDeviceSuitable(VkPhysicalDevice device, uint32_t& graphicsQueueFamily,

@@ -1,5 +1,6 @@
 #include "ExceptionHandler.h"
 #include <LLUtils/StringUtility.h>
+#include <LLUtils/Emergency.h>
 
 #include <algorithm>
 #include <cstdlib>
@@ -19,35 +20,24 @@ namespace OIV
         // No application logger or viewer object is safe to call at this boundary.
         void Present(const wchar_t* message) noexcept
         {
-            const auto stream = GetStdHandle(STD_ERROR_HANDLE);
-            if (stream != nullptr && stream != INVALID_HANDLE_VALUE)
+            // The emergency path owns file, stderr/Unicode-console and debugger output. Convert complete
+            // UTF-16 scalar chunks without allocating so a long native report is not truncated to one notice.
+            constexpr auto ChunkUnits = LLUtils::EmergencyDetail::Emergency::MaxMessageBytes / 4;
+            static_assert(ChunkUnits >= 2);  // Reserve four UTF-8 bytes per unit and never split a surrogate pair.
+            const std::wstring_view text(message);
+            for (std::size_t offset = 0; offset < text.size();)
             {
-                DWORD mode{}, written{};
-                if (GetConsoleMode(stream, &mode))
-                    WriteConsoleW(stream, message, static_cast<DWORD>(std::wcslen(message)), &written, nullptr);
-                else
-                {
-                    // Convert bounded chunks on the stack, also usable on the native fault path.
-                    const std::wstring_view text(message);
-                    std::size_t offset = 0;
-                    bool writable      = true;
-                    while (offset < text.size() && writable)
-                    {
-                        auto count      = (std::min) (text.size() - offset, std::size_t{256});
-                        const auto last = text[offset + count - 1];
-                        if (offset + count < text.size() && last >= 0xd800 && last <= 0xdbff)
-                            --count;
-                        char bytes[1024];
-                        const int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text.data() + offset,
-                                                             static_cast<int>(count), bytes,
-                                                             static_cast<int>(std::size(bytes)), nullptr, nullptr);
-                        writable = size > 0 && WriteFile(stream, bytes, static_cast<DWORD>(size), &written, nullptr) &&
-                                   written == static_cast<DWORD>(size);
-                        offset += count;
-                    }
-                }
+                auto count      = (std::min) (text.size() - offset, ChunkUnits);
+                const auto last = text[offset + count - 1];
+                if (offset + count < text.size() && last >= 0xd800 && last <= 0xdbff)
+                    --count;
+                char bytes[LLUtils::EmergencyDetail::Emergency::MaxMessageBytes];
+                const int size = WideCharToMultiByte(CP_UTF8, 0, text.data() + offset, static_cast<int>(count), bytes,
+                                                     static_cast<int>(std::size(bytes)), nullptr, nullptr);
+                if (size > 0)
+                    LLUtils::EmergencyDetail::Emergency::Write(std::string_view(bytes, size));
+                offset += count;
             }
-            OutputDebugStringW(message);
             // A failed call is not retried: the process may no longer be able to create UI.
             if (MessageBoxW(nullptr, message, Title, MB_OK | MB_ICONERROR | MB_TASKMODAL | MB_SETFOREGROUND) != 0)
             {
@@ -85,7 +75,7 @@ namespace OIV
         {
             if (detail::TryBeginExceptionReport())
             {
-                // Avoid the heap, symbol APIs and LLUtils on the faulting thread. These
+                // Avoid the heap, symbol APIs and ordinary exception/logging callbacks on the faulting thread. These
                 // record checks cannot guarantee memory integrity after native corruption.
                 wchar_t message[768]{};
                 const auto* record = pointers != nullptr ? pointers->ExceptionRecord : nullptr;

@@ -337,10 +337,19 @@ namespace OIV
         TicketID RequestManagedResidencyAsync(LLUtils::native_string_type fileName, std::uint64_t generation,
                                               bool isCurrentRequest)
         {
+            auto operationId = LLUtils::OperationScope::Current();
+            if (!operationId.value)
+                operationId = LLUtils::OperationId::Create();
             try
             {
-                IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
-                    fileName, ImageResidencyCacheItemType::FullSize);
+                TicketID ticket;
+                {
+                    const LLUtils::OperationScope operation(operationId);
+                    ticket = fImageResidencyCache.requestResidencyAsync(fileName,
+                                                                        ImageResidencyCacheItemType::FullSize);
+                }
+                IMCodec::ImageSharedPtr image = co_await ticket;
+                const LLUtils::OperationScope operation(operationId);
 
                 bool shouldDeliverCurrent = false;
                 bool shouldEvict          = image == nullptr;
@@ -363,6 +372,7 @@ namespace OIV
             }
             catch (TaskError)
             {
+                const LLUtils::OperationScope operation(operationId);
                 co_return IMCodec::ImageSharedPtr{};
             }
         }
@@ -370,10 +380,19 @@ namespace OIV
         TicketID RequestCandidateResidencyAsync(LLUtils::native_string_type fileName, std::ptrdiff_t index,
                                                 std::uint64_t generation, CandidateImageReadyCallback callback)
         {
+            auto operationId = LLUtils::OperationScope::Current();
+            if (!operationId.value)
+                operationId = LLUtils::OperationId::Create();
             try
             {
-                IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
-                    fileName, ImageResidencyCacheItemType::FullSize);
+                TicketID ticket;
+                {
+                    const LLUtils::OperationScope operation(operationId);
+                    ticket = fImageResidencyCache.requestResidencyAsync(fileName,
+                                                                        ImageResidencyCacheItemType::FullSize);
+                }
+                IMCodec::ImageSharedPtr image = co_await ticket;
+                const LLUtils::OperationScope operation(operationId);
 
                 if (image == nullptr)
                     fImageResidencyCache.removeResidency(fileName, ImageResidencyCacheItemType::FullSize);
@@ -385,6 +404,7 @@ namespace OIV
             }
             catch (TaskError)
             {
+                const LLUtils::OperationScope operation(operationId);
                 if (callback)
                     callback(generation, index, fileName, nullptr);
 
@@ -394,6 +414,9 @@ namespace OIV
 
         TicketID RequestFolderLoadResidencyAsync(FolderFileListSnapshot snapshot, std::uint64_t generation)
         {
+            auto operationId = LLUtils::OperationScope::Current();
+            if (!operationId.value)
+                operationId = LLUtils::OperationId::Create();
             try
             {
                 LLUtils::native_string_type failedFileName;
@@ -402,8 +425,14 @@ namespace OIV
                     if (failedFileName.empty())
                         failedFileName = fileName;
 
-                    IMCodec::ImageSharedPtr image = co_await fImageResidencyCache.requestResidencyAsync(
-                        fileName, ImageResidencyCacheItemType::FullSize);
+                    TicketID ticket;
+                    {
+                        const LLUtils::OperationScope operation(operationId);
+                        ticket = fImageResidencyCache.requestResidencyAsync(fileName,
+                                                                            ImageResidencyCacheItemType::FullSize);
+                    }
+                    IMCodec::ImageSharedPtr image = co_await ticket;
+                    const LLUtils::OperationScope operation(operationId);
 
                     {
                         std::lock_guard lock(fMutex);
@@ -420,6 +449,7 @@ namespace OIV
                     }
                 }
 
+                const LLUtils::OperationScope operation(operationId);
                 if (failedFileName.empty() == false && fFolderLoadReadyCallback)
                     fFolderLoadReadyCallback(snapshot, failedFileName, nullptr);
 
@@ -427,6 +457,7 @@ namespace OIV
             }
             catch (TaskError)
             {
+                const LLUtils::OperationScope operation(operationId);
                 co_return IMCodec::ImageSharedPtr{};
             }
         }
