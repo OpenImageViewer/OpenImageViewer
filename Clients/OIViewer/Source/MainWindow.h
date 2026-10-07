@@ -66,6 +66,7 @@ namespace OIV
         [[nodiscard]] int32_t GetImageControlClientWidth(int32_t layoutWidth) const;
         void PrepareImageControlLayout();
         void SetApplicationIcon();
+        void InitializeCursors();
         void UpdateNativeStatusBar(LWS::LogicalSize& canvasSize);
         [[nodiscard]] bool UseMainWindowAsCanvas() const;
 
@@ -81,6 +82,7 @@ namespace OIV
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNESW), LWS::Cursor::FromShape(LWS::CursorShape::SizeNS),
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNWSE), LWS::Cursor::FromShape(LWS::CursorShape::SizeAll),
         };
+        bool fCursorsInitialized    = false;
         bool fUseMainWindowAsCanvas = false;
         ImageControl fImageControl;
         std::unique_ptr<NativeState> fNativeState;
