@@ -1985,3 +1985,159 @@ TEST_CASE("ShellIntegrationHelper produces viewer command placement", "[AppCore]
     REQUIRE(OIV::ShellIntegrationHelper::TrayContextMenuPosition(iconRect) == (LLUtils::PointI32{40, 30}));
     REQUIRE(OIV::ShellIntegrationHelper::ViewCommandArgsFromTrayItem(LLUTILS_TEXT("Quit")) == "type=quit");
 }
+
+TEST_CASE("BrowseSessionController displays the adjacent file after deletion", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-delete-replacement-test");
+    const auto fileA  = folder / LLUTILS_TEXT("a.png");
+    const auto fileB  = folder / LLUTILS_TEXT("b.png");
+    const auto fileC  = folder / LLUTILS_TEXT("c.png");
+    TouchFile(fileA);
+    TouchFile(fileB);
+    TouchFile(fileC);
+
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::optional<OIV::BrowseSessionController::BrowseCandidateCompletion> readyCandidate;
+    OIV::BrowseSessionController controller(
+        &watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
+        [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {},
+        [&](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
+        {
+            {
+                std::lock_guard lock(mutex);
+                readyCandidate = completion;
+            }
+            cv.notify_all();
+        });
+
+    auto removed      = fileB;
+    auto expected     = fileC;
+    bool watcherFirst = false;
+    SECTION("Deleting the first file selects its successor")
+    {
+        removed  = fileA;
+        expected = fileB;
+    }
+    SECTION("Deleting the middle file selects its successor") {}
+    SECTION("Deleting the last file selects its predecessor")
+    {
+        removed  = fileC;
+        expected = fileB;
+    }
+    SECTION("Descending order selects the next file in the list")
+    {
+        sorter.SetActiveSortDirection(OIV::FileSorter::SortDirection::Descending);
+        expected = fileA;
+    }
+    SECTION("Watcher deletion preserves the removed row")
+    {
+        watcherFirst = true;
+    }
+
+    REQUIRE(controller.CommitCurrentFile(removed.native()) == ResultCode::RC_Success);
+    REQUIRE(std::filesystem::remove(removed));
+    if (watcherFirst)
+    {
+        REQUIRE(controller
+                    .OnFileChanged({controller.GetActiveFolderID(),
+                                    OIV::IFileWatcher::FileChangedOp::Remove,
+                                    folder.native(),
+                                    removed.filename().native(),
+                                    {}})
+                    .action == OIV::BrowseSessionController::BrowseSessionAction::CurrentFileRemoved);
+    }
+    REQUIRE(controller.RequestRemovedFileReplacement(removed.native()));
+    REQUIRE(controller.GetFolderFileList().GetSize() == 2);
+    REQUIRE(controller
+                .OnFileChanged({controller.GetActiveFolderID(),
+                                OIV::IFileWatcher::FileChangedOp::Remove,
+                                folder.native(),
+                                removed.filename().native(),
+                                {}})
+                .action == OIV::BrowseSessionController::BrowseSessionAction::Ignore);
+
+    OIV::BrowseSessionController::BrowseCandidateCompletion completion;
+    {
+        std::unique_lock lock(mutex);
+        REQUIRE(cv.wait_for(lock, std::chrono::seconds(2), [&] { return readyCandidate.has_value(); }));
+        completion = *readyCandidate;
+    }
+    REQUIRE(completion.fileName == expected.native());
+    REQUIRE(controller.OnBrowseCandidateReady(completion).action ==
+            OIV::BrowseSessionController::BrowseSessionAction::DisplayImage);
+    REQUIRE(controller.IsCurrentFile(expected.native()));
+}
+
+TEST_CASE("BrowseSessionController has no replacement after deleting the only file", "[AppCore]")
+{
+    const auto folder = MakeTempFolder("oiv-delete-only-file-test");
+    const auto file   = folder / LLUTILS_TEXT("a.png");
+    TouchFile(file);
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
+                                            [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
+    REQUIRE(controller.CommitCurrentFile(file.native()) == ResultCode::RC_Success);
+    REQUIRE(std::filesystem::remove(file));
+    REQUIRE_FALSE(controller.RequestRemovedFileReplacement(file.native()));
+    REQUIRE(controller.GetFolderFileList().GetSize() == 0);
+    REQUIRE(controller.GetCommittedCurrentFile().empty());
+}
+
+TEST_CASE("BrowseSessionController handles a recreated removed filename", "[AppCore]")
+{
+    const auto folder  = MakeTempFolder("oiv-delete-recreated-file-test");
+    const auto removed = folder / LLUTILS_TEXT("a.png");
+    const auto other   = folder / LLUTILS_TEXT("b.png");
+    TouchFile(removed);
+    TouchFile(other);
+    FakeFileWatcher watcher;
+    OIV::FileSorter sorter;
+    OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
+    OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
+                                            [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
+    REQUIRE(controller.CommitCurrentFile(removed.native()) == ResultCode::RC_Success);
+    REQUIRE(std::filesystem::remove(removed));
+    // Without a candidate callback the request fails, but the removed entry is still discarded.
+    REQUIRE_FALSE(controller.RequestRemovedFileReplacement(removed.native()));
+    REQUIRE(controller.CommitCurrentFile(other.native()) == ResultCode::RC_Success);
+
+    SECTION("Recreated by adding a file")
+    {
+        TouchFile(removed);
+        controller.OnFileChanged({controller.GetActiveFolderID(),
+                                  OIV::IFileWatcher::FileChangedOp::Add,
+                                  folder.native(),
+                                  removed.filename().native(),
+                                  {}});
+        REQUIRE(std::filesystem::remove(removed));
+        controller.OnFileChanged({controller.GetActiveFolderID(),
+                                  OIV::IFileWatcher::FileChangedOp::Remove,
+                                  folder.native(),
+                                  removed.filename().native(),
+                                  {}});
+        REQUIRE(controller.GetFolderFileList().GetSize() == 1);
+        REQUIRE(controller.IsCurrentFile(other.native()));
+    }
+    SECTION("Recreated by renaming the current file")
+    {
+        std::filesystem::rename(other, removed);
+        controller.OnFileChanged({controller.GetActiveFolderID(), OIV::IFileWatcher::FileChangedOp::Rename,
+                                  folder.native(), other.filename().native(), removed.filename().native()});
+        REQUIRE(controller.IsCurrentFile(removed.native()));
+        REQUIRE(std::filesystem::remove(removed));
+        REQUIRE(controller
+                    .OnFileChanged({controller.GetActiveFolderID(),
+                                    OIV::IFileWatcher::FileChangedOp::Remove,
+                                    folder.native(),
+                                    removed.filename().native(),
+                                    {}})
+                    .action == OIV::BrowseSessionController::BrowseSessionAction::CurrentFileRemoved);
+        REQUIRE(controller.GetFolderFileList().GetSize() == 0);
+    }
+}

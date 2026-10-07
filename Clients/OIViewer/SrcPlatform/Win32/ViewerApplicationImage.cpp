@@ -35,8 +35,10 @@ namespace OIV
 
         const auto fileNameToRemove = GetOpenedFileName();
         fRequestedFileForRemoval    = fileNameToRemove;
-        if (SHFileOperation(&fileOperation) == 0)
+        if (SHFileOperation(&fileOperation) == 0 && fileOperation.fAnyOperationsAborted == FALSE)
             ProcessRemovalOfOpenedFile(fileNameToRemove);
+        else
+            fRequestedFileForRemoval.clear();
     }
 
     ClipboardDataType ViewerApplication::PasteFromClipBoard()

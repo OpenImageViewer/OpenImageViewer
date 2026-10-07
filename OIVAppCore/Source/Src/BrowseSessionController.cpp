@@ -1,6 +1,7 @@
 #include <LLUtils/StringDefs.h>
 #include <OIVAppCore/BrowseSessionController.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <utility>
 
@@ -100,6 +101,8 @@ namespace OIV
         if (!std::filesystem::exists(normalizedPath))
             return ResultCode::RC_FileNotFound;
 
+        if (normalizedFile == fRemovedFile)
+            fRemovedFile.clear();
         ClearPendingBrowseRequest();
 
         const auto previousIndex = fFolderFileList->GetCurrentIndex();
@@ -164,6 +167,31 @@ namespace OIV
                                          requestedIndex, direction, false);
     }
 
+    bool BrowseSessionController::RequestRemovedFileReplacement(const LLUtils::native_string_type& fileName)
+    {
+        auto files         = fFolderFileList->CreateSnapshot().files;
+        const auto removed = std::ranges::find(files, fileName);
+        auto index         = fileName == fRemovedFile ? fRemovedFileIndex : FolderFileList::IndexStart;
+        if (removed != files.end())
+        {
+            index             = static_cast<FolderFileList::index_type>(removed - files.begin());
+            fRemovedFile      = fileName;
+            fRemovedFileIndex = index;
+            ClearPendingBrowseRequest();
+            fFolderFileList->UpdateFolderFileList(IFileWatcher::FileChangedOp::Remove, fileName, {},
+                                                  fCommittedCurrentFile);
+            fCommittedCurrentFile.clear();
+            fBrowseResidencyController.InvalidateCurrent();
+            files.erase(removed);
+        }
+
+        // The successor occupies the removed row. At the end of the list, use the preceding row.
+        const auto count          = static_cast<FolderFileList::index_type>(files.size());
+        const bool hasReplacement = count > 0 && index >= 0;
+        return hasReplacement && StartPendingBrowseRequest(fFolderFileList->GetFolder(), std::move(files),
+                                                           std::min(index, count - 1), index < count ? 1 : -1, false);
+    }
+
     bool BrowseSessionController::RequestFolderLoadResidency(const LLUtils::native_string_type& folderPath)
     {
         auto fileList = fFolderFileList->GetSupportedFolderFileListInFolder(folderPath);
@@ -195,13 +223,22 @@ namespace OIV
         if (fActiveFolderID == IFileWatcher::FolderID{} || fileChangedEventArgs.folderID != fActiveFolderID)
             return {};
 
-        if (fileChangedEventArgs.fileOp != IFileWatcher::FileChangedOp::Modified)
-            ClearPendingBrowseRequest();
-
         const auto absPath = NormalizeFileIdentity(
             (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName).native());
         const auto absPath2 = NormalizeFileIdentity(
             (std::filesystem::path(fileChangedEventArgs.folder) / fileChangedEventArgs.fileName2).native());
+
+        // A successful delete updates the list before browsing. Its later watcher notification must
+        // not cancel the replacement image that is already loading.
+        if (fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::Remove && absPath == fRemovedFile)
+            return {};
+
+        if ((fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::Add && absPath == fRemovedFile) ||
+            (fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::Rename && absPath2 == fRemovedFile))
+            fRemovedFile.clear();
+
+        if (fileChangedEventArgs.fileOp != IFileWatcher::FileChangedOp::Modified)
+            ClearPendingBrowseRequest();
 
         if (fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::WatchedFolderRemoved)
         {
@@ -213,6 +250,8 @@ namespace OIV
 
         if (fileChangedEventArgs.fileOp == IFileWatcher::FileChangedOp::Remove && absPath == fCommittedCurrentFile)
         {
+            fRemovedFileIndex = fFolderFileList->GetCurrentIndex();
+            fRemovedFile      = absPath;
             fFolderFileList->UpdateFolderFileList(fileChangedEventArgs.fileOp, absPath, absPath2,
                                                   fCommittedCurrentFile);
             fCommittedCurrentFile.clear();
@@ -224,6 +263,8 @@ namespace OIV
         {
             if (fFolderFileList->IsSupportedFileType(absPath2) == false)
             {
+                fRemovedFileIndex = fFolderFileList->GetCurrentIndex();
+                fRemovedFile      = absPath;
                 fFolderFileList->UpdateFolderFileList(IFileWatcher::FileChangedOp::Remove, absPath, {},
                                                       fCommittedCurrentFile);
                 fCommittedCurrentFile.clear();

@@ -61,6 +61,9 @@ namespace OIV
         ResultCode CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath, bool refreshResidency = true);
         void InvalidateCurrent();
         bool JumpFiles(FolderFileList::index_type step);
+        // Called after a successful deletion or a current-file removal notification.
+        // Removes the entry and requests its successor, or its predecessor at the end of the list.
+        bool RequestRemovedFileReplacement(const LLUtils::native_string_type& fileName);
         bool RequestFolderLoadResidency(const LLUtils::native_string_type& folderPath);
         bool IsCurrentFile(const LLUtils::native_string_type& fileName) const;
         const LLUtils::native_string_type& GetCommittedCurrentFile() const;
@@ -113,8 +116,10 @@ namespace OIV
         CurrentImageReadyCallback fCurrentImageReadyCallback;
         CandidateImageReadyCallback fCandidateImageReadyCallback;
         PendingBrowseRequest fPendingBrowseRequest;
-        std::uint64_t fNextPendingGeneration = 0;
-        bool fSuppressFileIndexChanged       = false;
+        std::uint64_t fNextPendingGeneration         = 0;
+        bool fSuppressFileIndexChanged               = false;
+        FolderFileList::index_type fRemovedFileIndex = FolderFileList::IndexStart;
+        LLUtils::native_string_type fRemovedFile;
         BrowseResidencyController fBrowseResidencyController;
     };
 }  // namespace OIV

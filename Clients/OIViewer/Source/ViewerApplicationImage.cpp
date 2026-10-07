@@ -406,21 +406,12 @@ namespace OIV
                                                       removeInternalDeletes, removeExternalDeletes, fileCount);
         if (action != RemovedFileAction::Ignore)
         {
-            bool firstJumpSucceeded    = false;
-            bool fallbackJumpSucceeded = false;
+            const bool replacementRequested = (action == RemovedFileAction::TryStart ||
+                                               action == RemovedFileAction::TryNextThenPrevious) &&
+                                              fBrowseSessionController != nullptr &&
+                                              fBrowseSessionController->RequestRemovedFileReplacement(fileName);
 
-            if (action == RemovedFileAction::TryStart)
-            {
-                firstJumpSucceeded = JumpFiles(FolderFileList::IndexStart);
-            }
-            else if (action == RemovedFileAction::TryNextThenPrevious)
-            {
-                firstJumpSucceeded = JumpFiles(1);
-                if (!firstJumpSucceeded)
-                    fallbackJumpSucceeded = JumpFiles(-1);
-            }
-
-            if (FileRemovalPolicy::ShouldUnloadAfterJumps(action, firstJumpSucceeded, fallbackJumpSucceeded))
+            if (FileRemovalPolicy::ShouldUnloadAfterJumps(action, replacementRequested, false))
             {
                 UnloadOpenedImaged();
                 ShowWelcomeMessage();
