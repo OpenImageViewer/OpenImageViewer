@@ -37,8 +37,11 @@ jobs:
       )
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    env:
+      GCC_VERSION: '14.4.0'
+      GCC_SHA256: '752b6f567beac83159c77a7680b1316bdd784738bff9a9d070112c09da90f6d9'
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - platform: Windows
@@ -69,9 +72,66 @@ jobs:
           # Pin the installer so release toolchain setup changes only through review.
           curl --proto '=https' --tlsv1.2 -fsSLo llvm.sh https://raw.githubusercontent.com/opencollab/llvm-jenkins.debian.net/c5ecff7c7208c8b5225e1f6e6ae6f2539e1d31ea/llvm.sh
           sudo bash llvm.sh 22
-          sudo apt-get install -y llvm-22 libvulkan-dev libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev p7zip-full wayland-protocols
+          sudo apt-get install -y llvm-22 libvulkan-dev libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev p7zip-full wayland-protocols libgmp-dev libmpfr-dev libmpc-dev
+          # GCC_ROOT redirects the host compiler's headers. Keep our variable project-specific.
+          echo "OIV_GCC_ROOT=$RUNNER_TOOL_CACHE/gcc-$GCC_VERSION" >> "$GITHUB_ENV"
+
+      - name: Cache GCC 14.4 toolchain
+        if: matrix.platform == 'Linux'
+        id: gcc-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.OIV_GCC_ROOT }}
+          key: gcc-${{ env.GCC_VERSION }}-ubuntu-24.04-${{ runner.arch }}-${{ env.GCC_SHA256 }}-${{ hashFiles('.github/scripts/Build-Gcc.ps1') }}
+
+      - name: Build GCC 14.4 toolchain
+        if: matrix.platform == 'Linux' && steps.gcc-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: >-
+          ./.github/scripts/Build-Gcc.ps1
+          -Version $env:GCC_VERSION
+          -Sha256 $env:GCC_SHA256
+          -InstallPrefix $env:OIV_GCC_ROOT
+          -WorkDirectory "$env:RUNNER_TEMP/gcc-build"
+
+      - name: Upload GCC bootstrap diagnostics
+        if: failure() && matrix.platform == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcc-bootstrap-diagnostics
+          path: |
+            ${{ runner.temp }}/gcc-build/bootstrap.log
+            ${{ runner.temp }}/gcc-build/**/config.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Select GCC 14.4 headers and runtime for Clang
+        if: matrix.platform == 'Linux'
+        run: |
+          set -euo pipefail
+          test "$("$OIV_GCC_ROOT/bin/g++" -dumpfullversion -dumpversion)" = "$GCC_VERSION"
+          "$OIV_GCC_ROOT/bin/g++" --version
+          clang++-22 --version
           echo "CC=clang-22" >> "$GITHUB_ENV"
           echo "CXX=clang++-22" >> "$GITHUB_ENV"
+          echo "CFLAGS=--gcc-toolchain=$OIV_GCC_ROOT" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=--gcc-toolchain=$OIV_GCC_ROOT" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$OIV_GCC_ROOT/lib64:$OIV_GCC_ROOT/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          # Check the compiler's selection rather than trusting that the environment flags were accepted.
+          runtime="$(realpath -e "$(clang++-22 --gcc-toolchain="$OIV_GCC_ROOT" -print-file-name=libstdc++.so.6)")"
+          test -f "$runtime"
+          if [[ "$runtime" != "$OIV_GCC_ROOT/"* ]]; then
+            echo 'Clang did not select the cached GCC runtime' >&2
+            exit 1
+          fi
+          echo "Selected libstdc++: $runtime"
+
+      - name: Save GCC 14.4 toolchain
+        if: matrix.platform == 'Linux' && steps.gcc-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.OIV_GCC_ROOT }}
+          key: ${{ steps.gcc-cache.outputs.cache-primary-key }}
 
       - name: Cache Vulkan SDK
         uses: actions/cache@v4
@@ -87,9 +147,12 @@ jobs:
         if: matrix.platform == 'Linux'
         run: |
           for library in libstdc++.so.6 libgcc_s.so.1; do
-            source_path="$(clang++-22 -print-file-name="$library")"
-            test "$source_path" != "$library"
+            source_path="$(realpath -e "$(clang++-22 --gcc-toolchain="$OIV_GCC_ROOT" -print-file-name="$library")")"
             test -f "$source_path"
+            if [[ "$source_path" != "$OIV_GCC_ROOT/"* ]]; then
+              echo "Runtime is outside the cached GCC toolchain: $source_path" >&2
+              exit 1
+            fi
             cp --dereference "$source_path" "publish/bin/$library"
           done
 
