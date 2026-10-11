@@ -141,6 +141,11 @@ namespace
         int unmaps{};
         int discardedUploads{};
         int readableUploads{};
+        // Descriptor binding distinguishes sampled image draws from the selection pipeline.
+        bool currentDrawSamplesImage{};
+        // Image and selection commands recorded independently of texture uploads.
+        int imageDraws{};
+        int selectionDraws{};
         VkDeviceSize bufferAllocationSize{4};
 
         template <typename Handle>
@@ -705,16 +710,24 @@ extern "C"
     VKAPI_ATTR void VKAPI_CALL vkCmdBindPipeline(VkCommandBuffer, VkPipelineBindPoint, VkPipeline pipeline)
     {
         CHECK(driver.pipelineFormats.at(pipeline) == driver.activeRenderFormat);
+        driver.currentDrawSamplesImage = false;
     }
     VKAPI_ATTR void VKAPI_CALL vkCmdBindDescriptorSets(VkCommandBuffer, VkPipelineBindPoint, VkPipelineLayout, uint32_t,
                                                        uint32_t, const VkDescriptorSet*, uint32_t, const uint32_t*)
     {
+        driver.currentDrawSamplesImage = true;
     }
     VKAPI_ATTR void VKAPI_CALL vkCmdPushConstants(VkCommandBuffer, VkPipelineLayout, VkShaderStageFlags, uint32_t,
                                                   uint32_t, const void*)
     {
     }
-    VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t) {}
+    VKAPI_ATTR void VKAPI_CALL vkCmdDraw(VkCommandBuffer, uint32_t, uint32_t, uint32_t, uint32_t)
+    {
+        if (driver.currentDrawSamplesImage)
+            ++driver.imageDraws;
+        else
+            ++driver.selectionDraws;
+    }
     VKAPI_ATTR VkResult VKAPI_CALL vkCreateDescriptorPool(VkDevice, const VkDescriptorPoolCreateInfo* info,
                                                           const VkAllocationCallbacks*, VkDescriptorPool* pool)
     {
@@ -1623,4 +1636,34 @@ TEST_CASE("Vulkan replaces texture dimensions after earlier submitted work compl
     CHECK(driver.images.begin()->second.height == 2);
     CHECK(driver.descriptors == descriptors);
     CHECK(driver.invalidWaits == 0);
+}
+
+TEST_CASE("Empty Vulkan pixels suppress cached image draws and allow replacement", "[vulkan][revision]")
+{
+    const auto mode = GENERATE(IRM_MainImage, IRM_Overlay);
+    driver          = {};
+    TestRenderer renderer;
+    TestPixels pixels;
+    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE(renderer.Register(&pixels) == 0);
+    auto& image = renderer.images.at(&pixels);
+    image.SetProperties({.filterType = FT_Linear, .imageRenderMode = mode});
+    REQUIRE(renderer.renderer.SetSelectionRect({{0, 0}, {1, 1}}) == 0);
+    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE(driver.imageDraws == 1);
+    REQUIRE(driver.selectionDraws == 1);
+    const auto uploads     = driver.readableUploads;
+    const auto descriptors = driver.descriptors;
+    pixels.image.reset();
+    REQUIRE(renderer.Redraw() == 0);
+    CHECK(driver.imageDraws == 1);
+    CHECK(driver.selectionDraws == 2);
+    CHECK(driver.readableUploads == uploads);
+    CHECK(driver.descriptors == descriptors);
+    pixels = TestPixels{};
+    REQUIRE(renderer.Redraw() == 0);
+    CHECK(driver.imageDraws == 2);
+    CHECK(driver.selectionDraws == 3);
+    CHECK(driver.readableUploads == uploads + 1);
+    CHECK(renderer.images.size() == 1);
 }
