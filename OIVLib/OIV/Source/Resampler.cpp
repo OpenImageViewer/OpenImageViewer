@@ -260,18 +260,18 @@ namespace OIV
         //__m256i v3 = _mm256_add_epi16(v1, v2);
 
         for (size_t sourceY = sourceYStart; sourceY < sourceYEnd; sourceY++)
+        {
+            // Byte strides preserve padding even when a row start is not aligned to a 32-bit texel.
+            const auto* row = params.imageBuffer + sourceY * params.imageRowPitchInBytes;
             for (size_t sourceX = sourcexStart; sourceX < sourceXEnd; sourceX++)
             {
-                // RGBA_PAIR [i++] = *reinterpret_cast<const Color*>(params.imageBuffer + sourceX + sourceY *
-                // params.ImageWidth);
-
-                alignas(16) const Color* c = reinterpret_cast<const Color*>(params.imageBuffer + sourceX +
-                                                                            sourceY * params.ImageWidth);
+                const auto* c = reinterpret_cast<const Color*>(row + sourceX * sizeof(Color));
                 accum.b += c->b;
                 accum.g += c->g;
                 accum.r += c->r;
                 accum.a += c->a;
             }
+        }
 
         alignas(16) Color c{static_cast<uint8_t>(accum.b / totalPixels), static_cast<uint8_t>(accum.g / totalPixels),
                             static_cast<uint8_t>(accum.r / totalPixels), static_cast<uint8_t>(accum.a / totalPixels)};
@@ -329,22 +329,23 @@ namespace OIV
             // if (task->TaskID < 100)
             {
 #endif
-                const size_t targetWidth     = task->resampleParams.targetWidth;
-                const size_t targetHeight    = task->resampleParams.targetHeight;
-                const double ratiox          = task->ratioX;
-                const double ratioy          = task->ratioY;
-                const uint32_t* sourceBuffer = task->resampleParams.sourceBuffer;
-                const size_t totalThreads    = task->totalThreads;
-                const size_t sourceWidth     = task->resampleParams.sourceWidth;
-                const size_t sourceHeight    = task->resampleParams.sourceHeight;
+                const size_t targetWidth      = task->resampleParams.targetWidth;
+                const size_t targetHeight     = task->resampleParams.targetHeight;
+                const double ratiox           = task->ratioX;
+                const double ratioy           = task->ratioY;
+                const std::byte* sourceBuffer = task->resampleParams.sourceBuffer;
+                const size_t totalThreads     = task->totalThreads;
+                const size_t sourceWidth      = task->resampleParams.sourceWidth;
+                const size_t sourceHeight     = task->resampleParams.sourceHeight;
 
                 uint32_t* targetBuffer = task->resampleParams.targetBuffer;
 
                 AverageParams params1;
-                params1.imageBuffer = sourceBuffer;
-                params1.ImageHeight = sourceHeight;
-                params1.ImageWidth  = sourceWidth;
-                params1.box         = task->box;
+                params1.imageBuffer          = sourceBuffer;
+                params1.imageRowPitchInBytes = task->resampleParams.sourceRowPitchInBytes;
+                params1.ImageHeight          = sourceHeight;
+                params1.ImageWidth           = sourceWidth;
+                params1.box                  = task->box;
 
                 const size_t startY = task->TaskID * (targetHeight / totalThreads);
                 const size_t endY   = task->TaskID == totalThreads - 1
@@ -397,9 +398,10 @@ namespace OIV
 
         ImageSharedPtr resampled = std::make_shared<IMCodec::Image>(imageItem, ImageItemType::Unknown);
         ResamplerParams params;
-        params.sourceBuffer = reinterpret_cast<const uint32_t*>(sourceImage->GetBufferAt(0, 0));
-        params.sourceWidth  = sourceImage->GetWidth();
-        params.sourceHeight = sourceImage->GetHeight();
+        params.sourceBuffer          = sourceImage->GetBufferAt(0, 0);
+        params.sourceRowPitchInBytes = sourceImage->GetRowPitchInBytes();
+        params.sourceWidth           = sourceImage->GetWidth();
+        params.sourceHeight          = sourceImage->GetHeight();
         params.targetBuffer = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(resampled->GetBufferAt(0, 0)));
         params.targetWidth  = width;
         params.targetHeight = height;
