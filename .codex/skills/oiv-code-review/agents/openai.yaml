@@ -1,0 +1,4 @@
+interface:
+  display_name: "OIV Code Review"
+  short_description: "Review complete OIViewer changes with evidence"
+  default_prompt: "Use $oiv-code-review to review the complete OIViewer change, apply $oiv-code-writer to first-party C++, and report confirmed fixes, optional improvements, and coverage gaps."
