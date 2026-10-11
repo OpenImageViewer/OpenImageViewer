@@ -1,14 +1,13 @@
 #pragma once
-#include <Interfaces/IRenderer.h>
+#include <RendererCore/IRenderBackend.h>
 
 namespace OIV
 {
     class D3D11RendererFactory
     {
-    public:
-        static IRendererSharedPtr  Create();
+      public:
+
+        static RenderBackendSharedPtr Create();
     };
 
-
-}
-
+}  // namespace OIV

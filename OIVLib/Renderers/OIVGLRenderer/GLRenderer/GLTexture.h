@@ -1,11 +1,13 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <LLUtils/Exception.h>
 
 #include <cstddef>
 
 namespace OIV
 {
+    // Owned OpenGL texture whose upload returns only after error validation.
     class GLTexture
     {
       public:
@@ -13,6 +15,8 @@ namespace OIV
         GLTexture()
         {
             glGenTextures(1, &fTexture);
+            if (fTexture == 0)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Could not allocate an OpenGL texture");
             Bind();
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -42,10 +46,14 @@ namespace OIV
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0,
                          GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+            // A failed upload must leave the backend revision unacknowledged for retry.
+            if (glGetError() != GL_NO_ERROR)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "OpenGL texture upload failed");
         }
 
       private:
 
+        // Owned texture name, zero only before successful allocation.
         GLuint fTexture{};
     };
 }  // namespace OIV

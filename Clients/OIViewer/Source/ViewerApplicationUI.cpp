@@ -35,8 +35,6 @@
 
 #include "OIVCommands.h"
 
-#include "OIVImage/OIVFileImage.h"
-#include "OIVImage/OIVRawImage.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 
@@ -53,7 +51,6 @@
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 #include <OIVAppCore/InputGesturePolicy.h>
-#include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionWorkflowPolicy.h>
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/SortCommandPolicy.h>
@@ -92,7 +89,7 @@ namespace OIV
             }
             else
             {
-                OIVTextImage* text = fLabelManager.GetTextLabel("imageInfo");
+                TextLabel* text = fLabelManager.GetTextLabel("imageInfo");
                 if (text != nullptr)
                 {
                     fLabelManager.Remove("imageInfo");
@@ -129,6 +126,13 @@ namespace OIV
             fMouseInput->Cancel();
             if (fAutoScroll != nullptr && fAutoScroll->IsAutoScrolling())
                 fAutoScroll->ToggleAutoScroll();
+            if (fMessageManager)
+                fMessageManager->Stop();
+            // Presentation owners release while their facade and orderly native handles live.
+            fAutoScrollAnchor.reset();
+            fLabelManager.RemoveAll();
+            fResampledRenderImage.reset();
+            fMainRenderImage.reset();
             if (fRenderGateway != nullptr)
                 ApiGlobal::sPictureRenderer->Shutdown();
         }
@@ -255,6 +259,71 @@ namespace OIV
         fDPIadjustmentFactor = {params.monitorDesc.contentScale.x, params.monitorDesc.contentScale.y};
     }
 
+    // Update the RenderFormat and Resampled presentations from cached ImageState results.
+    // This one-way update creates, updates or releases renderer registrations without
+    // processing pixels or drawing a frame.
+    void ViewerApplication::UpdateMainRenderImages()
+    {
+        // Before renderer initialization, retain only CPU data and desired view state.
+        if (!fRenderGateway || !ApiGlobal::sPictureRenderer || !ApiGlobal::sPictureRenderer->GetRenderer())
+            return;
+        Renderer& renderer           = fRenderGateway->GetRenderer();
+        const auto updateRenderImage = [&renderer](std::optional<RenderImage>& presentation,
+                                                   const IMCodec::ImageSharedPtr& pixels,
+                                                   const RenderImageProperties& properties)
+        {
+            // Discarded results release their registrations even when the next draw is deferred.
+            if (!pixels)
+                presentation.reset();
+            else if (presentation)
+            {
+                // Reuse the registration identity. Unchanged pixels keep their upload revision.
+                presentation->SetImage(pixels);
+                presentation->SetProperties(properties);
+            }
+            else
+                presentation.emplace(renderer.CreateImage(pixels, properties));
+        };
+        const auto& resampled = fImageState.GetRetainedImage(ImageProcessingStage::Resampled);
+        RenderImageProperties properties{
+            .position        = fImageState.GetOffset().Round(),
+            .scale           = fImageState.GetScale(),
+            .opacity         = 1.0,
+            .visible         = !resampled,
+            .filterType      = fImageFilter,
+            .imageRenderMode = IRM_MainImage,
+        };
+        // Keep the hidden full-resolution registration so its GPU texture can be reused
+        // when switching back from the resampled result.
+        updateRenderImage(fMainRenderImage, fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat),
+                          properties);
+        // Software resampling already incorporates zoom into the pixels, so display them at 1:1.
+        properties.scale   = LLUtils::PointF64::One;
+        properties.visible = static_cast<bool>(resampled);
+        updateRenderImage(fResampledRenderImage, resampled, properties);
+    }
+
+    void ViewerApplication::PresentPreparedFrame()
+    {
+        if (!fPresentationReady)
+        {
+            fPresentationPending = true;
+        }
+        else if (!fIsShuttingDown)
+        {
+            UpdateMainRenderImages();
+            fLabelManager.Prepare(fRenderGateway->GetRenderer());
+            fRenderGateway->Refresh();
+        }
+    }
+
+    void ViewerApplication::ResumePresentation()
+    {
+        fPresentationReady = true;
+        if (std::exchange(fPresentationPending, false))
+            PresentPreparedFrame();
+    }
+
     void ViewerApplication::PerformRefresh()
     {
         using namespace std::chrono;
@@ -270,7 +339,7 @@ namespace OIV
                 if (EnableFrameLimiter == true)
                     fRefreshTimer.Enable(false);
 
-                fRenderGateway->Refresh();
+                PresentPreparedFrame();
                 fLastRefreshTime = now;
                 break;
             case FrameRefreshAction::ScheduleRefresh:
@@ -292,7 +361,7 @@ namespace OIV
     void ViewerApplication::OnRefreshTimer()
     {
         using namespace std::chrono;
-        fRenderGateway->Refresh();
+        PresentPreparedFrame();
         fLastRefreshTime = high_resolution_clock::now();
     }
 
@@ -342,7 +411,7 @@ namespace OIV
         LLUtils::native_string_type title;
         if (fImageState.GetOpenedImage() != nullptr)
         {
-            const ImageSource imageSource = fImageState.GetOpenedImage()->GetImageSource();
+            const ImageSource imageSource = fImageState.GetOpenedImage()->source;
             if (imageSource == ImageSource::File)
             {
                 const auto& committedCurrentFile = fBrowseSessionController != nullptr
@@ -548,9 +617,9 @@ namespace OIV
             CountColorsAsync();
 
             LLUtils::native_string_type imageInfoString = MessageHelper::CreateImageInfoMessage(
-                fImageState.GetOpenedImage(), fImageState.GetImage(ImageChainStage::SourceImage),
-                fImageLoader.GetImageCodec());
-            OIVTextImage* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
+                fImageState.GetOpenedImage(), fImageState.GetRetainedImage(ImageProcessingStage::Source), fDisplayTime,
+                fImageState.GetNumUniqueColors(), fImageLoader.GetImageCodec());
+            TextLabel* imageInfoText = fLabelManager.GetOrCreateTextLabel("imageInfo");
 
             imageInfoText->SetText(imageInfoString);
             imageInfoText->SetBackgroundColor(LLUtils::Color(0, 0, 0, 127));
@@ -567,7 +636,7 @@ namespace OIV
 
     void ViewerApplication::ShowWelcomeMessage()
     {
-        OIVTextImage* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
+        TextLabel* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
         welcomeMessage->SetText(
             LLUTILS_TEXT("<textcolor=#4a80e2>Welcome to <textcolor=#ff0000>O<textcolor=#00ff00>I<textcolor=#0000ff>V\n"
                          "<textcolor=#25bc25>Drag <textcolor=#4a80e2>here an image to start\n"
@@ -581,7 +650,7 @@ namespace OIV
     void ViewerApplication::UpdateWelcomeMessageLayout()
     {
         using namespace LLUtils;
-        if (OIVTextImage* welcomeMessage = fLabelManager.GetTextLabel("welcomeMessage"); welcomeMessage != nullptr)
+        if (TextLabel* welcomeMessage = fLabelManager.GetTextLabel("welcomeMessage"); welcomeMessage != nullptr)
         {
             constexpr uint16_t referenceFontSize = 24;
             constexpr uint16_t maximumFontSize   = 44;

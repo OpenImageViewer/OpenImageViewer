@@ -27,8 +27,24 @@ namespace OIV
             text->SetDPI(std::get<0>(fDPI), std::get<1>(fDPI));
     }
 
+    void LabelManager::InitializeRenderer(Renderer& renderer)
+    {
+        fRenderer = &renderer;
+        for (auto* label : fCreationOrder)
+            label->EnsureRegistration(renderer);
+    }
+
+    void LabelManager::Prepare(Renderer& renderer)
+    {
+        for (auto* label : fCreationOrder)
+            label->EnsureRegistration(renderer);
+        for (auto* label : fCreationOrder)
+            label->Prepare(renderer);
+    }
+
     void LabelManager::RemoveAll()
     {
+        fCreationOrder.clear();
         fTextLabels.clear();
     }
 
@@ -36,28 +52,44 @@ namespace OIV
     {
         auto it = fTextLabels.find(labelName);
         if (it != fTextLabels.end())
+        {
+            std::erase(fCreationOrder, it->second.get());
             fTextLabels.erase(it);
+        }
     }
 
-    OIVTextImage* LabelManager::GetTextLabel(const std::string& labelName)
+    TextLabel* LabelManager::GetTextLabel(const std::string& labelName)
     {
         auto it = fTextLabels.find(labelName);
         return it == fTextLabels.end() ? nullptr : it->second.get();
     }
-    OIVTextImage* LabelManager::GetOrCreateTextLabel(const std::string& labelName)
+    TextLabel* LabelManager::GetOrCreateTextLabel(const std::string& labelName)
     {
         auto it = fTextLabels.find(labelName);
         if (it == fTextLabels.end())
         {
-            it = fTextLabels.emplace(labelName, CreateTemplatedText()).first;
+            auto label = CreateTemplatedText();
+            if (fRenderer)
+                label->EnsureRegistration(*fRenderer);
+            it = fTextLabels.emplace(labelName, std::move(label)).first;
+            try
+            {
+                fCreationOrder.push_back(it->second.get());
+            }
+            catch (...)
+            {
+                // A failed order insertion must not leave an unreachable named label.
+                fTextLabels.erase(it);
+                throw;
+            }
         }
 
         return it->second.get();
     }
 
-    OIVTextImageUniquePtr LabelManager::CreateTemplatedText()
+    std::unique_ptr<TextLabel> LabelManager::CreateTemplatedText()
     {
-        OIVTextImageUniquePtr text = std::make_unique<OIVTextImage>(fFreeType);
+        std::unique_ptr<TextLabel> text = std::make_unique<TextLabel>(fFreeType);
 
         text->SetPosition(LLUtils::PointF64::Zero);
         text->SetScale(LLUtils::PointF64::One);

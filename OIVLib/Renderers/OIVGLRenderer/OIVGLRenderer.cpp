@@ -191,13 +191,13 @@ void main()
         return 0;
     }
 
-    int OIVGLRenderer::Redraw()
+    int OIVGLRenderer::Render(const RenderFrame& frame)
     {
         glClearColor(DefaultCanvasColor[0], DefaultCanvasColor[1], DefaultCanvasColor[2], DefaultCanvasColor[3]);
         glClear(GL_COLOR_BUFFER_BIT);
-        RenderImages(IRM_MainImage);
+        RenderImages(frame, IRM_MainImage);
         DrawSelectionRect();
-        RenderImages(IRM_Overlay);
+        RenderImages(frame, IRM_Overlay);
         fContext.SwapBuffers();
         return 0;
     }
@@ -229,24 +229,9 @@ void main()
         return 0;
     }
 
-    int OIVGLRenderer::AddRenderable(IRenderable* renderable)
+    void OIVGLRenderer::ReleaseImageResources(uint64_t id) noexcept
     {
-        if (renderable == nullptr)
-            throw std::invalid_argument("Cannot add a null OpenGL renderable");
-
-        const bool inserted = fImageEntries.emplace(renderable->GetID(), ImageEntry{.renderable = renderable}).second;
-        if (!inserted)
-            throw std::runtime_error("Cannot add the same OpenGL renderable twice");
-
-        return 0;
-    }
-
-    int OIVGLRenderer::RemoveRenderable(IRenderable* renderable)
-    {
-        if (renderable == nullptr || fImageEntries.erase(renderable->GetID()) == 0)
-            throw std::runtime_error("Cannot remove an unknown OpenGL renderable");
-
-        return 0;
+        fImageEntries.erase(id);
     }
 
     const char* OIVGLRenderer::GetGPUName() const
@@ -275,26 +260,22 @@ void main()
         return fAPIVersion.c_str();
     }
 
-    void OIVGLRenderer::RenderImages(OIV_Image_Render_mode renderMode)
+    void OIVGLRenderer::RenderImages(const RenderFrame& frame, OIV_Image_Render_mode mode)
     {
-        for (auto& item : fImageEntries)
-        {
-            ImageEntry& entry = item.second;
-            if (entry.renderable->GetImageRenderMode() == renderMode)
-                DrawImage(entry);
-        }
+        for (const auto& [id, record] : frame.images)
+            if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
+                record.properties.imageRenderMode == mode)
+                DrawImage(fImageEntries.try_emplace(id).first->second, record);
     }
 
-    void OIVGLRenderer::DrawImage(ImageEntry& entry)
+    void OIVGLRenderer::DrawImage(ImageEntry& entry, const RenderImageRecord& record)
     {
-        IRenderable& renderable = *entry.renderable;
-        if (!renderable.GetVisible() || renderable.GetOpacity() <= 0.0)
+        if (!record.pixels || !record.properties.visible || record.properties.opacity <= 0.0)
             return;
 
-        renderable.PreRender();
-        if (renderable.GetIsImageDirty() || entry.texture == nullptr)
+        if (entry.uploadedRevision != record.revision || entry.texture == nullptr)
         {
-            IMCodec::ImageSharedPtr image = renderable.GetImage();
+            IMCodec::ImageSharedPtr image = record.pixels;
             if (image == nullptr)
                 return;
 
@@ -307,16 +288,16 @@ void main()
                 entry.texture = std::make_unique<GLTexture>();
 
             entry.texture->SetRGBATexture(image->GetWidth(), image->GetHeight(), image->GetBuffer());
-            entry.width  = image->GetWidth();
-            entry.height = image->GetHeight();
-            renderable.ClearImageDirty();
+            entry.width            = image->GetWidth();
+            entry.height           = image->GetHeight();
+            entry.uploadedRevision = record.revision;
         }
 
-        const OIV_Filter_type filter = renderable.GetFilterType() == FT_Lanczos3 ? fFilterType
-                                                                                 : renderable.GetFilterType();
+        const OIV_Filter_type filter = record.properties.filterType == FT_Lanczos3 ? fFilterType
+                                                                                   : record.properties.filterType;
         entry.texture->SetFilter(filter == FT_None ? GL_NEAREST : GL_LINEAR);
         entry.texture->Bind();
-        UpdateGpuParams(entry);
+        UpdateGpuParams(entry, record);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
@@ -355,10 +336,10 @@ void main()
 #endif
     }
 
-    void OIVGLRenderer::UpdateGpuParams(const ImageEntry& entry) const
+    void OIVGLRenderer::UpdateGpuParams(const ImageEntry& entry, const RenderImageRecord& record) const
     {
-        const LLUtils::PointF64 scale    = entry.renderable->GetScale();
-        const LLUtils::PointF64 position = entry.renderable->GetPosition();
+        const LLUtils::PointF64 scale    = record.properties.scale;
+        const LLUtils::PointF64 position = record.properties.position;
 
         fProgram->Bind();
         fProgram->SetUniform2F("viewportSize", fViewportSize[0], fViewportSize[1]);
@@ -369,12 +350,12 @@ void main()
         fProgram->SetUniform4F("backgroundColor2", fBackgroundColors[1].data());
         fProgram->SetUniform4F("transparencyColor1", fTransparencyColors[0].data());
         fProgram->SetUniform4F("transparencyColor2", fTransparencyColors[1].data());
-        fProgram->SetUniform1F("opacity", static_cast<float>(entry.renderable->GetOpacity()));
+        fProgram->SetUniform1F("opacity", static_cast<float>(record.properties.opacity));
         fProgram->SetUniform1F("exposure", fExposure);
         fProgram->SetUniform1F("colorOffset", fOffset);
         fProgram->SetUniform1F("gamma", fGamma);
         fProgram->SetUniform1F("saturation", fSaturation);
-        fProgram->SetUniform1I("imageRenderMode", entry.renderable->GetImageRenderMode());
+        fProgram->SetUniform1I("imageRenderMode", record.properties.imageRenderMode);
         fProgram->SetUniform1I("showGrid", fShowGrid ? 1 : 0);
     }
 }  // namespace OIV

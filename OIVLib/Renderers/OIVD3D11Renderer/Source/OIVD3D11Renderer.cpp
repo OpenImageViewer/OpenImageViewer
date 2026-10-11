@@ -26,9 +26,9 @@ namespace OIV
         fD3D11Renderer->UpdateGpuParameters();
     }
 
-    int OIVD3D11Renderer::Redraw()
+    int OIVD3D11Renderer::Render(const RenderFrame& frame)
     {
-        return fD3D11Renderer->Redraw();
+        return fD3D11Renderer->Render(frame);
     }
 
     int OIVD3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
@@ -41,13 +41,9 @@ namespace OIV
         return fD3D11Renderer->SetExposure(exposure);
     }
 
-    int OIVD3D11Renderer::AddRenderable(IRenderable* renderable)
+    void OIVD3D11Renderer::ReleaseImageResources(uint64_t id) noexcept
     {
-        return fD3D11Renderer->AddRenderable(renderable);
-    }
-    int OIVD3D11Renderer::RemoveRenderable(IRenderable* renderable)
-    {
-        return fD3D11Renderer->RemoveRenderable(renderable);
+        fD3D11Renderer->ReleaseImageResources(id);
     }
 
     int OIVD3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)

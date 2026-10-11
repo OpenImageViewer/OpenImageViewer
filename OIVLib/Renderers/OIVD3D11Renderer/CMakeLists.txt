@@ -28,3 +28,5 @@ if(NOT OIV_D3D11_LIBRARIES_AVAILABLE)
         "or set OIV_BUILD_RENDERER_D3D11=OFF.")
 endif()
 target_link_libraries(${TargetName} PRIVATE ${oivD3D11Libraries} LLUtils::LLUtils)
+
+target_link_libraries(${TargetName} PUBLIC RendererCore)

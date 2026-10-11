@@ -1,16 +1,15 @@
 #pragma once
 #include <Defs.h>
 #include <Image.h>
-#include <Interfaces/IRenderer.h>
-
+#include <RendererCore/Renderer.h>
 
 namespace OIV
 {
     class IPictureRenderer
     {
-    public:
-        virtual IRenderer* GetRenderer() = 0;
-        virtual IMCodec::ImageSharedPtr Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize) = 0;
+      public:
+
+        virtual Renderer* GetRenderer() = 0;
 
         virtual ResultCode LoadFile(void* buffer, std::size_t size, char* extension, OIV_CMD_LoadFile_Flags flags,
                                     ImageHandle& handle)                                           = 0;
@@ -21,7 +20,7 @@ namespace OIV
 
         virtual ResultCode SetSelectionRect(const OIV_CMD_SetSelectionRect_Request& selectionRect) = 0;
 
-        virtual int Init(const RendererOptions& options = {})          = 0;
+        virtual int Init(const RendererOptions& options = {}) = 0;
         // Idempotent. Stop rendering before window/display teardown; images may outlive shutdown.
         virtual void Shutdown() noexcept                               = 0;
         virtual int SetParent(std::size_t handle, void* nativeDisplay) = 0;
@@ -31,20 +30,23 @@ namespace OIV
         virtual IMCodec::ImageSharedPtr GetImage(ImageHandle handle) const                                      = 0;
         virtual int SetTexelGrid(const CmdRequestTexelGrid& viewParams)                                         = 0;
         virtual int SetClientSize(uint16_t width, uint16_t height)                                              = 0;
-        virtual ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request, OIV_CMD_AxisAlignedTransform_Response& response) = 0;
+        virtual ResultCode AxisAlignTrasnform(const OIV_CMD_AxisAlignedTransform_Request& request,
+                                              OIV_CMD_AxisAlignedTransform_Response& response)                  = 0;
         virtual ~IPictureRenderer() {}
-        virtual ResultCode AddRenderable(IRenderable* renderable) = 0;
-        virtual ResultCode RemoveRenderable(IRenderable* renderable) = 0;
-        virtual ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request, OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response) = 0;
+        virtual ResultCode CropImage(const OIV_CMD_CropImage_Request& oiv_cmd_get_pixel_buffer_request,
+                                     OIV_CMD_CropImage_Response& oiv_cmd_get_pixel_buffer_response)         = 0;
         virtual ResultCode GetPixels(const OIV_CMD_GetPixels_Request& req, OIV_CMD_GetPixels_Response& res) = 0;
-        virtual ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req,OIV_CMD_ConvertFormat_Response& res) = 0;
-        virtual ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure) = 0;
-        virtual ResultCode GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request, OIV_CMD_TexelInfo_Response& texelresponse) = 0;
-        virtual ResultCode GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res) = 0;
-        virtual ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request, OIV_CMD_GetSubImages_Response& res) = 0;
+        virtual ResultCode ConverFormat(const OIV_CMD_ConvertFormat_Request& req,
+                                        OIV_CMD_ConvertFormat_Response& res)                                = 0;
+        virtual ResultCode SetColorExposure(const OIV_CMD_ColorExposure_Request& exposure)                  = 0;
+        virtual ResultCode GetTexelInfo(const OIV_CMD_TexelInfo_Request& texel_request,
+                                        OIV_CMD_TexelInfo_Response& texelresponse)                          = 0;
+        virtual ResultCode GetKnownFileTypes(OIV_CMD_GetKnownFileTypes_Response& res)                       = 0;
+        virtual ResultCode GetSubImages(const OIV_CMD_GetSubImages_Request& request,
+                                        OIV_CMD_GetSubImages_Response& res)                                 = 0;
 
         virtual ResultCode RegisterCallbacks(const OIV_CMD_RegisterCallbacks_Request& callbacks) = 0;
-        virtual ResultCode ResampleImage(const OIV_CMD_Resample_Request&, ImageHandle&) = 0;
-        virtual ResultCode SetBackgroundColor(int index, LLUtils::Color backgroundColor) = 0;
+        virtual ResultCode ResampleImage(const OIV_CMD_Resample_Request&, ImageHandle&)          = 0;
+        virtual ResultCode SetBackgroundColor(int index, LLUtils::Color backgroundColor)         = 0;
     };
-}
+}  // namespace OIV

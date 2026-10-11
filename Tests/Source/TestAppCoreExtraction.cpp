@@ -43,7 +43,7 @@
 #include <IImageCodec.h>
 #include <ImageItem.h>
 #include <LLUtils/StringUtility.h>
-#include <OIVImage/OIVFileImage.h>
+#include <OIVAppCore/ViewerImage.h>
 
 #include <algorithm>
 #include <array>
@@ -259,10 +259,9 @@ namespace
             lastTraverseMode = traverseMode;
             lastContext      = context;
 
-            return OIV::ImageFileLoadResult{resultCode,
-                                            image != nullptr
-                                                ? std::make_shared<OIV::OIVFileImage>(normalizedFilePath, image)
-                                                : nullptr};
+            return OIV::ImageFileLoadResult{resultCode, OIV::ViewerImage{.pixels = image,
+                                                                         .source = OIV::ImageSource::File,
+                                                                         .path   = normalizedFilePath}};
         }
 
         ResultCode resultCode         = ResultCode::RC_Success;
@@ -591,14 +590,14 @@ TEST_CASE("ColorCorrectionCommandPolicy parses and applies color corrections", "
 
 TEST_CASE("ColorCountPolicy ignores stale completions unless image info is visible", "[AppCore]")
 {
-    int currentImage = 0;
-    int staleImage   = 0;
+    constexpr uint64_t currentGeneration = 2;
+    constexpr uint64_t staleGeneration   = 1;
 
-    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(&currentImage, &currentImage, false) ==
+    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(currentGeneration, currentGeneration, false) ==
             OIV::ColorCountCompletionAction::ApplyToCurrentImage);
-    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(&staleImage, &currentImage, true) ==
+    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(staleGeneration, currentGeneration, true) ==
             OIV::ColorCountCompletionAction::CountVisibleImage);
-    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(&staleImage, &currentImage, false) ==
+    REQUIRE(OIV::ColorCountPolicy::DecideCompletion(staleGeneration, currentGeneration, false) ==
             OIV::ColorCountCompletionAction::Ignore);
 
     REQUIRE(OIV::ColorCountPolicy::NormalizeCountResult(4, -1, -2) == 4);
@@ -1062,17 +1061,15 @@ TEST_CASE("ImageInfoPresentationPolicy builds file image rows", "[AppCore]")
     IMCodec::ImageSharedPtr image                  = CreateFormattedTestImage(16, 8);
     image->GetImageItem()->processData.processTime = 12.5;
 
-    auto fileImage = std::make_shared<OIV::OIVFileImage>(filePath.native(), image);
-    fileImage->SetDisplayTime(3.25);
-    fileImage->SetNumUniqueColors(7);
+    OIV::ViewerImage fileImage{.pixels = image, .source = OIV::ImageSource::File, .path = filePath.native()};
 
     auto metaData               = std::make_shared<IMCodec::ItemMetaData>();
     metaData->exifData.latitude = 1.25;
     metaData->exifData.make     = "CameraBrand";
-    fileImage->SetMetaData(metaData);
+    fileImage.metadata          = metaData;
 
     FakeImageCodec codec;
-    const auto rows = OIV::ImageInfoPresentationPolicy::Build(fileImage, fileImage, codec);
+    const auto rows = OIV::ImageInfoPresentationPolicy::Build(&fileImage, fileImage.pixels, 3.25, 7, codec);
 
     const auto* filePathRow = FindRow(rows, "File path");
     REQUIRE(filePathRow != nullptr);
@@ -1118,9 +1115,9 @@ TEST_CASE("ImageInfoPresentationPolicy handles generated animation images", "[Ap
                                                                          IMCodec::ImageItemType::AnimationFrame);
     container->SetSubImage(0, CreateFormattedTestImage(4, 2));
 
-    auto image = std::make_shared<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib, container);
+    OIV::ViewerImage image{.pixels = container};
     FakeImageCodec codec;
-    const auto rows = OIV::ImageInfoPresentationPolicy::Build(image, image, codec);
+    const auto rows = OIV::ImageInfoPresentationPolicy::Build(&image, image.pixels, 0.0, -1, codec);
 
     const auto* sourceRow = FindRow(rows, "Source");
     REQUIRE(sourceRow != nullptr);
@@ -1305,7 +1302,7 @@ TEST_CASE("ImageOpenController loads direct files through the injected loader", 
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
     REQUIRE(result.DecodeSucceeded());
-    REQUIRE(result.image != nullptr);
+    REQUIRE(result.image.pixels != nullptr);
     REQUIRE(fakeLoaderPtr->lastPath == sourcePath.lexically_normal().native());
     REQUIRE(fakeLoaderPtr->lastTraverseMode == IMCodec::PluginTraverseMode::AnyPlugin);
     REQUIRE(fakeLoaderPtr->lastContext.canvasWidth == 800);

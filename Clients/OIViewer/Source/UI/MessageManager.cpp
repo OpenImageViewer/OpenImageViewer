@@ -18,6 +18,20 @@ namespace OIV
             std::bind(&MessageManager::OnWindowSizeChange, this, std::placeholders::_1));
     }
 
+    void MessageManager::Stop()
+    {
+        // Detach timers as well as disabling them so an in-flight refresh cannot
+        // rearm delivery after cleanup. Clearing messages retires borrowed label pointers.
+        fTimerHideUserMessage.SetInterval(0);
+        fFadeTimer.SetInterval(0);
+        fTimerHideUserMessage.SetCallback({});
+        fFadeTimer.SetCallback({});
+        std::ignore = fTimerHideUserMessage.SetTargetWindow(nullptr);
+        std::ignore = fFadeTimer.SetTargetWindow(nullptr);
+        fSizeSubscription.Unsubscribe();
+        fMessages.clear();
+    }
+
     void MessageManager::OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams)
     {
         fMaxMessageWidth = sizeChangedParams.width - (fMarginLeft + fMarginRight);

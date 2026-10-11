@@ -3,7 +3,7 @@
 
 namespace OIV
 {
-    IRendererSharedPtr GLRendererFactory::Create()
+    RenderBackendSharedPtr GLRendererFactory::Create()
     {
         return std::make_shared<OIVGLRenderer>();
     }

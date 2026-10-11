@@ -55,6 +55,7 @@ endif()
 target_link_libraries(${TargetName}
 PUBLIC
 LLUtils::LLUtils
+RendererCore
 ImageUtil
 ImageCodec
 PRIVATE

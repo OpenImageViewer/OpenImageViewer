@@ -92,3 +92,5 @@ target_link_libraries(OIVGLRenderer
 if(oivGLWayland)
     target_compile_definitions(OIVGLRenderer PRIVATE OIV_GL_WAYLAND)
 endif()
+
+target_link_libraries(OIVGLRenderer PUBLIC RendererCore)

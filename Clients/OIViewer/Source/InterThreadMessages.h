@@ -27,9 +27,12 @@ namespace OIV
 
     using CandidateResidencyReadyData = BrowseSessionController::BrowseCandidateCompletion;
 
+    // Worker completion owns a source generation, never a presentation identity.
     struct CountColorsData
     {
-        void* image;
+        // Selected-source identity captured before the worker starts.
+        uint64_t generation;
+        // Unique color count or the existing failure sentinel.
         int64_t colorCount;
     };
 }  // namespace OIV

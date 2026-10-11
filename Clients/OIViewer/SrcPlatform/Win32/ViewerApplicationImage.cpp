@@ -77,7 +77,7 @@ namespace OIV
                 image = IMUtil::ImageUtil::Convert(image, TexelFormat::I_B8_G8_R8);
             image = IMUtil::ImageUtil::Transform({IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical},
                                                  image);
-            LoadOivImage(std::make_shared<OIVBaseImage>(ImageSource::Clipboard, image));
+            LoadOivImage(ViewerImage{.pixels = image, .source = ImageSource::Clipboard});
             clipboardType = ClipboardDataType::Image;
         }
         // Windows synthesizes CF_UNICODETEXT from CF_TEXT/CF_OEMTEXT, so legacy text is supported here.

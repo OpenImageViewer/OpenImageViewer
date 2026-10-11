@@ -27,8 +27,6 @@
 
 #include "OIVCommands.h"
 
-#include "OIVImage/OIVFileImage.h"
-#include "OIVImage/OIVRawImage.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 
@@ -45,7 +43,6 @@
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 #include <OIVAppCore/InputGesturePolicy.h>
-#include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionWorkflowPolicy.h>
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/SortCommandPolicy.h>
@@ -87,12 +84,13 @@ namespace OIV
         fTimerNoActiveZoom.SetInterval(0);
         fImageState.SetResample(true);
         fImageState.Refresh();
+        UpdateMainRenderImages();
         fRefreshOperation.Queue();
     }
 
     OIV_Filter_type ViewerApplication::GetFilterType() const
     {
-        return fImageState.GetVisibleImage()->GetFilterType();
+        return fImageFilter;
     }
 
     void ViewerApplication::UpdateExposure()
@@ -154,8 +152,8 @@ namespace OIV
 
     void ViewerApplication::SetFilterLevel(OIV_Filter_type filterType)
     {
-        fImageState.GetVisibleImage()->SetFilterType(
-            std::clamp(filterType, FT_None, static_cast<OIV_Filter_type>(FT_Count - 1)));
+        fImageFilter = std::clamp(filterType, FT_None, static_cast<OIV_Filter_type>(FT_Count - 1));
+        UpdateMainRenderImages();
 
         fRefreshOperation.Queue();
     }
@@ -181,6 +179,7 @@ namespace OIV
     void ViewerApplication::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
     {
         fImageState.SetOffset(ResolveOffset(offset));
+        UpdateMainRenderImages();
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
 
@@ -241,8 +240,8 @@ namespace OIV
 
     void ViewerApplication::UpdateSelectionRectText()
     {
-        OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
-        auto selectionSizeStr           = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
+        TextLabel* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
+        auto selectionSizeStr        = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
 
         if (selectionSizeText == nullptr)
         {
@@ -264,12 +263,12 @@ namespace OIV
         // text already exists, just make visible.
         selectionSizeText->SetVisible(true);
         selectionSizeText->SetText(selectionSizeStr);
-        selectionSizeText->Create();
+        selectionSizeText->GetMetrics();
 
         const auto labelPosition = SelectionWorkflowPolicy::PlaceSelectionLabel(
             fSelectionRect.GetSelectionRect(),
-            {static_cast<int32_t>(selectionSizeText->GetImage()->GetWidth()),
-             static_cast<int32_t>(selectionSizeText->GetImage()->GetHeight())},
+            {static_cast<int32_t>(selectionSizeText->GetMetrics().pixelSize.x),
+             static_cast<int32_t>(selectionSizeText->GetMetrics().pixelSize.y)},
             static_cast<LLUtils::PointI32>(fWindow.GetCanvasPixelSize()));
 
         selectionSizeText->SetPosition(static_cast<LLUtils::PointF64>(labelPosition));
@@ -300,7 +299,7 @@ namespace OIV
 
     void ViewerApplication::CancelSelection()
     {
-        OIVTextImage* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
+        TextLabel* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
         if (selectionSizeText != nullptr)
             selectionSizeText->SetVisible(false);
 
@@ -318,6 +317,7 @@ namespace OIV
         if (GetResamplingEnabled() && IsImageOpen() && fDownScalingTechnique == DownscalingTechnique::Software)
         {
             fImageState.SetResample(false);
+            UpdateMainRenderImages();
             fTimerNoActiveZoom.SetInterval(0);
             fTimerNoActiveZoom.SetInterval(fQueueResamplingDelay);
         }
@@ -332,6 +332,7 @@ namespace OIV
             {
                 fTimerNoActiveZoom.SetInterval(0);
                 fImageState.SetResample(false);
+                UpdateMainRenderImages();
             }
             else
             {
@@ -397,7 +398,7 @@ namespace OIV
 
     /*void ViewerApplication::UpdateCanvasSize()
     {
-        if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
+        if (fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
         {
             using namespace  LLUtils;
             const LWS::PixelSize pixels = fWindow.GetCanvasPixelSize();
@@ -416,7 +417,7 @@ namespace OIV
     {
         if (fVirtualStatusBar.GetVisible() == true)
         {
-            if (fImageState.GetImage(ImageChainStage::Deformed) != nullptr)
+            if (fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
             {
                 using namespace LLUtils;
                 PointF64 storageImageSpace = ClientToImage(fWindow.GetWindowMousePosition());
@@ -435,9 +436,9 @@ namespace OIV
                 if (!(storageImageSpace.x < 0 || storageImageSpace.y < 0 || storageImageSpace.x >= storageImageSize.x ||
                       storageImageSpace.y >= storageImageSize.y))
                 {
-                    LLUtils::native_string_type message = StringUtility::ToNativeString(
-                        OIVHelper::ParseTexelValue(fImageState.GetImage(ImageChainStage::Deformed)->GetImage(),
-                                                   static_cast<LLUtils::PointI32>(storageImageSpace)));
+                    LLUtils::native_string_type message = StringUtility::ToNativeString(OIVHelper::ParseTexelValue(
+                        fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform),
+                        static_cast<LLUtils::PointI32>(storageImageSpace)));
                     fVirtualStatusBar.SetText("texelValue", message);
                     fVirtualStatusBar.SetOpacity("texelValue", 1.0);
                     fRefreshOperation.Queue();
@@ -502,6 +503,7 @@ namespace OIV
         fRefreshOperation.Begin();
         SetResamplingEnabled(false);
         fImageState.Transform(relativeRotation, flip);
+        fImageState.Refresh(ImageProcessingStage::GeometricTransform);
         AutoPlaceImage(true);
         RefreshImage();
         fRefreshOperation.End();
@@ -517,9 +519,11 @@ namespace OIV
             {
                 case DownscalingTechnique::None:
                     fImageState.SetResample(false);
+                    UpdateMainRenderImages();
                     break;
                 case DownscalingTechnique::HardwareMipmaps:
                     fImageState.SetResample(false);
+                    UpdateMainRenderImages();
                     break;
                 case DownscalingTechnique::Software:
                     fImageState.SetResample(true);

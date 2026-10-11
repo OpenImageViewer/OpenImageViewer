@@ -33,8 +33,7 @@
 
 #include "OIVCommands.h"
 
-#include "OIVImage/OIVFileImage.h"
-#include "OIVImage/OIVRawImage.h"
+#include <ImageProcessing/FileImage.h>
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 
@@ -51,7 +50,6 @@
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 #include <OIVAppCore/InputGesturePolicy.h>
-#include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionWorkflowPolicy.h>
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/SortCommandPolicy.h>
@@ -204,24 +202,24 @@ namespace OIV
                 }
                 else
                 {
-                    auto currentImage = fImageState.GetOpenedImage()->GetImage()->GetSubImage(fCurrentFrame);
-                    fImageState.SetImageChainRoot(
-                        std::make_shared<OIVBaseImage>(ImageSource::GeneratedByLib, currentImage));
+                    auto currentImage = fImageState.GetOpenedImage()->pixels->GetSubImage(fCurrentFrame);
+                    fImageState.SetSelectedSource(currentImage);
                     fSequencerTimer.SetInterval(
                         fSequencerPolicy.StartFrame(currentImage->GetAnimationData().delayMilliseconds, now));
-                    fCurrentFrame = SequencerPolicy::NextFrame(
-                        fCurrentFrame, fImageState.GetOpenedImage()->GetImage()->GetNumSubImages());
+                    fCurrentFrame = SequencerPolicy::NextFrame(fCurrentFrame,
+                                                               fImageState.GetOpenedImage()->pixels->GetNumSubImages());
                     RefreshImage();
                 }
             }));
 
         fMessageManager = std::make_unique<MessageManager>(fWindow.GetWindow(), &fLabelManager, 5,
-                                                           [&]() -> void { fRefreshOperation.Queue(); });
+                                                           MakeSafeCallback([this]() { fRefreshOperation.Queue(); }));
 
         // Stop LWS buffer attachments before the renderer takes ownership of the canvas. On Wayland,
         // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
         std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
         InitializeRenderer(rendering);
+        fLabelManager.InitializeRenderer(fRenderGateway->GetRenderer());
 
         // Update oiv lib client size
         UpdateWindowSize();
@@ -248,17 +246,17 @@ namespace OIV
 
         if (isInitialFileLoadedSuccesfuly)
         {
-            // Registration happens here on the UI thread, after the renderer is ready.
-            auto file = std::make_shared<OIVFileImage>(filePath, std::move(initialImage));
-            file->SetMetaData(std::move(initialMetaData));
-            LoadOivImage(std::move(file));
+            LoadOivImage(ViewerImage{.pixels   = std::move(initialImage),
+                                     .metadata = std::move(initialMetaData),
+                                     .source   = ImageSource::File,
+                                     .path     = std::filesystem::path(filePath).lexically_normal().native()});
         }
     }
 
     IMCodec::ImageSharedPtr ViewerApplication::GetImageByIndex(int32_t index)
     {
         using namespace IMCodec;
-        auto openedImage = fImageState.GetOpenedImage()->GetImage();
+        auto openedImage = fImageState.GetOpenedImage()->pixels;
 
         const auto isMainAnActualImage = SubImagePolicy::IncludeMainImage(openedImage->GetItemType());
         const auto actualIndex         = SubImagePolicy::ActualImageIndexFromDisplayIndex(index, isMainAnActualImage);
@@ -375,10 +373,10 @@ namespace OIV
 
         fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"),
                                  fImageState.GetOpenedImage() != nullptr &&
-                                     fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File);
+                                     fImageState.GetOpenedImage()->source == ImageSource::File);
         fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"),
                                  fImageState.GetOpenedImage() != nullptr &&
-                                     fImageState.GetOpenedImage()->GetImageSource() == ImageSource::File);
+                                     fImageState.GetOpenedImage()->source == ImageSource::File);
 
         InitializeNotificationIcons();
 
@@ -415,12 +413,12 @@ namespace OIV
         switch (imageSizeType)
         {
             case ImageSizeType::Original:
-                return fImageState.GetImage(ImageChainStage::SourceImage) != nullptr
-                           ? PointF64(fImageState.GetImage(ImageChainStage::SourceImage)->GetImage()->GetDimensions())
+                return fImageState.GetRetainedImage(ImageProcessingStage::Source) != nullptr
+                           ? PointF64(fImageState.GetRetainedImage(ImageProcessingStage::Source)->GetDimensions())
                            : PointF64(0, 0);
             case ImageSizeType::Transformed:
                 return static_cast<PointF64>(
-                    fImageState.GetImage(ImageChainStage::Deformed)->GetImage()->GetDimensions());
+                    fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform)->GetDimensions());
             case ImageSizeType::Visible:
                 return fImageState.GetVisibleSize();
 

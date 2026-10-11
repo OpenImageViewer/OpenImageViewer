@@ -81,11 +81,11 @@ namespace
     };
     constexpr std::array<RendererBackend, 3> Backends{{
         {{RendererType::Vulkan, "Vulkan", true},
-         +[]() -> IRendererSharedPtr { return std::make_shared<FakeRenderer>(0); }},
+         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(0); }},
         {{RendererType::D3D11, "D3D11", true},
-         +[]() -> IRendererSharedPtr { return std::make_shared<FakeRenderer>(1); }},
+         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(1); }},
         {{RendererType::OpenGL, "GL", false},
-         +[]() -> IRendererSharedPtr { return std::make_shared<FakeRenderer>(2); }},
+         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(2); }},
     }};
     RendererAdapter Adapter(int index, Acceleration acceleration, std::string name = "GPU", uint32_t vendor = 0)
     {

@@ -7,7 +7,6 @@
 #include <Image.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/StringUtility.h>
-#include <OIVImage/OIVFileImage.h>
 
 #include <chrono>
 #include <ctime>
@@ -79,14 +78,14 @@ namespace OIV
     }  // namespace
 
     ImageInfoPresentationPolicy::ImageInfoRows ImageInfoPresentationPolicy::Build(
-        const OIVBaseImageSharedPtr& image, const OIVBaseImageSharedPtr& rasterized, IMCodec::IImageCodec& imageCodec)
+        const ViewerImage* image, const IMCodec::ImageSharedPtr& rasterized, double displayTime, int64_t uniqueValues,
+        IMCodec::IImageCodec& imageCodec)
     {
         ImageInfoRows rows;
-        std::shared_ptr<OIVFileImage> fileImage = std::dynamic_pointer_cast<OIVFileImage>(image);
 
-        if (fileImage != nullptr)
+        if (image && image->source == ImageSource::File)
         {
-            const std::filesystem::path filePath = fileImage->GetFileName();
+            const std::filesystem::path filePath = image->path;
             AddRow(rows, "File path", {filePath.native()});
 
             const uintmax_t fileSize = std::filesystem::file_size(filePath);
@@ -97,7 +96,7 @@ namespace OIV
                                               })});
             AddRow(rows, "File date", {FormatFileTime(filePath)});
 
-            const uint32_t bitmapSize          = rasterized->GetImage()->GetTotalSizeOfImageTexels();
+            const uint32_t bitmapSize          = rasterized->GetTotalSizeOfImageTexels();
             const long double compressionRatio = fileSize == 0 ? 0.0L
                                                                : static_cast<long double>(bitmapSize) /
                                                                      static_cast<long double>(fileSize);
@@ -105,21 +104,20 @@ namespace OIV
         }
         else if (image != nullptr)
         {
-            AddRow(rows, "Source", {FormatImageSource(image->GetImageSource())});
+            AddRow(rows, "Source", {FormatImageSource(image->source)});
         }
 
-        const bool isAnimation = rasterized->GetImage()->GetItemType() == IMCodec::ImageItemType::Container &&
-                                 rasterized->GetImage()->GetSubImageGroupType() ==
-                                     IMCodec::ImageItemType::AnimationFrame;
+        const bool isAnimation = rasterized->GetItemType() == IMCodec::ImageItemType::Container &&
+                                 rasterized->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame;
 
         if (isAnimation)
             AddRow(rows, "Num frames",
-                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetImage()->GetNumSubImages()))});
+                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetNumSubImages()))});
         else
             AddRow(rows, "Num sub-images",
-                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetImage()->GetNumSubImages()))});
+                   {LLUtils::StringUtility::ToNativeString(std::to_string(rasterized->GetNumSubImages()))});
 
-        IMCodec::ImageSharedPtr frame = isAnimation ? rasterized->GetImage()->GetSubImage(0) : rasterized->GetImage();
+        IMCodec::ImageSharedPtr frame = isAnimation ? rasterized->GetSubImage(0) : rasterized;
 
         AddRow(rows, "Width",
                {LLUtils::StringUtility::ToNativeString(std::to_string(frame->GetWidth())), LLUTILS_TEXT("px")});
@@ -135,13 +133,12 @@ namespace OIV
             AddRow(rows, "original channels info", {FormatTexelInfo(frame->GetOriginalTexelInfo())});
         }
 
-        if (image != nullptr && image->GetImage() != nullptr)
+        if (image != nullptr && image->pixels != nullptr)
         {
-            const IMCodec::ItemProcessData& processData = image->GetImage()->GetProcessData();
+            const IMCodec::ItemProcessData& processData = image->pixels->GetProcessData();
             AddRow(rows, "Load time",
                    {FormatNumber(static_cast<long double>(processData.processTime)), LLUTILS_TEXT("ms")});
-            AddRow(rows, "Display time",
-                   {FormatNumber(static_cast<long double>(rasterized->GetDisplayTime())), LLUTILS_TEXT("ms")});
+            AddRow(rows, "Display time", {FormatNumber(static_cast<long double>(displayTime)), LLUTILS_TEXT("ms")});
 
             LLUtils::native_string_type pluginDescription = LLUTILS_TEXT("Unknown");
             IMCodec::PluginProperties properties;
@@ -152,13 +149,12 @@ namespace OIV
             AddRow(rows, "Codec used", {pluginDescription});
         }
 
-        const int64_t uniqueValues = rasterized->GetNumUniqueColors();
         if (uniqueValues > -1)
             AddRow(rows, "Unique values", {LLUtils::StringUtility::ToNativeString(std::to_string(uniqueValues))});
 
-        if (image != nullptr && image->GetMetaData() != nullptr)
+        if (image != nullptr && image->metadata != nullptr)
         {
-            const IMCodec::ItemMetaDataSharedPtr& metaData = image->GetMetaData();
+            const IMCodec::ItemMetaDataSharedPtr& metaData = image->metadata;
             const IMCodec::ExifData& exifData              = metaData->exifData;
             if (exifData.longitude != std::numeric_limits<double>::max())
                 AddRow(rows, "Longitude", {FormatNumber(exifData.longitude, 6)});

@@ -55,5 +55,6 @@ endif()
 include_directories(${ExternalFolder}/ExoticNumbers/include)
 include_directories(${ExternalFolder}/ImageCodec/ImageCodec/Include)
 
+add_subdirectory(Renderers/Common)
 add_subdirectory(OIV)
 add_subdirectory(Renderers)

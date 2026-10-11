@@ -21,7 +21,7 @@
 #include <OIVShared/RecursiveDelayOp.h>
 
 #include <LLUtils/Logging/Logger.h>
-#include "OIVImage/OIVBaseImage.h"
+#include <RendererCore/Renderer.h>
 #include "LabelManager.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
@@ -35,7 +35,6 @@
 #include <OIVAppCore/FileRemovalPolicy.h>
 #include <OIVAppCore/ImageOpenController.h>
 #include <OIVAppCore/ImageState.h>
-#include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionRect.h>
 #include <OIVAppCore/SlideshowPolicy.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
@@ -198,6 +197,10 @@ namespace OIV
         void AddPlatformKeyBindings();
         void OnMonitorChanged(const EventManager::MonitorChangeEventParams& params);
         void PerformRefresh();
+        void UpdateMainRenderImages();
+        void PresentPreparedFrame();
+        void ResumePresentation();
+        static LLUtils::native_string_type DescribeImage(const IMCodec::ImageSharedPtr& pixels);
         void SetUserMessage(const LLUtils::native_string_type& message, GroupID groupID = 0,
                             MessageFlags groupFlags = MessageFlags::Interchangeable);
         bool ExecuteCommandInternal(const CommandRequestIntenal& request);
@@ -275,7 +278,7 @@ namespace OIV
         bool LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags);
         bool LoadFileOrFolder(const LLUtils::native_string_type& filePath, IMCodec::PluginTraverseMode traverseMode);
         bool ProcessImageLoadResult(const ImageLoadResult& loadResult);
-        void LoadOivImage(OIVBaseImageSharedPtr oivImage);
+        void LoadOivImage(ViewerImage oivImage);
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
@@ -370,6 +373,18 @@ namespace OIV
         MainWindow fWindow;
         // Native rendering stops before window teardown. Images release before this gateway destroys the API.
         std::unique_ptr<IViewerRenderPort> fRenderGateway;
+        // Optional main-image registrations, never created for CPU-only stages.
+        std::optional<RenderImage> fMainRenderImage;
+        // Retained software-resampled registration, released when its pixels are discarded.
+        std::optional<RenderImage> fResampledRenderImage;
+        // Current per-image filter policy belongs to viewer presentation.
+        OIV_Filter_type fImageFilter = FT_None;
+        // Time from loading to prepared display, formatted by viewer information policy.
+        double fDisplayTime = 0.0;
+        // Deferred platform readiness and coalesced redraw request belong to the scheduler.
+        bool fPresentationReady = true;
+        // A redraw requested before platform presentation becomes ready.
+        bool fPresentationPending = false;
         AutoScrollUniquePtr fAutoScroll;
         RecursiveDelayedOp fRefreshOperation;
         RecursiveDelayedOp fPreserveImageSpaceSelection;
@@ -380,7 +395,6 @@ namespace OIV
         IFileWatcher::FolderID fCOnfigurationFolderID = 0;
         int fCurrentFrame                             = 0;
         SequencerPolicy fSequencerPolicy;
-        OIVBaseImageSharedPtr fCountingImageColor;
         std::atomic_bool fIsColorThreadRunning = false;
         std::thread fCountingColorsThread;
         // FileCache fFileCache;
@@ -400,7 +414,8 @@ namespace OIV
 
         bool fIsGridEnabled                         = false;
         OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
-        OIVBaseImageSharedPtr fAutoScrollAnchor;
+        // Independent autoscroll overlay released before renderer shutdown.
+        std::optional<RenderImage> fAutoScrollAnchor;
         std::thread::id fMainThreadID = std::this_thread::get_id();
         SelectionRect fSelectionRect;
         uint32_t fQueueResamplingDelay        = 50;

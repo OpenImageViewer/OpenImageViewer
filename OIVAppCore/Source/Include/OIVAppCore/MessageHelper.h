@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LLUtils/StringDefs.h>
-#include <OIVImage/OIVBaseImage.h>
+#include <OIVAppCore/ViewerImage.h>
 #include <string_view>
 
 namespace IMCodec
@@ -11,24 +11,30 @@ namespace IMCodec
 
 namespace OIV
 {
-    class IRenderer;
+    class Renderer;
 
     // UTF-8 metadata and renderer are borrowed for the duration of CreateSystemInfoMessage.
     struct SystemInfoContext
     {
+        // Borrowed UTF-8 application name.
         std::string_view appName;
+        // Borrowed UTF-8 formatted application version.
         std::string_view appVersion;
+        // Borrowed UTF-8 source revision.
         std::string_view gitHash;
+        // Borrowed UTF-8 build configuration name.
         std::string_view buildType;
-        const IRenderer* renderer = nullptr;
+        // Optional borrowed common facade, queried only on its owner thread.
+        const Renderer* renderer = nullptr;
     };
 
     class MessageHelper
     {
       public:
 
-        static LLUtils::native_string_type CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage,
-                                                                  const OIVBaseImageSharedPtr& rasterized,
+        static LLUtils::native_string_type CreateImageInfoMessage(const ViewerImage* oivImage,
+                                                                  const IMCodec::ImageSharedPtr& rasterized,
+                                                                  double displayTime, int64_t uniqueValues,
                                                                   IMCodec::ImageCodec& imageCodec);
         static LLUtils::native_string_type CreateKeyBindingsMessage();
         // Collect system and renderer details on the renderer's owning thread, then format the overlay.

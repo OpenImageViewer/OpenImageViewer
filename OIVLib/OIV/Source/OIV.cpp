@@ -1,5 +1,5 @@
 #include "OIV.h"
-#include "Interfaces/IRenderer.h"
+#include "RendererCore/IRenderBackend.h"
 #include "NullRenderer.h"
 #include <LLUtils/StringDefs.h>
 #include <exif.h>
@@ -44,9 +44,9 @@ namespace OIV
         Shutdown();
     }
 
-    IRenderer* OIV::GetRenderer()
+    Renderer* OIV::GetRenderer()
     {
-        return fRenderer.get();
+        return fIsInitialized ? fRenderer.get() : nullptr;
     }
 
     LLUtils::PointI32 OIV::GetClientSize() const
@@ -62,11 +62,12 @@ namespace OIV
 
     void OIV::UpdateGpuParams()
     {
-        fViewParams.showGrid            = fShowGrid;
-        fViewParams.uTransparencyColor1 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color1;
-        fViewParams.uTransparencyColor2 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color2;
-        fViewParams.uViewportSize       = GetClientSize();
-        fRenderer->SetViewParams(fViewParams);
+        ViewParameters viewParams{};
+        viewParams.showGrid            = fShowGrid;
+        viewParams.uTransparencyColor1 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color1;
+        viewParams.uTransparencyColor2 = transparencyCheckerShades[static_cast<int>(fTransparencyShade)].color2;
+        viewParams.uViewportSize       = GetClientSize();
+        fRenderer->SetViewParams(viewParams);
     }
 
     IMUtil::AxisAlignedRotation OIV::ResolveExifRotation(unsigned short exifRotation) const
@@ -88,36 +89,6 @@ namespace OIV
                 rotation = AxisAlignedRotation::None;
         }
         return rotation;
-    }
-
-    IMCodec::ImageSharedPtr OIV::Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize)
-    {
-        const uint32_t width  = targetSize.x;
-        const uint32_t height = targetSize.y;
-
-        using namespace IMCodec;
-        // Create target downscaled image.
-        ImageItemSharedPtr imageItem = std::make_shared<ImageItem>();
-        ImageDescriptor& desc        = imageItem->descriptor;
-        desc.height                  = height;
-        desc.width                   = width;
-        desc.rowPitchInBytes         = width * sourceImage->GetBytesPerTexel();
-        desc.texelFormatDecompressed = sourceImage->GetTexelFormat();
-        desc.texelFormatStorage      = sourceImage->GetOriginalTexelFormat();
-        imageItem->data.Allocate(width * height * sourceImage->GetBytesPerTexel());
-
-        ImageSharedPtr resampled = std::make_shared<IMCodec::Image>(imageItem, ImageItemType::Unknown);
-        ResamplerParams params;
-        params.sourceBuffer = reinterpret_cast<const uint32_t*>(sourceImage->GetBufferAt(0, 0));
-        params.sourceWidth  = sourceImage->GetWidth();
-        params.sourceHeight = sourceImage->GetHeight();
-        params.targetBuffer = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(resampled->GetBufferAt(0, 0)));
-        params.targetWidth  = width;
-        params.targetHeight = height;
-
-        fResampler.Resample(params);
-
-        return resampled;
     }
 
 #pragma region IPictureViewer implementation
@@ -312,28 +283,6 @@ namespace OIV
         return ResultCode::RC_Success;
     }
 
-    // Registration and initialization share the renderer's owner thread. Background work
-    // passes decoded image data instead of OIV wrappers. Keep pre-init registrations queued
-    // for callers that construct renderables before initializing the renderer.
-    ResultCode OIV::AddRenderable(IRenderable* renderable)
-    {
-        if (fIsInitialized)
-            fRenderer->AddRenderable(renderable);
-        else
-            fPendingRenderables.push_back(renderable);
-
-        return ResultCode::RC_Success;
-    }
-    ResultCode OIV::RemoveRenderable(IRenderable* renderable)
-    {
-        if (fIsInitialized)
-            fRenderer->RemoveRenderable(renderable);
-        else
-            std::erase(fPendingRenderables, renderable);
-
-        return ResultCode::RC_Success;
-    }
-
     ResultCode OIV::CropImage(const OIV_CMD_CropImage_Request& request, OIV_CMD_CropImage_Response& response)
     {
         ResultCode result                   = RC_Success;
@@ -464,7 +413,7 @@ namespace OIV
         // Each initialization gets a fresh state: old snapshots remain disabled forever.
         if (fCallBacks.OnException != nullptr && !fExceptionSubscription)
         {
-            auto state           = std::make_shared<ExceptionCallbackState>(ExceptionCallbackState{
+            auto state             = std::make_shared<ExceptionCallbackState>(ExceptionCallbackState{
                 .mutex     = fExceptionMutex,
                 .callbacks = fCallBacks,
             });
@@ -502,6 +451,7 @@ namespace OIV
         if (const auto error = ValidateRendererOptions(options); !error.empty())
             throw std::invalid_argument(error);
         OIV_RendererInitializationParams params{};
+        RenderBackendSharedPtr backend;
         const OIVString dataRoot = GetRendererDataRoot() + OIV_TEXT("/") +
                                    LLUtils::StringUtility::ConvertString<OIVString>(FormatFullVersion(CurrentVersion)) +
                                    OIV_TEXT("/Renderer");
@@ -511,18 +461,16 @@ namespace OIV
 #if OIV_ALLOW_NULL_RENDERER
         if (options.renderer == RendererType::Null)
         {
-            fRenderer = std::make_shared<NullRenderer>();
-            fRenderer->Init(params);
+            backend = std::make_shared<NullRenderer>();
+            backend->Init(params);
         }
         else
 #endif
         {
-            // Only a successfully initialized renderer receives the images queued during startup.
-            fRenderer = SelectRenderer(GetRendererBackends(), options, params);
+            // Composition selects one initialized graphics backend for the common owner.
+            backend = SelectRenderer(GetRendererBackends(), options, params);
         }
-        for (const auto renderable : fPendingRenderables)
-            fRenderer->AddRenderable(renderable);
-        fPendingRenderables.clear();
+        fRenderer = std::make_unique<Renderer>(std::move(backend));
         {
             const std::lock_guard lock(*fExceptionMutex);
             fIsInitialized = true;
@@ -545,9 +493,10 @@ namespace OIV
         }
         fExceptionSubscription.Unsubscribe();
         // Release native rendering before the window, but retain the API's image manager until images are gone.
-        // Late image destruction uses the pre-initialization registration path instead of the released renderer.
+        // Common presentation owners may deregister after native resources have stopped.
         fIsInitialized = false;
-        fRenderer.reset();
+        if (fRenderer)
+            fRenderer->Shutdown();
         fParent        = 0;
         fNativeDisplay = nullptr;
         fCallBacks     = {};
@@ -624,7 +573,7 @@ namespace OIV
         using namespace IMCodec;
         // resample the displayed image.
         ImageSharedPtr original  = fImageManager.GetImage(resampleRequest.imageHandle);
-        ImageSharedPtr resmapled = Resample(original, resampleRequest.size);
+        ImageSharedPtr resmapled = fResampler.Resample(original, resampleRequest.size);
         handle                   = fImageManager.AddImage(resmapled);
         return RC_Success;
     }

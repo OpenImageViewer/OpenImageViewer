@@ -28,8 +28,6 @@
 #include "OIVCommands.h"
 #include "PlatformFileDialog.h"
 
-#include "OIVImage/OIVFileImage.h"
-#include "OIVImage/OIVRawImage.h"
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 
@@ -46,7 +44,6 @@
 #include <OIVAppCore/ImageLoadPresentationPolicy.h>
 #include <OIVAppCore/ImageTransformCommandPolicy.h>
 #include <OIVAppCore/InputGesturePolicy.h>
-#include <OIVAppCore/OIVImageHelper.h>
 #include <OIVAppCore/SelectionWorkflowPolicy.h>
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/SortCommandPolicy.h>
@@ -255,7 +252,7 @@ namespace OIV
         }
         else if (type == "keybindings")  // Toggle keybindings
         {
-            OIVTextImage* text = fLabelManager.GetTextLabel("keyBindings");
+            TextLabel* text = fLabelManager.GetTextLabel("keyBindings");
             if (text != nullptr)  //
             {
                 fLabelManager.Remove("keyBindings");
@@ -290,7 +287,7 @@ namespace OIV
     void ViewerApplication::CMD_ShowSystemInfo([[maybe_unused]] const CommandManager::CommandRequest& request,
                                                [[maybe_unused]] CommandManager::CommandResult& result)
     {
-        OIVTextImage* text = fLabelManager.GetTextLabel("systemInfo");
+        TextLabel* text = fLabelManager.GetTextLabel("systemInfo");
         if (text != nullptr)
         {
             fLabelManager.Remove("systemInfo");
@@ -341,7 +338,7 @@ namespace OIV
             if (IsImageOpen())
             {
                 auto openedImage = fImageState.GetOpenedImage();
-                auto imageSource = openedImage->GetImageSource();
+                auto imageSource = openedImage->source;
                 switch (imageSource)
                 {
                     case ImageSource::ClipboardText:
@@ -349,7 +346,7 @@ namespace OIV
                         break;
                     case ImageSource::File:
                     {
-                        std::filesystem::path p = std::dynamic_pointer_cast<OIVFileImage>(openedImage)->GetFileName();
+                        std::filesystem::path p = openedImage->path;
                         defaultFileName         = p.stem();
                     }
                     break;
@@ -375,7 +372,7 @@ namespace OIV
                     if (sv.empty() == false)
                         sv = sv.substr(1);
 
-                    auto rasterized = fImageState.GetImage(ImageChainStage::Rasterized)->GetImage();
+                    auto rasterized = fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
 
                     if (IMUtil::ImageUtil::HasAlphaChannelAndInUse(rasterized) == false)
                         rasterized = IMUtil::ImageUtil::Convert(
@@ -490,7 +487,7 @@ namespace OIV
     {
         auto openedImage = fImageState.GetOpenedImage();
         if (openedImage != nullptr &&
-            openedImage->GetImage()->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
+            openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
         {
             if (SequencerPolicy::IsChangeSpeedCommand(request.args))
             {

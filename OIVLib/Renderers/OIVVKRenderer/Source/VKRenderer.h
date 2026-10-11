@@ -6,7 +6,7 @@
 #include "VKPipeline.h"
 #include "VKTexture.h"
 #include <Defs.h>
-#include <Interfaces/IRenderer.h>
+#include <RendererCore/IRenderBackend.h>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -15,7 +15,8 @@
 
 namespace OIV
 {
-    class VKRenderer final : public IRenderer
+    // Vulkan graphics backend owning uploads, descriptors and submitted-work lifetimes.
+    class VKRenderer final : public IRenderBackend
     {
       public:
 
@@ -26,12 +27,11 @@ namespace OIV
         Acceleration GetAcceleration() const override { return fContext.GetAcceleration(); }
         int Init(const OIV_RendererInitializationParams& initParams) override;
         int SetViewParams(const ViewParameters& viewParams) override;
-        int Redraw() override;
+        int Render(const RenderFrame& frame) override;
         int SetFilterLevel(OIV_Filter_type filterType) override;
         int SetSelectionRect(VisualSelectionRect selectionRect) override;
         int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
-        int AddRenderable(IRenderable* renderable) override;
-        int RemoveRenderable(IRenderable* renderable) override;
+        void ReleaseImageResources(uint64_t id) noexcept override;
         int SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
 
         const char* GetBackendName() const override { return "Vulkan"; }
@@ -42,37 +42,66 @@ namespace OIV
 
       private:
 
+        // GPU cache keyed by renderer-local ID, with no borrowed record pointers.
         struct ImageEntry
         {
-            IRenderable* renderable{};
+            // Last content revision successfully uploaded by this backend.
+            uint64_t uploadedRevision = 0;
+            // Revision recorded in this command buffer, acknowledged only on submission.
+            uint64_t pendingRevision = 0;
+            // Logical release completed, but GPU ownership still awaits safe retirement.
+            bool retired = false;
+            // Owned lazy GPU texture, absent until a visible nonempty record uploads.
             std::unique_ptr<VKTexture> texture;
+            // Pool owning this descriptor set, retained until safe resource retirement.
             VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
+            // Lazy image descriptor, absent until a visible image needs resources.
             VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
+            // Last image view written into the descriptor.
             VkImageView descriptorImageView{VK_NULL_HANDLE};
+            // Last sampler written into the descriptor.
             VkSampler descriptorSampler{VK_NULL_HANDLE};
         };
 
+        // Shader ABI data with layout checked or preserved by the existing backend.
         struct PushConstants
         {
+            // Client viewport extent in pixels.
             alignas(8) float viewportSize[2];
+            // Texture extent in texels.
             alignas(8) float imageSize[2];
+            // Client pixels per texture texel along each axis.
             alignas(8) float imageScale[2];
+            // Client placement in pixels.
             alignas(8) float imageOffset[2];
+            // First RGBA background color for the existing background pattern.
             alignas(16) float backgroundColor1[4];
+            // Second RGBA background color for the existing background pattern.
             alignas(16) float backgroundColor2[4];
+            // First RGBA transparency-checker color.
             alignas(16) float transparencyColor1[4];
+            // Second RGBA transparency-checker color.
             alignas(16) float transparencyColor2[4];
+            // Presentation opacity multiplier.
             float opacity;
+            // Existing color exposure multiplier.
             float exposure;
+            // Existing color offset applied by the shader.
             float colorOffset;
+            // Existing gamma correction value.
             float gamma;
+            // Existing color saturation multiplier.
             float saturation;
+            // Whether the texel grid is drawn.
             int32_t showGrid;
         };
 
+        // Shader ABI data with layout checked or preserved by the existing backend.
         struct SelectionPushConstants
         {
+            // Client viewport extent in pixels.
             alignas(8) float viewportSize[2];
+            // Selection endpoints in client pixels.
             alignas(16) float selectionRect[4];
         };
 
@@ -99,10 +128,11 @@ namespace OIV
         void DestroyRenderFinishedSemaphores();
         bool RecreateSwapChainResources();
         VkResult RetireAcquiredFrame();
-        bool RenderFrame();
+        bool RenderFrame(const OIV::RenderFrame& frame);
         bool PresentImage();
-        bool PrepareImage(ImageEntry& entry);
-        void DrawImage(ImageEntry& entry, VKPipeline& pipeline, OIV_Image_Render_mode renderMode);
+        bool PrepareImage(ImageEntry& entry, const RenderImageRecord& record);
+        void DrawImage(ImageEntry& entry, const RenderImageRecord& record, VKPipeline& pipeline,
+                       OIV_Image_Render_mode renderMode);
         void DrawSelectionRect();
         void UpdateViewportSize(int width, int height);
 
@@ -113,46 +143,75 @@ namespace OIV
             Surface
         };
 
+        // Owned graphics context, released before the native canvas is destroyed.
         VKContext fContext;
+        // Graphics device used by this backend resource cache.
         VkDevice fDevice{VK_NULL_HANDLE};
+        // Selected Vulkan physical device used for allocations.
         VkPhysicalDevice fPhysicalDevice{VK_NULL_HANDLE};
+        // Current swap-chain dimensions in pixels.
         VkExtent2D fSwapChainExtent{0, 0};
+        // Swap-chain format used by the current rendering pipelines.
         VkFormat fPipelineFormat{VK_FORMAT_UNDEFINED};
+        // Pending surface/swap-chain recovery state for the existing bounded retry policy.
         SwapChainRecovery fSwapChainRecovery{SwapChainRecovery::Ready};
 
+        // Owned descriptor pools reused across lazy image allocations.
         std::vector<VkDescriptorPool> fDescriptorPools;
 
+        // Owned main-image pipeline and swap-chain rendering resources.
         VKPipelineUniquePtr fImagePipeline;
+        // Owned selection overlay pipeline.
         VKPipelineUniquePtr fSelectionPipeline;
+        // Owned text/overlay pipeline.
         VKPipelineUniquePtr fOverlayPipeline;
 
+        // Reusable graphics command buffer whose borrowed record inputs end before submission.
         VkCommandBuffer fCommandBuffer{VK_NULL_HANDLE};
+        // Acquire semaphore consumed once per acquired swap-chain image.
         VkSemaphore fImageAvailableSemaphore{VK_NULL_HANDLE};
         // Reacquiring a swap-chain image proves presentation consumed that image's previous semaphore signal.
         std::vector<VkSemaphore> fRenderFinishedSemaphores;
+        // Fence protecting submitted image resources and upload storage.
         VkFence fInFlightFence{VK_NULL_HANDLE};
         // Keep an acquired image across recording/submission failures so its semaphore is consumed exactly once.
         std::optional<uint32_t> fAcquiredImageIndex;
+        // Whether the previous command buffer requires completion before updating resources.
         bool fFrameSubmitted{};
 
+        // Reusable completed upload buffer, independent of common record lifetime.
         std::unique_ptr<VKUploadBuffer> fUploadBufferCache;
-        std::map<uint32_t, ImageEntry> fImageEntries;
+        // Renderer-local GPU cache with successful upload revisions and retirement ownership.
+        std::map<uint64_t, ImageEntry> fImageEntries;
+        // Existing backend synchronization retained across the contract migration.
         mutable std::mutex fMutex;
+        // Client viewport dimensions in pixels.
         std::array<float, 2> fViewportSize{};
         std::array<std::array<float, 4>, 2> fBackgroundColors = {
             {std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}, std::array<float, 4>{0.0F, 0.0F, 0.16F, 1.0F}}};
         std::array<std::array<float, 4>, 2> fTransparencyColors = {
             {std::array<float, 4>{0.75F, 0.75F, 0.75F, 1.0F}, std::array<float, 4>{1.0F, 1.0F, 1.0F, 1.0F}}};
+        // Current client selection rectangle, with the existing absent sentinel.
         VisualSelectionRect fSelectionRect{{-1, -1}, {-1, -1}};
+        // Global fallback sampling policy for the existing per-image filter behavior.
         OIV_Filter_type fFilterType{FT_Linear};
+        // Existing shader exposure multiplier.
         float fExposure{1.0F};
+        // Existing shader color offset.
         float fOffset{};
+        // Existing shader gamma value.
         float fGamma{1.0F};
+        // Existing shader saturation multiplier.
         float fSaturation{1.0F};
+        // Whether the existing texel-grid visualization is enabled.
         bool fShowGrid{};
+        // Backend cache/data directory supplied by API composition.
         OIVString fDataPath;
+        // Cached UTF-8 selected GPU name.
         mutable std::string fGPUName;
+        // Cached UTF-8 graphics API version.
         mutable std::string fAPIVersion;
+        // Cached UTF-8 selected driver version.
         mutable std::string fDriverVersion;
     };
 }  // namespace OIV
