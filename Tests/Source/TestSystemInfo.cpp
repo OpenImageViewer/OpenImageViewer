@@ -3,6 +3,7 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <LLUtils/StringUtility.h>
 #include "NullRenderer.h"
+#include <RendererCore/Renderer.h>
 
 namespace
 {
@@ -24,7 +25,9 @@ namespace
 TEST_CASE("System information formats adapter index and acceleration as adjacent rows", "[AppCore][system-info]")
 {
     const int index = GENERATE(-1, 0, 7);
-    SystemInfoRenderer renderer;
+    auto backend    = std::make_shared<SystemInfoRenderer>();
+    auto& renderer  = *backend;
+    OIV::Renderer facade(backend);
     renderer.index          = index;
     renderer.acceleration   = GENERATE(OIV::Acceleration::Hardware, OIV::Acceleration::Software,
                                        OIV::Acceleration::Unknown);
@@ -35,7 +38,7 @@ TEST_CASE("System information formats adapter index and acceleration as adjacent
         .appVersion = "1.2.3.4",
         .gitHash    = "abcdef12",
         .buildType  = "Debug",
-        .renderer   = &renderer,
+        .renderer   = &facade,
     });
     for (const auto value : {LLUTILS_TEXT("OIViewer"), LLUTILS_TEXT("1.2.3.4"), LLUTILS_TEXT("abcdef12"),
                              LLUTILS_TEXT("Debug"), LLUTILS_TEXT("Vulkan"), LLUTILS_TEXT("Test GPU \u00e9"),

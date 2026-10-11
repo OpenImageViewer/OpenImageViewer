@@ -1,5 +1,5 @@
 #pragma once
-#include <Interfaces/IRenderer.h>
+#include <RendererCore/IRenderBackend.h>
 
 namespace OIV
 {
@@ -7,7 +7,7 @@ namespace OIV
     {
       public:
 
-        static IRendererSharedPtr Create();
+        static RenderBackendSharedPtr Create();
     };
 
 }  // namespace OIV

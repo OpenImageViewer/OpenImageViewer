@@ -16,8 +16,8 @@ namespace
 
 namespace OIV
 {
-    IRendererSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
-                                      const OIV_RendererInitializationParams& params)
+    RenderBackendSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
+                                          const OIV_RendererInitializationParams& params)
     {
         struct Candidate
         {
@@ -40,7 +40,7 @@ namespace OIV
         const auto name = !options.adapterIndex && options.adapterName ? detail::TrimAdapterName(*options.adapterName)
                                                                        : std::string_view{};
         const bool constrained = options.adapterIndex || options.adapterName;
-        IRendererSharedPtr selected;
+        RenderBackendSharedPtr selected;
         std::string failures;
         const auto record = [&](std::string message)
         {

@@ -2,11 +2,10 @@
 
 namespace OIV
 {
-    ColorCountCompletionAction ColorCountPolicy::DecideCompletion(const void* countedImage,
-                                                                  const void* currentImage,
-                                                                  bool imageInfoVisible)
+    ColorCountCompletionAction ColorCountPolicy::DecideCompletion(uint64_t countedGeneration,
+                                                                  uint64_t currentGeneration, bool imageInfoVisible)
     {
-        if (countedImage == currentImage)
+        if (countedGeneration == currentGeneration)
             return ColorCountCompletionAction::ApplyToCurrentImage;
 
         return imageInfoVisible ? ColorCountCompletionAction::CountVisibleImage : ColorCountCompletionAction::Ignore;
@@ -16,4 +15,4 @@ namespace OIV
     {
         return countedValue != failureSentinel ? countedValue : failedValue;
     }
-}
+}  // namespace OIV

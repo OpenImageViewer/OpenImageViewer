@@ -103,7 +103,7 @@ namespace OIV
             g_object_unref(pixbuf);
             if (image != nullptr)
             {
-                LoadOivImage(std::make_shared<OIVBaseImage>(ImageSource::Clipboard, std::move(image)));
+                LoadOivImage(ViewerImage{.pixels = std::move(image), .source = ImageSource::Clipboard});
                 return ClipboardDataType::Image;
             }
         }

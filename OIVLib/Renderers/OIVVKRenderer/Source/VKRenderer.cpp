@@ -7,6 +7,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
+#include <LLUtils/Exception.h>
 
 namespace OIV
 {
@@ -66,12 +67,12 @@ namespace OIV
         constexpr int DefaultHeight = 800;
 
         VKContext::CreateParams contextParams{};
-        contextParams.window           = initParams.container;
-        contextParams.nativeDisplay    = initParams.nativeDisplay;
-        contextParams.width            = fViewportSize[0] > 0.0F ? static_cast<int>(fViewportSize[0]) : DefaultWidth;
-        contextParams.height           = fViewportSize[1] > 0.0F ? static_cast<int>(fViewportSize[1]) : DefaultHeight;
-        contextParams.gpuIndex         = initParams.gpuIndex;
-        contextParams.adapterName      = initParams.adapterName;
+        contextParams.window        = initParams.container;
+        contextParams.nativeDisplay = initParams.nativeDisplay;
+        contextParams.width         = fViewportSize[0] > 0.0F ? static_cast<int>(fViewportSize[0]) : DefaultWidth;
+        contextParams.height        = fViewportSize[1] > 0.0F ? static_cast<int>(fViewportSize[1]) : DefaultHeight;
+        contextParams.gpuIndex      = initParams.gpuIndex;
+        contextParams.adapterName   = initParams.adapterName;
 
         fContext.Init(contextParams);
 
@@ -230,7 +231,7 @@ namespace OIV
         return VK_SUCCESS;
     }
 
-    int VKRenderer::Redraw()
+    int VKRenderer::Render(const OIV::RenderFrame& frame)
     {
         std::lock_guard<std::mutex> lock(fMutex);
 
@@ -238,13 +239,13 @@ namespace OIV
         constexpr int MaxFrameAttempts = 2;
         for (int attempt = 0; attempt < MaxFrameAttempts; ++attempt)
         {
-            if (RenderFrame())
+            if (RenderFrame(frame))
                 return 0;
         }
         throw std::runtime_error("The Vulkan surface kept changing during redraw");
     }
 
-    bool VKRenderer::RenderFrame()
+    bool VKRenderer::RenderFrame(const OIV::RenderFrame& frame)
     {
         // Zero-sized windows defer the redraw until restoration, without consuming the recovery retry budget.
         if (fViewportSize[0] <= 0.0F || fViewportSize[1] <= 0.0F ||
@@ -266,9 +267,17 @@ namespace OIV
                 return false;
         }
 
+        for (auto it = fImageEntries.begin(); it != fImageEntries.end();)
+        {
+            const auto current = it++;
+            if (current->second.retired)
+                ReleaseImageResources(current->first);
+        }
+
         for (auto& item : fImageEntries)
         {
-            ImageEntry& entry = item.second;
+            ImageEntry& entry     = item.second;
+            entry.pendingRevision = 0;
             if (entry.texture != nullptr)
                 entry.texture->ReleaseUploadResources(fUploadBufferCache);
         }
@@ -300,16 +309,16 @@ namespace OIV
         beginInfo.flags = 0;
         CheckVkResult(vkBeginCommandBuffer(fCommandBuffer, &beginInfo), "Failed to begin the Vulkan command buffer");
 
-        std::vector<ImageEntry*> uploadedEntries;
-        for (auto& item : fImageEntries)
+        for (const auto& [id, record] : frame.images)
         {
-            ImageEntry& entry                      = item.second;
-            const OIV_Image_Render_mode renderMode = entry.renderable->GetImageRenderMode();
-            if ((renderMode == OIV_Image_Render_mode::IRM_MainImage ||
-                 renderMode == OIV_Image_Render_mode::IRM_Overlay) &&
-                PrepareImage(entry))
+            const auto mode = record.properties.imageRenderMode;
+            if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
+                (mode == IRM_MainImage || mode == IRM_Overlay))
             {
-                uploadedEntries.push_back(&entry);
+                auto& entry = fImageEntries.try_emplace(id).first->second;
+                if (entry.descriptorSet == VK_NULL_HANDLE)
+                    AllocateDescriptorSet(entry);
+                PrepareImage(entry, record);
             }
         }
 
@@ -341,20 +350,22 @@ namespace OIV
         scissor.extent = fSwapChainExtent;
         vkCmdSetScissor(fCommandBuffer, 0, 1, &scissor);
 
-        for (auto& item : fImageEntries)
+        for (const auto& [id, record] : frame.images)
         {
-            ImageEntry& entry = item.second;
-            if (entry.renderable->GetImageRenderMode() == OIV_Image_Render_mode::IRM_MainImage)
-                DrawImage(entry, *fImagePipeline, OIV_Image_Render_mode::IRM_MainImage);
+            const auto entry = fImageEntries.find(id);
+            if (record.properties.imageRenderMode == IRM_MainImage && entry != fImageEntries.end() &&
+                !entry->second.retired)
+                DrawImage(entry->second, record, *fImagePipeline, IRM_MainImage);
         }
 
         DrawSelectionRect();
 
-        for (auto& item : fImageEntries)
+        for (const auto& [id, record] : frame.images)
         {
-            ImageEntry& entry = item.second;
-            if (entry.renderable->GetImageRenderMode() == OIV_Image_Render_mode::IRM_Overlay)
-                DrawImage(entry, *fOverlayPipeline, OIV_Image_Render_mode::IRM_Overlay);
+            const auto entry = fImageEntries.find(id);
+            if (record.properties.imageRenderMode == IRM_Overlay && entry != fImageEntries.end() &&
+                !entry->second.retired)
+                DrawImage(entry->second, record, *fOverlayPipeline, IRM_Overlay);
         }
 
         vkCmdEndRenderPass(fCommandBuffer);
@@ -378,8 +389,9 @@ namespace OIV
         CheckVkResult(result, "Failed to submit draw command buffer");
         fFrameSubmitted = true;
 
-        for (ImageEntry* entry : uploadedEntries)
-            entry->renderable->ClearImageDirty();
+        for (auto& [id, entry] : fImageEntries)
+            if (entry.pendingRevision)
+                entry.uploadedRevision = entry.pendingRevision;
 
         return PresentImage();
     }
@@ -448,61 +460,45 @@ namespace OIV
         return 0;
     }
 
-    int VKRenderer::AddRenderable(IRenderable* renderable)
+    void VKRenderer::ReleaseImageResources(uint64_t id) noexcept
     {
-        if (renderable == nullptr)
-            throw std::invalid_argument("Cannot add a null renderable");
-
-        std::lock_guard<std::mutex> lock(fMutex);
-
-        const auto [added, inserted] = fImageEntries.try_emplace(renderable->GetID(),
-                                                                 ImageEntry{.renderable = renderable});
-        if (!inserted)
-            throw std::runtime_error("Cannot add the same renderable twice");
-        try
+        const auto found = fImageEntries.find(id);
+        if (found != fImageEntries.end())
         {
-            if (fImagePipeline != nullptr)
-                AllocateDescriptorSet(added->second);
-        }
-        catch (...)
-        {
-            fImageEntries.erase(added);
-            throw;
-        }
-        return 0;
-    }
-
-    int VKRenderer::RemoveRenderable(IRenderable* renderable)
-    {
-        if (renderable == nullptr)
-            throw std::invalid_argument("Cannot remove a null renderable");
-
-        std::lock_guard<std::mutex> lock(fMutex);
-
-        const auto entry = fImageEntries.find(renderable->GetID());
-        if (entry == fImageEntries.end())
-            throw std::runtime_error("Cannot remove an unknown renderable");
-
-        if (fDevice != VK_NULL_HANDLE)
-        {
-            if (fFrameSubmitted)
+            // Keep ownership in the existing cache entry if wait/free fails. The
+            // common registration can disappear without allocating retirement state.
+            auto& entry   = found->second;
+            entry.retired = true;
+            try
             {
-                const VkResult result = vkWaitForFences(fDevice, 1, &fInFlightFence, VK_TRUE, UINT64_MAX);
-                // Device loss counts as completion for resource lifetimes; image destructors must still clean up.
-                if (result != VK_SUCCESS && result != VK_ERROR_DEVICE_LOST)
-                    CheckVkResult(result, "Failed to wait for Vulkan rendering before removing an image");
+                if (fDevice != VK_NULL_HANDLE)
+                {
+                    if (fFrameSubmitted)
+                    {
+                        const auto result = vkWaitForFences(fDevice, 1, &fInFlightFence, VK_TRUE, UINT64_MAX);
+                        if (result != VK_SUCCESS && result != VK_ERROR_DEVICE_LOST)
+                            CheckVkResult(result, "Failed to retire Vulkan image resources");
+                    }
+                    if (entry.texture)
+                        entry.texture->ReleaseUploadResources(fUploadBufferCache);
+                    if (entry.descriptorSet != VK_NULL_HANDLE)
+                        CheckVkResult(vkFreeDescriptorSets(fDevice, entry.descriptorPool, 1, &entry.descriptorSet),
+                                      "Failed to release Vulkan image descriptor");
+                }
+                fImageEntries.erase(found);
             }
-            if (entry->second.texture != nullptr)
-                entry->second.texture->ReleaseUploadResources(fUploadBufferCache);
-            if (entry->second.descriptorSet != VK_NULL_HANDLE)
+            catch (...)
             {
-                CheckVkResult(vkFreeDescriptorSets(fDevice, entry->second.descriptorPool, 1,
-                                                   &entry->second.descriptorSet),
-                              "Failed to release a Vulkan descriptor set");
+                try
+                {
+                    LL_EXCEPTION_DONT_THROW(LLUtils::Exception::ErrorCode::RuntimeError,
+                                            "Vulkan image retirement deferred");
+                }
+                catch (...)
+                {
+                }
             }
         }
-        fImageEntries.erase(entry);
-        return 0;
     }
 
     VkDescriptorPool VKRenderer::CreateDescriptorPool()
@@ -608,17 +604,14 @@ namespace OIV
         fRenderFinishedSemaphores.clear();
     }
 
-    bool VKRenderer::PrepareImage(ImageEntry& entry)
+    bool VKRenderer::PrepareImage(ImageEntry& entry, const RenderImageRecord& record)
     {
-        IRenderable& renderable = *entry.renderable;
-
-        if (!renderable.GetVisible() || renderable.GetOpacity() <= 0.0)
+        if (!record.pixels || !record.properties.visible || record.properties.opacity <= 0.0)
             return false;
 
-        renderable.PreRender();
-        if (renderable.GetIsImageDirty() || entry.texture == nullptr)
+        if (entry.uploadedRevision != record.revision || entry.texture == nullptr)
         {
-            IMCodec::ImageSharedPtr image = renderable.GetImage();
+            IMCodec::ImageSharedPtr image = record.pixels;
             if (image == nullptr)
                 return false;
 
@@ -636,17 +629,18 @@ namespace OIV
             }
 
             entry.texture->Upload(fCommandBuffer, image->GetBuffer(), image->GetRowPitchInBytes(), fUploadBufferCache);
+            entry.pendingRevision = record.revision;
             return true;
         }
 
         return false;
     }
 
-    void VKRenderer::DrawImage(ImageEntry& entry, VKPipeline& pipeline, OIV_Image_Render_mode renderMode)
+    void VKRenderer::DrawImage(ImageEntry& entry, const RenderImageRecord& record, VKPipeline& pipeline,
+                               OIV_Image_Render_mode renderMode)
     {
-        IRenderable& renderable = *entry.renderable;
-        const double opacity    = renderable.GetOpacity();
-        if (!renderable.GetVisible() || opacity <= 0.0)
+        const double opacity = record.properties.opacity;
+        if (!record.properties.visible || opacity <= 0.0)
             return;
 
         if (entry.texture == nullptr || entry.descriptorSet == VK_NULL_HANDLE)
@@ -654,8 +648,8 @@ namespace OIV
 
         PushConstants pushConstants{};
         std::memcpy(pushConstants.viewportSize, fViewportSize.data(), sizeof(pushConstants.viewportSize));
-        const LLUtils::PointF64 imageScale    = renderable.GetScale();
-        const LLUtils::PointF64 imagePosition = renderable.GetPosition();
+        const LLUtils::PointF64 imageScale    = record.properties.scale;
+        const LLUtils::PointF64 imagePosition = record.properties.position;
 
         if (renderMode == OIV_Image_Render_mode::IRM_Overlay)
         {
@@ -694,14 +688,14 @@ namespace OIV
                     sizeof(pushConstants.transparencyColor1));
         std::memcpy(pushConstants.transparencyColor2, fTransparencyColors[1].data(),
                     sizeof(pushConstants.transparencyColor2));
-        pushConstants.opacity         = static_cast<float>(opacity);
-        pushConstants.exposure        = fExposure;
-        pushConstants.colorOffset     = fOffset;
-        pushConstants.gamma           = fGamma;
-        pushConstants.saturation      = fSaturation;
-        pushConstants.showGrid        = fShowGrid ? 1 : 0;
+        pushConstants.opacity     = static_cast<float>(opacity);
+        pushConstants.exposure    = fExposure;
+        pushConstants.colorOffset = fOffset;
+        pushConstants.gamma       = fGamma;
+        pushConstants.saturation  = fSaturation;
+        pushConstants.showGrid    = fShowGrid ? 1 : 0;
 
-        const OIV_Filter_type requestedFilter = renderable.GetFilterType();
+        const OIV_Filter_type requestedFilter = record.properties.filterType;
         const OIV_Filter_type filter          = requestedFilter == FT_Lanczos3 ? fFilterType : requestedFilter;
         const VkFilter vkFilter               = filter == FT_None ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
         const VkImageView imageView           = entry.texture->GetImageView();

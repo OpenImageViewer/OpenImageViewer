@@ -1,13 +1,16 @@
 #pragma once
-#include <Interfaces/IRenderer.h>
+#include <RendererCore/IRenderBackend.h>
 
 namespace OIV
 {
     inline constexpr std::size_t MaxRendererCount = 3;
+    // Startup discovery entry whose factory returns only the graphics contract.
     struct RendererBackend
     {
+        // Compiled backend identity and capability information used by selection policy.
         RendererInfo info;
-        IRendererSharedPtr (*create)();
+        // Factory invoked lazily while evaluating the existing candidate order.
+        RenderBackendSharedPtr (*create)();
     };
 
     // Startup-only selection; recovery keeps the chosen API. Exhaust Hardware, Unknown, then Software,
@@ -15,7 +18,7 @@ namespace OIV
     // Destroy failed/deferred instances before the next factory call. Stop at success; exhaustion
     // throws collected diagnostics. dataPath is a base directory; append the backend name for each
     // synchronous initialization call.
-    IRendererSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
-                                      const OIV_RendererInitializationParams& params);
+    RenderBackendSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
+                                          const OIV_RendererInitializationParams& params);
     std::span<const RendererBackend> GetRendererBackends();
 }  // namespace OIV

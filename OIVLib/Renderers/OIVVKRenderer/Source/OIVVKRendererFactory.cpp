@@ -3,7 +3,7 @@
 
 namespace OIV
 {
-    IRendererSharedPtr VKRendererFactory::Create()
+    RenderBackendSharedPtr VKRendererFactory::Create()
     {
         return std::make_shared<VKRenderer>();
     }

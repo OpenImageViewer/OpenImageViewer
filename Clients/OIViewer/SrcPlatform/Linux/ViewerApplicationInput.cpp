@@ -72,7 +72,7 @@ namespace OIV
         }
         else if (std::holds_alternative<LWS::EventPaint>(eventData))
         {
-            fRenderGateway->ResumePresentation();
+            ResumePresentation();
             handled = true;
         }
         else if (std::holds_alternative<LWS::EventKeyDown>(eventData) ||

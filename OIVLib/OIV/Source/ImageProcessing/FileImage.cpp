@@ -1,9 +1,5 @@
-#include <OIVImage/OIVFileImage.h>
-#include <LLUtils/FileMapping.h>
-#include <LLUtils/StringUtility.h>
-#include <Defs.h>
+#include <ImageProcessing/FileImage.h>
 #include <ImageUtil/ImageUtil.h>
-#include <utility>
 
 namespace OIV
 {
@@ -72,24 +68,6 @@ namespace OIV
         return IMUtil::ImageUtil::Transform(ResolveExifRotation(exitOrientation), image);
     }
 
-    const LLUtils::native_string_type& OIVFileImage::GetFileName() const
-    {
-        return fFileName;
-    }
-
-    OIVFileImage::OIVFileImage(const LLUtils::native_string_type& fileName)
-        : OIVBaseImage(ImageSource::File), fFileName(fileName)
-    {
-    }
-    OIVFileImage::OIVFileImage(const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
-        : OIVBaseImage(ImageSource::File, std::move(image)), fFileName(fileName)
-    {
-    }
-
-    ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags)
-    {
-        return Load(imageCodec, loaderFlags, IMCodec::ImageLoadFlags::None, {});
-    }
     IMCodec::ImageSharedPtr DecodeFileImage(IMCodec::ImageLoader& loader, const LLUtils::native_string_type& fileName,
                                             IMCodec::ItemMetaDataSharedPtr& metaData,
                                             IMCodec::PluginTraverseMode traverseMode,
@@ -100,8 +78,8 @@ namespace OIV
         if (loader.Decode(fileName, imageLoadFlags, params, traverseMode, image) == IMCodec::ImageResult::Success &&
             image)
         {
-            // Apply file orientation while the data is private to the loader. OIV wrappers
-            // created later receive the same oriented main image, subimages, and metadata.
+            // Apply orientation while pixels are private to the loader, then publish
+            // the oriented main image and subimages alongside the original metadata.
             if (loader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success)
             {
                 const auto orientation = metaData->exifData.orientation;
@@ -116,18 +94,4 @@ namespace OIV
         return image;
     }
 
-    ResultCode OIVFileImage::Load(IMCodec::ImageLoader* imageCodec, IMCodec::PluginTraverseMode loaderFlags,
-                                  IMCodec::ImageLoadFlags imageLoadFlags, const IMCodec::Parameters& params)
-    {
-        IMCodec::ItemMetaDataSharedPtr metaData;
-        auto image        = DecodeFileImage(*imageCodec, fFileName, metaData, loaderFlags, imageLoadFlags, params);
-        ResultCode result = RC_FileNotSupported;
-        if (image)
-        {
-            SetMetaData(std::move(metaData));
-            SetUnderlyingImage(std::move(image));
-            result = RC_Success;
-        }
-        return result;
-    }
 }  // namespace OIV

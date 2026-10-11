@@ -2,7 +2,7 @@
 
 #include <OIVAppCore/CommandManager.h>
 
-#include <OIVImage/OIVBaseImage.h>
+#include <OIVAppCore/ViewerImage.h>
 
 #include <string>
 
@@ -14,6 +14,6 @@ namespace OIV
 
         static LLUtils::native_string_type Execute(const CommandManager::CommandRequest& request,
                                                    const LLUtils::native_string_type& openedFileName,
-                                                   OIVBaseImageSharedPtr openedImage);
+                                                   const ViewerImage* openedImage);
     };
 }  // namespace OIV

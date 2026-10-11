@@ -29,7 +29,7 @@ namespace OIV
 
     LLUtils::native_string_type ShellCommandHandler::Execute(const CommandManager::CommandRequest& request,
                                                              const LLUtils::native_string_type& openedFileName,
-                                                             OIVBaseImageSharedPtr openedImage)
+                                                             const ViewerImage* openedImage)
     {
         const std::string command          = request.args.GetArgValue("cmd");
         LLUtils::native_string_type result = LLUtils::StringUtility::ToWString(request.displayName);
@@ -51,10 +51,10 @@ namespace OIV
         {
             if (openedImage != nullptr)
             {
-                if (openedImage->GetImage() != nullptr && openedImage->GetMetaData() != nullptr &&
-                    openedImage->GetMetaData()->exifData.latitude != std::numeric_limits<double>::max())
+                if (openedImage->pixels != nullptr && openedImage->metadata != nullptr &&
+                    openedImage->metadata->exifData.latitude != std::numeric_limits<double>::max())
                 {
-                    const auto& exifData = openedImage->GetMetaData()->exifData;
+                    const auto& exifData = openedImage->metadata->exifData;
                     LLUtils::native_stringstream stream;
                     stream << "https://www.google.com/maps/place/@" << exifData.latitude << "," << exifData.longitude
                            << ",300m/data=!3m1!1e3";

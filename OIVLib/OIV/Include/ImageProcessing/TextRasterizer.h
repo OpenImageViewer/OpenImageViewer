@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LLUtils/StringDefs.h>
-#include "OIVBaseImage.h"
+#include <Image.h>
 #include <LLUtils/BitFlags.h>
 #include <FreeTypeWrapper/FreeTypeConnector.h>
 
@@ -12,54 +12,78 @@ namespace FreeType
 
 namespace OIV
 {
+    // Existing font and layout options used by CPU metrics and bitmap generation.
     struct CreateTextParams
     {
+        // Native font file path passed to the existing font connector.
         LLUtils::native_string_type fontPath;
+        // Text content in the platform native character encoding.
         LLUtils::native_string_type text;
+        // Wrapping limit in pixels, following the existing zero/default policy.
         int32_t maxWidth;
+        // Outline thickness in pixels.
         uint32_t outlineWidth;
+        // Foreground RGBA color.
         LLUtils::Color textColor;
+        // Bitmap background RGBA color.
         LLUtils::Color backgroundColor;
+        // Configured outline color, preserving the existing producer policy.
         LLUtils::Color outlineColor;
+        // Font size in points, converted using the selected DPI.
         uint16_t fontSize;
+        // Horizontal dots per inch, zero resolves to the existing default of 96.
         uint16_t DPIx;
+        // Vertical dots per inch, zero resolves to the existing default of 96.
         uint16_t DPIy;
 
+        // Whether inline text formatting commands are interpreted.
         bool useMetaText;
+        // Whether the font connector applies bidirectional text handling.
         bool bidirectional;
+        // Whether line endings retain the existing fixed-width layout rule.
         bool lineEndFixedWidth;
+        // Existing antialiasing and glyph rasterization mode.
         FreeType::RenderMode renderMode;
     };
 
+    // Cached layout summary, available without generating bitmap pixels.
     struct TextMetrics
     {
+        // Measured row height in pixels.
         uint32_t rowHeight;
+        // Number of measured text rows.
         uint32_t totalRows;
+        // Measured bitmap bounds in pixels.
         LLUtils::PointI32 pixelSize{};
     };
 
-    class OIVTextImage : public OIVBaseImage
+    // CPU text producer with independent layout and bitmap invalidation.
+    class TextRasterizer
     {
+        // Independent invalidation lets hidden labels measure without rasterizing.
         enum class DirtyFlags : uint32_t
         {
-            None    = 0,
+            // No pending producer work.
+            None = 0,
+            // Layout must be measured again.
             Metrics = 1 << 0,
-            Bitmap  = 1 << 1,
-            All     = Metrics | Bitmap
+            // CPU bitmap must be prepared again.
+            Bitmap = 1 << 1,
+            // Both layout and pixels are invalid.
+            All = Metrics | Bitmap
         };
         LLUTILS_DEFINE_ENUM_CLASS_FLAG_OPERATIONS_IN_CLASS(DirtyFlags);
 
       public:
 
-        OIVTextImage(ImageSource imageSource, FreeType::FreeTypeConnector* freeType);
-
-        OIVTextImage(FreeType::FreeTypeConnector* freeType);
+        explicit TextRasterizer(FreeType::FreeTypeConnector* freeType);
 
 #pragma region Text rendering
         void SetText(const LLUtils::native_string_type& text)
         {
             if (fTextOptionsCurrent.text != text)
             {
+                // Text content in the platform native character encoding.
                 fTextOptionsCurrent.text = text;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -87,6 +111,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.fontSize != fontSize)
             {
+                // Font size in points, converted using the selected DPI.
                 fTextOptionsCurrent.fontSize = fontSize;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -95,6 +120,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.outlineWidth != outlineWidth)
             {
+                // Outline thickness in pixels.
                 fTextOptionsCurrent.outlineWidth = outlineWidth;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -122,6 +148,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.useMetaText != useMetaText)
             {
+                // Whether inline text formatting commands are interpreted.
                 fTextOptionsCurrent.useMetaText = useMetaText;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -131,6 +158,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.maxWidth != maxWidth)
             {
+                // Wrapping limit in pixels, following the existing zero/default policy.
                 fTextOptionsCurrent.maxWidth = maxWidth;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -140,6 +168,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.renderMode != renderMode)
             {
+                // Existing antialiasing and glyph rasterization mode.
                 fTextOptionsCurrent.renderMode = renderMode;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -149,6 +178,7 @@ namespace OIV
         {
             if (fTextOptionsCurrent.lineEndFixedWidth != lineEndFixedWidth)
             {
+                // Whether line endings retain the existing fixed-width layout rule.
                 fTextOptionsCurrent.lineEndFixedWidth = lineEndFixedWidth;
                 fDirtyFlags.set(DirtyFlags::All);
             }
@@ -156,50 +186,27 @@ namespace OIV
 
         TextMetrics GetMetrics();
         void UpdateTextMetrics();
-        void Create() { UpdateBitmap(); }
+        // Explicitly prepare dirty pixels, retaining successful empty output.
+        IMCodec::ImageSharedPtr GetBitmap();
+        bool IsBitmapDirty() const { return fDirtyFlags.test(DirtyFlags::Bitmap); }
 
 #pragma endregion Text display
 
-#pragma region Text rendering
-        CreateTextParams fTextOptionsCurrent{};
-
-      protected:
-
-        void UpdateBitmap()
-        {
-            UpdateTextMetrics();
-            if (fDirtyFlags.test(DirtyFlags::Bitmap))
-            {
-                auto textImage = CreateText();
-                if (textImage != nullptr)
-                {
-                    SetUnderlyingImage(textImage);
-                }
-                fDirtyFlags.clear(DirtyFlags::Bitmap);
-            }
-        }
-
-        void PerformPreRender() override
-        {
-            OIVBaseImage::PerformPreRender();
-            UpdateBitmap();
-        };
-
-        bool PerformIsDirty() const override
-        {
-            return fDirtyFlags.testAny(DirtyFlags::All) || OIVBaseImage::PerformIsDirty();
-        };
-
       private:
+
+        // Current text layout and pixel options, changed only through invalidating setters.
+        CreateTextParams fTextOptionsCurrent{};
 
         FreeType::TextCreateParams GetCreateParams();
         IMCodec::ImageSharedPtr CreateText();
+        // Layout and pixel work still required by the current options.
         LLUtils::BitFlags<DirtyFlags> fDirtyFlags{};
-        FreeType::TextMetrics fCachedTextMetrics;
+        // Reused layout measurements consumed by bitmap production.
+        FreeType::TextMetrics fCachedTextMetrics{};
+        // Borrowed font connector, which must outlive this producer.
         FreeType::FreeTypeConnector* fFreeType{};
+        // Last successful CPU bitmap, empty for successful empty text.
+        IMCodec::ImageSharedPtr fBitmap;
     };
-
-    using OIVTextImageUniquePtr = std::unique_ptr<OIVTextImage>;
-    using OIVTextImageSharedPtr = std::shared_ptr<OIVTextImage>;
 
 }  // namespace OIV

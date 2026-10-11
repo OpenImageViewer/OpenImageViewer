@@ -1,6 +1,8 @@
 #pragma once
 
 #include "OIVCommands.h"
+#include "ApiGlobal.h"
+#include <RendererCore/Renderer.h>
 
 #include <LWS/WindowTypes.hpp>
 
@@ -19,7 +21,7 @@ namespace OIV
         // Bind the native canvas before configuration; SetViewportSize supplies confirmed dimensions later.
         virtual void Initialize(std::size_t canvasHandle, void* nativeDisplay = nullptr,
                                 const RendererOptions& rendering = {})                           = 0;
-        virtual void ResumePresentation()                                                        = 0;
+        virtual Renderer& GetRenderer()                                                          = 0;
         virtual ResultCode Refresh()                                                             = 0;
         virtual void SetSelectionRect(const LLUtils::RectI32& rect)                              = 0;
         virtual void ClearSelectionRect()                                                        = 0;
@@ -33,17 +35,6 @@ namespace OIV
     {
       public:
 
-        enum class PresentationState
-        {
-            Ready,
-            Deferred,
-        };
-
-        explicit OivRenderGateway(PresentationState state = PresentationState::Ready)
-            : fPresentationReady(state == PresentationState::Ready)
-        {
-        }
-
         ~OivRenderGateway() override
         {
             if (fInitializationAttempted)
@@ -53,29 +44,13 @@ namespace OIV
         void Initialize(std::size_t canvasHandle, void* nativeDisplay = nullptr,
                         const RendererOptions& rendering = {}) override
         {
+            // Whether gateway destruction must release a partial or initialized API.
             fInitializationAttempted = true;
             OIVCommands::Init(canvasHandle, nativeDisplay, rendering);
         }
 
-        ResultCode Refresh() override
-        {
-            if (!fPresentationReady)
-            {
-                fRefreshPending = true;
-                return RC_Success;
-            }
-            return OIVCommands::Refresh();
-        }
-
-        void ResumePresentation() override
-        {
-            fPresentationReady = true;
-            if (fRefreshPending)
-            {
-                fRefreshPending = false;
-                OIVCommands::Refresh();
-            }
-        }
+        Renderer& GetRenderer() override { return *ApiGlobal::sPictureRenderer->GetRenderer(); }
+        ResultCode Refresh() override { return OIVCommands::Refresh(); }
 
         void SetSelectionRect(const LLUtils::RectI32& rect) override { OIVCommands::SetSelectionRect(rect); }
 
@@ -101,6 +76,7 @@ namespace OIV
             const ResultCode result = OIVCommands::ExecuteCommand(CMD_SetClientSize, &request,
                                                                   &OIVCommands::NullCommand);
             if (result == RC_Success)
+                // Last successfully applied canvas size, used to suppress duplicate updates.
                 fViewportSize = size;
             return result;
         }
@@ -113,9 +89,9 @@ namespace OIV
 
       private:
 
-        bool fPresentationReady;
-        bool fRefreshPending{};
+        // Last successfully applied canvas size, used to suppress duplicate updates.
         std::optional<LWS::PixelSize> fViewportSize;
+        // Whether gateway destruction must release a partial or initialized API.
         bool fInitializationAttempted{};
     };
 }  // namespace OIV

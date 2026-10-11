@@ -101,3 +101,5 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(FATAL_ERROR "OIVVKRenderer requires an LWS X11 or Wayland backend on Linux.")
     endif()
 endif()
+
+target_link_libraries(${TargetName} PUBLIC RendererCore)

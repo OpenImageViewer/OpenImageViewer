@@ -28,14 +28,15 @@ namespace OIV
                                                      IMCodec::PluginTraverseMode traverseMode,
                                                      const ImageLoadContext& context)
     {
-        auto file = std::make_shared<OIVFileImage>(normalizedFilePath);
-
         IMCodec::Parameters params;
         params.SetCustom(LLUTILS_TEXT("canvasWidth"), context.canvasWidth);
         params.SetCustom(LLUTILS_TEXT("canvasHeight"), context.canvasHeight);
 
-        const ResultCode result = file->Load(&fImageLoader, traverseMode, IMCodec::ImageLoadFlags::None, params);
-        return ImageFileLoadResult{result, file};
+        IMCodec::ItemMetaDataSharedPtr metadata;
+        auto pixels       = DecodeFileImage(fImageLoader, normalizedFilePath, metadata, traverseMode,
+                                            IMCodec::ImageLoadFlags::None, params);
+        const auto result = pixels ? RC_Success : RC_FileNotSupported;
+        return {result, ViewerImage{std::move(pixels), std::move(metadata), ImageSource::File, normalizedFilePath}};
     }
 
     ImageOpenController::ImageOpenController(std::unique_ptr<IImageFileLoader> imageFileLoader,
@@ -63,7 +64,7 @@ namespace OIV
             fBrowseSessionController->BeginDirectOpen(normalizedPath);
 
         auto fileLoadResult = fImageFileLoader->LoadFile(normalizedPath, traverseMode, context);
-        const auto image    = fileLoadResult.image != nullptr ? fileLoadResult.image->GetImage() : nullptr;
+        const auto image    = fileLoadResult.image.pixels;
 
         return ImageLoadResult{ClassifyLoadResult(fileLoadResult.resultCode, image), fileLoadResult.resultCode,
                                normalizedPath, std::move(fileLoadResult.image), id};
@@ -85,7 +86,9 @@ namespace OIV
             return ImageLoadResult{folderLoadQueued ? ImageLoadStatus::FolderLoadQueued
                                                     : ImageLoadStatus::NoSupportedFiles,
                                    folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
-                                   std::filesystem::path(filePath).lexically_normal().native(), nullptr, id};
+                                   std::filesystem::path(filePath).lexically_normal().native(),
+                                   {},
+                                   id};
         }
 
         return LoadFile(filePath, traverseMode, context);

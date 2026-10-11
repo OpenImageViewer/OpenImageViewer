@@ -4,7 +4,7 @@
 #include <OIVAppCore/ConfigurationLoader.h>
 #include <ImageCodec.h>
 
-#include <Interfaces/IRenderer.h>
+#include <RendererCore/Renderer.h>
 #include <LLUtils/PlatformUtility.h>
 
 #include <algorithm>
@@ -51,8 +51,9 @@ namespace OIV
         return ImageInfoPresentationPolicy::FormatFileTime(filePath);
     }
 
-    LLUtils::native_string_type MessageHelper::CreateImageInfoMessage(const OIVBaseImageSharedPtr& oivImage,
-                                                                      const OIVBaseImageSharedPtr& rasterized,
+    LLUtils::native_string_type MessageHelper::CreateImageInfoMessage(const ViewerImage* oivImage,
+                                                                      const IMCodec::ImageSharedPtr& rasterized,
+                                                                      double displayTime, int64_t uniqueValues,
                                                                       IMCodec::ImageCodec& imageCodec)
     {
         LLUtils::native_string_type message = MessageFormatter::DefaultHeaderColor +
@@ -66,7 +67,8 @@ namespace OIV
         args.valueColor                                 = LLUTILS_TEXT("<textcolor=#ffffff>");
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
 
-        const auto rows = ImageInfoPresentationPolicy::Build(oivImage, rasterized, imageCodec);
+        const auto rows = ImageInfoPresentationPolicy::Build(oivImage, rasterized, displayTime, uniqueValues,
+                                                             imageCodec);
         for (const auto& row : rows)
         {
             MessageFormatter::ValueObjectList values;

@@ -6,7 +6,7 @@
 #include <OIVAppCore/ImageOpenController.h>
 
 #include <ImageLoader.h>
-#include <OIVImage/OIVFileImage.h>
+#include <ImageProcessing/FileImage.h>
 #include <TexelFormat.h>
 #include <tiffio.h>
 
@@ -206,9 +206,9 @@ TEST_CASE("ImageLoader decodes ImageMagick compatibility matrix", "[ImageCompati
 
             REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
             REQUIRE(result.resultCode == ResultCode::RC_Success);
-            REQUIRE(result.image != nullptr);
+            REQUIRE(result.image.pixels != nullptr);
 
-            const auto loadedImage = result.image->GetImage();
+            const auto loadedImage = result.image.pixels;
             REQUIRE(loadedImage != nullptr);
             REQUIRE(HasNonZeroDimensions(loadedImage));
 
@@ -240,9 +240,9 @@ TEST_CASE("ImageLoader exposes unmapped TIFF extra samples as subimages", "[Imag
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
     REQUIRE(result.resultCode == ResultCode::RC_Success);
-    REQUIRE(result.image != nullptr);
+    REQUIRE(result.image.pixels != nullptr);
 
-    const auto loadedImage = result.image->GetImage();
+    const auto loadedImage = result.image.pixels;
     REQUIRE(loadedImage != nullptr);
     REQUIRE(loadedImage->GetItemType() == IMCodec::ImageItemType::Container);
     REQUIRE(loadedImage->GetNumSubImages() == 3);

@@ -1,7 +1,7 @@
 #include "ViewerMouseInput.h"
 
 #include "ViewerApplication.h"
-#include "OIVImage/OIVFileImage.h"
+#include <ImageProcessing/FileImage.h>
 
 #include <LLUtils/PlatformUtility.h>
 #include <LLUtils/StringUtility.h>
@@ -123,17 +123,22 @@ namespace OIV
         {
             const auto path = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) +
                               LLUTILS_TEXT("./Resources/Cursors/ArrowC.cur");
-            auto anchor     = std::make_unique<OIVFileImage>(path);
-            if (anchor->Load(&fOwner.fImageLoader, IMCodec::PluginTraverseMode::AnyPlugin) == RC_Success)
+            IMCodec::ItemMetaDataSharedPtr metadata;
+            auto pixels = DecodeFileImage(fOwner.fImageLoader, path, metadata, IMCodec::PluginTraverseMode::AnyPlugin);
+            if (pixels)
             {
-                anchor->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
-                anchor->SetPosition(static_cast<LLUtils::PointF64>(
-                    static_cast<LLUtils::PointI32>(fOwner.fWindow.GetCanvasMousePosition()) -
-                    static_cast<LLUtils::PointI32>(anchor->GetImage()->GetDimensions()) / 2));
-                anchor->SetScale({1.0, 1.0});
-                anchor->SetOpacity(0.5);
-                anchor->SetVisible(true);
-                fOwner.fAutoScrollAnchor = std::move(anchor);
+                const RenderImageProperties properties{
+                    .position = static_cast<LLUtils::PointF64>(
+                        static_cast<LLUtils::PointI32>(fOwner.fWindow.GetCanvasMousePosition()) -
+                        static_cast<LLUtils::PointI32>(pixels->GetDimensions()) / 2),
+                    .scale           = LLUtils::PointF64::One,
+                    .opacity         = 0.5,
+                    .visible         = true,
+                    .filterType      = FT_None,
+                    .imageRenderMode = IRM_Overlay,
+                };
+                fOwner.fAutoScrollAnchor.emplace(
+                    fOwner.fRenderGateway->GetRenderer().CreateImage(std::move(pixels), properties));
             }
         }
         else

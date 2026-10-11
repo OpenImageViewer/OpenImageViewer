@@ -3,11 +3,14 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "ViewerRenderPort.h"
+#include "UI/MessageManager.h"
+#include "NullRenderer.h"
 #include "ApiGlobal.h"
 #include "OIV.h"
-#include <OIVImage/OIVBaseImage.h>
-#include <OIVImage/OIVFileImage.h>
-#include <OIVImage/OIVTextImage.h>
+#include <RendererCore/Renderer.h>
+#include <OIVAppCore/ViewerImage.h>
+#include <ImageProcessing/FileImage.h>
+#include <ImageProcessing/TextRasterizer.h>
 #include <filesystem>
 #include <fstream>
 #include <future>
@@ -31,10 +34,6 @@ namespace
     static_assert(!std::is_copy_assignable_v<OIV::OIV>);
     static_assert(!std::is_move_constructible_v<OIV::OIV>);
     static_assert(!std::is_move_assignable_v<OIV::OIV>);
-    static_assert(!std::is_copy_constructible_v<OIV::OIVBaseImage>);
-    static_assert(!std::is_copy_assignable_v<OIV::OIVBaseImage>);
-    static_assert(!std::is_move_constructible_v<OIV::OIVBaseImage>);
-    static_assert(!std::is_move_assignable_v<OIV::OIVBaseImage>);
 
     // Each test owns its API instance without disturbing the suite's other image tests.
     struct ScopedApi
@@ -53,7 +52,7 @@ TEST_CASE("Render gateway releases the API after images on success or initializa
     const OIV::RendererOptions options{.renderer = fail ? static_cast<OIV::RendererType>(-1) : OIV::RendererType::Null};
     {
         OIV::OivRenderGateway gateway;
-        OIV::OIVBaseImage image(OIV::ImageSource::GeneratedByLib);
+        std::optional<OIV::RenderImage> image;
         if (fail)
             REQUIRE_THROWS_WITH(gateway.Initialize(0, nullptr, options),
                                 Catch::Matchers::ContainsSubstring("not available"));
@@ -61,8 +60,9 @@ TEST_CASE("Render gateway releases the API after images on success or initializa
         {
             REQUIRE_NOTHROW(gateway.Initialize(0, nullptr, options));
             REQUIRE(std::string(OIV::ApiGlobal::sPictureRenderer->GetRenderer()->GetBackendName()) == "Null");
+            image.emplace(gateway.GetRenderer().CreateImage({}));
         }
-        // The image's destructor needs the API, so it runs before the gateway releases it.
+        // Presentation destruction precedes the gateway and its stable facade.
         REQUIRE(OIV::ApiGlobal::sPictureRenderer != nullptr);
     }
     CHECK(OIV::ApiGlobal::sPictureRenderer == nullptr);
@@ -137,11 +137,11 @@ TEST_CASE("File decoding finishes without an OIV instance before renderer initia
     SECTION("Successful initialization wraps the existing pixels on the calling thread")
     {
         REQUIRE_NOTHROW(gateway.Initialize(0, nullptr, {.renderer = OIV::RendererType::Null}));
-        OIV::OIVFileImage image(fixture.native(), std::move(decoded));
-        image.SetMetaData(std::move(metaData));
-        CHECK(image.GetFileName() == fixture.native());
-        CHECK(image.GetImageSource() == OIV::ImageSource::File);
-        CHECK(image.GetImage()->GetBufferAt(0, 0) == pixels);
+        OIV::ViewerImage image{std::move(decoded), std::move(metaData), OIV::ImageSource::File, fixture.native()};
+        auto presentation = gateway.GetRenderer().CreateImage(image.pixels);
+        CHECK(image.path == fixture.native());
+        CHECK(image.source == OIV::ImageSource::File);
+        CHECK(image.pixels->GetBufferAt(0, 0) == pixels);
     }
     SECTION("Initialization failure leaves data safe to release without a renderer")
     {
@@ -201,10 +201,12 @@ TEST_CASE("Decoded file data preserves EXIF orientation and failed-load behavior
     CHECK(decoded->GetWidth() == original->GetHeight());
     CHECK(decoded->GetHeight() == original->GetWidth());
 
-    OIV::OIVFileImage file(oriented.native());
-    REQUIRE(file.Load(&loader, IMCodec::PluginTraverseMode::NoTraverse) == RC_Success);
-    CHECK(file.GetImage()->GetWidth() == decoded->GetWidth());
-    CHECK(file.GetMetaData()->exifData.orientation == metaData->exifData.orientation);
+    IMCodec::ItemMetaDataSharedPtr repeatedMetadata;
+    auto repeated = OIV::DecodeFileImage(loader, oriented.native(), repeatedMetadata,
+                                         IMCodec::PluginTraverseMode::NoTraverse);
+    REQUIRE(repeated);
+    CHECK(repeated->GetWidth() == decoded->GetWidth());
+    CHECK(repeatedMetadata->exifData.orientation == metaData->exifData.orientation);
 
     const auto unsupported = temporary.path / "unsupported.txt";
     {
@@ -215,48 +217,44 @@ TEST_CASE("Decoded file data preserves EXIF orientation and failed-load behavior
     CHECK(OIV::DecodeFileImage(loader, unsupported.native(), metaData, IMCodec::PluginTraverseMode::NoTraverse) ==
           nullptr);
     CHECK(metaData == nullptr);
-    OIV::OIVFileImage failed(unsupported.native());
-    CHECK(failed.Load(&loader, IMCodec::PluginTraverseMode::NoTraverse) == RC_FileNotSupported);
+    CHECK(OIV::DecodeFileImage(loader, unsupported.native(), metaData, IMCodec::PluginTraverseMode::NoTraverse) ==
+          nullptr);
 }
 
 TEST_CASE("Rendered text becomes clean and reuses its bitmap until content changes", "[renderer][text]")
 {
     ScopedApi api;
     FreeType::FreeTypeConnector connector;
-    OIV::OIVTextImage text(&connector);
+    OIV::TextRasterizer text(&connector);
     const auto font = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
                       "Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf";
     text.SetFontPath(font.native());
     text.SetFontSize(24);
     text.SetDPI(96, 96);
     text.SetText(LLUTILS_TEXT("OIV"));
-    CHECK(text.IsDirty());
+    CHECK(text.IsBitmapDirty());
     const auto metrics = text.GetMetrics();
-    CHECK(text.IsDirty());  // Measuring still leaves the bitmap pending.
-    text.PreRender();
-    REQUIRE(text.GetImage() != nullptr);
-    CHECK_FALSE(text.IsDirty());
-    CHECK(metrics.pixelSize.x == text.GetImage()->GetWidth());
-    CHECK(metrics.pixelSize.y == text.GetImage()->GetHeight());
-    const auto bitmap = text.GetImage();
+    CHECK(text.IsBitmapDirty());  // Measuring still leaves the bitmap pending.
+    text.GetBitmap();
+    REQUIRE(text.GetBitmap() != nullptr);
+    CHECK_FALSE(text.IsBitmapDirty());
+    CHECK(metrics.pixelSize.x == text.GetBitmap()->GetWidth());
+    CHECK(metrics.pixelSize.y == text.GetBitmap()->GetHeight());
+    const auto bitmap = text.GetBitmap();
 
     text.SetFontSize(24);
     text.SetDPI(96, 96);
     text.SetText(LLUTILS_TEXT("OIV"));
-    CHECK_FALSE(text.IsDirty());
-    text.SetPosition({10, 20});
-    CHECK(text.IsDirty());
-    text.PreRender();
-    CHECK_FALSE(text.IsDirty());
-    CHECK(text.GetImage() == bitmap);
+    CHECK_FALSE(text.IsBitmapDirty());
+    CHECK(text.GetBitmap() == bitmap);
 
     text.SetFontSize(14);
-    CHECK(text.IsDirty());
+    CHECK(text.IsBitmapDirty());
     text.GetMetrics();
-    CHECK(text.IsDirty());
-    text.PreRender();
-    CHECK_FALSE(text.IsDirty());
-    CHECK(text.GetImage() != bitmap);
+    CHECK(text.IsBitmapDirty());
+    text.GetBitmap();
+    CHECK_FALSE(text.IsBitmapDirty());
+    CHECK(text.GetBitmap() != bitmap);
 }
 
 TEST_CASE("Explicit renderer shutdown preserves the API until surviving images are released", "[renderer][lifetime]")
@@ -265,11 +263,14 @@ TEST_CASE("Explicit renderer shutdown preserves the API until surviving images a
     const bool fail = GENERATE(false, true);
     {
         OIV::OivRenderGateway gateway;
-        auto image = std::make_unique<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib);
+        std::optional<OIV::RenderImage> image;
         if (fail)
             REQUIRE_THROWS(gateway.Initialize(0, nullptr, {.renderer = static_cast<OIV::RendererType>(-1)}));
         else
+        {
             REQUIRE_NOTHROW(gateway.Initialize(0, nullptr, {.renderer = OIV::RendererType::Null}));
+            image.emplace(gateway.GetRenderer().CreateImage({}));
+        }
 
         auto* renderer = OIV::ApiGlobal::sPictureRenderer.get();
         renderer->Shutdown();
@@ -278,8 +279,7 @@ TEST_CASE("Explicit renderer shutdown preserves the API until surviving images a
         REQUIRE(OIV::ApiGlobal::sPictureRenderer.get() == renderer);
         image.reset();
 
-        // The API remains usable for registration and another initialization after native shutdown.
-        OIV::OIVBaseImage laterImage(OIV::ImageSource::GeneratedByLib);
+        // Reinitialization is safe after all old presentation owners are released.
         REQUIRE(renderer->Init({.renderer = OIV::RendererType::Null}) == 0);
         REQUIRE(renderer->GetRenderer() != nullptr);
         renderer->Shutdown();
@@ -423,7 +423,7 @@ TEST_CASE("Renderer shutdown releases native state and exception registrations",
     REQUIRE(renderer.GetRenderer() != nullptr);
     SECTION("Native cleanup precedes window destruction and allows later image release")
     {
-        auto image    = std::make_shared<OIV::OIVBaseImage>(OIV::ImageSource::GeneratedByLib);
+        auto image    = std::make_optional(renderer.GetRenderer()->CreateImage({}));
         bool released = false;
         auto listener = window.Listen(
             [&](const LWS::AnyEvent& event)
@@ -572,4 +572,35 @@ TEST_CASE("Exception bridge supports reentrant clearing and preserves native Uni
     CHECK(context.calls == 1);
     LLUtils::Exception::OnException.Raise({});
     CHECK(context.calls == 1);
+}
+
+TEST_CASE("Message producers stop before queued timer work can revisit released labels",
+          "[.][renderer][message-lifetime]")
+{
+    LWS::PlatformContext platform;
+#ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+#else
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Wayland}) == LWS::Result::Success);
+#endif
+    LWS::Window window(platform);
+    REQUIRE(window.Create() == LWS::Result::Success);
+    auto backend = std::make_shared<OIV::NullRenderer>();
+    OIV::Renderer renderer(backend);
+    FreeType::FreeTypeConnector font;
+    OIV::LabelManager labels(&font);
+    labels.InitializeRenderer(renderer);
+    OIV::MessageManager messages(window, &labels, 5, [] {});
+    messages.SetUserMessage(1, OIV::MessageFlags::Persistent, LLUTILS_TEXT("Lifetime"));
+    labels.Prepare(renderer);
+    // Let expiry become pending before the UI loop starts, then retire its label targets.
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    REQUIRE_NOTHROW(messages.Stop());
+    REQUIRE_NOTHROW(messages.Stop());
+    labels.RemoveAll();
+    OIV::EventManager::GetSingleton().SizeChange.Raise(OIV::EventManager::SizeChangeEventParams{640, 480});
+    REQUIRE(platform.PostTask([&platform]() { platform.RequestQuit(); }) == LWS::Result::Success);
+    CHECK(platform.RunMessageLoop() == LWS::LoopResult::Quit);
+    REQUIRE(window.Destroy() == LWS::Result::Success);
 }

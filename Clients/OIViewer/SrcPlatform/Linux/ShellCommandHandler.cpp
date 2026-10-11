@@ -58,7 +58,7 @@ namespace OIV
 
     LLUtils::native_string_type ShellCommandHandler::Execute(const CommandManager::CommandRequest& request,
                                                              const LLUtils::native_string_type& openedFileName,
-                                                             [[maybe_unused]] OIVBaseImageSharedPtr openedImage)
+                                                             [[maybe_unused]] const ViewerImage* openedImage)
     {
         const std::string command          = request.args.GetArgValue("cmd");
         LLUtils::native_string_type result = request.displayName;

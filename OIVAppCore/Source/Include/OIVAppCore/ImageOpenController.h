@@ -5,7 +5,8 @@
 
 #include <OIVAppCore/BrowseSessionController.h>
 
-#include <OIVImage/OIVFileImage.h>
+#include <OIVAppCore/ViewerImage.h>
+#include <ImageProcessing/FileImage.h>
 #include <ImageLoader.h>
 #include <Defs.h>
 
@@ -25,31 +26,45 @@ namespace OIV
         NoSupportedFiles
     };
 
+    // CPU decode context shared with the existing codec parameter boundary.
     struct ImageLoadContext
     {
-        int canvasWidth  = 0;
+        // Requested canvas width in pixels, passed to existing codec parameters.
+        int canvasWidth = 0;
+        // Requested canvas height in pixels, passed to existing codec parameters.
         int canvasHeight = 0;
+        // Logging operation identity carried through decode and completion.
         LLUtils::OperationId operationId;
     };
 
+    // CPU file-load result with the existing API failure code.
     struct ImageFileLoadResult
     {
+        // Existing API result code describing decode or opening failure.
         ResultCode resultCode = ResultCode::RC_UknownError;
-        std::shared_ptr<OIVFileImage> image;
+        // CPU document returned by loading, with empty pixels when decoding fails.
+        ViewerImage image;
     };
 
+    // Opening result carried to viewer composition without registering pixels.
     struct ImageLoadResult
     {
+        // Viewer classification of the opening result.
         ImageLoadStatus status = ImageLoadStatus::UnknownError;
-        ResultCode resultCode  = ResultCode::RC_UknownError;
+        // Existing API result code describing decode or opening failure.
+        ResultCode resultCode = ResultCode::RC_UknownError;
+        // Normalized path for file/folder navigation and error formatting.
         LLUtils::native_string_type normalizedPath;
-        std::shared_ptr<OIVFileImage> image;
+        // CPU document returned by loading, with empty pixels when decoding fails.
+        ViewerImage image;
 
+        // Logging operation identity carried through decode and completion.
         LLUtils::OperationId operationId;
 
         bool DecodeSucceeded() const;
     };
 
+    // CPU file-loading boundary that returns document values and API result codes.
     class IImageFileLoader
     {
       public:
@@ -60,6 +75,7 @@ namespace OIV
                                              const ImageLoadContext& context) = 0;
     };
 
+    // Detached decoder adapter preserving orientation, metadata and codec parameters.
     class OIVImageFileLoader : public IImageFileLoader
     {
       public:
@@ -71,9 +87,11 @@ namespace OIV
 
       private:
 
+        // Borrowed codec loader that outlives the file loader.
         IMCodec::ImageLoader& fImageLoader;
     };
 
+    // Opening policy that normalizes paths and coordinates data-only browsing handoffs.
     class ImageOpenController
     {
       public:
@@ -94,7 +112,9 @@ namespace OIV
 
       private:
 
+        // Optional borrowed browsing controller used for file/folder navigation.
         BrowseSessionController* fBrowseSessionController = nullptr;
+        // Owned CPU file-loading boundary used by direct opening.
         std::unique_ptr<IImageFileLoader> fImageFileLoader;
     };
 }  // namespace OIV

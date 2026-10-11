@@ -2,7 +2,7 @@
 
 #include <LLUtils/StringDefs.h>
 
-#include <OIVImage/OIVBaseImage.h>
+#include <ImageProcessing/ImageSource.h>
 
 #include <string>
 

@@ -33,25 +33,36 @@ namespace OIV
         Fading
     };
 
+    // Scheduling state borrows a label until producer stop and label-manager cleanup.
     struct MessageData
     {
+        // Current visibility/fade stage in the existing message policy.
         DisplayStage displayStage{};
-        uint32_t ttl;  // Time to live in milliseconds
+        // Message lifetime in milliseconds.
+        uint32_t ttl;
+        // Creation time in milliseconds since the manager stopwatch epoch.
         int64_t timeStamp;
+        // Application message group used by replacement and removal policy.
         GroupID groupID;
+        // Existing persistence, replacement and manual-removal options.
         MessageFlags flags;
+        // Message-local identity used to reuse named labels, distinct from render IDs.
         uint16_t messageUniqueID;
-        OIVTextImage* message;
+        // Borrowed label, cleared from scheduling state before labels are destroyed.
+        TextLabel* message;
     };
 
     using RequestRefreshCallbackType = std::function<void()>;
 
+    // Viewer message scheduling borrows labels and stops its producers before label cleanup.
     class MessageManager
     {
       public:
 
         MessageManager(LWS::Window& associatedWindow, LabelManager* labelManager, size_t maxMessages,
                        RequestRefreshCallbackType callback);
+        // Stop label-dependent producers before LabelManager releases their targets.
+        void Stop();
         void SetUserMessage(uint32_t groupID, MessageFlags commandGroup, const LLUtils::native_string_type& message);
         void UpdateMessagesPosition();
         void RemoveGroup(GroupID groupID);
@@ -70,21 +81,37 @@ namespace OIV
 
       private:
 
+        // Existing message-local identity allocator for named label reuse.
         LLUtils::UniqueIdProvider<uint16_t> fMessageIDProvider{1};
+        // Borrowed label owner, which outlives this scheduling object.
         LabelManager* fLabelManager{};
+        // Maximum number of message scheduling entries retained.
         size_t fMaxMessages{};
+        // Scheduled messages borrowing label pointers until Stop clears them.
         ListMessageData fMessages;
+        // Minimum message lifetime in milliseconds.
         uint32_t fMinDelayRemoveMessage = 1000;
-        uint32_t fDelayPerCharacter     = 40;
+        // Additional lifetime per character in milliseconds.
+        uint32_t fDelayPerCharacter = 40;
+        // Epoch used for relative message timestamps.
         LLUtils::StopWatch fStopWatch{true};
+        // Owned expiry timer detached before label release.
         LWS::Timer fTimerHideUserMessage;
+        // Owned fade timer detached before label release.
         LWS::Timer fFadeTimer;
+        // Viewer redraw request guarded by the viewer callback lifetime.
         RequestRefreshCallbackType fRefreshCallback;
+        // Existing redraw coalescing within message updates.
         RecursiveDelayedOp fRefreshRequest;
+        // Wrapping width in client pixels.
         int32_t fMaxMessageWidth{};
-        int32_t fMarginLeft  = 20;
-        int32_t fMarginTop   = 20;
+        // Left placement margin in client pixels.
+        int32_t fMarginLeft = 20;
+        // Top placement margin in client pixels.
+        int32_t fMarginTop = 20;
+        // Right wrapping margin in client pixels.
         int32_t fMarginRight = 20;
+        // Owned size-change subscription removed before label cleanup.
         EventManager::SizeChangeEvent::Subscription fSizeSubscription;
     };
 }  // namespace OIV
