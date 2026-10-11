@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 #include <thread>
@@ -18,7 +19,7 @@ namespace OIV
     {
       public:
 
-        // Synchronously resample packed 32-bit render pixels using the existing policy.
+        // Synchronously resample 32-bit render pixels with optional row padding using the existing policy.
         // Input pixels remain read-only until the reused workers have joined.
         IMCodec::ImageSharedPtr Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize);
 
@@ -37,7 +38,7 @@ namespace OIV
             int32_t right;
         };
 
-        // Borrowed packed 32-bit source and writable target buffers for one CPU operation.
+        // Borrowed 32-bit source and packed writable target buffers for one CPU operation.
         struct ResamplerParams
         {
             // Writable packed target pixels, borrowed for the duration of processing.
@@ -46,8 +47,10 @@ namespace OIV
             uint32_t targetWidth;
             // Target height in rows.
             uint32_t targetHeight;
-            // Read-only packed source pixels, borrowed for processing.
-            const uint32_t* sourceBuffer;
+            // Read-only source bytes, borrowed for processing.
+            const std::byte* sourceBuffer;
+            // Byte distance between source row starts, including any padding.
+            size_t sourceRowPitchInBytes;
             // Source width in texels.
             uint32_t sourceWidth;
             // Source height in rows.
@@ -58,7 +61,9 @@ namespace OIV
         struct AverageParams
         {
             // Read-only source pixels used by neighborhood averaging.
-            const uint32_t* imageBuffer;
+            const std::byte* imageBuffer;
+            // Byte distance between source row starts, independent of logical width.
+            size_t imageRowPitchInBytes;
             // Source width in texels.
             size_t ImageWidth;
             // Source height in rows.

@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <RendererCore/Renderer.h>
 #include <ImageProcessing/RawImage.h>
 #include <OIVAppCore/ImageState.h>
@@ -9,6 +10,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace
 {
@@ -297,4 +299,44 @@ TEST_CASE("Raw creation copies padded rows and geometric refresh invalidates lat
     REQUIRE(state.GetRetainedImage(OIV::ImageProcessingStage::GeometricTransform));
     CHECK(state.GetVisibleSize() == LLUtils::PointF64{3, 2});
     CHECK(state.GetRetainedImage(OIV::ImageProcessingStage::RenderFormat) == nullptr);
+}
+
+TEST_CASE("CPU resampling respects padded byte rows without normalizing the source", "[image][cpu][pipeline]")
+{
+    NoApi noApi;
+    const uint32_t rowPitch = GENERATE(16u, 17u, 20u, 25u);
+    // Padding deliberately differs from every channel so accidental sampling is visible.
+    std::vector<std::byte> source(rowPitch * 4, std::byte{0xEF});
+    std::array<std::byte, 64> packed{};
+    for (size_t y = 0; y < 4; ++y)
+        for (size_t x = 0; x < 4; ++x)
+            for (size_t channel = 0; channel < 4; ++channel)
+            {
+                const auto value                       = std::byte(10 + y * 20 + x * 4 + channel);
+                source[y * rowPitch + x * 4 + channel] = value;
+                packed[y * 16 + x * 4 + channel]       = value;
+            }
+    const auto pixels = OIV::CreateRawImage({source.data(), 4, 4, rowPitch, IMCodec::TexelFormat::I_R8_G8_B8_A8}, {});
+    OIV::ImageState state;
+    state.SetOpenedImage(OIV::ViewerImage{.pixels = pixels});
+    state.SetScale({0.5, 0.5});
+    state.SetResample(true);
+    state.Refresh();
+    CHECK(state.GetRetainedImage(OIV::ImageProcessingStage::RenderFormat) == pixels);
+    const auto result = state.GetRetainedImage(OIV::ImageProcessingStage::Resampled);
+    REQUIRE(result);
+    REQUIRE(result->GetWidth() == 2);
+    REQUIRE(result->GetHeight() == 2);
+
+    OIV::Resampler resampler;
+    const auto reference = resampler.Resample(
+        OIV::CreateRawImage({packed.data(), 4, 4, 16, IMCodec::TexelFormat::I_R8_G8_B8_A8}, {}), {2, 2});
+    for (size_t y = 0; y < 2; ++y)
+        for (size_t x = 0; x < 2; ++x)
+            for (size_t channel = 0; channel < 4; ++channel)
+            {
+                CHECK(result->GetBufferAt(x, y)[channel] == reference->GetBufferAt(x, y)[channel]);
+                // Each 2x2 neighborhood averages independently across all four channels.
+                CHECK(result->GetBufferAt(x, y)[channel] == std::byte(22 + y * 40 + x * 8 + channel));
+            }
 }
