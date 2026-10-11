@@ -640,7 +640,8 @@ namespace OIV
                                OIV_Image_Render_mode renderMode)
     {
         const double opacity = record.properties.opacity;
-        if (!record.properties.visible || opacity <= 0.0)
+        // Empty content keeps its cached resources for replacement but must not draw the old texture.
+        if (!record.pixels || !record.properties.visible || opacity <= 0.0)
             return;
 
         if (entry.texture == nullptr || entry.descriptorSet == VK_NULL_HANDLE)
