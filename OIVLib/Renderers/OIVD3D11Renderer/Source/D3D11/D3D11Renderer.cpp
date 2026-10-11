@@ -333,6 +333,11 @@ namespace OIV
         gpuBuffer.uScale[1]                     = static_cast<float>(record.properties.scale.y);
         gpuBuffer.opacity                       = static_cast<float>(record.properties.opacity);
 
+        // TODO: Analyze whether caching the last uploaded constant-buffer data is worthwhile.
+        // Efficient retained-mode client usage avoids updates when state is unchanged,
+        // so identical consecutive draw payloads are expected to be uncommon. Verify this
+        // expectation, including content-only changes and shared-buffer reuse across images.
+        // Document the decision to implement or omit caching, with its evidence and rationale.
         fBufferImageCommon->Update();
         fBufferImageCommon->Use(ShaderStage::FragmentShader, 0);
 
