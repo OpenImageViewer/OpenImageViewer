@@ -1,7 +1,7 @@
 #OIVD3DRenderer
 cmake_minimum_required(VERSION 3.10)
 
-file(GLOB_RECURSE sourceFiles
+file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.h"
     "./Source/*.cpp"
 )
@@ -30,3 +30,5 @@ endif()
 target_link_libraries(${TargetName} PRIVATE ${oivD3D11Libraries} LLUtils::LLUtils)
 
 target_link_libraries(${TargetName} PUBLIC RendererCore)
+
+target_include_directories(${TargetName} PUBLIC Include)

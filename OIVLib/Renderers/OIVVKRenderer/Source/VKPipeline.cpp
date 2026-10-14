@@ -3,7 +3,6 @@
 #include <array>
 #include <cstring>
 #include <fstream>
-#include <stdexcept>
 
 namespace OIV
 {
@@ -11,17 +10,20 @@ namespace OIV
     {
         std::ifstream file(filePath, std::ios::ate | std::ios::binary);
         if (!file.is_open())
-            throw std::runtime_error("Failed to open shader file: " + filePath.string());
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                    "Failed to open shader file:", std::nullopt, filePath.string());
 
         const std::streamoff fileSize = file.tellg();
         if (fileSize <= 0 || fileSize % static_cast<std::streamoff>(sizeof(uint32_t)) != 0)
-            throw std::runtime_error("Invalid SPIR-V shader file: " + filePath.string());
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                    "Invalid SPIR-V shader file:", std::nullopt, filePath.string());
 
         file.seekg(0);
 
         std::vector<uint32_t> buffer(static_cast<size_t>(fileSize) / sizeof(uint32_t));
         if (!file.read(reinterpret_cast<char*>(buffer.data()), fileSize))
-            throw std::runtime_error("Failed to read SPIR-V shader file: " + filePath.string());
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                    "Failed to read SPIR-V shader file:", std::nullopt, filePath.string());
 
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

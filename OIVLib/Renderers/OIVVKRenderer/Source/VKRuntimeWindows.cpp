@@ -1,6 +1,6 @@
 #include <windows.h>
 #include "VKRuntime.h"
-#include <stdexcept>
+#include <RendererCore/RendererException.h>
 #include <string>
 
 namespace OIV
@@ -49,6 +49,7 @@ namespace OIV
         // Thread-safe local initialization caches success or failure for all renderer instances.
         static const std::string failure = LoadVulkanRuntime();
         if (!failure.empty())
-            throw std::runtime_error(failure);
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan, "Load Vulkan runtime",
+                                    std::nullopt, failure);
     }
 }  // namespace OIV

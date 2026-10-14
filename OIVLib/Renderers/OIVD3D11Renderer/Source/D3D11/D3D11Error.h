@@ -1,48 +1,36 @@
 #pragma once
-#include <string>
+#include <RendererCore/RendererException.h>
 #include <windows.h>
-#include <LLUtils/PlatformUtility.h>
-#include <LLUtils/Exception.h>
+#include <string_view>
 
 namespace OIV
 {
     class D3D11Error
     {
-    public:
-        static const bool fShowDeviceErrors = false;
-        static void HandleError(std::string errorMessage)
+      public:
+
+        static void HandleError(std::string_view operation)
         {
-            if (fShowDeviceErrors)
-                MessageBoxA(static_cast<HWND>(0), errorMessage.c_str(), "Error", MB_OK);
-            else
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, errorMessage);
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::D3D11, operation);
         }
 
-        static void HandleDeviceError(HRESULT result)
+        static RendererErrorCode Classify(HRESULT result) noexcept
         {
-            HandleDeviceError(result, "Error");
+            RendererErrorCode code = RendererErrorCode::BackendFailure;
+            if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET ||
+                result == DXGI_ERROR_DEVICE_HUNG)
+                code = RendererErrorCode::DeviceLost;
+            else if (result == E_OUTOFMEMORY)
+                code = RendererErrorCode::OutOfMemory;
+            return code;
         }
 
-        static void HandleDeviceError(HRESULT result, const std::string& errorMessage)
+        static void HandleDeviceError(HRESULT result, std::string_view operation = "Direct3D operation")
         {
-            if (SUCCEEDED(result) == false)
-            {
-                std::string message = "Direct3D11 could complete the operation.";
-                if (errorMessage.empty() == false)
-                    message += "\n" + errorMessage;
-                std::string err = LLUtils::PlatformUtility::GetLastErrorAsString<char>();
-
-                if (err.empty() == false)
-                    message += "\n" + err;
-
-                HandleError(message);
-            }
+            if (FAILED(result))
+                throw RendererException(Classify(result), RendererType::D3D11, operation,
+                                        RendererNativeError{RendererNativeDomain::D3D11,
+                                                            static_cast<std::int64_t>(result)});
         }
-
-        static void HandleDeviceError(HRESULT result, std::string&& errorMessage)
-        {
-            HandleDeviceError(result, errorMessage);
-        }
-
     };
-}
+}  // namespace OIV

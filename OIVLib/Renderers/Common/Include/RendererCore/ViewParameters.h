@@ -1,5 +1,5 @@
 #pragma once
-#include <LLUtils/StringUtility.h>
+#include <LLUtils/Color.h>
 #include <LLUtils/Point.h>
 
 namespace OIV
@@ -17,4 +17,4 @@ namespace OIV
         LLUtils::Color uTransparencyColor2;
         bool showGrid;
     };
-}
+}  // namespace OIV

@@ -78,7 +78,6 @@ add_library(OIVGLRenderer STATIC
 target_include_directories(OIVGLRenderer
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../OIV/Include
 )
 target_link_libraries(OIVGLRenderer
     PUBLIC

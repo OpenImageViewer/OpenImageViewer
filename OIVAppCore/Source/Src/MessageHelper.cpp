@@ -16,6 +16,27 @@
 
 namespace OIV
 {
+    namespace
+    {
+        constexpr std::string_view RendererName(std::optional<RendererType> type)
+        {
+            if (!type)
+                return "Unknown";
+            switch (*type)
+            {
+                case RendererType::D3D11:
+                    return "D3D11";
+                case RendererType::Vulkan:
+                    return "Vulkan";
+                case RendererType::OpenGL:
+                    return "GL";
+                case RendererType::Null:
+                    return "Null";
+            }
+            return "Unknown";
+        }
+    }  // namespace
+
     LLUtils::native_string_type MessageHelper::CreateKeyBindingsMessage()
     {
         using namespace std;
@@ -149,7 +170,8 @@ namespace OIV
         const auto coresInfo = LLUtils::PlatformUtility::GetCPUCoresInfo();
         const auto cpuCores  = std::format("{} physical / {} logical", coresInfo.physicalCores, coresInfo.logicalCores);
         const auto* renderer = context.renderer;
-        const int adapterIndex = renderer ? renderer->GetSelectedGPUIndex() : -1;
+        const auto* adapter  = renderer ? &renderer->GetSelectedAdapter() : nullptr;
+        const int adapterIndex = adapter ? adapter->index : -1;
         const auto indexText   = adapterIndex < 0 ? std::string{} : std::to_string(adapterIndex);
 
         LLUtils::native_string_type message = MessageFormatter::DefaultHeaderColor +
@@ -172,12 +194,13 @@ namespace OIV
                  {"Commit", context.gitHash},
                  {"Operating system", osName},
                  {"CPU cores", cpuCores},
-                 {"Renderer", renderer ? renderer->GetBackendName() : "Unknown"},
-                 {"Adapter", renderer ? renderer->GetGPUName() : "Unknown"},
+                 {"Renderer", renderer ? RendererName(context.rendererType) : "Unknown"},
+                 {"Adapter",
+                  adapter && !adapter->name.empty() ? std::string_view(adapter->name) : std::string_view("Unknown")},
                  {"Adapter index", indexText},
-                 {"Acceleration", GetAccelerationName(renderer ? renderer->GetAcceleration() : Acceleration::Unknown)},
-                 {"API version", renderer ? renderer->GetAPIVersion() : "Unknown"},
-                 {"Driver version", renderer ? renderer->GetDriverVersion() : "Unknown"}})
+                 {"Acceleration", GetAccelerationName(adapter ? adapter->acceleration : Acceleration::Unknown)},
+                 {"API version", adapter ? std::string_view(adapter->apiVersion) : std::string_view("Unknown")},
+                 {"Driver version", adapter ? std::string_view(adapter->driverVersion) : std::string_view("Unknown")}})
         {
             messageValues.emplace_back(label, MessageFormatter::ValueObjectList{MessageFormatter::ValueObject(
                                                   LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(

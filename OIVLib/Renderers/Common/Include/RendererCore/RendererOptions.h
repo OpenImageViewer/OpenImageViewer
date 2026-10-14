@@ -4,7 +4,6 @@
 #include <array>
 #include <cstdint>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 
@@ -46,7 +45,7 @@ namespace OIV
         bool supportsAdapterSelection;
     };
 
-    // Names are UTF-8; indexes belong to this API's enumeration.
+    // Names are UTF-8. Adapter indices belong to the reporting graphics API.
     struct RendererAdapter
     {
         int index = -1;
@@ -54,25 +53,20 @@ namespace OIV
         uint32_t vendorId         = 0;
         Acceleration acceleration = Acceleration::Unknown;
         bool preferred            = false;
+        // Selected-device versions are populated during initialization, absent during enumeration.
+        std::string apiVersion;
+        std::string driverVersion;
     };
 
     struct RendererOptions
     {
-        // Restrict the API; its eligible adapters and acceleration tiers still participate.
+        // Restrict the graphics API. Its eligible adapters and acceleration tiers still participate.
         std::optional<RendererType> renderer;
-        // Vendor/name filter retained across API fallback; ignored when adapterIndex is set.
+        // The vendor/name filter persists across API fallback. An adapter index takes precedence.
         std::optional<std::string> adapterName;
-        // Zero-based index in renderer or GetDefaultRenderer(); disables adapter and API fallback.
+        // Zero-based index in the selected or default renderer. Disables adapter and API fallback.
         std::optional<int> adapterIndex;
     };
-
-    // Metadata follows runtime preference: D3D11 -> Vulkan -> GL on Windows, Vulkan -> GL on Linux.
-    // Omit APIs not compiled into this library; no graphics runtime is loaded or queried.
-    std::span<const RendererInfo> GetBuiltRenderers();
-    // First available API in the above order; automatic startup may select another after probing the machine.
-    RendererType GetDefaultRenderer();
-    bool IsRendererAvailable(RendererType renderer);
-    std::string ValidateRendererOptions(const RendererOptions& options);
 
     namespace detail
     {
@@ -92,14 +86,14 @@ namespace OIV
             return first == name.npos ? std::string_view{}
                                       : name.substr(first, name.find_last_not_of(whitespace) - first + 1);
         }
-        // Fold ASCII letters only; UTF-8 byte sequences remain unchanged.
+        // Fold ASCII letters only. UTF-8 byte sequences remain unchanged.
         constexpr bool AsciiContains(std::string_view text, std::string_view query)
         {
             return !std::ranges::search(text, query,
                                         [](unsigned char x, unsigned char y) { return AsciiLower(x) == AsciiLower(y); })
                         .empty();
         }
-        // Recognized vendor names match IDs (AMD also matches Radeon); other queries match name substrings.
+        // Recognized vendor names match IDs (AMD also matches Radeon). Other queries match name substrings.
         constexpr bool AdapterNameMatches(std::string_view requested, std::string_view available, uint32_t vendorId = 0)
         {
             constexpr std::array<std::pair<std::string_view, uint32_t>, 3> vendors{

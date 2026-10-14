@@ -23,6 +23,17 @@ namespace
 
 namespace OIV
 {
+    std::array<LLUtils::Color, 2> ViewerPresentationPolicy::CheckerboardColors(TransparencyShade shade)
+    {
+        constexpr std::array colors{
+            std::array{LLUtils::Color{{255, 255, 255, 255}}, LLUtils::Color{{204, 204, 204, 255}}},
+            std::array{LLUtils::Color{{153, 153, 153, 255}}, LLUtils::Color{{102, 102, 102, 255}}},
+            std::array{LLUtils::Color{{102, 102, 102, 255}}, LLUtils::Color{{51, 51, 51, 255}}},
+            std::array{LLUtils::Color{{51, 51, 51, 255}}, LLUtils::Color{{0, 0, 0, 255}}},
+        };
+        return colors[static_cast<std::size_t>(shade)];
+    }
+
     LLUtils::native_string_type ViewerPresentationPolicy::FormatOperationResult(OperationResult result)
     {
         switch (result)

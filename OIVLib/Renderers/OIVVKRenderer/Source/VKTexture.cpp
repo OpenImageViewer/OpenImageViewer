@@ -169,7 +169,8 @@ namespace OIV
                 return i;
         }
 
-        throw std::runtime_error("Failed to find suitable memory type");
+        throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                "Failed to find suitable memory type");
     }
 
     void VKTexture::TransitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout,

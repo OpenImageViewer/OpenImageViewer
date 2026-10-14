@@ -93,8 +93,8 @@ namespace OIV
 
         text->SetPosition(LLUtils::PointF64::Zero);
         text->SetScale(LLUtils::PointF64::One);
-        text->SetFilterType(OIV_Filter_type::FT_None);
-        text->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
+        text->SetFilterType(OIV::FilterType::None);
+        text->SetImageRenderMode(OIV::ImageRenderMode::Overlay);
         text->SetVisible(true);
         text->SetOpacity(1.0);
 
@@ -102,7 +102,6 @@ namespace OIV
         text->SetFontPath(sFontPath);
         text->SetFontSize(12);
         text->SetOutlineWidth(2);
-        // text->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
         text->SetBackgroundColor(LLUtils::Color(0, 0, 0, 180));
 
         return text;

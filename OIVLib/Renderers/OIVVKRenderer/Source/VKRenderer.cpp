@@ -5,7 +5,6 @@
 #include <cmath>
 #include <filesystem>
 #include <cstring>
-#include <stdexcept>
 #include <vector>
 #include <LLUtils/Exception.h>
 
@@ -36,32 +35,30 @@ namespace OIV
         }
     }  // namespace
 
-    VKRenderer::VKRenderer() = default;
-
     VKRenderer::~VKRenderer()
     {
-        if (fDevice != VK_NULL_HANDLE)
+        if (fContext.GetDevice() != VK_NULL_HANDLE)
         {
             RetireAcquiredFrame();
-            vkDeviceWaitIdle(fDevice);
+            vkDeviceWaitIdle(fContext.GetDevice());
 
             fImageEntries.clear();
 
             if (fInFlightFence != VK_NULL_HANDLE)
-                vkDestroyFence(fDevice, fInFlightFence, nullptr);
+                vkDestroyFence(fContext.GetDevice(), fInFlightFence, nullptr);
             DestroyRenderFinishedSemaphores();
             if (fImageAvailableSemaphore != VK_NULL_HANDLE)
-                vkDestroySemaphore(fDevice, fImageAvailableSemaphore, nullptr);
+                vkDestroySemaphore(fContext.GetDevice(), fImageAvailableSemaphore, nullptr);
 
             if (fCommandBuffer != VK_NULL_HANDLE)
-                vkFreeCommandBuffers(fDevice, fContext.GetCommandPool(), 1, &fCommandBuffer);
+                vkFreeCommandBuffers(fContext.GetDevice(), fContext.GetCommandPool(), 1, &fCommandBuffer);
 
             for (const VkDescriptorPool descriptorPool : fDescriptorPools)
-                vkDestroyDescriptorPool(fDevice, descriptorPool, nullptr);
+                vkDestroyDescriptorPool(fContext.GetDevice(), descriptorPool, nullptr);
         }
     }
 
-    int VKRenderer::Init(const OIV_RendererInitializationParams& initParams)
+    void VKRenderer::Init(const OIV::RendererInitialization& initParams)
     {
         constexpr int DefaultWidth  = 1200;
         constexpr int DefaultHeight = 800;
@@ -76,8 +73,6 @@ namespace OIV
 
         fContext.Init(contextParams);
 
-        fDevice          = fContext.GetDevice();
-        fPhysicalDevice  = fContext.GetPhysicalDevice();
         fSwapChainExtent = fContext.GetSwapChainExtent();
 
         fDataPath     = initParams.dataPath;
@@ -96,14 +91,14 @@ namespace OIV
         allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
 
-        VkResult result = vkAllocateCommandBuffers(fDevice, &allocInfo, &fCommandBuffer);
+        VkResult result = vkAllocateCommandBuffers(fContext.GetDevice(), &allocInfo, &fCommandBuffer);
         CheckVkResult(result, "Failed to allocate command buffer");
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
         VkSemaphore imageAvailable;
-        result = vkCreateSemaphore(fDevice, &semaphoreInfo, nullptr, &imageAvailable);
+        result = vkCreateSemaphore(fContext.GetDevice(), &semaphoreInfo, nullptr, &imageAvailable);
         CheckVkResult(result, "Failed to create image available semaphore");
         fImageAvailableSemaphore = imageAvailable;
         CreateRenderFinishedSemaphores();
@@ -112,11 +107,9 @@ namespace OIV
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         VkFence fence;
-        result = vkCreateFence(fDevice, &fenceInfo, nullptr, &fence);
+        result = vkCreateFence(fContext.GetDevice(), &fenceInfo, nullptr, &fence);
         CheckVkResult(result, "Failed to create fence");
         fInFlightFence = fence;
-
-        return 0;
     }
 
     void VKRenderer::CreatePipelines()
@@ -129,9 +122,9 @@ namespace OIV
         const std::vector<VkImageView> swapChainImageViews = fContext.GetSwapChainImageViews();
 
         auto imagePipeline = std::make_unique<VKPipeline>(
-            VKPipeline::CreateInfo{fDevice, fSwapChainExtent, fContext.GetSwapChainFormat(), vertShader, fragShader,
-                                   true, sizeof(PushConstants), swapChainImageViews});
-        auto selectionPipeline = std::make_unique<VKPipeline>(VKPipeline::CreateInfo{fDevice,
+            VKPipeline::CreateInfo{fContext.GetDevice(), fSwapChainExtent, fContext.GetSwapChainFormat(), vertShader,
+                                   fragShader, true, sizeof(PushConstants), swapChainImageViews});
+        auto selectionPipeline = std::make_unique<VKPipeline>(VKPipeline::CreateInfo{fContext.GetDevice(),
                                                                                      fSwapChainExtent,
                                                                                      fContext.GetSwapChainFormat(),
                                                                                      vertShader,
@@ -139,7 +132,7 @@ namespace OIV
                                                                                      false,
                                                                                      sizeof(SelectionPushConstants),
                                                                                      {}});
-        auto overlayPipeline   = std::make_unique<VKPipeline>(VKPipeline::CreateInfo{fDevice,
+        auto overlayPipeline   = std::make_unique<VKPipeline>(VKPipeline::CreateInfo{fContext.GetDevice(),
                                                                                      fSwapChainExtent,
                                                                                      fContext.GetSwapChainFormat(),
                                                                                      vertShader,
@@ -162,14 +155,13 @@ namespace OIV
         fPipelineFormat = fContext.GetSwapChainFormat();
     }
 
-    int VKRenderer::SetViewParams(const ViewParameters& viewParams)
+    void VKRenderer::SetViewParams(const ViewParameters& viewParams)
     {
         std::lock_guard<std::mutex> lock(fMutex);
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
         fTransparencyColors[0] = ToFloatColor(viewParams.uTransparencyColor1);
         fTransparencyColors[1] = ToFloatColor(viewParams.uTransparencyColor2);
         fShowGrid              = viewParams.showGrid;
-        return 0;
     }
 
     void VKRenderer::UpdateViewportSize(int width, int height)
@@ -186,7 +178,7 @@ namespace OIV
         if (fContext.GetSwapChain() != VK_NULL_HANDLE)
         {
             CheckVkResult(RetireAcquiredFrame(), "Failed to retire the acquired Vulkan frame");
-            CheckVkResult(vkDeviceWaitIdle(fDevice), "Failed to wait for Vulkan swap-chain retirement");
+            CheckVkResult(vkDeviceWaitIdle(fContext.GetDevice()), "Failed to wait for Vulkan swap-chain retirement");
             fFrameSubmitted = false;
             DestroyRenderFinishedSemaphores();
             if (fImagePipeline != nullptr)
@@ -203,7 +195,8 @@ namespace OIV
 
         fSwapChainExtent = fContext.GetSwapChainExtent();
         if (fContext.GetSwapChainFormat() == fPipelineFormat)
-            fImagePipeline->RecreateFramebuffers(fDevice, fContext.GetSwapChainImageViews(), fSwapChainExtent);
+            fImagePipeline->RecreateFramebuffers(fContext.GetDevice(), fContext.GetSwapChainImageViews(),
+                                                 fSwapChainExtent);
         else
             CreatePipelines();
         CreateRenderFinishedSemaphores();
@@ -231,7 +224,7 @@ namespace OIV
         return VK_SUCCESS;
     }
 
-    int VKRenderer::Render(const OIV::RenderFrame& frame)
+    void VKRenderer::Render(const OIV::RenderFrame& frame)
     {
         std::lock_guard<std::mutex> lock(fMutex);
 
@@ -240,9 +233,9 @@ namespace OIV
         for (int attempt = 0; attempt < MaxFrameAttempts; ++attempt)
         {
             if (RenderFrame(frame))
-                return 0;
+                return;
         }
-        throw std::runtime_error("The Vulkan surface kept changing during redraw");
+        throw RendererException(RendererErrorCode::SurfaceUnavailable, RendererType::Vulkan, "Redraw changing surface");
     }
 
     bool VKRenderer::RenderFrame(const OIV::RenderFrame& frame)
@@ -313,7 +306,7 @@ namespace OIV
         {
             const auto mode = record.properties.imageRenderMode;
             if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
-                (mode == IRM_MainImage || mode == IRM_Overlay))
+                (mode == OIV::ImageRenderMode::MainImage || mode == OIV::ImageRenderMode::Overlay))
             {
                 auto& entry = fImageEntries.try_emplace(id).first->second;
                 if (entry.descriptorSet == VK_NULL_HANDLE)
@@ -353,9 +346,9 @@ namespace OIV
         for (const auto& [id, record] : frame.images)
         {
             const auto entry = fImageEntries.find(id);
-            if (record.properties.imageRenderMode == IRM_MainImage && entry != fImageEntries.end() &&
+            if (record.properties.imageRenderMode == OIV::ImageRenderMode::MainImage && entry != fImageEntries.end() &&
                 !entry->second.retired)
-                DrawImage(entry->second, record, *fImagePipeline, IRM_MainImage);
+                DrawImage(entry->second, record, *fImagePipeline, OIV::ImageRenderMode::MainImage);
         }
 
         DrawSelectionRect();
@@ -363,9 +356,9 @@ namespace OIV
         for (const auto& [id, record] : frame.images)
         {
             const auto entry = fImageEntries.find(id);
-            if (record.properties.imageRenderMode == IRM_Overlay && entry != fImageEntries.end() &&
+            if (record.properties.imageRenderMode == OIV::ImageRenderMode::Overlay && entry != fImageEntries.end() &&
                 !entry->second.retired)
-                DrawImage(entry->second, record, *fOverlayPipeline, IRM_Overlay);
+                DrawImage(entry->second, record, *fOverlayPipeline, OIV::ImageRenderMode::Overlay);
         }
 
         vkCmdEndRenderPass(fCommandBuffer);
@@ -426,38 +419,34 @@ namespace OIV
         return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
     }
 
-    int VKRenderer::SetFilterLevel(OIV_Filter_type filterType)
+    void VKRenderer::SetFilterLevel(OIV::FilterType filterType)
     {
         std::lock_guard<std::mutex> lock(fMutex);
         fFilterType = filterType;
-        return 0;
     }
 
-    int VKRenderer::SetSelectionRect(VisualSelectionRect selectionRect)
+    void VKRenderer::SetSelectionRect(VisualSelectionRect selectionRect)
     {
         std::lock_guard<std::mutex> lock(fMutex);
         fSelectionRect = selectionRect;
-        return 0;
     }
 
-    int VKRenderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    void VKRenderer::SetExposure(const OIV::ColorExposure& exposure)
     {
         std::lock_guard<std::mutex> lock(fMutex);
         fExposure   = static_cast<float>(exposure.exposure);
         fOffset     = static_cast<float>(exposure.offset);
         fGamma      = static_cast<float>(exposure.gamma);
         fSaturation = static_cast<float>(exposure.saturation);
-        return 0;
     }
 
-    int VKRenderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    void VKRenderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
     {
         std::lock_guard<std::mutex> lock(fMutex);
         if (index >= 0 && index < 2)
         {
             fBackgroundColors[index] = ToFloatColor(backgroundColor);
         }
-        return 0;
     }
 
     void VKRenderer::ReleaseImageResources(uint64_t id) noexcept
@@ -471,18 +460,20 @@ namespace OIV
             entry.retired = true;
             try
             {
-                if (fDevice != VK_NULL_HANDLE)
+                if (fContext.GetDevice() != VK_NULL_HANDLE)
                 {
                     if (fFrameSubmitted)
                     {
-                        const auto result = vkWaitForFences(fDevice, 1, &fInFlightFence, VK_TRUE, UINT64_MAX);
+                        const auto result = vkWaitForFences(fContext.GetDevice(), 1, &fInFlightFence, VK_TRUE,
+                                                            UINT64_MAX);
                         if (result != VK_SUCCESS && result != VK_ERROR_DEVICE_LOST)
                             CheckVkResult(result, "Failed to retire Vulkan image resources");
                     }
                     if (entry.texture)
                         entry.texture->ReleaseUploadResources(fUploadBufferCache);
                     if (entry.descriptorSet != VK_NULL_HANDLE)
-                        CheckVkResult(vkFreeDescriptorSets(fDevice, entry.descriptorPool, 1, &entry.descriptorSet),
+                        CheckVkResult(vkFreeDescriptorSets(fContext.GetDevice(), entry.descriptorPool, 1,
+                                                           &entry.descriptorSet),
                                       "Failed to release Vulkan image descriptor");
                 }
                 fImageEntries.erase(found);
@@ -517,7 +508,7 @@ namespace OIV
         poolInfo.maxSets       = DescriptorCount;
 
         VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
-        VkResult result = vkCreateDescriptorPool(fDevice, &poolInfo, nullptr, &descriptorPool);
+        VkResult result = vkCreateDescriptorPool(fContext.GetDevice(), &poolInfo, nullptr, &descriptorPool);
         CheckVkResult(result, "Failed to create descriptor pool");
         try
         {
@@ -525,7 +516,7 @@ namespace OIV
         }
         catch (...)
         {
-            vkDestroyDescriptorPool(fDevice, descriptorPool, nullptr);
+            vkDestroyDescriptorPool(fContext.GetDevice(), descriptorPool, nullptr);
             throw;
         }
         return descriptorPool;
@@ -544,7 +535,7 @@ namespace OIV
 
         VkDescriptorPool descriptorPool = fDescriptorPools.empty() ? CreateDescriptorPool() : fDescriptorPools.back();
         allocInfo.descriptorPool        = descriptorPool;
-        VkResult result                 = vkAllocateDescriptorSets(fDevice, &allocInfo, &entry.descriptorSet);
+        VkResult result = vkAllocateDescriptorSets(fContext.GetDevice(), &allocInfo, &entry.descriptorSet);
         if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL)
         {
             // Removed renderables may have freed capacity in an older pool. Keep the usual path to one allocation.
@@ -554,7 +545,7 @@ namespace OIV
             {
                 descriptorPool           = fDescriptorPools[i];
                 allocInfo.descriptorPool = descriptorPool;
-                result                   = vkAllocateDescriptorSets(fDevice, &allocInfo, &entry.descriptorSet);
+                result = vkAllocateDescriptorSets(fContext.GetDevice(), &allocInfo, &entry.descriptorSet);
                 if (result == VK_SUCCESS)
                     std::swap(fDescriptorPools[i], fDescriptorPools.back());
             }
@@ -562,7 +553,7 @@ namespace OIV
             {
                 descriptorPool           = CreateDescriptorPool();
                 allocInfo.descriptorPool = descriptorPool;
-                result                   = vkAllocateDescriptorSets(fDevice, &allocInfo, &entry.descriptorSet);
+                result = vkAllocateDescriptorSets(fContext.GetDevice(), &allocInfo, &entry.descriptorSet);
             }
         }
         CheckVkResult(result, "Failed to allocate descriptor set");
@@ -580,7 +571,7 @@ namespace OIV
             for (VkSemaphore& semaphore : semaphores)
             {
                 VkSemaphore created;
-                CheckVkResult(vkCreateSemaphore(fDevice, &semaphoreInfo, nullptr, &created),
+                CheckVkResult(vkCreateSemaphore(fContext.GetDevice(), &semaphoreInfo, nullptr, &created),
                               "Failed to create render finished semaphore");
                 semaphore = created;
             }
@@ -590,7 +581,7 @@ namespace OIV
             for (const VkSemaphore semaphore : semaphores)
             {
                 if (semaphore != VK_NULL_HANDLE)
-                    vkDestroySemaphore(fDevice, semaphore, nullptr);
+                    vkDestroySemaphore(fContext.GetDevice(), semaphore, nullptr);
             }
             throw;
         }
@@ -600,7 +591,7 @@ namespace OIV
     void VKRenderer::DestroyRenderFinishedSemaphores()
     {
         for (const VkSemaphore semaphore : fRenderFinishedSemaphores)
-            vkDestroySemaphore(fDevice, semaphore, nullptr);
+            vkDestroySemaphore(fContext.GetDevice(), semaphore, nullptr);
         fRenderFinishedSemaphores.clear();
     }
 
@@ -618,13 +609,15 @@ namespace OIV
             if (image->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::I_R8_G8_B8_A8);
             if (image == nullptr)
-                throw std::runtime_error("Could not convert image for Vulkan rendering");
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                        "Convert image for rendering");
 
             if (entry.texture == nullptr || entry.texture->GetWidth() != image->GetWidth() ||
                 entry.texture->GetHeight() != image->GetHeight())
             {
-                entry.texture             = std::make_unique<VKTexture>(fDevice, fPhysicalDevice, image->GetWidth(),
-                                                                        image->GetHeight(), VK_FORMAT_R8G8B8A8_UNORM);
+                entry.texture = std::make_unique<VKTexture>(fContext.GetDevice(), fContext.GetPhysicalDevice(),
+                                                            image->GetWidth(), image->GetHeight(),
+                                                            VK_FORMAT_R8G8B8A8_UNORM);
                 entry.descriptorImageView = VK_NULL_HANDLE;
             }
 
@@ -637,7 +630,7 @@ namespace OIV
     }
 
     void VKRenderer::DrawImage(ImageEntry& entry, const RenderImageRecord& record, VKPipeline& pipeline,
-                               OIV_Image_Render_mode renderMode)
+                               OIV::ImageRenderMode renderMode)
     {
         const double opacity = record.properties.opacity;
         // Empty content keeps its cached resources for replacement but must not draw the old texture.
@@ -652,7 +645,7 @@ namespace OIV
         const LLUtils::PointF64 imageScale    = record.properties.scale;
         const LLUtils::PointF64 imagePosition = record.properties.position;
 
-        if (renderMode == OIV_Image_Render_mode::IRM_Overlay)
+        if (renderMode == OIV::ImageRenderMode::Overlay)
         {
             const double oppositeX = imagePosition.x + static_cast<double>(entry.texture->GetWidth()) * imageScale.x;
             const double oppositeY = imagePosition.y + static_cast<double>(entry.texture->GetHeight()) * imageScale.y;
@@ -696,14 +689,14 @@ namespace OIV
         pushConstants.saturation  = fSaturation;
         pushConstants.showGrid    = fShowGrid ? 1 : 0;
 
-        const OIV_Filter_type requestedFilter = record.properties.filterType;
-        const OIV_Filter_type filter          = requestedFilter == FT_Lanczos3 ? fFilterType : requestedFilter;
-        const VkFilter vkFilter               = filter == FT_None ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
-        const VkImageView imageView           = entry.texture->GetImageView();
-        const VkSampler sampler               = pipeline.GetSampler(vkFilter);
+        const OIV::FilterType requestedFilter = record.properties.filterType;
+        const OIV::FilterType filter = requestedFilter == OIV::FilterType::Lanczos3 ? fFilterType : requestedFilter;
+        const VkFilter vkFilter      = filter == OIV::FilterType::None ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+        const VkImageView imageView  = entry.texture->GetImageView();
+        const VkSampler sampler      = pipeline.GetSampler(vkFilter);
         if (entry.descriptorImageView != imageView || entry.descriptorSampler != sampler)
         {
-            pipeline.UpdateDescriptorSet(fDevice, entry.descriptorSet, imageView, sampler);
+            pipeline.UpdateDescriptorSet(fContext.GetDevice(), entry.descriptorSet, imageView, sampler);
             entry.descriptorImageView = imageView;
             entry.descriptorSampler   = sampler;
         }
@@ -733,32 +726,5 @@ namespace OIV
                            sizeof(SelectionPushConstants), &pushConstants);
         vkCmdDraw(fCommandBuffer, 4, 1, 0, 0);
     }
-    const char* VKRenderer::GetGPUName() const
-    {
-        if (fGPUName.empty())
-        {
-            fGPUName = fContext.GetPhysicalDeviceProperties().deviceName;
-            if (fGPUName.empty())
-                fGPUName = "Unknown";
-        }
-        return fGPUName.c_str();
-    }
 
-    const char* VKRenderer::GetAPIVersion() const
-    {
-        if (fAPIVersion.empty())
-        {
-            const uint32_t apiVersion = fContext.GetPhysicalDeviceProperties().apiVersion;
-            fAPIVersion               = std::to_string(VK_API_VERSION_MAJOR(apiVersion)) + "." +
-                                        std::to_string(VK_API_VERSION_MINOR(apiVersion));
-        }
-        return fAPIVersion.c_str();
-    }
-
-    const char* VKRenderer::GetDriverVersion() const
-    {
-        if (fDriverVersion.empty())
-            fDriverVersion = std::to_string(fContext.GetPhysicalDeviceProperties().driverVersion);
-        return fDriverVersion.c_str();
-    }
 }  // namespace OIV

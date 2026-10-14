@@ -1,4 +1,5 @@
 #include "GLContext.h"
+#include <RendererCore/RendererException.h>
 
 #include <GL/glew.h>
 #include <EGL/egl.h>
@@ -8,6 +9,26 @@
 
 #include <algorithm>
 #include <stdexcept>
+
+namespace
+{
+    [[noreturn]] void ThrowEglFailure(const char* operation)
+    {
+        const EGLint error          = eglGetError();
+        OIV::RendererErrorCode code = OIV::RendererErrorCode::BackendFailure;
+        if (error == EGL_CONTEXT_LOST)
+            code = OIV::RendererErrorCode::DeviceLost;
+        else if (error == EGL_BAD_ALLOC)
+            code = OIV::RendererErrorCode::OutOfMemory;
+        else if (error == EGL_BAD_SURFACE)
+            code = OIV::RendererErrorCode::SurfaceUnavailable;
+        if (error == EGL_SUCCESS)
+            throw OIV::RendererException(code, OIV::RendererType::OpenGL, operation);
+        throw OIV::RendererException(code, OIV::RendererType::OpenGL, operation,
+                                     OIV::RendererNativeError{OIV::RendererNativeDomain::EGL,
+                                                              static_cast<std::int64_t>(error)});
+    }
+}  // namespace
 
 class GLContext::NativeState
 {
@@ -56,7 +77,7 @@ void GLContext::Init(std::uintptr_t window, void* nativeDisplay)
         eglInitialize(state->eglDisplay, &majorVersion, &minorVersion) == EGL_FALSE ||
         eglBindAPI(EGL_OPENGL_API) == EGL_FALSE)
     {
-        throw std::runtime_error("Could not initialize EGL for Wayland OpenGL rendering");
+        ThrowEglFailure("Could not initialize EGL for Wayland OpenGL rendering");
     }
 
     constexpr EGLint configAttributes[] = {
@@ -78,12 +99,13 @@ void GLContext::Init(std::uintptr_t window, void* nativeDisplay)
     EGLint configCount{};
     if (eglChooseConfig(state->eglDisplay, configAttributes, &config, 1, &configCount) == EGL_FALSE || configCount == 0)
     {
-        throw std::runtime_error("Could not select an EGL framebuffer configuration");
+        ThrowEglFailure("Could not select an EGL framebuffer configuration");
     }
 
     state->eglWindow = wl_egl_window_create(reinterpret_cast<wl_surface*>(window), 1, 1);
     if (state->eglWindow == nullptr)
-        throw std::runtime_error("Could not create an EGL window for the Wayland surface");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Create EGL window for Wayland surface");
 
     state->eglSurface = eglCreatePlatformWindowSurface(state->eglDisplay, config, state->eglWindow, nullptr);
     constexpr EGLint contextAttributes[] = {
@@ -93,7 +115,7 @@ void GLContext::Init(std::uintptr_t window, void* nativeDisplay)
     if (state->eglSurface == EGL_NO_SURFACE || state->eglContext == EGL_NO_CONTEXT ||
         eglMakeCurrent(state->eglDisplay, state->eglSurface, state->eglSurface, state->eglContext) == EGL_FALSE)
     {
-        throw std::runtime_error("Could not create an EGL OpenGL context for the Wayland surface");
+        ThrowEglFailure("Could not create an EGL OpenGL context for the Wayland surface");
     }
 
     fNativeState = std::move(state);
@@ -119,5 +141,8 @@ void GLContext::SetSwapInterval(int interval)
 void GLContext::SwapBuffers() const
 {
     if (fNativeState != nullptr)
-        eglSwapBuffers(fNativeState->eglDisplay, fNativeState->eglSurface);
+        if (eglSwapBuffers(fNativeState->eglDisplay, fNativeState->eglSurface) == EGL_FALSE)
+        {
+            ThrowEglFailure("Swap buffers");
+        }
 }

@@ -10,9 +10,6 @@
 
 #include <Version.h>
 
-#include <Functions.h>
-#include <ApiGlobal.h>
-
 #include <LLUtils/Exception.h>
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/UniqueIDProvider.h>
@@ -25,7 +22,6 @@
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
 
-#include "OIVCommands.h"
 #include "PlatformFileDialog.h"
 
 #include "VirtualStatusBar.h"
@@ -115,7 +111,7 @@ namespace OIV
         {
             if (fImageState.GetVisibleImage() != nullptr)
             {
-                SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) + 1));
+                SetFilterLevel(static_cast<OIV::FilterType>(static_cast<int>(GetFilterType()) + 1));
                 filterTypeChanged = true;
             }
         }
@@ -123,7 +119,7 @@ namespace OIV
         {
             if (fImageState.GetVisibleImage() != nullptr)
             {
-                SetFilterLevel(static_cast<OIV_Filter_type>(static_cast<int>(GetFilterType()) - 1));
+                SetFilterLevel(static_cast<OIV::FilterType>(static_cast<int>(GetFilterType()) - 1));
                 filterTypeChanged = true;
             }
         }
@@ -147,8 +143,8 @@ namespace OIV
         }
         else if (type == "toggletransparencymode")
         {
-            fTransparencyMode = static_cast<OIV_PROP_TransparencyMode>(
-                (fTransparencyMode + 1) % static_cast<int>(OIV_PROP_TransparencyMode::TM_Count));
+            fTransparencyMode = static_cast<OIV::TransparencyShade>((static_cast<int>(fTransparencyMode) + 1) %
+                                                                    static_cast<int>(OIV::TransparencyShade::Count));
             UpdateRenderViewParams();
 
             LLUtils::native_string_type userMessage = LLUTILS_TEXT("Transparency: ");
@@ -156,16 +152,16 @@ namespace OIV
 
             switch (fTransparencyMode)
             {
-                case OIV_PROP_TransparencyMode::TM_Light:
+                case OIV::TransparencyShade::Light:
                     transparencyMode = LLUTILS_TEXT("Light");
                     break;
-                case OIV_PROP_TransparencyMode::TM_Medium:
+                case OIV::TransparencyShade::Medium:
                     transparencyMode = LLUTILS_TEXT("Medium(default)");
                     break;
-                case OIV_PROP_TransparencyMode::TM_Dark:
+                case OIV::TransparencyShade::Dark:
                     transparencyMode = LLUTILS_TEXT("Dark");
                     break;
-                case OIV_PROP_TransparencyMode::TM_Darker:
+                case OIV::TransparencyShade::Darker:
                     transparencyMode = LLUTILS_TEXT("Darker");
                     break;
                 default:
@@ -225,16 +221,16 @@ namespace OIV
         {
             switch (GetFilterType())
             {
-                case FT_None:
+                case OIV::FilterType::None:
                     result.resValue = LLUTILS_TEXT("No filtering");
                     break;
-                case FT_Linear:
+                case OIV::FilterType::Linear:
                     result.resValue = LLUTILS_TEXT("Linear filtering");
                     break;
-                case FT_Lanczos3:
+                case OIV::FilterType::Lanczos3:
                     result.resValue = LLUTILS_TEXT("Lanczos3 filtering");
                     break;
-                case FT_Count:
+                case OIV::FilterType::Count:
                 default:
                     LL_EXCEPTION_UNEXPECTED_VALUE;
                     break;
@@ -269,8 +265,8 @@ namespace OIV
             text->SetFontSize(12);
             text->SetOutlineWidth(2);
             text->SetPosition({20, 60});
-            text->SetFilterType(OIV_Filter_type::FT_None);
-            text->SetImageRenderMode(IRM_Overlay);
+            text->SetFilterType(OIV::FilterType::None);
+            text->SetImageRenderMode(OIV::ImageRenderMode::Overlay);
             text->SetScale({1.0, 1.0});
             text->SetOpacity(1.0);
             text->SetVisible(true);
@@ -304,11 +300,12 @@ namespace OIV
 #endif
 
         auto message = MessageHelper::CreateSystemInfoMessage({
-            .appName    = "OpenImageViewer",
-            .appVersion = OIV::FormatFullVersion(OIV::CurrentVersion),
-            .gitHash    = OIV_GIT_SHORT_HASH,
-            .buildType  = buildType,
-            .renderer   = OIV::ApiGlobal::sPictureRenderer->GetRenderer(),
+            .appName      = "OpenImageViewer",
+            .appVersion   = OIV::FormatFullVersion(OIV::CurrentVersion),
+            .gitHash      = OIV_GIT_SHORT_HASH,
+            .buildType    = buildType,
+            .renderer     = fRenderer.get(),
+            .rendererType = fRendererType,
         });
 
         text->SetText(message);
@@ -317,8 +314,8 @@ namespace OIV
         text->SetFontSize(12);
         text->SetOutlineWidth(2);
         text->SetPosition({20, 60});
-        text->SetFilterType(OIV_Filter_type::FT_None);
-        text->SetImageRenderMode(IRM_Overlay);
+        text->SetFilterType(OIV::FilterType::None);
+        text->SetImageRenderMode(OIV::ImageRenderMode::Overlay);
         text->SetScale({1.0, 1.0});
         text->SetOpacity(1.0);
         text->SetVisible(true);

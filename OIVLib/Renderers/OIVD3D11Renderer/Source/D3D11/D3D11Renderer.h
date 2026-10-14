@@ -5,9 +5,9 @@
 #include "D3D11Shader.h"
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
-#include <Defs.h>
-#include <Interfaces/IRendererDefs.h>
-#include <RendererCore/RenderFrame.h>
+#include <RendererCore/RenderTypes.h>
+#include <RendererCore/ViewParameters.h>
+#include <RendererCore/IRenderBackend.h>
 #include <LLUtils/Color.h>
 #include <map>
 
@@ -79,13 +79,6 @@ namespace OIV
     };
 #pragma pack()
 
-    enum class ImageDisplayMode
-    {
-        Default,
-        ImageView,
-        Overlay
-    };
-
     // GPU cache keyed by renderer-local ID, with no borrowed record pointers.
     struct ImageEntry
     {
@@ -96,37 +89,36 @@ namespace OIV
     };
 
     // Direct3D graphics implementation with lazy textures keyed by common registration ID.
-    class D3D11Renderer
+    class D3D11Renderer final : public IRenderBackend
     {
       public:
 
-        D3D11Renderer();
+        D3D11Renderer() = default;
 
-      public:
-
-        int Init(const OIV_RendererInitializationParams& initParams);
-        int SetViewParams(const ViewParameters& viewParams);
-        void UpdateGpuParameters();
-        int Render(const RenderFrame& frame);
-        int SetFilterLevel(OIV_Filter_type filterType);
-        int SetselectionRect(const VisualSelectionRect& selection_rect);
-        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
-        void ReleaseImageResources(uint64_t id) noexcept;
-        int SetBackgroundColor(int index, LLUtils::Color backgroundColor);
-        Acceleration GetAcceleration() const { return fDevice->GetAcceleration(); }
-        int GetSelectedGPUIndex() const { return fDevice->GetSelectedGPUIndex(); }
-        DXGI_ADAPTER_DESC GetAdapterDesc() const { return fDevice->GetAdapterDesc(); }
-        LARGE_INTEGER GetDriverVersion() const { return fDevice->GetDriverVersion(); }
+        void Init(const OIV::RendererInitialization& initParams) override;
+        void SetViewParams(const ViewParameters& viewParams) override;
+        void Render(const RenderFrame& frame) override;
+        void SetFilterLevel(OIV::FilterType filterType) override;
+        void SetSelectionRect(VisualSelectionRect selectionRect) override;
+        void SetExposure(const OIV::ColorExposure& exposure) override;
+        void ReleaseImageResources(uint64_t id) noexcept override;
+        void SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
+        const RendererAdapter& GetSelectedAdapter() const override
+        {
+            return fDevice ? fDevice->GetSelectedAdapter() : IRenderBackend::GetSelectedAdapter();
+        }
+        std::vector<RendererAdapter> EnumerateAdapters() override { return D3D11Device::EnumerateAdapters(); }
 
 #pragma region  //**** Private methods*****/
 
       private:
 
+        void UpdateGpuParameters();
         void ResizeBackBuffer(int x, int y);
         void CreateShaders();
         void CreateBuffers();
         void UpdateViewportSize(int x, int y);
-        void SetDevicestate();
+        void SetDeviceState();
         void DrawImage(ImageEntry& entry, const RenderImageRecord& record);
 #pragma endregion
 
@@ -139,7 +131,7 @@ namespace OIV
         // Owned main-image fragment shader.
         D3D11ShaderUniquePtr fImageFragmentShader;
         // Owned selection fragment shader.
-        D3D11ShaderUniquePtr fSelectionFragmentShaer;
+        D3D11ShaderUniquePtr fSelectionFragmentShader;
         // Owned overlay fragment shader.
         D3D11ShaderUniquePtr fImageSimpleFragmentShader;
         // Whether the existing main-image constant buffer requires an update.
@@ -150,8 +142,8 @@ namespace OIV
         VisualSelectionRect fSelectionRect;
         // Existing RGBA background-pattern colors.
         std::array<LLUtils::ColorF32, 2> fBackgroundColors = {{
-            {static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<uint8_t>(0),
-             static_cast<uint8_t>(255)}  // black
+            {static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<uint8_t>(255)}
+            // black
             ,
             {static_cast<uint8_t>(0), static_cast<uint8_t>(0), static_cast<uint8_t>(40),
              static_cast<uint8_t>(255)}  // dark blue
@@ -161,14 +153,14 @@ namespace OIV
         // Renderer-local GPU cache with successful upload revisions and retirement ownership.
         MapImageEntry fImageEntries;
         // Backend cache/data directory supplied by API composition.
-        OIVString fDataPath;
+        std::filesystem::path fDataPath;
         // Opaque canvas clear color.
         LLUtils::ColorF32 fBackgroundColor = {static_cast<uint8_t>(45), static_cast<uint8_t>(45),
                                               static_cast<uint8_t>(48), static_cast<uint8_t>(255)};
 
 #pragma region /* Direct3D111 resources*/
         // Current Direct3D viewport.
-        D3D11_VIEWPORT fViewport{};
+        D3D11_VIEWPORT fViewport{.MinDepth = 0, .MaxDepth = 1};
         // Owned selection constants and their GPU buffer.
         D3D11BufferBoundUniquePtr<CONSTANT_BUFFER_SELECTION_RECT> fBufferSelection;
         // Owned global constants and their GPU buffer.

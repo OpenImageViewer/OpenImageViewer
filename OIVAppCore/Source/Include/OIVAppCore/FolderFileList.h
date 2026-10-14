@@ -9,7 +9,7 @@
 #include <limits>
 #include <iterator>
 #include <set>
-#include <Defs.h>
+#include <OIVAppCore/NavigationResult.h>
 
 namespace OIV
 {
@@ -42,7 +42,7 @@ namespace OIV
                        OnFileIndexChangedCallbackType callback);
 
         index_type GetCurrentIndex() const;
-        ResultCode SetCurrentIndex(index_type index);
+        NavigationResult SetCurrentIndex(index_type index);
         bool IsMarkerIndex(index_type index) const;
         index_type GetIndexFromMarker(index_type marker) const;
         const string_type& GetCurrentItemName() const;
@@ -52,7 +52,7 @@ namespace OIV
         const string_type& GetFolder() const;
         size_t GetSize() const;
         Snapshot CreateSnapshot() const;
-        ResultCode SetCurrentIndexByElementName(const string_type& element);
+        NavigationResult SetCurrentIndexByElementName(const string_type& element);
         void InvalidateCurrentIndex();
         string_type GetElementNameFromIndex(index_type index) const;
         void Sort(const string_type& currentFile);

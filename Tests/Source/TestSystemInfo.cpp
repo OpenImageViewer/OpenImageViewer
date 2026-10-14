@@ -11,35 +11,37 @@ namespace
     {
       public:
 
-        int index                      = -1;
-        OIV::Acceleration acceleration = OIV::Acceleration::Unknown;
+        OIV::RendererAdapter adapter{.name = "Test GPU \xc3\xa9", .apiVersion = "1.3"};
 
-        const char* GetBackendName() const override { return "Vulkan"; }
-        const char* GetGPUName() const override { return "Test GPU \xc3\xa9"; }
-        const char* GetAPIVersion() const override { return "1.3"; }
-        int GetSelectedGPUIndex() const override { return index; }
-        OIV::Acceleration GetAcceleration() const override { return acceleration; }
+        mutable unsigned adapterReads = 0;
+        const OIV::RendererAdapter& GetSelectedAdapter() const override
+        {
+            ++adapterReads;
+            return adapter;
+        }
     };
 }  // namespace
 
 TEST_CASE("System information formats adapter index and acceleration as adjacent rows", "[AppCore][system-info]")
 {
     const int index = GENERATE(-1, 0, 7);
-    auto backend    = std::make_shared<SystemInfoRenderer>();
+    auto backend    = std::make_unique<SystemInfoRenderer>();
     auto& renderer  = *backend;
-    OIV::Renderer facade(backend);
-    renderer.index          = index;
-    renderer.acceleration   = GENERATE(OIV::Acceleration::Hardware, OIV::Acceleration::Software,
-                                       OIV::Acceleration::Unknown);
-    const auto acceleration = LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
-        OIV::GetAccelerationName(renderer.acceleration));
+    OIV::Renderer facade(std::move(backend));
+    renderer.adapter.index        = index;
+    renderer.adapter.acceleration = GENERATE(OIV::Acceleration::Hardware, OIV::Acceleration::Software,
+                                             OIV::Acceleration::Unknown);
+    const auto acceleration       = LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
+        OIV::GetAccelerationName(renderer.adapter.acceleration));
     const auto text = OIV::MessageHelper::CreateSystemInfoMessage({
-        .appName    = "OIViewer",
-        .appVersion = "1.2.3.4",
-        .gitHash    = "abcdef12",
-        .buildType  = "Debug",
-        .renderer   = &facade,
+        .appName      = "OIViewer",
+        .appVersion   = "1.2.3.4",
+        .gitHash      = "abcdef12",
+        .buildType    = "Debug",
+        .renderer     = &facade,
+        .rendererType = OIV::RendererType::Vulkan,
     });
+    CHECK(renderer.adapterReads == 1);
     for (const auto value : {LLUTILS_TEXT("OIViewer"), LLUTILS_TEXT("1.2.3.4"), LLUTILS_TEXT("abcdef12"),
                              LLUTILS_TEXT("Debug"), LLUTILS_TEXT("Vulkan"), LLUTILS_TEXT("Test GPU \u00e9"),
                              LLUTILS_TEXT("1.3"), LLUTILS_TEXT(" physical / "), LLUTILS_TEXT(" logical")})
@@ -80,4 +82,36 @@ TEST_CASE("System information supports an absent renderer", "[AppCore][system-in
     CHECK(text.substr(adapter, adapterIndex - adapter).find(LLUTILS_TEXT("Unknown")) != text.npos);
     CHECK(text.substr(adapterIndex, acceleration - adapterIndex).find(LLUTILS_TEXT("Not reported")) != text.npos);
     CHECK(text.substr(acceleration, apiVersion - acceleration).find(LLUTILS_TEXT("Unknown")) != text.npos);
+}
+
+TEST_CASE("Null renderer exposes stable empty adapter and version records", "[AppCore][system-info]")
+{
+    OIV::NullRenderer renderer;
+    const auto& adapter = renderer.GetSelectedAdapter();
+    renderer.Init({});
+    CHECK(renderer.EnumerateAdapters().empty());
+    CHECK(&renderer.GetSelectedAdapter() == &adapter);
+    CHECK(adapter.index == -1);
+    CHECK(adapter.name.empty());
+    CHECK(adapter.acceleration == OIV::Acceleration::Unknown);
+    CHECK_FALSE(adapter.preferred);
+    CHECK(adapter.apiVersion.empty());
+    CHECK(adapter.driverVersion.empty());
+}
+
+TEST_CASE("System information derives backend names from the selected enum", "[AppCore][system-info]")
+{
+    const auto [type, name]        = GENERATE(std::pair{OIV::RendererType::D3D11, "D3D11"},
+                                              std::pair{OIV::RendererType::Vulkan, "Vulkan"},
+                                              std::pair{OIV::RendererType::OpenGL, "GL"},
+                                              std::pair{OIV::RendererType::Null, "Null"});
+    auto backend                   = std::make_unique<SystemInfoRenderer>();
+    backend->adapter.driverVersion = "123.456";
+    OIV::Renderer renderer(std::move(backend));
+    const auto text = OIV::MessageHelper::CreateSystemInfoMessage({.renderer = &renderer, .rendererType = type});
+    const auto row  = text.find(LLUTILS_TEXT("Renderer"));
+    REQUIRE(row != text.npos);
+    const auto rendererRow = text.substr(row, text.find(LLUTILS_TEXT("Adapter"), row) - row);
+    CHECK(rendererRow.find(LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(name)) != text.npos);
+    CHECK(text.find(LLUTILS_TEXT("123.456")) != text.npos);
 }

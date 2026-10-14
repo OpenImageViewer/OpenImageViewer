@@ -39,14 +39,14 @@ namespace OIV
         return Snapshot{fCurrentFolder, fListFiles, fCurrentEntryIndex};
     }
 
-    ResultCode FolderFileList::SetCurrentIndexByElementName(const string_type& element)
+    NavigationResult FolderFileList::SetCurrentIndexByElementName(const string_type& element)
     {
         list_string_type::iterator it = std::find(fListFiles.begin(), fListFiles.end(), element);
 
         if (it != fListFiles.end())
             return SetCurrentIndex(std::distance(fListFiles.begin(), it));
 
-        return ResultCode::RC_OutOfRange;
+        return std::unexpected(NavigationError::OutOfRange);
     }
 
     FolderFileList::index_type FolderFileList::GetCurrentIndex() const
@@ -59,10 +59,10 @@ namespace OIV
         return (index >= 0 && index < static_cast<index_type>(fListFiles.size()));
     }
 
-    ResultCode FolderFileList::SetCurrentIndex(index_type index)
+    NavigationResult FolderFileList::SetCurrentIndex(index_type index)
     {
         if (fListFiles.empty())
-            return ResultCode::RC_EmptyData;
+            return std::unexpected(NavigationError::EmptyData);
 
         const index_type previousIndex = fCurrentEntryIndex;
 
@@ -76,11 +76,11 @@ namespace OIV
             if (fOnFileIndexChangedCallback != nullptr && previousIndex != fCurrentEntryIndex)
                 fOnFileIndexChangedCallback(fCurrentEntryIndex, previousIndex);
 
-            return ResultCode::RC_Success;
+            return {};
         }
         else
         {
-            return ResultCode::RC_OutOfRange;
+            return std::unexpected(NavigationError::OutOfRange);
         }
     }
     bool FolderFileList::IsMarkerIndex(index_type index) const

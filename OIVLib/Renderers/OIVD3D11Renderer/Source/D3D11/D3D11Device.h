@@ -4,7 +4,7 @@
 #include <dxgi1_4.h>
 #include "D3D11Common.h"
 #include "D3D11Error.h"
-#include <Interfaces/RendererOptions.h>
+#include <RendererCore/RendererOptions.h>
 #include <LLUtils/StringUtility.h>
 #include <array>
 #include <stdexcept>
@@ -18,24 +18,8 @@ namespace OIV
 
         ID3D11DeviceContext* GetContext() const { return fD3dContext.Get(); }
         ID3D11Device* GetdDevice() const { return fD3dDevice.Get(); }
-        int GetSelectedGPUIndex() const { return fGpuIndex; }
-        Acceleration GetAcceleration() const { return fAcceleration; }
-        IDXGIAdapter* GetAdapter() const { return fD3dAdapter.Get(); }
+        const RendererAdapter& GetSelectedAdapter() const { return fSelectedAdapter; }
         IDXGISwapChain* GetSwapChain() const { return fD3dSwapChain.Get(); }
-        DXGI_ADAPTER_DESC GetAdapterDesc() const
-        {
-            DXGI_ADAPTER_DESC desc{};
-            if (fD3dAdapter)
-                fD3dAdapter->GetDesc(&desc);
-            return desc;
-        }
-        LARGE_INTEGER GetDriverVersion() const
-        {
-            LARGE_INTEGER version{};
-            if (fD3dAdapter && FAILED(fD3dAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &version)))
-                version = {};
-            return version;
-        }
         static std::vector<RendererAdapter> EnumerateAdapters()
         {
             ComPtr<IDXGIFactory1> factory;
@@ -66,6 +50,7 @@ namespace OIV
         }
         void Create(HWND hwnd, int adapterIndex, const char* adapterName, std::optional<Acceleration> acceleration)
         {
+            fSelectedAdapter = {};
             static constexpr std::array requestedLevels{D3D_FEATURE_LEVEL_11_0};
             constexpr UINT createFlags = D3D11_CREATE_DEVICE_SINGLETHREADED
 #ifdef _DEBUG
@@ -82,8 +67,8 @@ namespace OIV
                     DXGI_ERROR_NOT_FOUND)
                     throw std::invalid_argument("--adapter-index is outside the D3D11 adapter list");
                 if (!selected)
-                    throw std::runtime_error("Could not enumerate the selected D3D11 adapter");
-                fGpuIndex = adapterIndex;
+                    throw RendererException(RendererErrorCode::BackendFailure, RendererType::D3D11,
+                                            "Enumerate selected D3D11 adapter");
             }
             else if (adapterName)
             {
@@ -98,7 +83,6 @@ namespace OIV
                             D3D11Error::HandleDeviceError(factory->EnumAdapters1(static_cast<UINT>(adapterIndex),
                                                                                  selected.GetAddressOf()),
                                                           "Could not select D3D11 adapter");
-                        fGpuIndex = adapterIndex;
                         break;
                     }
                 if (!selected && acceleration != Acceleration::Software)
@@ -121,7 +105,6 @@ namespace OIV
                 status = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createFlags, requestedLevels.data(),
                                            static_cast<UINT>(requestedLevels.size()), D3D11_SDK_VERSION,
                                            fD3dDevice.GetAddressOf(), nullptr, fD3dContext.GetAddressOf());
-                fAcceleration = Acceleration::Software;
             }
             D3D11Error::HandleDeviceError(status, "The requested adapter cannot create a Direct3D 11 device");
             ComPtr<IDXGIDevice> dxgiDevice;
@@ -132,9 +115,8 @@ namespace OIV
             D3D11Error::HandleDeviceError(fD3dAdapter.As(&adapter1), "Could not query selected adapter properties");
             DXGI_ADAPTER_DESC1 desc{};
             D3D11Error::HandleDeviceError(adapter1->GetDesc1(&desc), "Could not read selected adapter properties");
-            fAcceleration = warp || (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? Acceleration::Software
-                                                                              : Acceleration::Hardware;
-            if (fGpuIndex < 0)
+
+            if (adapterIndex < 0)
             {
                 for (UINT index = 0;; ++index)
                 {
@@ -146,11 +128,24 @@ namespace OIV
                         candidateDesc.AdapterLuid.HighPart == desc.AdapterLuid.HighPart &&
                         candidateDesc.AdapterLuid.LowPart == desc.AdapterLuid.LowPart)
                     {
-                        fGpuIndex = static_cast<int>(index);
+                        adapterIndex = static_cast<int>(index);
                         break;
                     }
                 }
             }
+            fSelectedAdapter = {adapterIndex, LLUtils::StringUtility::ConvertString<std::string>(desc.Description),
+                                desc.VendorId,
+                                (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? Acceleration::Software
+                                                                          : Acceleration::Hardware,
+                                adapterIndex == 0};
+            fSelectedAdapter.apiVersion = "11.0";
+            // Driver reporting is optional and must not reject a usable device.
+            LARGE_INTEGER version{};
+            if (SUCCEEDED(fD3dAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &version)) && version.QuadPart != 0)
+                fSelectedAdapter.driverVersion = std::to_string(HIWORD(version.HighPart)) + "." +
+                                                 std::to_string(LOWORD(version.HighPart)) + "." +
+                                                 std::to_string(HIWORD(version.LowPart)) + "." +
+                                                 std::to_string(LOWORD(version.LowPart));
             ComPtr<IDXGIFactory2> swapFactory;
             D3D11Error::HandleDeviceError(fD3dAdapter->GetParent(IID_PPV_ARGS(swapFactory.GetAddressOf())),
                                           "DXGI 1.2 is required");
@@ -179,8 +174,7 @@ namespace OIV
 
       private:
 
-        int fGpuIndex              = -1;
-        Acceleration fAcceleration = Acceleration::Unknown;
+        RendererAdapter fSelectedAdapter;
         ComPtr<IDXGISwapChain1> fD3dSwapChain;
         ComPtr<ID3D11DeviceContext> fD3dContext;
         ComPtr<ID3D11Device> fD3dDevice;

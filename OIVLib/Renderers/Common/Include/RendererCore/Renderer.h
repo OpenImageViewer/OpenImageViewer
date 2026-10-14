@@ -26,7 +26,7 @@ namespace OIV
         RenderImage(Renderer& owner, uint64_t id) noexcept;
         // Non-owning stable facade, null only after a move.
         Renderer* fOwner;
-        // Renderer-local identity distinct from C ImageHandle, never recycled.
+        // Renderer-local identity, never recycled.
         uint64_t fId;
     };
 
@@ -37,26 +37,21 @@ namespace OIV
     {
       public:
 
-        explicit Renderer(RenderBackendSharedPtr backend);
+        explicit Renderer(std::unique_ptr<OIV::IRenderBackend> backend);
         ~Renderer();
         Renderer(const Renderer&)            = delete;
         Renderer& operator=(const Renderer&) = delete;
         Renderer(Renderer&&)                 = delete;
         Renderer& operator=(Renderer&&)      = delete;
         RenderImage CreateImage(IMCodec::ImageSharedPtr pixels, const RenderImageProperties& properties = {});
-        int Redraw();
+        void Redraw();
         void Shutdown() noexcept;
-        int SetViewParams(const ViewParameters& params);
-        int SetFilterLevel(OIV_Filter_type filter);
-        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure);
-        int SetSelectionRect(VisualSelectionRect selection);
-        int SetBackgroundColor(int index, LLUtils::Color color);
-        Acceleration GetAcceleration() const;
-        const char* GetBackendName() const;
-        const char* GetGPUName() const;
-        const char* GetAPIVersion() const;
-        const char* GetDriverVersion() const;
-        int GetSelectedGPUIndex() const;
+        void SetViewParams(const ViewParameters& params);
+        void SetFilterLevel(OIV::FilterType filter);
+        void SetExposure(const OIV::ColorExposure& exposure);
+        void SetSelectionRect(VisualSelectionRect selection);
+        void SetBackgroundColor(int index, LLUtils::Color color);
+        const RendererAdapter& GetSelectedAdapter() const;
 
       private:
 
@@ -65,9 +60,7 @@ namespace OIV
         void SetImage(uint64_t id, const IMCodec::ImageSharedPtr& pixels);
         void SetProperties(uint64_t id, const RenderImageProperties& properties);
         // Backend owns GPU resources and acknowledges its own successful uploads.
-        RenderBackendSharedPtr fBackend;
-        // Current frame view parameters supplied by API composition.
-        ViewParameters fViewParams{};
+        std::unique_ptr<OIV::IRenderBackend> fBackend;
         // Sole CPU record store, traversed directly during frames in creation order.
         std::map<uint64_t, RenderImageRecord> fImages;
         // Next identity, monotonically advanced only after successful insertion.

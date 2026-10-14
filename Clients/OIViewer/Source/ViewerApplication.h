@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Defs.h>
+#include <RendererFactory.h>
 #include <LLUtils/Utility.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/Rect.h>
@@ -26,7 +26,6 @@
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 #include "ContextMenu.h"
-#include "ViewerRenderPort.h"
 #include <OIVAppCore/AppSettingsPolicy.h>
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/FolderFileList.h>
@@ -244,8 +243,8 @@ namespace OIV
         void ToggleBorders();
         void SetSlideShowEnabled(bool enabled);
         bool GetSlideShowEnabled() const { return fSlideshowPolicy.IsEnabled(); }
-        void SetFilterLevel(OIV_Filter_type filterType);
-        OIV_Filter_type GetFilterType() const;
+        void SetFilterLevel(OIV::FilterType filterType);
+        OIV::FilterType GetFilterType() const;
         void ToggleGrid();
         void UpdateRenderViewParams();
         void Pan(const LLUtils::PointF64& panAmount);
@@ -371,14 +370,18 @@ namespace OIV
         MonitorProvider fMonitorProvider;
 #pragma endregion FrameLimiter
         MainWindow fWindow;
-        // Native rendering stops before window teardown. Images release before this gateway destroys the API.
-        std::unique_ptr<IViewerRenderPort> fRenderGateway;
+        // Native rendering stops before window teardown. Presentations release before their renderer owner.
+        // Declared before every presentation owner so registrations are destroyed first.
+        std::unique_ptr<Renderer> fRenderer;
+        RendererType fRendererType = RendererType::Null;
+        ViewParameters fRenderViewParams{};
+        std::optional<LWS::PixelSize> fViewportSize;
         // Optional main-image registrations, never created for CPU-only stages.
         std::optional<RenderImage> fMainRenderImage;
         // Retained software-resampled registration, released when its pixels are discarded.
         std::optional<RenderImage> fResampledRenderImage;
         // Current per-image filter policy belongs to viewer presentation.
-        OIV_Filter_type fImageFilter = FT_None;
+        OIV::FilterType fImageFilter = OIV::FilterType::None;
         // Time from loading to prepared display, formatted by viewer information policy.
         double fDisplayTime = 0.0;
         // Deferred platform readiness and coalesced redraw request belong to the scheduler.
@@ -412,8 +415,8 @@ namespace OIV
         std::unique_ptr<RawInputState, RawInputStateDeleter> fRawInputState;
         std::unique_ptr<NativeWindowState, NativeWindowStateDeleter> fNativeWindowState;
 
-        bool fIsGridEnabled                         = false;
-        OIV_PROP_TransparencyMode fTransparencyMode = OIV_PROP_TransparencyMode::TM_Medium;
+        bool fIsGridEnabled                      = false;
+        OIV::TransparencyShade fTransparencyMode = OIV::TransparencyShade::Medium;
         // Independent autoscroll overlay released before renderer shutdown.
         std::optional<RenderImage> fAutoScrollAnchor;
         std::thread::id fMainThreadID = std::this_thread::get_id();
@@ -456,10 +459,10 @@ namespace OIV
         LLUtils::native_string_type DefaultTextKeyColorTag   = LLUTILS_TEXT("<textcolor=#ff8930ff>");
         LLUtils::native_string_type DefaultTextValueColorTag = LLUTILS_TEXT("<textcolor=#7672ffff>");
         LLUtils::StopWatch fFileDisplayTimer;
-        ResetTransformationMode fResetTransformationMode           = ResetTransformationMode::ResetAll;
-        const OIV_CMD_ColorExposure_Request DefaultColorCorrection = {1.0, 0.0, 1.0, 1.0, 1.0};
-        OIV_CMD_ColorExposure_Request fColorExposure               = DefaultColorCorrection;
-        OIV_CMD_ColorExposure_Request fLastColorExposure           = fColorExposure;
+        ResetTransformationMode fResetTransformationMode = ResetTransformationMode::ResetAll;
+        const OIV::ColorExposure DefaultColorCorrection  = {1.0, 0.0, 1.0, 1.0, 1.0};
+        OIV::ColorExposure fColorExposure                = DefaultColorCorrection;
+        OIV::ColorExposure fLastColorExposure            = fColorExposure;
         VirtualStatusBar fVirtualStatusBar;
 
         static constexpr double ZoomAmountPerWheelStep = 0.2;

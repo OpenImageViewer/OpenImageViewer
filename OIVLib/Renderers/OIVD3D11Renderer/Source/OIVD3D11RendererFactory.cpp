@@ -1,10 +1,10 @@
 #include "../Include/OIVD3D11RendererFactory.h"
-#include "OIVD3D11Renderer.h"
+#include "D3D11/D3D11Renderer.h"
 
 namespace OIV
 {
-    RenderBackendSharedPtr D3D11RendererFactory::Create()
+    std::unique_ptr<IRenderBackend> CreateD3D11Backend()
     {
-        return std::make_shared<OIVD3D11Renderer>();
+        return std::make_unique<D3D11Renderer>();
     }
 }  // namespace OIV

@@ -232,18 +232,28 @@ namespace
       public:
 
         // Real backend linked against deterministic Vulkan entrypoints.
-        std::shared_ptr<OIV::VKRenderer> backend = std::make_shared<OIV::VKRenderer>();
+        OIV::VKRenderer* backend = nullptr;
         // Stable common facade, declared before the registrations that borrow it.
-        OIV::Renderer renderer{backend};
+        OIV::Renderer renderer;
+        TestRenderer()
+            : renderer(
+                  [this]
+                  {
+                      auto owner = std::make_unique<OIV::VKRenderer>();
+                      backend    = owner.get();
+                      return owner;
+                  }())
+        {
+        }
         // Scenario-owned registrations, released before the facade and backend.
         std::map<TestPixels*, OIV::RenderImage> images;
-        int Init(const OIV_RendererInitializationParams& params) { return backend->Init(params); }
-        int SetViewParams(const OIV::ViewParameters& params) { return backend->SetViewParams(params); }
-        int GetSelectedGPUIndex() const { return backend->GetSelectedGPUIndex(); }
+        void Init(const OIV::RendererInitialization& params) { backend->Init(params); }
+        void SetViewParams(const OIV::ViewParameters& params) { return backend->SetViewParams(params); }
+        const OIV::RendererAdapter& GetSelectedAdapter() const { return backend->GetSelectedAdapter(); }
         auto EnumerateAdapters() { return backend->EnumerateAdapters(); }
         int Register(TestPixels* image)
         {
-            images.emplace(image, renderer.CreateImage(image->image, {.filterType = FT_Linear}));
+            images.emplace(image, renderer.CreateImage(image->image, {.filterType = OIV::FilterType::Linear}));
             return 0;
         }
         int Remove(TestPixels* image)
@@ -251,7 +261,7 @@ namespace
             images.erase(image);
             return 0;
         }
-        int Redraw()
+        void Redraw()
         {
             for (auto& [pixels, presentation] : images)
                 presentation.SetImage(pixels->image);
@@ -916,13 +926,13 @@ TEST_CASE("Vulkan redraw retries an acquired frame after resource or submission 
     TestPixels image;
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         REQUIRE(renderer.Register(&image) == 0);
         driver.failure = failure;
         REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
         // A new redraw must also render scene changes made after a failed present.
         image.Replace();
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.invalidAcquires == 0);
         CHECK(driver.invalidWaits == 0);
         const int completedFrames = failure == Failure::Present ? 2 : 1;
@@ -930,7 +940,7 @@ TEST_CASE("Vulkan redraw retries an acquired frame after resource or submission 
         CHECK(driver.submissions == completedFrames);
         CHECK(driver.presentations == completedFrames);
         CHECK(driver.readableUploads > 0);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.presentations == completedFrames + 1);
         REQUIRE(renderer.Remove(&image) == 0);
     }
@@ -948,7 +958,7 @@ TEST_CASE("Vulkan failed submission permits image removal and swapchain retireme
     TestPixels image;
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         REQUIRE(renderer.Register(&image) == 0);
         driver.failure = Failure::Submit;
         REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
@@ -956,8 +966,8 @@ TEST_CASE("Vulkan failed submission permits image removal and swapchain retireme
         CHECK(driver.invalidWaits == 0);
         SECTION("Resize before retry")
         {
-            REQUIRE(renderer.SetViewParams({.uViewportSize = {64, 64}}) == 0);
-            REQUIRE(renderer.Redraw() == 0);
+            REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {64, 64}}));
+            REQUIRE_NOTHROW(renderer.Redraw());
             CHECK(driver.invalidAcquires == 0);
             CHECK(driver.presentations == 1);
         }
@@ -975,7 +985,7 @@ TEST_CASE("Successful Vulkan submission and presentation commit without host all
     const Failure failure = GENERATE(Failure::SubmitMessage, Failure::PresentMessage);
     TestRenderer renderer;
     TestPixels image;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&image) == 0);
     driver.failure = failure;
     bool completed = false;
@@ -989,7 +999,7 @@ TEST_CASE("Successful Vulkan submission and presentation commit without host all
     }
     failNextHostAllocation = false;
     REQUIRE(completed);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.invalidAcquires == 0);
     CHECK(driver.invalidWaits == 0);
     CHECK(driver.presentations == 2);
@@ -1006,12 +1016,12 @@ TEST_CASE("Vulkan reuses one bounded mapped upload buffer after frame completion
     {
         TestRenderer renderer;
         TestPixels image;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         REQUIRE(renderer.Register(&image) == 0);
         for (int i = 0; i < Frames; ++i)
         {
             image.Replace();
-            REQUIRE(renderer.Redraw() == 0);
+            REQUIRE_NOTHROW(renderer.Redraw());
         }
         const int uploads = oversized ? Frames : 1;
         CHECK(driver.bufferCreations == uploads);
@@ -1040,7 +1050,8 @@ TEST_CASE("Vulkan startup cleans only successfully created handles", "[vulkan][f
         driver.failAfter = GENERATE(0, 1, 2);
     {
         TestRenderer renderer;
-        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}), OIV::VKException);
+        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}),
+                          OIV::VKException);
     }
     CHECK(driver.objects.empty());
     CHECK(driver.views.empty());
@@ -1066,20 +1077,20 @@ TEST_CASE("Vulkan retries complete reconstruction after a partial resize failure
     {
         TestRenderer renderer;
         TestPixels image;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         REQUIRE(renderer.Register(&image) == 0);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         if (formatChanged)
             driver.surfaceFormat = VK_FORMAT_R8G8B8A8_UNORM;
         driver.failure = failure;
         if (failure != Failure::SwapChain)
             driver.failAfter = 1;
         const OIV::ViewParameters view{.uViewportSize = {64, 64}};
-        REQUIRE(renderer.SetViewParams(view) == 0);
+        REQUIRE_NOTHROW(renderer.SetViewParams(view));
         REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
         // OIV supplies the same requested size on the next refresh.
-        REQUIRE(renderer.SetViewParams(view) == 0);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.SetViewParams(view));
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.presentations == 2);
         CHECK(driver.activeRenderFormat == driver.surfaceFormat);
         CHECK(driver.pipelineFormats.size() == 3);
@@ -1096,11 +1107,11 @@ TEST_CASE("Vulkan retains the need to replace a surface after replacement fails"
     driver = {};
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         driver.acquireResults = {VK_ERROR_SURFACE_LOST_KHR};
         driver.failure        = Failure::Surface;
         REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.presentations == 1);
     }
     CHECK(driver.objects.empty());
@@ -1112,9 +1123,9 @@ TEST_CASE("Vulkan completes an event-driven redraw after surface invalidation", 
     const VkResult invalidation = GENERATE(VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR);
     const bool duringPresent    = GENERATE(false, true);
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     (duringPresent ? driver.presentResults : driver.acquireResults).push_back(invalidation);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.presentations == 1);
     CHECK(driver.acquireAttempts == 2);
     CHECK(driver.renderPasses == (duringPresent ? 2 : 1));
@@ -1124,11 +1135,11 @@ TEST_CASE("Vulkan stops retrying a persistently invalid surface", "[vulkan][reco
 {
     driver = {};
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     driver.acquireResults = {VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_OUT_OF_DATE_KHR};
-    REQUIRE_THROWS_AS(renderer.Redraw(), std::runtime_error);
+    REQUIRE_THROWS_AS(renderer.Redraw(), OIV::RendererException);
     CHECK(driver.acquireAttempts == 2);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.presentations == 1);
 }
 
@@ -1138,18 +1149,18 @@ TEST_CASE("Vulkan descriptor pools stay bounded when renderables are replaced", 
     {
         TestRenderer renderer;
         std::array<TestPixels, 33> images;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         for (size_t i = 0; i < images.size(); ++i)
         {
             REQUIRE(renderer.Register(&images[i]) == 0);
         }
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         for (size_t i = 0; i < 320; ++i)
         {
             TestPixels& image = images[i % images.size()];
             REQUIRE(renderer.Remove(&image) == 0);
             REQUIRE(renderer.Register(&image) == 0);
-            REQUIRE(renderer.Redraw() == 0);
+            REQUIRE_NOTHROW(renderer.Redraw());
         }
         CHECK(driver.descriptors.size() == images.size());
         CHECK(driver.poolCreations == 2);
@@ -1164,10 +1175,10 @@ TEST_CASE("Vulkan accepts a suboptimal surface without duplicating the frame", "
 {
     driver = {};
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     driver.acquireResults = {VK_SUBOPTIMAL_KHR};
     driver.presentResults = {VK_SUBOPTIMAL_KHR};
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.acquireAttempts == 1);
     CHECK(driver.presentations == 1);
     CHECK(driver.renderPasses == 1);
@@ -1177,12 +1188,12 @@ TEST_CASE("Vulkan retries a surface replacement that failed during a capabilitie
 {
     driver = {};
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     driver.capabilityResults = {VK_ERROR_SURFACE_LOST_KHR};
     driver.failure           = Failure::Surface;
-    REQUIRE(renderer.SetViewParams({.uViewportSize = {64, 64}}) == 0);
+    REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {64, 64}}));
     REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.presentations == 1);
 }
 
@@ -1191,9 +1202,9 @@ TEST_CASE("Vulkan image removal still releases resources after device loss", "[v
     driver = {};
     TestRenderer renderer;
     TestPixels image;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&image) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     driver.failure = Failure::FenceWait;
     REQUIRE_NOTHROW(renderer.Remove(&image));
     CHECK(driver.images.empty());
@@ -1206,12 +1217,12 @@ TEST_CASE("Vulkan registration releases a pool when host bookkeeping fails", "[v
     {
         TestRenderer renderer;
         TestPixels image;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         driver.failure = Failure::PoolBookkeeping;
         REQUIRE(renderer.Register(&image) == 0);
         REQUIRE_THROWS_AS(renderer.Redraw(), std::bad_alloc);
         CHECK(driver.poolCapacity.empty());
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         REQUIRE(renderer.Remove(&image) == 0);
     }
     CHECK(driver.objects.empty());
@@ -1222,14 +1233,14 @@ TEST_CASE("Vulkan lazy descriptor allocation preserves committed resources after
     driver = {};
     TestRenderer renderer;
     TestPixels image;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&image) == 0);
     CHECK(driver.descriptors.empty());
     driver.failure = Failure::DescriptorCommit;
     REQUIRE_THROWS_AS(renderer.Redraw(), std::bad_alloc);
     failNextHostAllocation = false;
     CHECK(driver.descriptors.size() == 1);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.descriptors.size() == 1);
     REQUIRE(renderer.Remove(&image) == 0);
 }
@@ -1252,9 +1263,9 @@ TEST_CASE("Vulkan uploads raw RGBA rows with packed or padded byte pitches", "[v
     TestPixels image;
     image.image = std::make_shared<IMCodec::Image>(item, IMCodec::ImageItemType::Unknown);
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&image) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE(driver.uploadRowLength >= 2);
     for (uint32_t row = 0; row < 2; ++row)
         for (uint32_t column = 0; column < 8; ++column)
@@ -1288,8 +1299,14 @@ TEST_CASE("Vulkan selects a presentable 1.1 device with stable enumeration indic
     }
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = requested}) == 0);
-        CHECK(renderer.GetSelectedGPUIndex() == expected);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = requested}));
+        const auto& adapter = renderer.GetSelectedAdapter();
+        CHECK(adapter.index == expected);
+        CHECK(adapter.name == "Test GPU");
+        CHECK(adapter.vendorId == 0);
+        CHECK(adapter.acceleration == OIV::Acceleration::Hardware);
+        CHECK(adapter.preferred == (expected == 2));
+        CHECK(&renderer.GetSelectedAdapter() == &adapter);
         CHECK(driver.devices[0].extensionQueries == 0);
         CHECK(driver.devices[expected].propertyQueries == 1);
         if (requested == 1)
@@ -1315,8 +1332,8 @@ TEST_CASE("Vulkan rejects unsupported explicit GPUs without silently selecting a
     }
     {
         TestRenderer renderer;
-        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = 0}),
-                          std::runtime_error);
+        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = 0}),
+                          OIV::RendererException);
         CHECK(driver.devices[1].propertyQueries == 0);
         CHECK(driver.swapChainCreations == 0);
     }
@@ -1329,8 +1346,8 @@ TEST_CASE("Vulkan rejects automatic selection when every GPU is below 1.1", "[vu
     driver.devices[0].apiVersion = VK_API_VERSION_1_0;
     {
         TestRenderer renderer;
-        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}),
-                          std::runtime_error);
+        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}),
+                          OIV::RendererException);
         CHECK(driver.devices[0].extensionQueries == 0);
     }
     CHECK(driver.objects.empty());
@@ -1340,18 +1357,18 @@ TEST_CASE("Vulkan coalesces view changes before rebuilding the swap chain", "[vu
 {
     driver = {};
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     for (int size : {64, 128, 256})
-        REQUIRE(renderer.SetViewParams({.uViewportSize = {size, size}}) == 0);
+        REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {size, size}}));
     CHECK(driver.swapChainCreations == 1);
     CHECK(driver.deviceWaits == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.swapChainCreations == 2);
     CHECK(driver.deviceWaits == 1);
     CHECK(driver.createdExtent.width == 256);
     CHECK(driver.createdExtent.height == 256);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.swapChainCreations == 2);
     CHECK(driver.deviceWaits == 1);
 }
@@ -1360,21 +1377,21 @@ TEST_CASE("Vulkan defers zero-sized views and restores the same previous size", 
 {
     driver = {};
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
-    REQUIRE(renderer.SetViewParams({.uViewportSize = {64, 64}}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
+    REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {64, 64}}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     const int creations = driver.swapChainCreations;
     const int waits     = driver.deviceWaits;
     driver.zeroExtent   = true;
-    REQUIRE(renderer.SetViewParams({.uViewportSize = {0, 0}}) == 0);
+    REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {0, 0}}));
     for (int i = 0; i < 3; ++i)
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.acquireAttempts == 1);
     CHECK(driver.swapChainCreations == creations);
     CHECK(driver.deviceWaits == waits);
     driver.zeroExtent = false;
-    REQUIRE(renderer.SetViewParams({.uViewportSize = {64, 64}}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.SetViewParams({.uViewportSize = {64, 64}}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.presentations == 2);
     CHECK(driver.swapChainCreations == creations + 1);
 }
@@ -1389,17 +1406,17 @@ TEST_CASE("Vulkan initializes images after a zero-extent startup is restored", "
         TestRenderer renderer;
         if (registerBeforeInit)
             REQUIRE(renderer.Register(&image) == 0);
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         if (!registerBeforeInit)
             REQUIRE(renderer.Register(&image) == 0);
         for (int i = 0; i < 3; ++i)
-            REQUIRE(renderer.Redraw() == 0);
+            REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.acquireAttempts == 0);
         CHECK(driver.swapChainCreations == 0);
         CHECK(driver.pipelineCreations == 0);
         CHECK(driver.deviceWaits == 0);
         driver.zeroExtent = false;
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.presentations == 1);
         CHECK(driver.descriptors.size() == 1);
         CHECK(driver.readableUploads > 0);
@@ -1417,23 +1434,23 @@ TEST_CASE("Vulkan keeps recovery pending while the native surface has zero exten
     const VkResult invalidation = GENERATE(VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR);
     const bool duringPresent    = GENERATE(false, true);
     TestRenderer renderer;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     driver.zeroExtent = true;
     (duringPresent ? driver.presentResults : driver.acquireResults).push_back(invalidation);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     const int acquisitions = driver.acquireAttempts;
     const int waits        = driver.deviceWaits;
     const int surfaces     = driver.surfaceCreations;
     for (int i = 0; i < 3; ++i)
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.acquireAttempts == acquisitions);
     CHECK(driver.deviceWaits == waits);
     CHECK(driver.swapChainCreations == 1);
     CHECK(driver.surfaceCreations == surfaces);
     CHECK(surfaces == (invalidation == VK_ERROR_SURFACE_LOST_KHR ? 2 : 1));
     driver.zeroExtent = false;
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.presentations == 2);
     CHECK(driver.swapChainCreations == 2);
     CHECK(driver.invalidWaits == 0);
@@ -1446,13 +1463,13 @@ TEST_CASE("Vulkan reconstructs after a previously failed presentation becomes in
     const VkResult invalidation = GENERATE(VK_ERROR_OUT_OF_DATE_KHR, VK_SUBOPTIMAL_KHR, VK_ERROR_SURFACE_LOST_KHR);
     TestRenderer renderer;
     TestPixels image;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&image) == 0);
     driver.failure = Failure::Present;
     REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
     driver.presentResults.push_back(invalidation);
     image.Replace();
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads > 0);
     CHECK(driver.presentations == (invalidation == VK_SUBOPTIMAL_KHR ? 2 : 1));
     CHECK(driver.swapChainCreations == 2);
@@ -1470,7 +1487,7 @@ TEST_CASE("Vulkan retries failed first pipeline creation after zero-extent start
     {
         TestRenderer renderer;
         TestPixels image;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         REQUIRE(renderer.Register(&image) == 0);
         driver.zeroExtent = false;
         driver.failure    = failure;
@@ -1478,7 +1495,7 @@ TEST_CASE("Vulkan retries failed first pipeline creation after zero-extent start
             driver.failAfter = 1;
         REQUIRE_THROWS(renderer.Redraw());
         REQUIRE(driver.failure == Failure::NoFailure);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         CHECK(driver.presentations == 1);
         CHECK(driver.descriptors.size() == 1);
         CHECK(driver.readableUploads > 0);
@@ -1496,20 +1513,21 @@ TEST_CASE("Vulkan adapter selectors do not silently fall back", "[vulkan][select
     SECTION("Index outside enumeration")
     {
         TestRenderer renderer;
-        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = 99}),
+        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = 99}),
                           std::invalid_argument);
     }
     SECTION("Unknown name")
     {
         TestRenderer renderer;
-        REQUIRE_THROWS_AS(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .adapterName = "missing adapter"}),
-                          std::runtime_error);
+        REQUIRE_THROWS_AS(renderer.Init(
+                              {.container = 1, .dataPath = LLUTILS_TEXT("."), .adapterName = "missing adapter"}),
+                          OIV::RendererException);
     }
     SECTION("Case-insensitive exact name")
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .adapterName = "test gpu"}) == 0);
-        CHECK(renderer.GetSelectedGPUIndex() == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .adapterName = "test gpu"}));
+        CHECK(renderer.GetSelectedAdapter().index == 0);
     }
     CHECK(driver.objects.empty());
 }
@@ -1522,7 +1540,7 @@ TEST_CASE("Vulkan uses bounded queue storage for shared and distinct families", 
     driver.presentFamily  = families.second;
     {
         TestRenderer renderer;
-        REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+        REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
         const auto expected = families.first == families.second ? std::vector<uint32_t>{0}
                                                                 : std::vector<uint32_t>{0, 1};
         CHECK(driver.createdQueueFamilies == expected);
@@ -1548,7 +1566,14 @@ TEST_CASE("Vulkan reports each adapter's acceleration and enumeration index with
     CHECK(adapters[3].acceleration == OIV::Acceleration::Unknown);
     for (size_t i = 0; i < adapters.size(); ++i)
         CHECK(adapters[i].index == static_cast<int>(i));
-    CHECK(renderer.GetSelectedGPUIndex() == -1);
+    const auto& selected = renderer.GetSelectedAdapter();
+    CHECK(selected.index == -1);
+    CHECK(selected.name.empty());
+    CHECK(selected.apiVersion.empty());
+    CHECK(selected.driverVersion.empty());
+    CHECK(selected.vendorId == 0);
+    CHECK(selected.acceleration == OIV::Acceleration::Unknown);
+    CHECK_FALSE(selected.preferred);
     CHECK(driver.objects.empty());
 }
 
@@ -1557,33 +1582,33 @@ TEST_CASE("Common Vulkan presentation retries revisions and reuses unchanged upl
     driver = {};
     TestRenderer renderer;
     TestPixels pixels;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&pixels) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     const auto firstUploads = driver.readableUploads;
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == firstUploads);
     auto& image = renderer.images.at(&pixels);
     image.SetProperties({.position = {5, 5}, .opacity = 0.5});
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == firstUploads);
     pixels.Replace();
     driver.failure = Failure::Submit;
     REQUIRE_THROWS_AS(renderer.Redraw(), OIV::VKException);
     const auto failedUploads = driver.readableUploads;
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == failedUploads + 1);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == failedUploads + 1);
     pixels.image.reset();
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == failedUploads + 1);
     pixels = TestPixels{};
     image.SetProperties({.visible = false});
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == failedUploads + 1);
     image.SetProperties({.visible = true});
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == failedUploads + 2);
 }
 
@@ -1592,14 +1617,14 @@ TEST_CASE("Common registration failure leaves no CPU record or GPU resource", "[
     driver = {};
     TestRenderer renderer;
     TestPixels pixels;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     failNextHostAllocation = true;
     REQUIRE_THROWS_AS(renderer.renderer.CreateImage(pixels.image), std::bad_alloc);
     CHECK(driver.descriptors.empty());
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == 0);
     auto image = renderer.renderer.CreateImage(pixels.image);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.readableUploads == 1);
 }
 
@@ -1608,14 +1633,14 @@ TEST_CASE("Vulkan release failure retains GPU ownership until later completion",
     driver = {};
     TestRenderer renderer;
     TestPixels pixels;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&pixels) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     driver.descriptorFreeResults = {VK_ERROR_OUT_OF_HOST_MEMORY};
     REQUIRE_NOTHROW(renderer.Remove(&pixels));
     CHECK(driver.images.size() == 1);
     CHECK(driver.descriptors.size() == 1);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.images.empty());
     CHECK(driver.descriptors.empty());
 }
@@ -1625,12 +1650,12 @@ TEST_CASE("Vulkan replaces texture dimensions after earlier submitted work compl
     driver = {};
     TestRenderer renderer;
     TestPixels pixels;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&pixels) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     const auto descriptors = driver.descriptors;
     pixels                 = TestPixels(2, 2);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE(driver.images.size() == 1);
     CHECK(driver.images.begin()->second.width == 2);
     CHECK(driver.images.begin()->second.height == 2);
@@ -1640,30 +1665,77 @@ TEST_CASE("Vulkan replaces texture dimensions after earlier submitted work compl
 
 TEST_CASE("Empty Vulkan pixels suppress cached image draws and allow replacement", "[vulkan][revision]")
 {
-    const auto mode = GENERATE(IRM_MainImage, IRM_Overlay);
+    const auto mode = GENERATE(OIV::ImageRenderMode::MainImage, OIV::ImageRenderMode::Overlay);
     driver          = {};
     TestRenderer renderer;
     TestPixels pixels;
-    REQUIRE(renderer.Init({.container = 1, .dataPath = OIV_TEXT("."), .gpuIndex = -1}) == 0);
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .dataPath = LLUTILS_TEXT("."), .gpuIndex = -1}));
     REQUIRE(renderer.Register(&pixels) == 0);
     auto& image = renderer.images.at(&pixels);
-    image.SetProperties({.filterType = FT_Linear, .imageRenderMode = mode});
-    REQUIRE(renderer.renderer.SetSelectionRect({{0, 0}, {1, 1}}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    image.SetProperties({.filterType = OIV::FilterType::Linear, .imageRenderMode = mode});
+    REQUIRE_NOTHROW(renderer.renderer.SetSelectionRect({{0, 0}, {1, 1}}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE(driver.imageDraws == 1);
     REQUIRE(driver.selectionDraws == 1);
     const auto uploads     = driver.readableUploads;
     const auto descriptors = driver.descriptors;
     pixels.image.reset();
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.imageDraws == 1);
     CHECK(driver.selectionDraws == 2);
     CHECK(driver.readableUploads == uploads);
     CHECK(driver.descriptors == descriptors);
     pixels = TestPixels{};
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK(driver.imageDraws == 2);
     CHECK(driver.selectionDraws == 3);
     CHECK(driver.readableUploads == uploads + 1);
     CHECK(renderer.images.size() == 1);
+}
+
+TEST_CASE("Vulkan failure carries portable and native details", "[vulkan][failure]")
+{
+    const OIV::VKException failure(VK_ERROR_DEVICE_LOST, "Submit frame");
+    CHECK(failure.GetCode() == OIV::RendererErrorCode::DeviceLost);
+    CHECK(failure.GetBackend() == OIV::RendererType::Vulkan);
+    CHECK(failure.GetOperation() == "Submit frame");
+    CHECK(failure.GetResult() == VK_ERROR_DEVICE_LOST);
+    REQUIRE(failure.GetNativeError());
+    CHECK(failure.GetNativeError()->domain == OIV::RendererNativeDomain::Vulkan);
+    CHECK(failure.GetNativeError()->value == VK_ERROR_DEVICE_LOST);
+}
+
+TEST_CASE("Vulkan selected adapter survives reads and resets on context teardown", "[vulkan][selection]")
+{
+    driver                 = {};
+    driver.devices[0].type = GENERATE(VK_PHYSICAL_DEVICE_TYPE_CPU, VK_PHYSICAL_DEVICE_TYPE_OTHER);
+    OIV::VKContext context;
+    context.Init({.window = 1, .nativeDisplay = nullptr, .width = 1200, .height = 800, .gpuIndex = 0});
+    const auto& adapter = context.GetSelectedAdapter();
+    CHECK(adapter.name == "Test GPU");
+    CHECK(adapter.acceleration == (driver.devices[0].type == VK_PHYSICAL_DEVICE_TYPE_CPU ? OIV::Acceleration::Software
+                                                                                         : OIV::Acceleration::Unknown));
+    CHECK_FALSE(adapter.preferred);
+    CHECK(driver.devices[0].propertyQueries == 1);
+    context.Purge();
+    CHECK(adapter.index == -1);
+    CHECK(adapter.name.empty());
+    CHECK(adapter.apiVersion.empty());
+    CHECK(adapter.driverVersion.empty());
+    CHECK(adapter.acceleration == OIV::Acceleration::Unknown);
+    CHECK(context.GetPhysicalDevice() == VK_NULL_HANDLE);
+    CHECK(driver.objects.empty());
+}
+
+TEST_CASE("Vulkan selected adapter contains versions without additional property queries", "[vulkan][selection]")
+{
+    driver = {};
+    TestRenderer renderer;
+    renderer.Init({.container = 1});
+    const auto& adapter = renderer.GetSelectedAdapter();
+    CHECK(driver.devices[0].propertyQueries == 1);
+    CHECK(adapter.apiVersion == "1.1");
+    CHECK(adapter.driverVersion == "0");
+    CHECK(&renderer.GetSelectedAdapter() == &adapter);
+    CHECK(driver.devices[0].propertyQueries == 1);
 }

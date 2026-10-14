@@ -40,8 +40,7 @@ namespace OIV
     {
         fRawInputState.reset(new RawInputState(*this));
         fNativeWindowState.reset(new NativeWindowState(fPlatform));
-        fFileWatcher   = std::make_unique<Win32::FileWatcherWin32>();
-        fRenderGateway = std::make_unique<OivRenderGateway>();
+        fFileWatcher = std::make_unique<Win32::FileWatcherWin32>();
     }
 
     void ViewerApplication::RawInputStateDeleter::operator()(RawInputState* state) const noexcept
@@ -68,7 +67,9 @@ namespace OIV
         const auto canvasHandle = LWS::Win32::GetHwnd(fWindow.GetCanvasWindow());
         if (!canvasHandle.has_value())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to obtain the canvas window handle");
-        fRenderGateway->Initialize(reinterpret_cast<LWS::Handle>(*canvasHandle), nullptr, rendering);
+        auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*canvasHandle), nullptr}, rendering);
+        fRenderer     = std::move(created.renderer);
+        fRendererType = created.type;
     }
 
     WindowSizeDecision ViewerApplication::GetWindowSizeDecision(const CommandManager::CommandArgs& args) const

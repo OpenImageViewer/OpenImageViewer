@@ -47,14 +47,16 @@ TEST_CASE("Default and indexed D3D11 startup do not require Vulkan", "[vulkan][l
     REQUIRE(window.handle != nullptr);
     const auto path =
         (std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "runtime-failure-cache").wstring();
-    const OIV_RendererInitializationParams params{
+    const OIV::RendererInitialization params{
         .container = reinterpret_cast<size_t>(window.handle),
         .dataPath  = path.c_str(),
     };
     for (const auto& options : {OIV::RendererOptions{}, OIV::RendererOptions{.adapterIndex = 0}})
     {
         const auto renderer = OIV::SelectRenderer(OIV::GetRendererBackends(), options, params);
-        CHECK(std::string(renderer->GetBackendName()) == "D3D11");
-        CHECK(renderer->GetAcceleration() != OIV::Acceleration::Unknown);
+        CHECK(renderer.type == OIV::RendererType::D3D11);
+        const auto& adapter = renderer.backend->GetSelectedAdapter();
+        CHECK(adapter.acceleration != OIV::Acceleration::Unknown);
+        CHECK(adapter.apiVersion == "11.0");
     }
 }

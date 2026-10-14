@@ -10,8 +10,6 @@
 
 #include <Version.h>
 
-#include <Functions.h>
-#include <ApiGlobal.h>
 #include <LWS/Platform.hpp>
 #ifdef LWS_HAS_WIN32_BACKEND
     #include <LWS/Win32/WindowExtensions.hpp>
@@ -30,8 +28,6 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
-
-#include "OIVCommands.h"
 
 #include <ImageProcessing/FileImage.h>
 #include "VirtualStatusBar.h"
@@ -219,9 +215,10 @@ namespace OIV
         // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
         std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
         InitializeRenderer(rendering);
-        fLabelManager.InitializeRenderer(fRenderGateway->GetRenderer());
+        UpdateRenderViewParams();
+        fLabelManager.InitializeRenderer(*fRenderer);
 
-        // Update oiv lib client size
+        // Capture the canvas extent for the first presentation.
         UpdateWindowSize();
         fWindow.ShowCanvas();
 

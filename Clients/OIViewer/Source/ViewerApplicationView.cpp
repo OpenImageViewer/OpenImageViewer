@@ -8,9 +8,6 @@
 
 #include <Version.h>
 
-#include <Functions.h>
-#include <ApiGlobal.h>
-
 #include <LLUtils/Exception.h>
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
@@ -24,8 +21,6 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
-
-#include "OIVCommands.h"
 
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
@@ -59,9 +54,10 @@ namespace OIV
     void ViewerApplication::OnSelectionRectChanged(const LLUtils::RectI32& selectionRect, bool isVisible)
     {
         if (isVisible)
-            fRenderGateway->SetSelectionRect(selectionRect);
+            fRenderer->SetSelectionRect(
+                {selectionRect.GetCorner(LLUtils::TopLeft), selectionRect.GetCorner(LLUtils::BottomRight)});
         else
-            fRenderGateway->ClearSelectionRect();
+            fRenderer->SetSelectionRect({{-1, -1}, {-1, -1}});
 
         fRefreshOperation.Queue();
     }
@@ -88,21 +84,21 @@ namespace OIV
         fRefreshOperation.Queue();
     }
 
-    OIV_Filter_type ViewerApplication::GetFilterType() const
+    OIV::FilterType ViewerApplication::GetFilterType() const
     {
         return fImageFilter;
     }
 
     void ViewerApplication::UpdateExposure()
     {
-        fRenderGateway->SetColorExposure(fColorExposure);
+        fRenderer->SetExposure(fColorExposure);
         fRefreshOperation.Queue();
     }
 
     bool ViewerApplication::ToggleColorCorrection()
     {
         bool isDefault = true;
-        if (memcmp(&fColorExposure, &DefaultColorCorrection, sizeof(OIV_CMD_ColorExposure_Request)) == 0)
+        if (fColorExposure == DefaultColorCorrection)
         {
             std::swap(fLastColorExposure, fColorExposure);
         }
@@ -150,9 +146,9 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::SetFilterLevel(OIV_Filter_type filterType)
+    void ViewerApplication::SetFilterLevel(OIV::FilterType filterType)
     {
-        fImageFilter = std::clamp(filterType, FT_None, static_cast<OIV_Filter_type>(FT_Count - 1));
+        fImageFilter = std::clamp(filterType, OIV::FilterType::None, OIV::FilterType::Lanczos3);
         UpdateMainRenderImages();
 
         fRefreshOperation.Queue();
@@ -166,14 +162,11 @@ namespace OIV
 
     void ViewerApplication::UpdateRenderViewParams()
     {
-        CmdRequestTexelGrid grid;
-        grid.gridSize         = fIsGridEnabled ? 1.0 : 0.0;
-        grid.transparencyMode = fTransparencyMode;
-        grid.generateMipmaps  = fDownScalingTechnique == DownscalingTechnique::HardwareMipmaps;
-        if (fRenderGateway->SetTexelGrid(grid) == RC_Success)
-        {
-            fRefreshOperation.Queue();
-        }
+        const auto colors                     = ViewerPresentationPolicy::CheckerboardColors(fTransparencyMode);
+        fRenderViewParams.showGrid            = fIsGridEnabled;
+        fRenderViewParams.uTransparencyColor1 = colors[0];
+        fRenderViewParams.uTransparencyColor2 = colors[1];
+        fRefreshOperation.Queue();
     }
 
     void ViewerApplication::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
@@ -254,8 +247,8 @@ namespace OIV
             selectionSizeText->SetTextRenderMode(FreeType::RenderMode::Antialiased);
             selectionSizeText->SetOutlineWidth(0);
 
-            selectionSizeText->SetFilterType(OIV_Filter_type::FT_None);
-            selectionSizeText->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
+            selectionSizeText->SetFilterType(OIV::FilterType::None);
+            selectionSizeText->SetImageRenderMode(OIV::ImageRenderMode::Overlay);
             selectionSizeText->SetScale({1.0, 1.0});
             selectionSizeText->SetOpacity(1.0);
         }
@@ -468,7 +461,11 @@ namespace OIV
         const auto scale          = clientArea.Scale();
         const LWS::PixelSize size = clientArea.pixels.value_or(LWS::PixelSize{});
         // Forward zero extents as well: minimized or unconfigured canvases must suspend presentation.
-        fRenderGateway->SetViewportSize(size);
+        if (fViewportSize != size)
+        {
+            fRenderViewParams.uViewportSize = {size.x, size.y};
+            fViewportSize                   = size;
+        }
         if (scale.has_value() && size.x > 0 && size.y > 0)
         {
             fDPIadjustmentFactor = {scale->x, scale->y};

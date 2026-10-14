@@ -91,15 +91,15 @@ namespace OIV
         fBrowseResidencyController.InvalidateCurrent();
     }
 
-    ResultCode BrowseSessionController::CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath,
-                                                          bool refreshResidency)
+    NavigationResult BrowseSessionController::CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath,
+                                                                bool refreshResidency)
     {
         const auto normalizedPath = std::filesystem::path(absoluteFilePath).lexically_normal();
         const auto normalizedFile = normalizedPath.native();
         const auto folderPath     = normalizedPath.parent_path().native();
 
         if (!std::filesystem::exists(normalizedPath))
-            return ResultCode::RC_FileNotFound;
+            return std::unexpected(NavigationError::FileNotFound);
 
         if (normalizedFile == fRemovedFile)
             fRemovedFile.clear();
@@ -134,7 +134,7 @@ namespace OIV
         if (refreshResidency && HasCommittedFolderRepresentation())
             fBrowseResidencyController.RefreshCommittedCurrent(fFolderFileList->CreateSnapshot());
 
-        return ResultCode::RC_Success;
+        return {};
     }
 
     void BrowseSessionController::InvalidateCurrent()
@@ -432,14 +432,14 @@ namespace OIV
             fFolderFileList->SetFolder(fPendingBrowseRequest.folderPath, std::move(fileList), acceptedFile);
         }
 
-        ResultCode setCurrentResult = ResultCode::RC_Success;
+        NavigationResult setCurrentResult = {};
         {
             const ScopedFileIndexChangeSuppression suppressFileIndexChanged(fSuppressFileIndexChanged);
             setCurrentResult      = fFolderFileList->SetCurrentIndexByElementName(acceptedFile);
             fCommittedCurrentFile = acceptedFile;
         }
 
-        if (setCurrentResult != ResultCode::RC_Success || HasCommittedFolderRepresentation() == false)
+        if (!setCurrentResult || HasCommittedFolderRepresentation() == false)
         {
             ClearPendingBrowseRequest();
             return {};

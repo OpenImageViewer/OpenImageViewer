@@ -9,8 +9,6 @@
 
 #include <Version.h>
 
-#include <Functions.h>
-#include <ApiGlobal.h>
 #include <LWS/Platform.hpp>
 #ifdef LWS_HAS_WIN32_BACKEND
     #include <LWS/Win32/WindowExtensions.hpp>
@@ -32,8 +30,6 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
-
-#include "OIVCommands.h"
 
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
@@ -117,8 +113,8 @@ namespace OIV
 
     void ViewerApplication::ReleaseWindowResources()
     {
-        // Stop callbacks before native rendering, including timers entered through nested dispatch. The gateway
-        // stays alive until images and queued results are destroyed; only then may it release the global API.
+        // Stop callbacks before native rendering, including timers entered through nested dispatch.
+        // The renderer owner stays alive until its image registrations and queued results are released.
         if (!fIsShuttingDown.exchange(true))
         {
             fUiLifetime.reset();
@@ -128,13 +124,13 @@ namespace OIV
                 fAutoScroll->ToggleAutoScroll();
             if (fMessageManager)
                 fMessageManager->Stop();
-            // Presentation owners release while their facade and orderly native handles live.
+            // Presentation owners release while their renderer and native handles are still available.
             fAutoScrollAnchor.reset();
             fLabelManager.RemoveAll();
             fResampledRenderImage.reset();
             fMainRenderImage.reset();
-            if (fRenderGateway != nullptr)
-                ApiGlobal::sPictureRenderer->Shutdown();
+            if (fRenderer != nullptr)
+                fRenderer->Shutdown();
         }
     }
 
@@ -265,9 +261,9 @@ namespace OIV
     void ViewerApplication::UpdateMainRenderImages()
     {
         // Before renderer initialization, retain only CPU data and desired view state.
-        if (!fRenderGateway || !ApiGlobal::sPictureRenderer || !ApiGlobal::sPictureRenderer->GetRenderer())
+        if (!fRenderer)
             return;
-        Renderer& renderer           = fRenderGateway->GetRenderer();
+        Renderer& renderer           = *fRenderer;
         const auto updateRenderImage = [&renderer](std::optional<RenderImage>& presentation,
                                                    const IMCodec::ImageSharedPtr& pixels,
                                                    const RenderImageProperties& properties)
@@ -291,7 +287,7 @@ namespace OIV
             .opacity         = 1.0,
             .visible         = !resampled,
             .filterType      = fImageFilter,
-            .imageRenderMode = IRM_MainImage,
+            .imageRenderMode = OIV::ImageRenderMode::MainImage,
         };
         // Keep the hidden full-resolution registration so its GPU texture can be reused
         // when switching back from the resampled result.
@@ -312,8 +308,9 @@ namespace OIV
         else if (!fIsShuttingDown)
         {
             UpdateMainRenderImages();
-            fLabelManager.Prepare(fRenderGateway->GetRenderer());
-            fRenderGateway->Refresh();
+            fLabelManager.Prepare(*fRenderer);
+            fRenderer->SetViewParams(fRenderViewParams);
+            fRenderer->Redraw();
         }
     }
 
@@ -532,9 +529,9 @@ namespace OIV
                 fFileSorter.SetSortDirection(action.sortType, action.sortDirection);
                 break;
             case AppSettingsPolicy::ActionType::BackgroundColor:
-                ApiGlobal::sPictureRenderer->SetBackgroundColor(
-                    action.backgroundColorIndex,
-                    LLUtils::Color::FromString(LLUtils::StringUtility::ToAString(action.textValue)));
+                fRenderer->SetBackgroundColor(action.backgroundColorIndex,
+                                              LLUtils::Color::FromString(
+                                                  LLUtils::StringUtility::ToAString(action.textValue)));
                 fRefreshOperation.Queue();
                 break;
             case AppSettingsPolicy::ActionType::BiggestSubImageOnLoad:
@@ -625,7 +622,6 @@ namespace OIV
             imageInfoText->SetBackgroundColor(LLUtils::Color(0, 0, 0, 127));
             imageInfoText->SetFontPath(LabelManager::sFixedFontPath);
             imageInfoText->SetFontSize(12);
-            // imageInfoText->SetRenderMode(OIV_PROP_CreateText_Mode::CTM_AntiAliased);
             imageInfoText->SetOutlineWidth(2);
             imageInfoText->SetPosition({20, 60});
 

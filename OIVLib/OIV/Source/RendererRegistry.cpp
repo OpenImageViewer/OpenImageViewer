@@ -15,16 +15,17 @@ namespace OIV
     {
         // Prefer D3D11 on Windows. CMake excludes it elsewhere, leaving Vulkan before GL on Linux.
         // Startup selection and command-line help share this ordered table.
-        constexpr std::array<RendererBackend, OIV_BUILD_RENDERER_VK + OIV_BUILD_RENDERER_D3D11 + OIV_BUILD_RENDERER_GL>
+        constexpr size_t num_installed_renderers = OIV_BUILD_RENDERER_VK + OIV_BUILD_RENDERER_D3D11 + OIV_BUILD_RENDERER_GL;
+        constexpr std::array<RendererBackend, num_installed_renderers>
             Backends{{
 #if OIV_BUILD_RENDERER_D3D11
-                {{RendererType::D3D11, "D3D11", true}, &D3D11RendererFactory::Create},
+                {{RendererType::D3D11, "D3D11", true}, &CreateD3D11Backend},
 #endif
 #if OIV_BUILD_RENDERER_VK
-                {{RendererType::Vulkan, "Vulkan", true}, &VKRendererFactory::Create},
+                {{RendererType::Vulkan, "Vulkan", true}, &CreateVulkanBackend},
 #endif
 #if OIV_BUILD_RENDERER_GL
-                {{RendererType::OpenGL, "GL", false}, &GLRendererFactory::Create},
+                {{RendererType::OpenGL, "GL", false}, &CreateOpenGLBackend},
 #endif
             }};
         static_assert(Backends.size() <= MaxRendererCount);

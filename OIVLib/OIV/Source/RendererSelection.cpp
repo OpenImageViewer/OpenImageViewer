@@ -16,8 +16,8 @@ namespace
 
 namespace OIV
 {
-    RenderBackendSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
-                                          const OIV_RendererInitializationParams& params)
+    BackendSelection SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
+                                    const OIV::RendererInitialization& params)
     {
         struct Candidate
         {
@@ -40,7 +40,7 @@ namespace OIV
         const auto name = !options.adapterIndex && options.adapterName ? detail::TrimAdapterName(*options.adapterName)
                                                                        : std::string_view{};
         const bool constrained = options.adapterIndex || options.adapterName;
-        RenderBackendSharedPtr selected;
+        BackendSelection selected;
         std::string failures;
         const auto record = [&](std::string message)
         {
@@ -49,7 +49,7 @@ namespace OIV
         };
         for (const auto tier : AccelerationOrder)
         {
-            for (size_t b = 0; b < backends.size() && !selected; ++b)
+            for (size_t b = 0; b < backends.size() && !selected.backend; ++b)
             {
                 const auto& backend = backends[b];
                 auto& state         = states[b];
@@ -80,12 +80,12 @@ namespace OIV
                 }
                 // With a name, enumeration order wins. Otherwise preserve each API's automatic
                 // preferred GPU, then exhaust the other devices in the current acceleration tier.
-                for (int preference = 0; preference < 2 && !selected; ++preference)
+                for (int preference = 0; preference < 2 && !selected.backend; ++preference)
                 {
                     for (auto& candidate : state.candidates)
                     {
                         const bool preferred = !constrained && candidate.adapter.preferred;
-                        if (selected || preferred != (preference == 0) || candidate.exhausted ||
+                        if (selected.backend || preferred != (preference == 0) || candidate.exhausted ||
                             (!candidate.needsClassification && candidate.adapter.acceleration != tier))
                             continue;
                         const auto description = std::string(backend.info.name) + " adapter " +
@@ -93,22 +93,19 @@ namespace OIV
                                                  candidate.adapter.name + ")";
                         try
                         {
-                            auto renderer            = backend.create();
-                            auto initialization      = params;
-                            const OIVString dataPath = OIVString(params.dataPath ? params.dataPath : OIV_TEXT(".")) +
-                                                       OIV_TEXT("/") +
-                                                       LLUtils::StringUtility::ConvertString<OIVString>(
-                                                           std::string(backend.info.name));
-                            initialization.dataPath  = dataPath.c_str();
-                            initialization.gpuIndex  = candidate.adapter.index;
+                            auto renderer           = backend.create();
+                            auto initialization     = params;
+                            initialization.dataPath = (params.dataPath.empty() ? std::filesystem::path(".")
+                                                                               : params.dataPath) /
+                                                      backend.info.name;
+                            initialization.gpuIndex = candidate.adapter.index;
                             // Index precedence and name filtering were resolved before entering the backend.
                             initialization.adapterName  = nullptr;
                             initialization.acceleration = candidate.needsClassification
                                                               ? std::nullopt
                                                               : std::optional{candidate.adapter.acceleration};
-                            if (renderer->Init(initialization) != 0)
-                                throw std::runtime_error("Initialization returned a failure status");
-                            const auto actual              = renderer->GetAcceleration();
+                            renderer->Init(initialization);
+                            const auto actual              = renderer->GetSelectedAdapter().acceleration;
                             candidate.adapter.acceleration = actual;
                             candidate.needsClassification  = false;
                             const bool soleContext         = !backend.info.supportsAdapterSelection &&
@@ -123,7 +120,7 @@ namespace OIV
                             {
                                 LL_LOG(RendererLog(), LLUtils::LogLevel::Info, "Selected {} [{}]", description,
                                        GetAccelerationName(actual));
-                                selected = std::move(renderer);
+                                selected = {.backend = std::move(renderer), .type = backend.info.type};
                             }
                         }
                         catch (const std::exception& error)
@@ -134,10 +131,10 @@ namespace OIV
                     }
                 }
             }
-            if (selected)
+            if (selected.backend)
                 break;
         }
-        if (!selected)
+        if (!selected.backend)
             throw std::runtime_error("No eligible renderer could initialize." + failures);
         return selected;
     }

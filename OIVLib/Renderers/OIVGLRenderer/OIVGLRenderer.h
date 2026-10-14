@@ -16,32 +16,28 @@
 namespace OIV
 {
     // OpenGL graphics backend borrowing prepared common records only during rendering.
-    class OIVGLRenderer : public IRenderBackend
+    class OIVGLRenderer final : public IRenderBackend
     {
       public:
 
         OIVGLRenderer() = default;
         ~OIVGLRenderer() override;
 
-        int Init(const OIV_RendererInitializationParams& initParams) override;
-        int SetViewParams(const ViewParameters& viewParams) override;
-        int Render(const RenderFrame& frame) override;
-        int SetFilterLevel(OIV_Filter_type filterType) override;
-        int SetSelectionRect(VisualSelectionRect selectionRect) override;
-        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
-        int SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
+        void Init(const OIV::RendererInitialization& initParams) override;
+        void SetViewParams(const ViewParameters& viewParams) override;
+        void Render(const RenderFrame& frame) override;
+        void SetFilterLevel(OIV::FilterType filterType) override;
+        void SetSelectionRect(VisualSelectionRect selectionRect) override;
+        void SetExposure(const OIV::ColorExposure& exposure) override;
+        void SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
         void ReleaseImageResources(uint64_t id) noexcept override;
 
-        Acceleration GetAcceleration() const override { return fAcceleration; }
-        const char* GetBackendName() const override { return "GL"; }
-        const char* GetGPUName() const override;
-        const char* GetAPIVersion() const override;
-        const char* GetDriverVersion() const override { return ""; }
+        const RendererAdapter& GetSelectedAdapter() const override { return fSelectedAdapter; }
 
       private:
 
         // Selected adapter acceleration classification.
-        Acceleration fAcceleration = Acceleration::Unknown;
+        RendererAdapter fSelectedAdapter;
 
         // GPU cache keyed by renderer-local ID, with no borrowed record pointers.
         struct ImageEntry
@@ -59,7 +55,7 @@ namespace OIV
         void DrawImage(ImageEntry& entry, const RenderImageRecord& record);
         void DrawSelectionRect() const;
         void PrepareResources();
-        void RenderImages(const RenderFrame& frame, OIV_Image_Render_mode renderMode);
+        void RenderImages(const RenderFrame& frame, OIV::ImageRenderMode renderMode);
         void UpdateGpuParams(const ImageEntry& entry, const RenderImageRecord& record) const;
         void UpdateViewportSize(int width, int height);
 
@@ -85,7 +81,7 @@ namespace OIV
         // Current client selection rectangle, with the existing absent sentinel.
         VisualSelectionRect fSelectionRect{{-1, -1}, {-1, -1}};
         // Global fallback sampling policy for the existing per-image filter behavior.
-        OIV_Filter_type fFilterType{FT_Linear};
+        OIV::FilterType fFilterType{OIV::FilterType::Linear};
         // Existing shader exposure multiplier.
         float fExposure{1.0F};
         // Existing shader color offset.
@@ -96,9 +92,5 @@ namespace OIV
         float fSaturation{1.0F};
         // Whether the existing texel-grid visualization is enabled.
         bool fShowGrid{};
-        // Cached UTF-8 selected GPU name.
-        mutable std::string fGPUName;
-        // Cached UTF-8 graphics API version.
-        mutable std::string fAPIVersion;
     };
 }  // namespace OIV

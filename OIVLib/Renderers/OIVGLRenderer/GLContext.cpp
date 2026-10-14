@@ -1,11 +1,11 @@
 #include "GLContext.h"
+#include <RendererCore/RendererException.h>
 
 #include <windows.h>
 #include <GL/glew.h>
 #include <GL/wglew.h>
 
 #include <cstring>
-#include <stdexcept>
 
 class GLContext::NativeState
 {
@@ -35,7 +35,10 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
     if (state.deviceContext == nullptr)
     {
         Purge();
-        throw std::runtime_error("Could not acquire an OpenGL device context");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not acquire an OpenGL device context",
+                                     OIV::RendererNativeError{OIV::RendererNativeDomain::Win32,
+                                                              static_cast<std::int64_t>(::GetLastError())});
     }
 
     PIXELFORMATDESCRIPTOR descriptor{
@@ -53,7 +56,10 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
         if (format == 0 || SetPixelFormat(state.deviceContext, format, &descriptor) == FALSE)
         {
             Purge();
-            throw std::runtime_error("Could not select an OpenGL pixel format");
+            throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                         "Could not select an OpenGL pixel format",
+                                         OIV::RendererNativeError{OIV::RendererNativeDomain::Win32,
+                                                                  static_cast<std::int64_t>(::GetLastError())});
         }
     }
 
@@ -61,7 +67,10 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
     if (state.renderContext == nullptr || wglMakeCurrent(state.deviceContext, state.renderContext) == FALSE)
     {
         Purge();
-        throw std::runtime_error("Could not create an OpenGL rendering context");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not create an OpenGL rendering context",
+                                     OIV::RendererNativeError{OIV::RendererNativeDomain::Win32,
+                                                              static_cast<std::int64_t>(::GetLastError())});
     }
 
     const auto getExtensions = reinterpret_cast<PFNWGLGETEXTENSIONSSTRINGEXTPROC>(
@@ -98,5 +107,11 @@ void GLContext::Resize([[maybe_unused]] int width, [[maybe_unused]] int height) 
 void GLContext::SwapBuffers() const
 {
     if (fNativeState != nullptr)
-        ::SwapBuffers(fNativeState->deviceContext);
+        if (::SwapBuffers(fNativeState->deviceContext) == FALSE)
+        {
+            const DWORD error = ::GetLastError();
+            throw OIV::RendererException(
+                OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL, "Swap buffers",
+                OIV::RendererNativeError{OIV::RendererNativeDomain::Win32, static_cast<std::int64_t>(error)});
+        }
 }

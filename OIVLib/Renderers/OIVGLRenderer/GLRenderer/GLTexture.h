@@ -1,7 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
-#include <LLUtils/Exception.h>
+#include <RendererCore/RendererException.h>
 
 #include <cstddef>
 
@@ -16,7 +16,16 @@ namespace OIV
         {
             glGenTextures(1, &fTexture);
             if (fTexture == 0)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Could not allocate an OpenGL texture");
+            {
+                const GLenum error = glGetError();
+                const auto code    = error == GL_OUT_OF_MEMORY ? RendererErrorCode::OutOfMemory
+                                                               : RendererErrorCode::BackendFailure;
+                if (error != GL_NO_ERROR)
+                    throw RendererException(code, RendererType::OpenGL, "Allocate OpenGL texture",
+                                            RendererNativeError{RendererNativeDomain::OpenGL,
+                                                                static_cast<std::int64_t>(error)});
+                throw RendererException(code, RendererType::OpenGL, "Allocate OpenGL texture");
+            }
             Bind();
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -47,8 +56,12 @@ namespace OIV
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0,
                          GL_RGBA, GL_UNSIGNED_BYTE, buffer);
             // A failed upload must leave the backend revision unacknowledged for retry.
-            if (glGetError() != GL_NO_ERROR)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "OpenGL texture upload failed");
+            const GLenum error = glGetError();
+            if (error != GL_NO_ERROR)
+                throw RendererException(
+                    error == GL_OUT_OF_MEMORY ? RendererErrorCode::OutOfMemory : RendererErrorCode::BackendFailure,
+                    RendererType::OpenGL, "Upload OpenGL texture",
+                    RendererNativeError{RendererNativeDomain::OpenGL, static_cast<std::int64_t>(error)});
         }
 
       private:

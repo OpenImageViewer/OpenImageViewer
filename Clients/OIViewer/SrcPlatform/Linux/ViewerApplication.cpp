@@ -50,7 +50,6 @@ namespace OIV
         fNativeWindowState.reset(new NativeWindowState());
         fFileWatcher.reset();
         fPresentationReady = false;
-        fRenderGateway     = std::make_unique<OivRenderGateway>();
     }
 
     void ViewerApplication::RawInputStateDeleter::operator()(RawInputState* state) const noexcept
@@ -70,9 +69,12 @@ namespace OIV
 
     void ViewerApplication::InitializeRenderer(const RendererOptions& rendering)
     {
-        auto& canvas = fWindow.GetCanvasWindow();
-        fRenderGateway->Initialize(reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(canvas)),
-                                   *LWS::Wayland::GetDisplay(canvas), rendering);
+        auto& canvas  = fWindow.GetCanvasWindow();
+        auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(canvas)),
+                                        *LWS::Wayland::GetDisplay(canvas)},
+                                       rendering);
+        fRenderer     = std::move(created.renderer);
+        fRendererType = created.type;
     }
 
     WindowSizeDecision ViewerApplication::GetWindowSizeDecision(const CommandManager::CommandArgs& args) const

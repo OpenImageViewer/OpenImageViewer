@@ -1,17 +1,31 @@
 #pragma once
 
 #include "VKRuntime.h"
-#include <stdexcept>
+#include <RendererCore/RendererException.h>
 #include <string>
 
 namespace OIV
 {
-    class VKException : public std::runtime_error
+    inline RendererErrorCode ClassifyVkResult(VkResult result) noexcept
+    {
+        RendererErrorCode code = RendererErrorCode::BackendFailure;
+        if (result == VK_ERROR_DEVICE_LOST)
+            code = RendererErrorCode::DeviceLost;
+        else if (result == VK_ERROR_OUT_OF_HOST_MEMORY || result == VK_ERROR_OUT_OF_DEVICE_MEMORY)
+            code = RendererErrorCode::OutOfMemory;
+        else if (result == VK_ERROR_SURFACE_LOST_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+            code = RendererErrorCode::SurfaceUnavailable;
+        return code;
+    }
+
+    class VKException : public RendererException
     {
       public:
 
-        VKException(VkResult result, const std::string& message)
-            : std::runtime_error(message + " (VkResult: " + std::to_string(result) + ")"), fResult(result)
+        VKException(VkResult result, const std::string& operation)
+            : RendererException(ClassifyVkResult(result), RendererType::Vulkan, operation,
+                                RendererNativeError{RendererNativeDomain::Vulkan, static_cast<std::int64_t>(result)}),
+              fResult(result)
         {
         }
 

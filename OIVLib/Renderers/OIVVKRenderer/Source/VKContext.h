@@ -1,23 +1,14 @@
 #pragma once
 
 #include <cstdint>
-#include <Interfaces/RendererOptions.h>
+#include <RendererCore/RendererOptions.h>
 #include <vector>
 
 #ifdef _WIN32
     #include <windows.h>
 #endif
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include <vulkan/vulkan.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 namespace OIV
 {
@@ -35,19 +26,18 @@ namespace OIV
             const char* adapterName = nullptr;
         };
 
-        VKContext();
+        VKContext()                            = default;
         VKContext(const VKContext&)            = delete;
         VKContext& operator=(const VKContext&) = delete;
         ~VKContext();
 
         static std::vector<RendererAdapter> EnumerateAdapters();
-        Acceleration GetAcceleration() const;
+        const RendererAdapter& GetSelectedAdapter() const { return fSelectedAdapter; }
         void Init(const CreateParams& params);
         void Purge();
         bool RecreateSwapChain(int width, int height, bool recoverSurface);
 
         VkPhysicalDevice GetPhysicalDevice() const { return fPhysicalDevice; }
-        VkPhysicalDeviceProperties GetPhysicalDeviceProperties() const;
         VkDevice GetDevice() const { return fDevice; }
         VkSwapchainKHR GetSwapChain() const { return fSwapChain; }
         VkQueue GetGraphicsQueue() const { return fGraphicsQueue; }
@@ -57,13 +47,12 @@ namespace OIV
         VkCommandPool GetCommandPool() const { return fCommandPool; }
         const std::vector<VkImage>& GetSwapChainImages() const { return fSwapChainImages; }
         const std::vector<VkImageView>& GetSwapChainImageViews() const { return fSwapChainImageViews; }
-        int GetGpuIndex() const { return fGpuIndex; }
 
       private:
 
         void CreateInstance();
         void CreateSurface(void* nativeDisplay, std::uintptr_t window);
-        void PickPhysicalDevice(const char* adapterName);
+        void PickPhysicalDevice(int gpuIndex, const char* adapterName);
         bool IsPhysicalDeviceSuitable(VkPhysicalDevice device, uint32_t& graphicsQueueFamily,
                                       uint32_t& presentQueueFamily) const;
         void CreateLogicalDevice();
@@ -89,7 +78,7 @@ namespace OIV
         std::vector<VkImage> fSwapChainImages;
         std::vector<VkImageView> fSwapChainImageViews;
 
-        int fGpuIndex{-1};
+        RendererAdapter fSelectedAdapter;
 
         std::uintptr_t fWindow{};
 #ifdef __linux__
