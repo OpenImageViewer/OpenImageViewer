@@ -50,10 +50,9 @@ namespace
 
 TEST_CASE("OpenGL renderer factory implements the current renderer contract", "[renderer][opengl]")
 {
-    const auto backend = OIV::GLRendererFactory::Create();
-    OIV::Renderer renderer(backend);
-
+    auto backend = OIV::CreateOpenGLBackend();
     REQUIRE(backend != nullptr);
+    OIV::Renderer renderer(std::move(backend));
     REQUIRE_NOTHROW(renderer.CreateImage({}));
 }
 
@@ -73,12 +72,12 @@ TEST_CASE("OpenGL renderer draws canvas, selection, and overlays with opaque out
     REQUIRE(window.Create(windowConfig) == LWS::Result::Success);
     std::ignore = platform.RefreshMonitors();
 
-    const auto backend = OIV::GLRendererFactory::Create();
-    OIV::Renderer renderer(backend);
-    REQUIRE(backend->Init({
-                .container     = reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(window)),
-                .nativeDisplay = *LWS::Wayland::GetDisplay(window),
-            }) == 0);
+    auto backend = OIV::CreateOpenGLBackend();
+    REQUIRE_NOTHROW(backend->Init({
+        .container     = reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(window)),
+        .nativeDisplay = *LWS::Wayland::GetDisplay(window),
+    }));
+    OIV::Renderer renderer(std::move(backend));
 
     GLuint framebuffer{};
     GLuint colorTexture{};
@@ -90,19 +89,19 @@ TEST_CASE("OpenGL renderer draws canvas, selection, and overlays with opaque out
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
     REQUIRE(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
 
-    REQUIRE(renderer.SetViewParams({
-                .uViewportSize       = {64, 64},
-                .uTransparencyColor1 = {0, 255, 0},
-                .uTransparencyColor2 = {255, 255, 0},
-                .showGrid            = false,
-            }) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.SetViewParams({
+        .uViewportSize       = {64, 64},
+        .uTransparencyColor1 = {0, 255, 0},
+        .uTransparencyColor2 = {255, 255, 0},
+        .showGrid            = false,
+    }));
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE((ReadPixel(0, 0) == std::array<uint8_t, 4>{45, 45, 48, 255}));
 
-    REQUIRE(renderer.SetBackgroundColor(0, {255, 0, 0}) == 0);
-    REQUIRE(renderer.SetBackgroundColor(1, {0, 0, 255}) == 0);
-    auto image = std::make_optional(renderer.CreateImage(CreateBlackImage(), {.filterType = FT_Linear}));
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.SetBackgroundColor(0, {255, 0, 0}));
+    REQUIRE_NOTHROW(renderer.SetBackgroundColor(1, {0, 0, 255}));
+    auto image = std::make_optional(renderer.CreateImage(CreateBlackImage(), {.filterType = OIV::FilterType::Linear}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     const auto backgroundFirst         = ReadPixel(8, 8);
     const auto backgroundSecond        = ReadPixel(24, 8);
     const auto selectionInteriorBefore = ReadPixel(32, 32);
@@ -113,27 +112,28 @@ TEST_CASE("OpenGL renderer draws canvas, selection, and overlays with opaque out
     REQUIRE(backgroundSecond[0] < 50);
     REQUIRE(backgroundSecond[2] > 200);
 
-    REQUIRE(renderer.SetSelectionRect({{16, 16}, {48, 48}}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.SetSelectionRect({{16, 16}, {48, 48}}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE(ReadPixel(8, 8) != backgroundFirst);
     REQUIRE(ReadPixel(32, 32) == selectionInteriorBefore);
     REQUIRE(ReadPixel(16, 32) != selectionBorderBefore);
 
-    REQUIRE(renderer.SetSelectionRect({{-8, 16}, {48, 48}}) == 0);
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.SetSelectionRect({{-8, 16}, {48, 48}}));
+    REQUIRE_NOTHROW(renderer.Redraw());
     REQUIRE(ReadPixel(8, 8) != backgroundFirst);
 
-    REQUIRE(renderer.SetSelectionRect({{-1, -1}, {-1, -1}}) == 0);
+    REQUIRE_NOTHROW(renderer.SetSelectionRect({{-1, -1}, {-1, -1}}));
     // Image info uses alpha 127; F1 and system info use 216. Check RGB blending and
     // final window alpha independently, including redraws and transparent/opaque endpoints.
     for (const uint8_t alpha : {0, 127, 216, 255})
     {
         CAPTURE(alpha);
         auto overlay = renderer.CreateImage(CreateBlackImage(alpha, 64),
-                                            {.filterType = FT_Linear, .imageRenderMode = IRM_Overlay});
+                                            {.filterType      = OIV::FilterType::Linear,
+                                             .imageRenderMode = OIV::ImageRenderMode::Overlay});
         for (int frame = 0; frame < 2; ++frame)
         {
-            REQUIRE(renderer.Redraw() == 0);
+            REQUIRE_NOTHROW(renderer.Redraw());
             const auto first   = ReadPixel(8, 8);
             const auto second  = ReadPixel(24, 8);
             const int expected = 255 - alpha;
@@ -148,17 +148,17 @@ TEST_CASE("OpenGL renderer draws canvas, selection, and overlays with opaque out
         }
     }
     image->SetImage(CreateBlackImage(255, 64));
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK((ReadPixel(8, 8) == std::array<uint8_t, 4>{0, 0, 0, 255}));
     image->SetImage({});
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK((ReadPixel(8, 8) == std::array<uint8_t, 4>{45, 45, 48, 255}));
     image->SetProperties({.visible = false});
     image->SetImage(CreateBlackImage(255, 32));
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     CHECK((ReadPixel(8, 8) == std::array<uint8_t, 4>{45, 45, 48, 255}));
     image->SetProperties({.visible = true});
-    REQUIRE(renderer.Redraw() == 0);
+    REQUIRE_NOTHROW(renderer.Redraw());
     // Framebuffer Y runs upward, so sample within the smaller top-left client image.
     CHECK((ReadPixel(8, 56) == std::array<uint8_t, 4>{0, 0, 0, 255}));
     REQUIRE(glGetError() == GL_NO_ERROR);

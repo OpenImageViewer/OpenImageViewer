@@ -8,7 +8,7 @@
 #include <OIVAppCore/ViewerImage.h>
 #include <ImageProcessing/FileImage.h>
 #include <ImageLoader.h>
-#include <Defs.h>
+#include <expected>
 
 #include <cstdint>
 #include <memory>
@@ -37,22 +37,18 @@ namespace OIV
         LLUtils::OperationId operationId;
     };
 
-    // CPU file-load result with the existing API failure code.
-    struct ImageFileLoadResult
+    enum class ImageLoadError
     {
-        // Existing API result code describing decode or opening failure.
-        ResultCode resultCode = ResultCode::RC_UknownError;
-        // CPU document returned by loading, with empty pixels when decoding fails.
-        ViewerImage image;
+        UnsupportedFormat,
+        UnknownError
     };
+    using ImageFileLoadResult = std::expected<ViewerImage, ImageLoadError>;
 
     // Opening result carried to viewer composition without registering pixels.
     struct ImageLoadResult
     {
         // Viewer classification of the opening result.
         ImageLoadStatus status = ImageLoadStatus::UnknownError;
-        // Existing API result code describing decode or opening failure.
-        ResultCode resultCode = ResultCode::RC_UknownError;
         // Normalized path for file/folder navigation and error formatting.
         LLUtils::native_string_type normalizedPath;
         // CPU document returned by loading, with empty pixels when decoding fails.
@@ -64,7 +60,7 @@ namespace OIV
         bool DecodeSucceeded() const;
     };
 
-    // CPU file-loading boundary that returns document values and API result codes.
+    // CPU file-loading boundary returns a document or a recoverable decode failure.
     class IImageFileLoader
     {
       public:
@@ -107,7 +103,7 @@ namespace OIV
         ImageLoadResult LoadFileOrFolder(const LLUtils::native_string_type& filePath,
                                          IMCodec::PluginTraverseMode traverseMode, const ImageLoadContext& context);
 
-        static ImageLoadStatus ClassifyLoadResult(ResultCode resultCode, const IMCodec::ImageSharedPtr& image,
+        static ImageLoadStatus ClassifyLoadResult(const ImageFileLoadResult& result,
                                                   std::uint32_t maxSupportedDimension = MaxSupportedDimension);
 
       private:

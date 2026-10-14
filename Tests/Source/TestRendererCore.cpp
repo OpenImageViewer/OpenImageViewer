@@ -5,7 +5,6 @@
 #include <OIVAppCore/ImageState.h>
 #include <ImageProcessing/TextRasterizer.h>
 #include "LabelManager.h"
-#include "ApiGlobal.h"
 #include <array>
 #include <optional>
 #include <type_traits>
@@ -19,6 +18,15 @@ namespace
     {
       public:
 
+        int* releaseSnapshot  = nullptr;
+        int* destructionCount = nullptr;
+        ~Backend() override
+        {
+            if (releaseSnapshot)
+                *releaseSnapshot = releases;
+            if (destructionCount)
+                ++*destructionCount;
+        }
         // Number of logical releases, including never-uploaded registrations.
         int releases = 0;
         // Last released renderer-local identity.
@@ -37,9 +45,10 @@ namespace
         bool visible = false;
         // Last record's content revision, observed without retaining a borrowed record.
         uint64_t lastRevision = 0;
-        int Init(const OIV_RendererInitializationParams&) override { return 0; }
-        int SetViewParams(const OIV::ViewParameters&) override { return 0; }
-        int Render(const OIV::RenderFrame& frame) override
+        void Init(const OIV::RendererInitialization&) override {}
+        OIV::ViewParameters view{};
+        void SetViewParams(const OIV::ViewParameters& parameters) override { view = parameters; }
+        void Render(const OIV::RenderFrame& frame) override
         {
             count = frame.images.size();
             if (!frame.images.empty())
@@ -51,26 +60,16 @@ namespace
                 lastId       = frame.images.rbegin()->first;
                 lastRevision = frame.images.rbegin()->second.revision;
             }
-            return 0;
         }
         void ReleaseImageResources(uint64_t imageId) noexcept override
         {
             ++releases;
             releasedId = imageId;
         }
-        int SetFilterLevel(OIV_Filter_type) override { return 0; }
-        int SetExposure(const OIV_CMD_ColorExposure_Request&) override { return 0; }
-        int SetSelectionRect(OIV::VisualSelectionRect) override { return 0; }
-        int SetBackgroundColor(int, LLUtils::Color) override { return 0; }
-        const char* GetBackendName() const override { return "Test"; }
-    };
-
-    // CPU tests temporarily remove the API so hidden global access fails deterministically.
-    struct NoApi
-    {
-        // Prior suite-owned API restored after the CPU-only operation.
-        std::unique_ptr<OIV::IPictureRenderer> previous = std::move(OIV::ApiGlobal::sPictureRenderer);
-        ~NoApi() { OIV::ApiGlobal::sPictureRenderer = std::move(previous); }
+        void SetFilterLevel(OIV::FilterType) override {}
+        void SetExposure(const OIV::ColorExposure&) override {}
+        void SetSelectionRect(OIV::VisualSelectionRect) override {}
+        void SetBackgroundColor(int, LLUtils::Color) override {}
     };
 
     IMCodec::ImageSharedPtr Pixels()
@@ -86,12 +85,13 @@ namespace
 
 TEST_CASE("Common renderer owns registration identity and content revisions", "[renderer][core]")
 {
-    auto backend = std::make_shared<Backend>();
-    OIV::Renderer renderer(backend);
+    auto owner    = std::make_unique<Backend>();
+    auto* backend = owner.get();
+    OIV::Renderer renderer(std::move(owner));
     auto pixels = Pixels();
     {
         auto image = renderer.CreateImage(pixels);
-        REQUIRE(renderer.Redraw() == 0);
+        REQUIRE_NOTHROW(renderer.Redraw());
         const auto id       = backend->id;
         const auto revision = backend->revision;
         image.SetImage(pixels);
@@ -117,9 +117,13 @@ TEST_CASE("Common renderer owns registration identity and content revisions", "[
 
 TEST_CASE("Move assignment releases its destination and renderers remain independent", "[renderer][core]")
 {
-    auto first  = std::make_shared<Backend>();
-    auto second = std::make_shared<Backend>();
-    OIV::Renderer a(first), b(second);
+    int firstReleases      = 0;
+    auto firstOwner        = std::make_unique<Backend>();
+    auto* first            = firstOwner.get();
+    first->releaseSnapshot = &firstReleases;
+    auto secondOwner       = std::make_unique<Backend>();
+    auto* second           = secondOwner.get();
+    OIV::Renderer a(std::move(firstOwner)), b(std::move(secondOwner));
     auto pixels = Pixels();
     {
         auto source      = a.CreateImage(pixels);
@@ -136,14 +140,13 @@ TEST_CASE("Move assignment releases its destination and renderers remain indepen
         CHECK(second->revision == 1);
         a.Shutdown();
     }
-    CHECK(first->releases == 1);
+    CHECK(firstReleases == 1);
     CHECK(second->releases == 1);
 }
 
 TEST_CASE("Text producer prepares and clears CPU pixels without a renderer", "[image][cpu][text]")
 {
     FreeType::FreeTypeConnector connector;
-    NoApi noApi;
     OIV::TextRasterizer text(&connector);
     CHECK(text.GetBitmap() == nullptr);
     CHECK_FALSE(text.IsBitmapDirty());
@@ -163,7 +166,6 @@ TEST_CASE("Text producer prepares and clears CPU pixels without a renderer", "[i
 
 TEST_CASE("ImageState processes cached pixels without presentation ownership", "[image][cpu][pipeline]")
 {
-    NoApi noApi;
     OIV::ImageState state;
     auto pixels = Pixels();
     state.SetOpenedImage(OIV::ViewerImage{.pixels = pixels});
@@ -198,8 +200,9 @@ TEST_CASE("ImageState processes cached pixels without presentation ownership", "
 
 TEST_CASE("Visible text preparation preserves pixels, empty output and retry work", "[renderer][text][preparation]")
 {
-    auto backend = std::make_shared<Backend>();
-    OIV::Renderer renderer(backend);
+    auto owner    = std::make_unique<Backend>();
+    auto* backend = owner.get();
+    OIV::Renderer renderer(std::move(owner));
     FreeType::FreeTypeConnector font;
     OIV::TextLabel label(&font);
     const auto fontPath = LLUTILS_TEXT("Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf");
@@ -245,8 +248,9 @@ TEST_CASE("Visible text preparation preserves pixels, empty output and retry wor
 
 TEST_CASE("Label manager registers pre-initialization labels in creation order", "[renderer][text][order]")
 {
-    auto backend = std::make_shared<Backend>();
-    OIV::Renderer renderer(backend);
+    auto owner    = std::make_unique<Backend>();
+    auto* backend = owner.get();
+    OIV::Renderer renderer(std::move(owner));
     FreeType::FreeTypeConnector font;
     OIV::LabelManager labels(&font);
     auto* first = labels.GetOrCreateTextLabel("z-first");
@@ -280,7 +284,6 @@ TEST_CASE("Label manager registers pre-initialization labels in creation order",
 
 TEST_CASE("Raw creation copies padded rows and geometric refresh invalidates later results", "[image][cpu][pipeline]")
 {
-    NoApi noApi;
     std::array<std::byte, 36> source{};
     source[0]   = std::byte{0x42};
     auto pixels = OIV::CreateRawImage({source.data(), 2, 3, 12, IMCodec::TexelFormat::I_R8_G8_B8_A8}, {});
@@ -303,7 +306,6 @@ TEST_CASE("Raw creation copies padded rows and geometric refresh invalidates lat
 
 TEST_CASE("CPU resampling respects padded byte rows without normalizing the source", "[image][cpu][pipeline]")
 {
-    NoApi noApi;
     const uint32_t rowPitch = GENERATE(16u, 17u, 20u, 25u);
     // Padding deliberately differs from every channel so accidental sampling is visible.
     std::vector<std::byte> source(rowPitch * 4, std::byte{0xEF});
@@ -339,4 +341,37 @@ TEST_CASE("CPU resampling respects padded byte rows without normalizing the sour
                 // Each 2x2 neighborhood averages independently across all four channels.
                 CHECK(result->GetBufferAt(x, y)[channel] == std::byte(22 + y * 40 + x * 8 + channel));
             }
+}
+
+TEST_CASE("View parameters reach each backend without narrowing or shared state", "[renderer][core][viewport]")
+{
+    auto firstOwner  = std::make_unique<Backend>();
+    auto secondOwner = std::make_unique<Backend>();
+    auto* first      = firstOwner.get();
+    auto* second     = secondOwner.get();
+    OIV::Renderer a(std::move(firstOwner)), b(std::move(secondOwner));
+    for (const auto extent : {LLUtils::PointI32{}, LLUtils::PointI32{70000, 80000}, LLUtils::PointI32{},
+                              LLUtils::PointI32{640, 480}, LLUtils::PointI32{640, 480}})
+    {
+        a.SetViewParams({.uViewportSize = extent, .showGrid = true});
+        CHECK(first->view.uViewportSize == extent);
+        CHECK(first->view.showGrid);
+        CHECK(second->view.uViewportSize == LLUtils::PointI32{});
+        CHECK_FALSE(second->view.showGrid);
+    }
+}
+
+TEST_CASE("Backend ownership ends exactly once at renderer shutdown", "[renderer][core][lifetime]")
+{
+    int destroyed           = 0;
+    auto owner              = std::make_unique<Backend>();
+    owner->destructionCount = &destroyed;
+    OIV::Renderer renderer(std::move(owner));
+    auto image = std::make_optional(renderer.CreateImage({}));
+    renderer.Shutdown();
+    CHECK(destroyed == 1);
+    REQUIRE_NOTHROW(renderer.Shutdown());
+    CHECK(destroyed == 1);
+    REQUIRE_NOTHROW(image.reset());
+    CHECK(destroyed == 1);
 }

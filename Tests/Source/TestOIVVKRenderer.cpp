@@ -11,29 +11,29 @@
 
 TEST_CASE("Vulkan renderer factory implements the current renderer contract", "[renderer][vulkan]")
 {
-    const OIV::RenderBackendSharedPtr renderer = OIV::VKRendererFactory::Create();
+    auto renderer = OIV::CreateVulkanBackend();
 
     REQUIRE(renderer != nullptr);
-    OIV::Renderer facade(renderer);
+    OIV::Renderer facade(std::move(renderer));
     REQUIRE_NOTHROW(facade.CreateImage({}));
 }
 
-TEST_CASE("Vulkan renderer reports correct backend name", "[renderer][vulkan]")
+TEST_CASE("Vulkan renderer exposes an empty selected adapter before initialization", "[renderer][vulkan]")
 {
-    const OIV::RenderBackendSharedPtr renderer = OIV::VKRendererFactory::Create();
+    auto renderer = OIV::CreateVulkanBackend();
     REQUIRE(renderer != nullptr);
-    REQUIRE(renderer->GetBackendName() != nullptr);
-    REQUIRE(std::string(renderer->GetBackendName()) == "Vulkan");
+    CHECK(renderer->GetSelectedAdapter().index == -1);
+    CHECK(renderer->GetSelectedAdapter().apiVersion.empty());
 }
 
 TEST_CASE("Vulkan renderer accepts view parameters before init", "[renderer][vulkan]")
 {
-    const OIV::RenderBackendSharedPtr renderer = OIV::VKRendererFactory::Create();
+    auto renderer = OIV::CreateVulkanBackend();
     REQUIRE(renderer != nullptr);
 
     OIV::ViewParameters viewParams{};
     viewParams.uViewportSize = {64, 64};
-    REQUIRE(renderer->SetViewParams(viewParams) == 0);
+    REQUIRE_NOTHROW(renderer->SetViewParams(viewParams));
 }
 
 #endif

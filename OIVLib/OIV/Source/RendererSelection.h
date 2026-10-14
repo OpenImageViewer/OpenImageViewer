@@ -1,5 +1,6 @@
 #pragma once
 #include <RendererCore/IRenderBackend.h>
+#include <RendererDiscovery.h>
 
 namespace OIV
 {
@@ -10,7 +11,13 @@ namespace OIV
         // Compiled backend identity and capability information used by selection policy.
         RendererInfo info;
         // Factory invoked lazily while evaluating the existing candidate order.
-        RenderBackendSharedPtr (*create)();
+        std::unique_ptr<OIV::IRenderBackend> (*create)();
+    };
+
+    struct BackendSelection
+    {
+        std::unique_ptr<IRenderBackend> backend;
+        RendererType type = RendererType::Null;
     };
 
     // Startup-only selection; recovery keeps the chosen API. Exhaust Hardware, Unknown, then Software,
@@ -18,7 +25,7 @@ namespace OIV
     // Destroy failed/deferred instances before the next factory call. Stop at success; exhaustion
     // throws collected diagnostics. dataPath is a base directory; append the backend name for each
     // synchronous initialization call.
-    RenderBackendSharedPtr SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
-                                          const OIV_RendererInitializationParams& params);
+    BackendSelection SelectRenderer(std::span<const RendererBackend> backends, const RendererOptions& options,
+                                    const OIV::RendererInitialization& params);
     std::span<const RendererBackend> GetRendererBackends();
 }  // namespace OIV

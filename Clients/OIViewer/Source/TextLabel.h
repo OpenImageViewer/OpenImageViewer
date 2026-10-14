@@ -61,7 +61,7 @@ namespace OIV
             }
         }
         bool GetVisible() const { return fProperties.visible; }
-        void SetFilterType(OIV_Filter_type value)
+        void SetFilterType(OIV::FilterType value)
         {
             if (fProperties.filterType != value)
             {
@@ -69,8 +69,8 @@ namespace OIV
                 fPropertiesDirty       = true;
             }
         }
-        OIV_Filter_type GetFilterType() const { return fProperties.filterType; }
-        void SetImageRenderMode(OIV_Image_Render_mode value)
+        OIV::FilterType GetFilterType() const { return fProperties.filterType; }
+        void SetImageRenderMode(OIV::ImageRenderMode value)
         {
             if (fProperties.imageRenderMode != value)
             {
@@ -78,7 +78,7 @@ namespace OIV
                 fPropertiesDirty            = true;
             }
         }
-        OIV_Image_Render_mode GetImageRenderMode() const { return fProperties.imageRenderMode; }
+        OIV::ImageRenderMode GetImageRenderMode() const { return fProperties.imageRenderMode; }
 
         TextMetrics GetMetrics() { return fRasterizer.GetMetrics(); }
         bool IsDirty() const { return fPropertiesDirty || fRasterizer.IsBitmapDirty(); }
@@ -101,7 +101,8 @@ namespace OIV
         // CPU producer owns text options, layout and cached bitmap.
         TextRasterizer fRasterizer;
         // Desired appearance, applied without invalidating CPU pixels.
-        RenderImageProperties fProperties{.filterType = FT_None, .imageRenderMode = IRM_Overlay};
+        RenderImageProperties fProperties{.filterType      = OIV::FilterType::None,
+                                          .imageRenderMode = OIV::ImageRenderMode::Overlay};
         // Optional renderer registration released while its stable facade is alive.
         std::optional<RenderImage> fPresentation;
         // Property changes request redraw even when bitmap content is unchanged.

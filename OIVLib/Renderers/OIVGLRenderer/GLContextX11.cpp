@@ -1,4 +1,5 @@
 #include "GLContext.h"
+#include <RendererCore/RendererException.h>
 
 #include <GL/glew.h>
 #include <GL/glx.h>
@@ -48,11 +49,13 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
     state->display = XOpenDisplay(nullptr);
     state->window  = static_cast<::Window>(window);
     if (state->display == nullptr)
-        throw std::runtime_error("Could not open the X11 display for OpenGL rendering");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not open the X11 display for OpenGL rendering");
 
     XWindowAttributes attributes{};
     if (XGetWindowAttributes(state->display, state->window, &attributes) == 0)
-        throw std::runtime_error("Could not query the X11 window for OpenGL rendering");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not query the X11 window for OpenGL rendering");
 
     XVisualInfo visualTemplate{.visualid = XVisualIDFromVisual(attributes.visual)};
     int visualCount{};
@@ -61,7 +64,8 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
     {
         if (visualInfo != nullptr)
             XFree(visualInfo);
-        throw std::runtime_error("Could not resolve the X11 window visual for OpenGL rendering");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not resolve the X11 window visual for OpenGL rendering");
     }
 
     int supportsOpenGL{};
@@ -74,7 +78,8 @@ void GLContext::Init(std::uintptr_t window, [[maybe_unused]] void* nativeDisplay
     if (!compatibleVisual || state->renderContext == nullptr ||
         glXMakeCurrent(state->display, state->window, state->renderContext) == False)
     {
-        throw std::runtime_error("Could not create an OpenGL context for the X11 window");
+        throw OIV::RendererException(OIV::RendererErrorCode::BackendFailure, OIV::RendererType::OpenGL,
+                                     "Could not create an OpenGL context for the X11 window");
     }
 
     const char* extensions = glXQueryExtensionsString(state->display, DefaultScreen(state->display));

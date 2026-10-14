@@ -269,7 +269,7 @@ namespace
 
         ~BrowseSessionControllerFixture() { processor->ReleaseAll(); }
 
-        void LoadFolder() { REQUIRE(controller.CommitCurrentFile(initialFileName) == ResultCode::RC_Success); }
+        void LoadFolder() { REQUIRE(controller.CommitCurrentFile(initialFileName).has_value()); }
 
         LLUtils::native_string_type initialFileName;
         FakeFileWatcher watcher;

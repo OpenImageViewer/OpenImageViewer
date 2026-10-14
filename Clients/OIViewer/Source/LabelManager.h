@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Defs.h>
+#include <RendererCore/RenderTypes.h>
 #include <LLUtils/PlatformUtility.h>
 #include "TextLabel.h"
 

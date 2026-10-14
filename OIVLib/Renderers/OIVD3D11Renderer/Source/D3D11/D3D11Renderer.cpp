@@ -11,13 +11,7 @@
 
 namespace OIV
 {
-    D3D11Renderer::D3D11Renderer()
-    {
-        fViewport.MinDepth = 0;
-        fViewport.MaxDepth = 1;
-    }
-
-    void D3D11Renderer::SetDevicestate()
+    void D3D11Renderer::SetDeviceState()
     {
         ID3D11DeviceContext* d3dContext = fDevice->GetContext();
         fImageVertexShader->Use();
@@ -232,8 +226,8 @@ namespace OIV
         fImageVertexShader->SetSourceFileName(programsPath / L"QuadVP.shader");
         fImageFragmentShader = std::make_unique<D3D11FragmentShader>(fDevice);
         fImageFragmentShader->SetSourceFileName(programsPath / L"QuadFP.shader");
-        fSelectionFragmentShaer = std::make_unique<D3D11FragmentShader>(fDevice);
-        fSelectionFragmentShaer->SetSourceFileName(programsPath / L"QuadSelectionFP.shader");
+        fSelectionFragmentShader = std::make_unique<D3D11FragmentShader>(fDevice);
+        fSelectionFragmentShader->SetSourceFileName(programsPath / L"QuadSelectionFP.shader");
         fImageSimpleFragmentShader = std::make_unique<D3D11FragmentShader>(fDevice);
         fImageSimpleFragmentShader->SetSourceFileName(programsPath / L"QuadSimpleFP.shader");
 
@@ -241,11 +235,11 @@ namespace OIV
 
         D3D11Utility::LoadShader(fImageVertexShader, shaderCachePath);
         D3D11Utility::LoadShader(fImageFragmentShader, shaderCachePath);
-        D3D11Utility::LoadShader(fSelectionFragmentShaer, shaderCachePath);
+        D3D11Utility::LoadShader(fSelectionFragmentShader, shaderCachePath);
         D3D11Utility::LoadShader(fImageSimpleFragmentShader, shaderCachePath);
     }
 
-    int D3D11Renderer::Init(const OIV_RendererInitializationParams& initParams)
+    void D3D11Renderer::Init(const OIV::RendererInitialization& initParams)
     {
         fDataPath = initParams.dataPath;
         fDevice   = std::make_shared<D3D11Device>();
@@ -255,8 +249,7 @@ namespace OIV
         ResizeBackBuffer(1280, 800);
         CreateShaders();
         CreateBuffers();
-        SetDevicestate();
-        return 0;
+        SetDeviceState();
     }
 
     void D3D11Renderer::UpdateViewportSize(int x, int y)
@@ -269,7 +262,7 @@ namespace OIV
         fDevice->GetContext()->RSSetViewports(1, &fViewport);
     }
 
-    int D3D11Renderer::SetViewParams(const ViewParameters& viewParams)
+    void D3D11Renderer::SetViewParams(const ViewParameters& viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
@@ -281,8 +274,6 @@ namespace OIV
                static_cast<LLUtils::ColorF32>(viewParams.uTransparencyColor2).channels.data(), sizeof(float) * 4);
 
         fIsParamsDirty = true;
-
-        return 0;
     }
 
     void D3D11Renderer::UpdateGpuParameters()
@@ -312,12 +303,12 @@ namespace OIV
         {
             auto texture = OIVD3DHelper::CreateTexture(fDevice, record.pixels, false);
             if (!texture)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Cannot create texture");
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::D3D11, "Create D3D11 texture");
             entry.texture          = std::move(texture);
             entry.uploadedRevision = record.revision;
 
             if (entry.texture == nullptr)
-                LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "can not create texture");
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::D3D11, "Create D3D11 texture");
         }
 
         CONSTANT_BUFFER_IMAGE_COMMON& gpuBuffer = fBufferImageCommon->GetBuffer();
@@ -343,10 +334,10 @@ namespace OIV
 
         switch (record.properties.imageRenderMode)
         {
-            case OIV_Image_Render_mode::IRM_Overlay:
+            case OIV::ImageRenderMode::Overlay:
                 fImageSimpleFragmentShader->Use();
                 break;
-            case OIV_Image_Render_mode::IRM_MainImage:
+            case OIV::ImageRenderMode::MainImage:
                 fBufferImageMain->Use(ShaderStage::FragmentShader, 1);
                 fImageFragmentShader->Use();
                 break;
@@ -359,7 +350,7 @@ namespace OIV
         fDevice->GetContext()->Draw(4, 0);
     }
 
-    int D3D11Renderer::Render(const RenderFrame& frame)
+    void D3D11Renderer::Render(const RenderFrame& frame)
     {
         UpdateGpuParameters();
         ID3D11DeviceContext* context = fDevice->GetContext();
@@ -368,7 +359,7 @@ namespace OIV
         // Draw images
         for (const auto& [id, record] : frame.images)
             if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
-                record.properties.imageRenderMode == IRM_MainImage)
+                record.properties.imageRenderMode == OIV::ImageRenderMode::MainImage)
                 DrawImage(fImageEntries.try_emplace(id).first->second, record);
 
         // Draw selection rect.
@@ -384,46 +375,46 @@ namespace OIV
             }
 
             fBufferSelection->Use(ShaderStage::FragmentShader, 0);
-            fSelectionFragmentShaer->Use();
+            fSelectionFragmentShader->Use();
             context->Draw(4, 0);
         }
 
         // Draw Overlays
         for (const auto& [id, record] : frame.images)
             if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
-                record.properties.imageRenderMode == IRM_Overlay)
+                record.properties.imageRenderMode == OIV::ImageRenderMode::Overlay)
                 DrawImage(fImageEntries.try_emplace(id).first->second, record);
 
-        fDevice->GetSwapChain()->Present(0, 0);
-        return 0;
+        D3D11Error::HandleDeviceError(fDevice->GetSwapChain()->Present(0, 0), "Present frame");
     }
 
-    int D3D11Renderer::SetFilterLevel(OIV_Filter_type filterType)
+    void D3D11Renderer::SetFilterLevel(OIV::FilterType filterType)
     {
         D3D11_SAMPLER_DESC desc;
         D3D11Utility::CreateD3D11DefaultSamplerState(desc);
 
         switch (filterType)
         {
-            case FT_None:
+            case OIV::FilterType::None:
                 desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
                 break;
-            case FT_Linear:
+            case OIV::FilterType::Linear:
                 desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
                 break;
-            case FT_Lanczos3:
+            case OIV::FilterType::Lanczos3:
                 desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
                 break;
             default:
                 LL_EXCEPTION_UNEXPECTED_VALUE;
         }
-        fDevice->GetdDevice()->CreateSamplerState(&desc, fSamplerState.ReleaseAndGetAddressOf());
-        fDevice->GetContext()->PSSetSamplers(static_cast<UINT>(0), static_cast<UINT>(1), fSamplerState.GetAddressOf());
-
-        return 0;
+        ComPtr<ID3D11SamplerState> replacement;
+        D3D11Error::HandleDeviceError(fDevice->GetdDevice()->CreateSamplerState(&desc, replacement.GetAddressOf()),
+                                      "Set image filter");
+        fDevice->GetContext()->PSSetSamplers(0, 1, replacement.GetAddressOf());
+        fSamplerState = std::move(replacement);
     }
 
-    int D3D11Renderer::SetselectionRect(const VisualSelectionRect& selection_rect)
+    void D3D11Renderer::SetSelectionRect(VisualSelectionRect selection_rect)
     {
         fSelectionRect                         = selection_rect;
         CONSTANT_BUFFER_SELECTION_RECT& buffer = fBufferSelection->GetBuffer();
@@ -435,11 +426,9 @@ namespace OIV
         buffer.uSelectionRect[2] = fSelectionRect.p1.x;
         buffer.uSelectionRect[3] = fSelectionRect.p1.y;
         fBufferSelection->Update();
-
-        return 0;
     }
 
-    int D3D11Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    void D3D11Renderer::SetExposure(const OIV::ColorExposure& exposure)
     {
         CONSTANT_BUFFER_IMAGE_MAIN& buffer = fBufferImageMain->GetBuffer();
         buffer.exposure                    = static_cast<float>(exposure.exposure);
@@ -448,7 +437,6 @@ namespace OIV
         buffer.saturation                  = static_cast<float>(exposure.saturation);
 
         fIsParamsDirty = true;
-        return 0;
     }
 
     void D3D11Renderer::ReleaseImageResources(uint64_t id) noexcept
@@ -456,7 +444,7 @@ namespace OIV
         fImageEntries.erase(id);
     }
 
-    int D3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    void D3D11Renderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
     {
         fBackgroundColors.at(index) = static_cast<LLUtils::ColorF32>(backgroundColor);
         if (index == 0)
@@ -466,7 +454,6 @@ namespace OIV
             memcpy(fBufferGlobals->GetBuffer().backgroundColor2, fBackgroundColors[1].channels.data(),
                    sizeof(float) * 4);
         fGlobalsDirty = true;
-
-        return 0;
     }
+
 }  // namespace OIV

@@ -58,7 +58,8 @@ namespace OIV
 
         void SortFolderFileList();
         void BeginDirectOpen(const LLUtils::native_string_type& normalizedFilePath);
-        ResultCode CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath, bool refreshResidency = true);
+        NavigationResult CommitCurrentFile(const LLUtils::native_string_type& absoluteFilePath,
+                                           bool refreshResidency = true);
         void InvalidateCurrent();
         bool JumpFiles(FolderFileList::index_type step);
         // Called after a successful deletion or a current-file removal notification.

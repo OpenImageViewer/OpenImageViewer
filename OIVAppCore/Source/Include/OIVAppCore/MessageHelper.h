@@ -3,6 +3,8 @@
 #include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ViewerImage.h>
 #include <string_view>
+#include <optional>
+#include <RendererCore/RendererOptions.h>
 
 namespace IMCodec
 {
@@ -26,6 +28,8 @@ namespace OIV
         std::string_view buildType;
         // Optional borrowed common facade, queried only on its owner thread.
         const Renderer* renderer = nullptr;
+        // Actual factory selection, absent when the caller has no backend identity.
+        std::optional<RendererType> rendererType;
     };
 
     class MessageHelper

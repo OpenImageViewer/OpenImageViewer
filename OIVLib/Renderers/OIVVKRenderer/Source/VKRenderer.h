@@ -5,7 +5,7 @@
 #include "VKContext.h"
 #include "VKPipeline.h"
 #include "VKTexture.h"
-#include <Defs.h>
+#include <RendererCore/RenderTypes.h>
 #include <RendererCore/IRenderBackend.h>
 #include <map>
 #include <memory>
@@ -20,25 +20,19 @@ namespace OIV
     {
       public:
 
-        VKRenderer();
+        VKRenderer() = default;
         ~VKRenderer() override;
 
         std::vector<RendererAdapter> EnumerateAdapters() override { return VKContext::EnumerateAdapters(); }
-        Acceleration GetAcceleration() const override { return fContext.GetAcceleration(); }
-        int Init(const OIV_RendererInitializationParams& initParams) override;
-        int SetViewParams(const ViewParameters& viewParams) override;
-        int Render(const RenderFrame& frame) override;
-        int SetFilterLevel(OIV_Filter_type filterType) override;
-        int SetSelectionRect(VisualSelectionRect selectionRect) override;
-        int SetExposure(const OIV_CMD_ColorExposure_Request& exposure) override;
+        const RendererAdapter& GetSelectedAdapter() const override { return fContext.GetSelectedAdapter(); }
+        void Init(const OIV::RendererInitialization& initParams) override;
+        void SetViewParams(const ViewParameters& viewParams) override;
+        void Render(const RenderFrame& frame) override;
+        void SetFilterLevel(OIV::FilterType filterType) override;
+        void SetSelectionRect(VisualSelectionRect selectionRect) override;
+        void SetExposure(const OIV::ColorExposure& exposure) override;
         void ReleaseImageResources(uint64_t id) noexcept override;
-        int SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
-
-        const char* GetBackendName() const override { return "Vulkan"; }
-        const char* GetGPUName() const override;
-        const char* GetAPIVersion() const override;
-        const char* GetDriverVersion() const override;
-        int GetSelectedGPUIndex() const override { return fContext.GetGpuIndex(); }
+        void SetBackgroundColor(int index, LLUtils::Color backgroundColor) override;
 
       private:
 
@@ -132,7 +126,7 @@ namespace OIV
         bool PresentImage();
         bool PrepareImage(ImageEntry& entry, const RenderImageRecord& record);
         void DrawImage(ImageEntry& entry, const RenderImageRecord& record, VKPipeline& pipeline,
-                       OIV_Image_Render_mode renderMode);
+                       OIV::ImageRenderMode renderMode);
         void DrawSelectionRect();
         void UpdateViewportSize(int width, int height);
 
@@ -145,10 +139,6 @@ namespace OIV
 
         // Owned graphics context, released before the native canvas is destroyed.
         VKContext fContext;
-        // Graphics device used by this backend resource cache.
-        VkDevice fDevice{VK_NULL_HANDLE};
-        // Selected Vulkan physical device used for allocations.
-        VkPhysicalDevice fPhysicalDevice{VK_NULL_HANDLE};
         // Current swap-chain dimensions in pixels.
         VkExtent2D fSwapChainExtent{0, 0};
         // Swap-chain format used by the current rendering pipelines.
@@ -194,7 +184,7 @@ namespace OIV
         // Current client selection rectangle, with the existing absent sentinel.
         VisualSelectionRect fSelectionRect{{-1, -1}, {-1, -1}};
         // Global fallback sampling policy for the existing per-image filter behavior.
-        OIV_Filter_type fFilterType{FT_Linear};
+        OIV::FilterType fFilterType{OIV::FilterType::Linear};
         // Existing shader exposure multiplier.
         float fExposure{1.0F};
         // Existing shader color offset.
@@ -206,12 +196,6 @@ namespace OIV
         // Whether the existing texel-grid visualization is enabled.
         bool fShowGrid{};
         // Backend cache/data directory supplied by API composition.
-        OIVString fDataPath;
-        // Cached UTF-8 selected GPU name.
-        mutable std::string fGPUName;
-        // Cached UTF-8 graphics API version.
-        mutable std::string fAPIVersion;
-        // Cached UTF-8 selected driver version.
-        mutable std::string fDriverVersion;
+        std::filesystem::path fDataPath;
     };
 }  // namespace OIV

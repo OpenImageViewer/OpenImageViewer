@@ -19,7 +19,7 @@ namespace OIV
 {
     bool ImageLoadResult::DecodeSucceeded() const
     {
-        return resultCode == ResultCode::RC_Success;
+        return status == ImageLoadStatus::Loaded || status == ImageLoadStatus::TooLarge;
     }
 
     OIVImageFileLoader::OIVImageFileLoader(IMCodec::ImageLoader& imageLoader) : fImageLoader(imageLoader) {}
@@ -33,10 +33,12 @@ namespace OIV
         params.SetCustom(LLUTILS_TEXT("canvasHeight"), context.canvasHeight);
 
         IMCodec::ItemMetaDataSharedPtr metadata;
-        auto pixels       = DecodeFileImage(fImageLoader, normalizedFilePath, metadata, traverseMode,
-                                            IMCodec::ImageLoadFlags::None, params);
-        const auto result = pixels ? RC_Success : RC_FileNotSupported;
-        return {result, ViewerImage{std::move(pixels), std::move(metadata), ImageSource::File, normalizedFilePath}};
+        auto pixels                = DecodeFileImage(fImageLoader, normalizedFilePath, metadata, traverseMode,
+                                                     IMCodec::ImageLoadFlags::None, params);
+        ImageFileLoadResult result = std::unexpected(ImageLoadError::UnsupportedFormat);
+        if (pixels)
+            result = ViewerImage{std::move(pixels), std::move(metadata), ImageSource::File, normalizedFilePath};
+        return result;
     }
 
     ImageOpenController::ImageOpenController(std::unique_ptr<IImageFileLoader> imageFileLoader,
@@ -64,10 +66,9 @@ namespace OIV
             fBrowseSessionController->BeginDirectOpen(normalizedPath);
 
         auto fileLoadResult = fImageFileLoader->LoadFile(normalizedPath, traverseMode, context);
-        const auto image    = fileLoadResult.image.pixels;
 
-        return ImageLoadResult{ClassifyLoadResult(fileLoadResult.resultCode, image), fileLoadResult.resultCode,
-                               normalizedPath, std::move(fileLoadResult.image), id};
+        return ImageLoadResult{ClassifyLoadResult(fileLoadResult), normalizedPath,
+                               fileLoadResult ? std::move(*fileLoadResult) : ViewerImage{}, id};
     }
 
     ImageLoadResult ImageOpenController::LoadFileOrFolder(const LLUtils::native_string_type& filePath,
@@ -85,7 +86,6 @@ namespace OIV
 
             return ImageLoadResult{folderLoadQueued ? ImageLoadStatus::FolderLoadQueued
                                                     : ImageLoadStatus::NoSupportedFiles,
-                                   folderLoadQueued ? ResultCode::RC_Success : ResultCode::RC_EmptyData,
                                    std::filesystem::path(filePath).lexically_normal().native(),
                                    {},
                                    id};
@@ -94,21 +94,18 @@ namespace OIV
         return LoadFile(filePath, traverseMode, context);
     }
 
-    ImageLoadStatus ImageOpenController::ClassifyLoadResult(ResultCode resultCode, const IMCodec::ImageSharedPtr& image,
+    ImageLoadStatus ImageOpenController::ClassifyLoadResult(const ImageFileLoadResult& result,
                                                             std::uint32_t maxSupportedDimension)
     {
-        if (resultCode == ResultCode::RC_FileNotSupported)
-            return ImageLoadStatus::UnsupportedFormat;
-
-        if (resultCode != ResultCode::RC_Success)
-            return ImageLoadStatus::UnknownError;
-
-        if (image == nullptr)
-            return ImageLoadStatus::UnknownError;
-
-        if (image->GetWidth() > maxSupportedDimension || image->GetHeight() > maxSupportedDimension)
-            return ImageLoadStatus::TooLarge;
-
-        return ImageLoadStatus::Loaded;
+        ImageLoadStatus status = ImageLoadStatus::UnknownError;
+        if (!result)
+            status = result.error() == ImageLoadError::UnsupportedFormat ? ImageLoadStatus::UnsupportedFormat
+                                                                         : ImageLoadStatus::UnknownError;
+        else if (result->pixels)
+            status = result->pixels->GetWidth() > maxSupportedDimension ||
+                             result->pixels->GetHeight() > maxSupportedDimension
+                         ? ImageLoadStatus::TooLarge
+                         : ImageLoadStatus::Loaded;
+        return status;
     }
 }  // namespace OIV

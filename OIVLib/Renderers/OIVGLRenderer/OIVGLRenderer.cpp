@@ -1,5 +1,6 @@
 #include "OIVGLRenderer.h"
 #include "GLAcceleration.h"
+#include <RendererCore/RendererException.h>
 
 #include <ImageUtil/ImageUtil.h>
 
@@ -161,8 +162,9 @@ void main()
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
     }
 
-    int OIVGLRenderer::Init(const OIV_RendererInitializationParams& initParams)
+    void OIVGLRenderer::Init(const OIV::RendererInitialization& initParams)
     {
+        fSelectedAdapter = {};
         if (initParams.gpuIndex >= 0 || initParams.adapterName != nullptr)
             throw std::invalid_argument(
                 "GL uses the platform-selected adapter; explicit adapter selection is unsupported");
@@ -170,63 +172,61 @@ void main()
         glewExperimental      = GL_TRUE;
         const GLenum glewCode = glewInit();
         if (glewCode != GLEW_OK)
-            throw std::runtime_error("Could not initialize GLEW: " +
-                                     std::string(reinterpret_cast<const char*>(glewGetErrorString(glewCode))));
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL, "Initialize GLEW",
+                                    RendererNativeError{RendererNativeDomain::GLEW,
+                                                        static_cast<std::int64_t>(glewCode)},
+                                    reinterpret_cast<const char*>(glewGetErrorString(glewCode)));
 
         // GLEW can leave GL_INVALID_ENUM behind while probing a compatibility context.
         glGetError();
         const auto* vendor   = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
         const auto* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
-        fAcceleration        = ClassifyGLAcceleration(vendor ? vendor : "", renderer ? renderer : "");
+        fSelectedAdapter     = {.name         = renderer ? renderer : "",
+                                .acceleration = ClassifyGLAcceleration(vendor ? vendor : "", renderer ? renderer : "")};
+        const auto* version  = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+        fSelectedAdapter.apiVersion = version ? version : "";
         PrepareResources();
-        return 0;
     }
 
-    int OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
+    void OIVGLRenderer::SetViewParams(const ViewParameters& viewParams)
     {
         UpdateViewportSize(static_cast<int>(viewParams.uViewportSize.x), static_cast<int>(viewParams.uViewportSize.y));
         fTransparencyColors[0] = ToFloatColor(viewParams.uTransparencyColor1);
         fTransparencyColors[1] = ToFloatColor(viewParams.uTransparencyColor2);
         fShowGrid              = viewParams.showGrid;
-        return 0;
     }
 
-    int OIVGLRenderer::Render(const RenderFrame& frame)
+    void OIVGLRenderer::Render(const RenderFrame& frame)
     {
         glClearColor(DefaultCanvasColor[0], DefaultCanvasColor[1], DefaultCanvasColor[2], DefaultCanvasColor[3]);
         glClear(GL_COLOR_BUFFER_BIT);
-        RenderImages(frame, IRM_MainImage);
+        RenderImages(frame, OIV::ImageRenderMode::MainImage);
         DrawSelectionRect();
-        RenderImages(frame, IRM_Overlay);
+        RenderImages(frame, OIV::ImageRenderMode::Overlay);
         fContext.SwapBuffers();
-        return 0;
     }
 
-    int OIVGLRenderer::SetFilterLevel(OIV_Filter_type filterLevel)
+    void OIVGLRenderer::SetFilterLevel(OIV::FilterType filterLevel)
     {
         fFilterType = filterLevel;
-        return 0;
     }
 
-    int OIVGLRenderer::SetSelectionRect(VisualSelectionRect selectionRect)
+    void OIVGLRenderer::SetSelectionRect(VisualSelectionRect selectionRect)
     {
         fSelectionRect = selectionRect;
-        return 0;
     }
 
-    int OIVGLRenderer::SetExposure(const OIV_CMD_ColorExposure_Request& exposure)
+    void OIVGLRenderer::SetExposure(const OIV::ColorExposure& exposure)
     {
         fExposure   = static_cast<float>(exposure.exposure);
         fOffset     = static_cast<float>(exposure.offset);
         fGamma      = static_cast<float>(exposure.gamma);
         fSaturation = static_cast<float>(exposure.saturation);
-        return 0;
     }
 
-    int OIVGLRenderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
+    void OIVGLRenderer::SetBackgroundColor(int index, LLUtils::Color backgroundColor)
     {
         fBackgroundColors.at(static_cast<size_t>(index)) = ToFloatColor(backgroundColor);
-        return 0;
     }
 
     void OIVGLRenderer::ReleaseImageResources(uint64_t id) noexcept
@@ -234,33 +234,7 @@ void main()
         fImageEntries.erase(id);
     }
 
-    const char* OIVGLRenderer::GetGPUName() const
-    {
-        if (fGPUName.empty())
-        {
-            const GLubyte* name = glGetString(GL_RENDERER);
-            if (name != nullptr)
-                fGPUName = reinterpret_cast<const char*>(name);
-            else
-                fGPUName = "Unknown";
-        }
-        return fGPUName.c_str();
-    }
-
-    const char* OIVGLRenderer::GetAPIVersion() const
-    {
-        if (fAPIVersion.empty())
-        {
-            const GLubyte* version = glGetString(GL_VERSION);
-            if (version != nullptr)
-                fAPIVersion = reinterpret_cast<const char*>(version);
-            else
-                fAPIVersion = "Unknown";
-        }
-        return fAPIVersion.c_str();
-    }
-
-    void OIVGLRenderer::RenderImages(const RenderFrame& frame, OIV_Image_Render_mode mode)
+    void OIVGLRenderer::RenderImages(const RenderFrame& frame, OIV::ImageRenderMode mode)
     {
         for (const auto& [id, record] : frame.images)
             if (record.pixels && record.properties.visible && record.properties.opacity > 0.0 &&
@@ -282,7 +256,8 @@ void main()
             if (image->GetTexelFormat() != IMCodec::TexelFormat::I_R8_G8_B8_A8)
                 image = IMUtil::ImageUtil::Convert(image, IMCodec::TexelFormat::I_R8_G8_B8_A8);
             if (image == nullptr)
-                throw std::runtime_error("Could not convert an image for OpenGL rendering");
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL,
+                                        "Convert image for rendering");
 
             if (entry.texture == nullptr)
                 entry.texture = std::make_unique<GLTexture>();
@@ -293,9 +268,10 @@ void main()
             entry.uploadedRevision = record.revision;
         }
 
-        const OIV_Filter_type filter = record.properties.filterType == FT_Lanczos3 ? fFilterType
-                                                                                   : record.properties.filterType;
-        entry.texture->SetFilter(filter == FT_None ? GL_NEAREST : GL_LINEAR);
+        const OIV::FilterType filter = record.properties.filterType == OIV::FilterType::Lanczos3
+                                           ? fFilterType
+                                           : record.properties.filterType;
+        entry.texture->SetFilter(filter == OIV::FilterType::None ? GL_NEAREST : GL_LINEAR);
         entry.texture->Bind();
         UpdateGpuParams(entry, record);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -355,7 +331,7 @@ void main()
         fProgram->SetUniform1F("colorOffset", fOffset);
         fProgram->SetUniform1F("gamma", fGamma);
         fProgram->SetUniform1F("saturation", fSaturation);
-        fProgram->SetUniform1I("imageRenderMode", record.properties.imageRenderMode);
+        fProgram->SetUniform1I("imageRenderMode", static_cast<int>(record.properties.imageRenderMode));
         fProgram->SetUniform1I("showGrid", fShowGrid ? 1 : 0);
     }
 }  // namespace OIV

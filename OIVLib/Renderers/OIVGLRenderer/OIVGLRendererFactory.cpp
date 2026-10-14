@@ -3,8 +3,8 @@
 
 namespace OIV
 {
-    RenderBackendSharedPtr GLRendererFactory::Create()
+    std::unique_ptr<IRenderBackend> CreateOpenGLBackend()
     {
-        return std::make_shared<OIVGLRenderer>();
+        return std::make_unique<OIVGLRenderer>();
     }
 }  // namespace OIV

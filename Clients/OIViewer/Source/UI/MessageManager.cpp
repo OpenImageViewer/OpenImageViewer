@@ -198,8 +198,8 @@ namespace OIV
         messageData.message->SetFontSize(12);
         messageData.message->SetOutlineWidth(2);
         messageData.message->SetPosition(static_cast<LLUtils::PointF64>(LLUtils::PointI32(fMarginLeft, fMarginTop)));
-        messageData.message->SetFilterType(OIV_Filter_type::FT_None);
-        messageData.message->SetImageRenderMode(OIV_Image_Render_mode::IRM_Overlay);
+        messageData.message->SetFilterType(OIV::FilterType::None);
+        messageData.message->SetImageRenderMode(OIV::ImageRenderMode::Overlay);
         messageData.message->SetScale({1.0, 1.0});
         messageData.message->SetOpacity(1.0);
         messageData.message->SetVisible(true);

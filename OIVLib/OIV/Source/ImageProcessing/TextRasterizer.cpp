@@ -1,6 +1,6 @@
 #include <ImageProcessing/TextRasterizer.h>
 #include "../FreeTypeHelper.h"
-#include <Defs.h>
+#include <RendererCore/RenderTypes.h>
 #include <ImageUtil/ImageUtil.h>
 
 namespace OIV

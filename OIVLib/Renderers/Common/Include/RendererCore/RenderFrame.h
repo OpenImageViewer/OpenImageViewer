@@ -1,7 +1,7 @@
 #pragma once
-#include <Defs.h>
+#include <RendererCore/RenderTypes.h>
 #include <Image.h>
-#include <Interfaces/IRendererDefs.h>
+#include <RendererCore/ViewParameters.h>
 #include <map>
 #include <cstdint>
 
@@ -19,9 +19,9 @@ namespace OIV
         // Whether this presentation participates in the current frame.
         bool visible = true;
         // Per-image sampling policy, preserving explicit call-site defaults.
-        OIV_Filter_type filterType = FT_Lanczos3;
+        OIV::FilterType filterType = OIV::FilterType::Lanczos3;
         // Main images precede selection, overlays follow it in registration order.
-        OIV_Image_Render_mode imageRenderMode = IRM_MainImage;
+        OIV::ImageRenderMode imageRenderMode = OIV::ImageRenderMode::MainImage;
     };
 
     // Renderer-owned CPU bookkeeping. Backends borrow records only during Render.

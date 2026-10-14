@@ -8,16 +8,14 @@ namespace OIV
       public:
 
         // Inherited via IRenderBackend
-        int Init([[maybe_unused]] const OIV_RendererInitializationParams& initParams) override { return 0; }
-        int SetViewParams([[maybe_unused]] const ViewParameters& viewParams) override { return 0; }
-        int Render(const RenderFrame&) override { return 0; }
-        int SetFilterLevel([[maybe_unused]] OIV_Filter_type filterLevel) override { return 0; }
-        int SetExposure([[maybe_unused]] const OIV_CMD_ColorExposure_Request& exposure) override { return 0; }
-        int SetSelectionRect([[maybe_unused]] VisualSelectionRect selectionRect) override { return 0; }
-        int SetBackgroundColor(int index, LLUtils::Color backgroundColor) override { return 0; }
+        void Init([[maybe_unused]] const OIV::RendererInitialization& initParams) override {}
+        void SetViewParams([[maybe_unused]] const ViewParameters& viewParams) override {}
+        void Render(const RenderFrame&) override {}
+        void SetFilterLevel([[maybe_unused]] OIV::FilterType filterLevel) override {}
+        void SetExposure([[maybe_unused]] const OIV::ColorExposure& exposure) override {}
+        void SetSelectionRect([[maybe_unused]] VisualSelectionRect selectionRect) override {}
+        void SetBackgroundColor(int index, LLUtils::Color backgroundColor) override {}
 
         void ReleaseImageResources(uint64_t) noexcept override {}
-
-        const char* GetBackendName() const override { return "Null"; }
     };
 }  // namespace OIV

@@ -205,7 +205,7 @@ TEST_CASE("ImageLoader decodes ImageMagick compatibility matrix", "[ImageCompati
             }
 
             REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
-            REQUIRE(result.resultCode == ResultCode::RC_Success);
+            REQUIRE(result.DecodeSucceeded());
             REQUIRE(result.image.pixels != nullptr);
 
             const auto loadedImage = result.image.pixels;
@@ -239,7 +239,7 @@ TEST_CASE("ImageLoader exposes unmapped TIFF extra samples as subimages", "[Imag
     const auto result = LoadWithRealController(tempFile.Path().native());
 
     REQUIRE(result.status == OIV::ImageLoadStatus::Loaded);
-    REQUIRE(result.resultCode == ResultCode::RC_Success);
+    REQUIRE(result.DecodeSucceeded());
     REQUIRE(result.image.pixels != nullptr);
 
     const auto loadedImage = result.image.pixels;
@@ -272,7 +272,7 @@ TEST_CASE("ImageOpenController rejects unsupported ImageMagick corpus variants",
 
             INFO("unsupported image path=" << OIV::Tests::NarrowPath(image.path));
             REQUIRE(result.status == OIV::ImageLoadStatus::UnsupportedFormat);
-            REQUIRE(result.resultCode == ResultCode::RC_FileNotSupported);
+            REQUIRE_FALSE(result.DecodeSucceeded());
         }
     }
 

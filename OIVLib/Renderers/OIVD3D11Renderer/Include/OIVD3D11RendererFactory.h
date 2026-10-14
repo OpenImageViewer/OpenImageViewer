@@ -3,11 +3,5 @@
 
 namespace OIV
 {
-    class D3D11RendererFactory
-    {
-      public:
-
-        static RenderBackendSharedPtr Create();
-    };
-
-}  // namespace OIV
+    std::unique_ptr<IRenderBackend> CreateD3D11Backend();
+}

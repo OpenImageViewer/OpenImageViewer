@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 
 #include <memory>
+#include <RendererCore/RendererException.h>
 #include <stdexcept>
 #include <string>
 
@@ -22,7 +23,8 @@ namespace OIV
                 fFragmentShader = CreateShader(fragmentShaderSource, GL_FRAGMENT_SHADER);
                 fShaderProgram  = glCreateProgram();
                 if (fShaderProgram == 0)
-                    throw std::runtime_error("Could not create an OpenGL shader program");
+                    throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL,
+                                            "Could not create an OpenGL shader program");
 
                 glAttachShader(fShaderProgram, fVertexShader);
                 glAttachShader(fShaderProgram, fFragmentShader);
@@ -32,7 +34,8 @@ namespace OIV
                 GLint linked{};
                 glGetProgramiv(fShaderProgram, GL_LINK_STATUS, &linked);
                 if (linked != GL_TRUE)
-                    throw std::runtime_error("Could not link OpenGL shaders: " + GetProgramLinkError(fShaderProgram));
+                    throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL,
+                                            "Link OpenGL shaders", std::nullopt, GetProgramLinkError(fShaderProgram));
             }
             catch (...)
             {
@@ -101,7 +104,8 @@ namespace OIV
 
             const GLuint shader = glCreateShader(type);
             if (shader == 0)
-                throw std::runtime_error("Could not create an OpenGL shader");
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL,
+                                        "Could not create an OpenGL shader");
 
             glShaderSource(shader, 1, &shaderSource, nullptr);
             glCompileShader(shader);
@@ -109,7 +113,8 @@ namespace OIV
             {
                 const std::string error = GetShaderCompileError(shader);
                 glDeleteShader(shader);
-                throw std::runtime_error("Could not compile an OpenGL shader: " + error);
+                throw RendererException(RendererErrorCode::BackendFailure, RendererType::OpenGL,
+                                        "Compile OpenGL shader", std::nullopt, error);
             }
 
             return shader;

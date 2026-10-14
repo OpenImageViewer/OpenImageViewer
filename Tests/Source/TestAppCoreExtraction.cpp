@@ -259,12 +259,12 @@ namespace
             lastTraverseMode = traverseMode;
             lastContext      = context;
 
-            return OIV::ImageFileLoadResult{resultCode, OIV::ViewerImage{.pixels = image,
-                                                                         .source = OIV::ImageSource::File,
-                                                                         .path   = normalizedFilePath}};
+            if (error)
+                return std::unexpected(*error);
+            return OIV::ViewerImage{.pixels = image, .source = OIV::ImageSource::File, .path = normalizedFilePath};
         }
 
-        ResultCode resultCode         = ResultCode::RC_Success;
+        std::optional<OIV::ImageLoadError> error;
         IMCodec::ImageSharedPtr image = CreateTestImage();
         LLUtils::native_string_type lastPath;
         IMCodec::PluginTraverseMode lastTraverseMode = IMCodec::PluginTraverseMode::NoTraverse;
@@ -1252,14 +1252,14 @@ TEST_CASE("FolderFileList leaves current index invalid when current file is not 
 
 TEST_CASE("ImageOpenController classifies load results", "[AppCore]")
 {
-    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_Success, CreateTestImage()) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(OIV::ViewerImage{.pixels = CreateTestImage()}) ==
             OIV::ImageLoadStatus::Loaded);
-    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_FileNotSupported, nullptr) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(std::unexpected(OIV::ImageLoadError::UnsupportedFormat)) ==
             OIV::ImageLoadStatus::UnsupportedFormat);
-    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(ResultCode::RC_UknownError, nullptr) ==
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(std::unexpected(OIV::ImageLoadError::UnknownError)) ==
             OIV::ImageLoadStatus::UnknownError);
     REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(
-                ResultCode::RC_Success, CreateTestImage(OIV::ImageOpenController::MaxSupportedDimension + 1, 1)) ==
+                OIV::ViewerImage{.pixels = CreateTestImage(OIV::ImageOpenController::MaxSupportedDimension + 1, 1)}) ==
             OIV::ImageLoadStatus::TooLarge);
 }
 
@@ -1271,13 +1271,12 @@ TEST_CASE("ImageLoadPresentationPolicy maps load results to UI decisions", "[App
     REQUIRE_FALSE(presentation.shouldLoadImage);
     REQUIRE_FALSE(presentation.shouldShowMessage);
 
-    result       = {OIV::ImageLoadStatus::Loaded, ResultCode::RC_Success, LLUTILS_TEXT("path.png"), nullptr};
+    result       = {OIV::ImageLoadStatus::Loaded, LLUTILS_TEXT("path.png"), nullptr};
     presentation = OIV::ImageLoadPresentationPolicy::Decide(result, LLUTILS_TEXT("path.png"));
     REQUIRE(presentation.succeeded);
     REQUIRE(presentation.shouldLoadImage);
 
-    result       = {OIV::ImageLoadStatus::UnsupportedFormat, ResultCode::RC_FileNotSupported, LLUTILS_TEXT("path.png"),
-                    nullptr};
+    result       = {OIV::ImageLoadStatus::UnsupportedFormat, LLUTILS_TEXT("path.png"), nullptr};
     presentation = OIV::ImageLoadPresentationPolicy::Decide(result, LLUTILS_TEXT("<path>"));
     REQUIRE_FALSE(presentation.succeeded);
     REQUIRE(presentation.shouldShowMessage);
@@ -1325,11 +1324,11 @@ TEST_CASE("BrowseSessionController sets current index for loaded file in folder"
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.IsCurrentFile(fileB.native()));
 
-    REQUIRE(controller.CommitCurrentFile(fileC.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileC.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 2);
     REQUIRE(controller.IsCurrentFile(fileC.native()));
 }
@@ -1351,7 +1350,7 @@ TEST_CASE("BrowseSessionController updates current index after sort order change
                                             LLUTILS_TEXT("jpg;png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
 
     sorter.SetSortType(OIV::FileSorter::SortType::Extension);
@@ -1402,7 +1401,7 @@ TEST_CASE("BrowseSessionController ignores stale navigation success after sort o
         return completions[count - 1];
     };
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.JumpFiles(1));
 
@@ -1457,7 +1456,7 @@ TEST_CASE("BrowseSessionController ignores stale navigation failure after sort o
             completionCv.notify_all();
         });
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.JumpFiles(1));
 
@@ -1508,7 +1507,7 @@ TEST_CASE("BrowseSessionController accepts normalized pending file identity", "[
             completionCv.notify_all();
         });
 
-    REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileA.native()).has_value());
     REQUIRE(controller.JumpFiles(1));
 
     OIV::BrowseSessionController::BrowseCandidateCompletion completion;
@@ -1557,7 +1556,7 @@ TEST_CASE("BrowseSessionController ignores stale navigation success after watche
             completionCv.notify_all();
         });
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
     REQUIRE(controller.GetFolderFileList().GetCurrentIndex() == 1);
     REQUIRE(controller.JumpFiles(1));
 
@@ -1601,7 +1600,7 @@ TEST_CASE("BrowseSessionController returns removal result when committed current
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
 
     const auto result = controller.OnFileChanged({controller.GetActiveFolderID(),
                                                   OIV::IFileWatcher::FileChangedOp::Remove,
@@ -1630,7 +1629,7 @@ TEST_CASE("BrowseSessionController returns unsupported result when committed cur
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
 
     const auto result = controller.OnFileChanged({controller.GetActiveFolderID(),
                                                   OIV::IFileWatcher::FileChangedOp::Rename, folder.native(),
@@ -1668,7 +1667,7 @@ TEST_CASE("BrowseSessionController commits supported current rename and reloads 
                                                 loadedCv.notify_all();
                                             });
 
-    REQUIRE(controller.CommitCurrentFile(fileB.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileB.native()).has_value());
 
     const auto result = controller.OnFileChanged({controller.GetActiveFolderID(),
                                                   OIV::IFileWatcher::FileChangedOp::Rename, folder.native(),
@@ -1698,7 +1697,7 @@ TEST_CASE("BrowseSessionController ignores file watcher events from inactive fol
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
 
-    REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileA.native()).has_value());
     const auto sizeBefore = controller.GetFolderFileList().GetSize();
 
     const auto result = controller.OnFileChanged(
@@ -1756,7 +1755,7 @@ TEST_CASE("BrowseSessionController owns folder navigation", "[AppCore]")
             [&] { return std::find(loadedFiles.begin(), loadedFiles.end(), fileName) != loadedFiles.end(); });
     };
 
-    REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileA.native()).has_value());
 
     REQUIRE(controller.GetFolderFileList().GetSize() == 3);
     REQUIRE(controller.IsCurrentFile(fileA.native()));
@@ -1800,7 +1799,7 @@ TEST_CASE("BrowseSessionController skips invalid requested files before committi
             resultCv.notify_all();
         });
 
-    REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileA.native()).has_value());
     REQUIRE(controller.IsCurrentFile(fileA.native()));
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(controller.IsCurrentFile(fileA.native()));
@@ -1860,7 +1859,7 @@ TEST_CASE("BrowseSessionController keeps current file when invalid skip search i
         });
     controllerPtr = &controller;
 
-    REQUIRE(controller.CommitCurrentFile(fileA.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(fileA.native()).has_value());
     REQUIRE(controller.IsCurrentFile(fileA.native()));
     REQUIRE(controller.JumpFiles(1));
     REQUIRE(controller.IsCurrentFile(fileA.native()));
@@ -2035,7 +2034,7 @@ TEST_CASE("BrowseSessionController displays the adjacent file after deletion", "
         watcherFirst = true;
     }
 
-    REQUIRE(controller.CommitCurrentFile(removed.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(removed.native()).has_value());
     REQUIRE(std::filesystem::remove(removed));
     if (watcherFirst)
     {
@@ -2079,7 +2078,7 @@ TEST_CASE("BrowseSessionController has no replacement after deleting the only fi
     OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
-    REQUIRE(controller.CommitCurrentFile(file.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(file.native()).has_value());
     REQUIRE(std::filesystem::remove(file));
     REQUIRE_FALSE(controller.RequestRemovedFileReplacement(file.native()));
     REQUIRE(controller.GetFolderFileList().GetSize() == 0);
@@ -2098,11 +2097,11 @@ TEST_CASE("BrowseSessionController handles a recreated removed filename", "[AppC
     OIV::ImageResidencyCache residency(std::make_unique<CountingResidencyProcessor>(), 1);
     OIV::BrowseSessionController controller(&watcher, &sorter, {LLUTILS_TEXT("png")}, LLUTILS_TEXT("png"), residency,
                                             [](const LLUtils::native_string_type&, IMCodec::ImageSharedPtr) {});
-    REQUIRE(controller.CommitCurrentFile(removed.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(removed.native()).has_value());
     REQUIRE(std::filesystem::remove(removed));
     // Without a candidate callback the request fails, but the removed entry is still discarded.
     REQUIRE_FALSE(controller.RequestRemovedFileReplacement(removed.native()));
-    REQUIRE(controller.CommitCurrentFile(other.native()) == ResultCode::RC_Success);
+    REQUIRE(controller.CommitCurrentFile(other.native()).has_value());
 
     SECTION("Recreated by adding a file")
     {
@@ -2137,4 +2136,60 @@ TEST_CASE("BrowseSessionController handles a recreated removed filename", "[AppC
                     .action == OIV::BrowseSessionController::BrowseSessionAction::CurrentFileRemoved);
         REQUIRE(controller.GetFolderFileList().GetSize() == 0);
     }
+}
+
+TEST_CASE("Image opening preserves typed decode failures", "[AppCore][loading]")
+{
+    const auto error = GENERATE(OIV::ImageLoadError::UnsupportedFormat, OIV::ImageLoadError::UnknownError);
+    auto loader      = std::make_unique<FakeImageFileLoader>();
+    loader->error    = error;
+    OIV::ImageOpenController controller(std::move(loader));
+    const auto result = controller.LoadFile(LLUTILS_TEXT("failure.png"), IMCodec::PluginTraverseMode::NoTraverse, {});
+    CHECK_FALSE(result.DecodeSucceeded());
+    CHECK(result.image.pixels == nullptr);
+    CHECK(result.status == (error == OIV::ImageLoadError::UnsupportedFormat ? OIV::ImageLoadStatus::UnsupportedFormat
+                                                                            : OIV::ImageLoadStatus::UnknownError));
+    CHECK(OIV::ImageOpenController::ClassifyLoadResult(OIV::ViewerImage{}) == OIV::ImageLoadStatus::UnknownError);
+}
+
+TEST_CASE("Navigation failures preserve the selected item and callback count", "[AppCore][navigation]")
+{
+    const auto folder = MakeTempFolder("oiv-navigation-errors");
+    const auto file   = folder / "a.png";
+    TouchFile(file);
+    OIV::FileSorter sorter;
+    const OIV::FolderFileList::hashset_type extensions{LLUTILS_TEXT("png")};
+    int notifications = 0;
+    OIV::FolderFileList files(&sorter, extensions, LLUTILS_TEXT("png"), [&](auto, auto) { ++notifications; });
+    auto result = files.SetCurrentIndex(0);
+    REQUIRE_FALSE(result);
+    CHECK(result.error() == OIV::NavigationError::EmptyData);
+    files.SetFolder(folder.native(), {file.native()}, file.native());
+    const auto before = notifications;
+    result            = files.SetCurrentIndex(10);
+    REQUIRE_FALSE(result);
+    CHECK(result.error() == OIV::NavigationError::OutOfRange);
+    CHECK(files.GetCurrentItemName() == file.native());
+    CHECK(notifications == before);
+    OIV::ImageResidencyCache residency;
+    OIV::BrowseSessionController controller(nullptr, &sorter, extensions, LLUTILS_TEXT("png"), residency,
+                                            [](const auto&, auto) {});
+    REQUIRE(controller.CommitCurrentFile(file.native()));
+    result = controller.CommitCurrentFile((folder / "missing.png").native());
+    REQUIRE_FALSE(result);
+    CHECK(result.error() == OIV::NavigationError::FileNotFound);
+    CHECK(controller.IsCurrentFile(file.native()));
+}
+
+TEST_CASE("Viewer checkerboard shades retain their existing color pairs", "[AppCore][renderer]")
+{
+    using OIV::TransparencyShade;
+    CHECK(OIV::ViewerPresentationPolicy::CheckerboardColors(TransparencyShade::Light) ==
+          std::array{LLUtils::Color{{255, 255, 255, 255}}, LLUtils::Color{{204, 204, 204, 255}}});
+    CHECK(OIV::ViewerPresentationPolicy::CheckerboardColors(TransparencyShade::Medium) ==
+          std::array{LLUtils::Color{{153, 153, 153, 255}}, LLUtils::Color{{102, 102, 102, 255}}});
+    CHECK(OIV::ViewerPresentationPolicy::CheckerboardColors(TransparencyShade::Dark) ==
+          std::array{LLUtils::Color{{102, 102, 102, 255}}, LLUtils::Color{{51, 51, 51, 255}}});
+    CHECK(OIV::ViewerPresentationPolicy::CheckerboardColors(TransparencyShade::Darker) ==
+          std::array{LLUtils::Color{{51, 51, 51, 255}}, LLUtils::Color{{0, 0, 0, 255}}});
 }

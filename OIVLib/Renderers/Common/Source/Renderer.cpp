@@ -37,7 +37,7 @@ namespace OIV
         assert(fOwner);
         fOwner->SetProperties(fId, properties);
     }
-    Renderer::Renderer(RenderBackendSharedPtr backend) : fBackend(std::move(backend))
+    Renderer::Renderer(std::unique_ptr<OIV::IRenderBackend> backend) : fBackend(std::move(backend))
     {
         assert(fBackend);
     }
@@ -77,7 +77,7 @@ namespace OIV
             fBackend->ReleaseImageResources(id);
         fImages.erase(id);
     }
-    int Renderer::Redraw()
+    void Renderer::Redraw()
     {
         assert(!fRendering);
 #ifndef NDEBUG
@@ -90,56 +90,36 @@ namespace OIV
         } scope{fRendering};
         fRendering = true;
 #endif
-        return fBackend ? fBackend->Render(RenderFrame{fImages}) : 0;
+        if (fBackend)
+            fBackend->Render(RenderFrame{fImages});
     }
     void Renderer::Shutdown() noexcept
     {
         assert(!fRendering);
         fBackend.reset();
     }
-    int Renderer::SetViewParams(const ViewParameters& p)
+    void Renderer::SetViewParams(const ViewParameters& p)
     {
-        fViewParams = p;
-        return fBackend->SetViewParams(fViewParams);
+        fBackend->SetViewParams(p);
     }
-    int Renderer::SetFilterLevel(OIV_Filter_type f)
+    void Renderer::SetFilterLevel(OIV::FilterType f)
     {
-        return fBackend->SetFilterLevel(f);
+        fBackend->SetFilterLevel(f);
     }
-    int Renderer::SetExposure(const OIV_CMD_ColorExposure_Request& e)
+    void Renderer::SetExposure(const OIV::ColorExposure& e)
     {
-        return fBackend->SetExposure(e);
+        fBackend->SetExposure(e);
     }
-    int Renderer::SetSelectionRect(VisualSelectionRect s)
+    void Renderer::SetSelectionRect(VisualSelectionRect s)
     {
-        return fBackend->SetSelectionRect(s);
+        fBackend->SetSelectionRect(s);
     }
-    int Renderer::SetBackgroundColor(int i, LLUtils::Color c)
+    void Renderer::SetBackgroundColor(int i, LLUtils::Color c)
     {
-        return fBackend->SetBackgroundColor(i, c);
+        fBackend->SetBackgroundColor(i, c);
     }
-    Acceleration Renderer::GetAcceleration() const
+    const RendererAdapter& Renderer::GetSelectedAdapter() const
     {
-        return fBackend->GetAcceleration();
-    }
-    const char* Renderer::GetBackendName() const
-    {
-        return fBackend->GetBackendName();
-    }
-    const char* Renderer::GetGPUName() const
-    {
-        return fBackend->GetGPUName();
-    }
-    const char* Renderer::GetAPIVersion() const
-    {
-        return fBackend->GetAPIVersion();
-    }
-    const char* Renderer::GetDriverVersion() const
-    {
-        return fBackend->GetDriverVersion();
-    }
-    int Renderer::GetSelectedGPUIndex() const
-    {
-        return fBackend->GetSelectedGPUIndex();
+        return fBackend->GetSelectedAdapter();
     }
 }  // namespace OIV

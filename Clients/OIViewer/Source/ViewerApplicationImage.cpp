@@ -10,9 +10,6 @@
 
 #include <Version.h>
 
-#include <Functions.h>
-#include <ApiGlobal.h>
-
 #include <LLUtils/Exception.h>
 #include <LLUtils/FileHelper.h>
 #include <LLUtils/PlatformUtility.h>
@@ -26,8 +23,6 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
-
-#include "OIVCommands.h"
 
 #include <ImageProcessing/TextRasterizer.h>
 #include <ImageProcessing/RawImage.h>
@@ -210,13 +205,10 @@ namespace OIV
             if (fBrowseSessionController != nullptr && loadResult.image.pixels != nullptr &&
                 loadResult.image.source == ImageSource::File)
             {
-                const ResultCode commitResult = fBrowseSessionController->CommitCurrentFile(loadResult.normalizedPath);
-                if (commitResult != ResultCode::RC_Success)
+                const auto commitResult = fBrowseSessionController->CommitCurrentFile(loadResult.normalizedPath);
+                if (!commitResult)
                 {
-                    const ImageLoadResult commitFailure{ImageLoadStatus::UnknownError,
-                                                        commitResult,
-                                                        loadResult.normalizedPath,
-                                                        {}};
+                    const ImageLoadResult commitFailure{ImageLoadStatus::UnknownError, loadResult.normalizedPath, {}};
                     const auto failurePresentation = ImageLoadPresentationPolicy::Decide(commitFailure,
                                                                                          formattedFilePath);
                     if (failurePresentation.shouldShowMessage)
@@ -370,8 +362,7 @@ namespace OIV
                 OnFileIndexResidencyReady(result.fileName, result.image);
                 break;
             case BrowseSessionController::BrowseSessionAction::ShowFailure:
-                ProcessImageLoadResult(
-                    {ImageLoadStatus::UnknownError, ResultCode::RC_UknownError, result.fileName, {}});
+                ProcessImageLoadResult({ImageLoadStatus::UnknownError, result.fileName, {}});
                 break;
             case BrowseSessionController::BrowseSessionAction::CurrentFileRemoved:
             case BrowseSessionController::BrowseSessionAction::CurrentFileUnsupportedRename:
@@ -480,7 +471,7 @@ namespace OIV
 
         if (image == nullptr)
         {
-            ProcessImageLoadResult({ImageLoadStatus::UnknownError, ResultCode::RC_UknownError, fileName, {}});
+            ProcessImageLoadResult({ImageLoadStatus::UnknownError, fileName, {}});
             return;
         }
 

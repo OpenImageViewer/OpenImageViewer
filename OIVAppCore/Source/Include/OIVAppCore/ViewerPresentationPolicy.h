@@ -5,6 +5,8 @@
 #include <ImageProcessing/ImageSource.h>
 
 #include <string>
+#include <array>
+#include <RendererCore/RenderTypes.h>
 
 namespace OIV
 {
@@ -19,6 +21,8 @@ namespace OIV
     class ViewerPresentationPolicy
     {
       public:
+
+        static std::array<LLUtils::Color, 2> CheckerboardColors(TransparencyShade shade);
 
         static LLUtils::native_string_type FormatOperationResult(OperationResult result);
         static LLUtils::native_string_type FormatFailedOperation(const LLUtils::native_string_type& action,

@@ -1,7 +1,7 @@
 #include <LLUtils/Logging/Logger.h>
 #include "VKContext.h"
 #include "VKCommon.h"
-#include <Interfaces/RendererOptions.h>
+#include <RendererCore/RendererOptions.h>
 
 #include <algorithm>
 #include <cstring>
@@ -20,8 +20,6 @@ namespace
 
 namespace OIV
 {
-    VKContext::VKContext() = default;
-
     VKContext::~VKContext()
     {
         Purge();
@@ -29,8 +27,8 @@ namespace OIV
 
     void VKContext::Init(const CreateParams& params)
     {
-        fGpuIndex = params.gpuIndex;
-        fWindow   = params.window;
+        fSelectedAdapter = {};
+        fWindow          = params.window;
 #ifdef __linux__
         fNativeDisplay = params.nativeDisplay;
 #endif
@@ -40,7 +38,7 @@ namespace OIV
 
         CreateInstance();
         CreateSurface(params.nativeDisplay, params.window);
-        PickPhysicalDevice(params.adapterName);
+        PickPhysicalDevice(params.gpuIndex, params.adapterName);
         CreateLogicalDevice();
         CreateSwapChain(params.width, params.height);
         CreateCommandPool();
@@ -48,6 +46,8 @@ namespace OIV
 
     void VKContext::Purge()
     {
+        fSelectedAdapter = {};
+        fPhysicalDevice  = VK_NULL_HANDLE;
         if (fDevice != VK_NULL_HANDLE)
         {
             vkDeviceWaitIdle(fDevice);
@@ -101,7 +101,8 @@ namespace OIV
             if (vkGetPhysicalDeviceSurfaceSupportKHR(fPhysicalDevice, fPresentQueueFamily, fSurface, &presentSupport) !=
                     VK_SUCCESS ||
                 !presentSupport)
-                throw std::runtime_error("The Vulkan present queue cannot use the recreated surface");
+                throw RendererException(RendererErrorCode::SurfaceUnavailable, RendererType::Vulkan,
+                                        "The Vulkan present queue cannot use the recreated surface");
         }
         return CreateSwapChain(width, height);
     }
@@ -223,38 +224,33 @@ namespace OIV
         return adapters;
     }
 
-    Acceleration VKContext::GetAcceleration() const
-    {
-        return fPhysicalDevice == VK_NULL_HANDLE ? Acceleration::Unknown
-                                                 : ClassifyDevice(GetPhysicalDeviceProperties().deviceType);
-    }
-
-    void VKContext::PickPhysicalDevice(const char* adapterName)
+    void VKContext::PickPhysicalDevice(int gpuIndex, const char* adapterName)
     {
         uint32_t deviceCount{0};
         CheckVkResult(vkEnumeratePhysicalDevices(fInstance, &deviceCount, nullptr),
                       "Failed to enumerate Vulkan physical devices");
 
         if (deviceCount == 0)
-            throw std::runtime_error("Failed to find GPUs with Vulkan support");
+            throw RendererException(RendererErrorCode::BackendFailure, RendererType::Vulkan,
+                                    "Failed to find GPUs with Vulkan support");
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
         CheckVkResult(vkEnumeratePhysicalDevices(fInstance, &deviceCount, devices.data()),
                       "Failed to enumerate Vulkan physical devices");
 
-        const bool requested = fGpuIndex >= 0 || adapterName != nullptr;
-        if (fGpuIndex >= static_cast<int>(devices.size()))
+        const bool requested = gpuIndex >= 0 || adapterName != nullptr;
+        if (gpuIndex >= static_cast<int>(devices.size()))
             throw std::invalid_argument("--adapter-index is outside the Vulkan adapter list");
 
         VkPhysicalDeviceProperties selectedProperties{};
         int selectedIndex  = -1;
-        const size_t first = fGpuIndex >= 0 ? static_cast<size_t>(fGpuIndex) : 0;
-        const size_t end   = fGpuIndex >= 0 ? first + 1 : devices.size();
+        const size_t first = gpuIndex >= 0 ? static_cast<size_t>(gpuIndex) : 0;
+        const size_t end   = gpuIndex >= 0 ? first + 1 : devices.size();
         for (size_t i = first; i < end; ++i)
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties(devices[i], &properties);
-            if (fGpuIndex < 0 && adapterName != nullptr &&
+            if (gpuIndex < 0 && adapterName != nullptr &&
                 !detail::AdapterNameMatches(adapterName, properties.deviceName, properties.vendorID))
                 continue;
             // Descriptor pool growth relies on Vulkan 1.1's recoverable out-of-pool result.
@@ -280,17 +276,23 @@ namespace OIV
         }
 
         if (selectedIndex < 0)
-            throw std::runtime_error(
+            throw RendererException(
+                RendererErrorCode::BackendFailure, RendererType::Vulkan,
                 requested ? "The requested adapter was not found or does not support Vulkan 1.1 and window presentation"
                           : "Failed to find a Vulkan 1.1 GPU that can render and present to this window");
 
-        fGpuIndex          = selectedIndex;
-        const char* reason = requested ? "user requested"
-                             : selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
-                                 ? "discrete GPU preferred"
-                                 : "first available GPU (no discrete GPU found)";
+        fSelectedAdapter               = {selectedIndex, selectedProperties.deviceName, selectedProperties.vendorID,
+                                          ClassifyDevice(selectedProperties.deviceType),
+                                          selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU};
+        fSelectedAdapter.apiVersion    = std::to_string(VK_API_VERSION_MAJOR(selectedProperties.apiVersion)) + "." +
+                                         std::to_string(VK_API_VERSION_MINOR(selectedProperties.apiVersion));
+        fSelectedAdapter.driverVersion = std::to_string(selectedProperties.driverVersion);
+        const char* reason             = requested ? "user requested"
+                                         : selectedProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+                                             ? "discrete GPU preferred"
+                                             : "first available GPU (no discrete GPU found)";
         LL_LOG(VulkanLog(), LLUtils::LogLevel::Info, "Selected GPU: {} (index {}, {})", selectedProperties.deviceName,
-               fGpuIndex, reason);
+               fSelectedAdapter.index, reason);
     }
 
     bool VKContext::IsPhysicalDeviceSuitable(VkPhysicalDevice device, uint32_t& graphicsQueueFamily,
@@ -413,7 +415,8 @@ namespace OIV
         CheckVkResult(vkGetPhysicalDeviceSurfaceFormatsKHR(fPhysicalDevice, fSurface, &formatCount, nullptr),
                       "Failed to get Vulkan surface formats");
         if (formatCount == 0)
-            throw std::runtime_error("The Vulkan surface does not expose any image formats");
+            throw RendererException(RendererErrorCode::SurfaceUnavailable, RendererType::Vulkan,
+                                    "The Vulkan surface does not expose any image formats");
 
         std::vector<VkSurfaceFormatKHR> formats(formatCount);
         CheckVkResult(vkGetPhysicalDeviceSurfaceFormatsKHR(fPhysicalDevice, fSurface, &formatCount, formats.data()),
@@ -423,7 +426,8 @@ namespace OIV
         CheckVkResult(vkGetPhysicalDeviceSurfacePresentModesKHR(fPhysicalDevice, fSurface, &presentModeCount, nullptr),
                       "Failed to get Vulkan present modes");
         if (presentModeCount == 0)
-            throw std::runtime_error("The Vulkan surface does not expose any present modes");
+            throw RendererException(RendererErrorCode::SurfaceUnavailable, RendererType::Vulkan,
+                                    "The Vulkan surface does not expose any present modes");
 
         std::vector<VkPresentModeKHR> presentModes(presentModeCount);
         CheckVkResult(vkGetPhysicalDeviceSurfacePresentModesKHR(fPhysicalDevice, fSurface, &presentModeCount,
@@ -572,11 +576,4 @@ namespace OIV
         }
     }
 
-    VkPhysicalDeviceProperties VKContext::GetPhysicalDeviceProperties() const
-    {
-        VkPhysicalDeviceProperties properties{};
-        if (fPhysicalDevice != VK_NULL_HANDLE)
-            vkGetPhysicalDeviceProperties(fPhysicalDevice, &properties);
-        return properties;
-    }
 }  // namespace OIV

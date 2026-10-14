@@ -3,10 +3,5 @@
 
 namespace OIV
 {
-    class VKRendererFactory
-    {
-      public:
-
-        static RenderBackendSharedPtr Create();
-    };
-}  // namespace OIV
+    std::unique_ptr<IRenderBackend> CreateVulkanBackend();
+}

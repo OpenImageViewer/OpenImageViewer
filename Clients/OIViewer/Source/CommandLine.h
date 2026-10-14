@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Interfaces/RendererOptions.h>
+#include <RendererDiscovery.h>
 #include <LLUtils/StringDefs.h>
 #include <variant>
 

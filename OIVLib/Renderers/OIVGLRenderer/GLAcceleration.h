@@ -1,5 +1,5 @@
 #pragma once
-#include <Interfaces/RendererOptions.h>
+#include <RendererCore/RendererOptions.h>
 
 namespace OIV
 {

@@ -134,11 +134,10 @@ namespace OIV
                     .scale           = LLUtils::PointF64::One,
                     .opacity         = 0.5,
                     .visible         = true,
-                    .filterType      = FT_None,
-                    .imageRenderMode = IRM_Overlay,
+                    .filterType      = OIV::FilterType::None,
+                    .imageRenderMode = OIV::ImageRenderMode::Overlay,
                 };
-                fOwner.fAutoScrollAnchor.emplace(
-                    fOwner.fRenderGateway->GetRenderer().CreateImage(std::move(pixels), properties));
+                fOwner.fAutoScrollAnchor.emplace(fOwner.fRenderer->CreateImage(std::move(pixels), properties));
             }
         }
         else

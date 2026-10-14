@@ -55,37 +55,35 @@ namespace
                 throw std::runtime_error("runtime unavailable");
             return backend.adapters;
         }
-        int Init(const OIV_RendererInitializationParams& params) override
+        void Init(const OIV::RendererInitialization& params) override
         {
             CHECK(params.adapterName == nullptr);
             auto& backend = fixture->backends[fApi];
             backend.attempts.push_back(params.gpuIndex);
             if (backend.failures.contains(params.gpuIndex))
                 throw std::runtime_error("unsupported device or initialization failure");
-            fAcceleration = backend.gl;
+            fSelectedAdapter.acceleration = backend.gl;
             if (fApi != 2)
             {
                 const auto adapter = std::ranges::find(backend.adapters, params.gpuIndex, &RendererAdapter::index);
                 REQUIRE(adapter != backend.adapters.end());
-                fAcceleration = adapter->acceleration;
+                fSelectedAdapter = *adapter;
             }
-            return 0;
         }
-        Acceleration GetAcceleration() const override { return fAcceleration; }
-        const char* GetBackendName() const override { return std::array{"Vulkan", "D3D11", "GL"}[fApi]; }
+        const RendererAdapter& GetSelectedAdapter() const override { return fSelectedAdapter; }
 
       private:
 
         size_t fApi;
-        Acceleration fAcceleration = Acceleration::Unknown;
+        RendererAdapter fSelectedAdapter;
     };
     constexpr std::array<RendererBackend, 3> Backends{{
         {{RendererType::Vulkan, "Vulkan", true},
-         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(0); }},
+         +[]() -> std::unique_ptr<OIV::IRenderBackend> { return std::make_unique<FakeRenderer>(0); }},
         {{RendererType::D3D11, "D3D11", true},
-         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(1); }},
+         +[]() -> std::unique_ptr<OIV::IRenderBackend> { return std::make_unique<FakeRenderer>(1); }},
         {{RendererType::OpenGL, "GL", false},
-         +[]() -> RenderBackendSharedPtr { return std::make_shared<FakeRenderer>(2); }},
+         +[]() -> std::unique_ptr<OIV::IRenderBackend> { return std::make_unique<FakeRenderer>(2); }},
     }};
     RendererAdapter Adapter(int index, Acceleration acceleration, std::string name = "GPU", uint32_t vendor = 0)
     {
@@ -101,7 +99,7 @@ TEST_CASE("Startup exhausts hardware before software and discovers lazily", "[re
     state.backends[1].adapters = {Adapter(0, hardwareApi == 1 ? Acceleration::Hardware : Acceleration::Software)};
     state.backends[2].gl       = Acceleration::Hardware;
     const auto selected        = SelectRenderer(Backends, {}, {});
-    CHECK(std::string(selected->GetBackendName()) == Backends[hardwareApi].info.name);
+    CHECK(selected.type == Backends[hardwareApi].info.type);
     for (int api = 0; api < hardwareApi; ++api)
         CHECK(state.backends[api].attempts.empty());
     for (int api = hardwareApi + 1; api < 3; ++api)
@@ -116,28 +114,28 @@ TEST_CASE("D3D11 preference preserves hardware priority and Vulkan fallback", "[
     Fixture state;
     state.backends[0].adapters = {Adapter(0, Acceleration::Hardware)};
     state.backends[1].adapters = {Adapter(0, Acceleration::Hardware)};
-    std::string_view expected  = "D3D11";
+    RendererType expected      = RendererType::D3D11;
     SECTION("D3D11 hardware succeeds") {}
     SECTION("D3D11 hardware initialization fails")
     {
         state.backends[1].failures = {0};
-        expected                   = "Vulkan";
+        expected                   = RendererType::Vulkan;
     }
     SECTION("D3D11 discovery fails")
     {
         state.backends[1].discoveryFails = true;
-        expected                         = "Vulkan";
+        expected                         = RendererType::Vulkan;
     }
     SECTION("Vulkan hardware precedes D3D11 software")
     {
         state.backends[1].adapters.front().acceleration = Acceleration::Software;
-        expected                                        = "Vulkan";
+        expected                                        = RendererType::Vulkan;
     }
     const std::array preferred{Backends[1], Backends[0], Backends[2]};
     const auto selected = SelectRenderer(preferred, {}, {});
-    CHECK(selected->GetBackendName() == expected);
-    CHECK(selected->GetAcceleration() == Acceleration::Hardware);
-    CHECK(state.backends[0].discoveries == (expected == "Vulkan" ? 1 : 0));
+    CHECK(selected.type == expected);
+    CHECK(selected.backend->GetSelectedAdapter().acceleration == Acceleration::Hardware);
+    CHECK(state.backends[0].discoveries == (expected == RendererType::Vulkan ? 1 : 0));
     CHECK(state.backends[2].discoveries == 0);
 }
 
@@ -149,7 +147,7 @@ TEST_CASE("Unknown GL precedes software but never confirmed hardware", "[rendere
     state.backends[1].adapters = {Adapter(0, hardware ? Acceleration::Hardware : Acceleration::Software)};
     state.backends[2].gl       = Acceleration::Unknown;
     const auto selected        = SelectRenderer(Backends, {}, {});
-    CHECK(std::string(selected->GetBackendName()) == (hardware ? "D3D11" : "GL"));
+    CHECK(selected.type == (hardware ? RendererType::D3D11 : RendererType::OpenGL));
     CHECK(state.backends[0].attempts.empty());
     CHECK(state.backends[2].attempts.size() == (hardware ? 0 : 2));
 }
@@ -163,7 +161,7 @@ TEST_CASE("Software tier retains API order after failed hardware and unknown", "
     state.backends[1].failures = {0};
     state.backends[2].gl       = Acceleration::Software;
     const auto selected        = SelectRenderer(Backends, {}, {});
-    CHECK(std::string(selected->GetBackendName()) == "Vulkan");
+    CHECK(selected.type == RendererType::Vulkan);
     CHECK(state.backends[0].attempts == std::vector<int>{0, 1});
     CHECK(state.backends[1].attempts == std::vector<int>{0});
 }
@@ -175,8 +173,8 @@ TEST_CASE("Explicit API permits its software but forbids another API", "[rendere
     state.backends[1].adapters = {Adapter(0, Acceleration::Hardware), Adapter(1, Acceleration::Software)};
     state.backends[1].failures = {0};
     const auto selected        = SelectRenderer(Backends, {.renderer = RendererType::D3D11}, {});
-    CHECK(std::string(selected->GetBackendName()) == "D3D11");
-    CHECK(selected->GetAcceleration() == Acceleration::Software);
+    CHECK(selected.type == RendererType::D3D11);
+    CHECK(selected.backend->GetSelectedAdapter().acceleration == Acceleration::Software);
     CHECK(state.backends[0].discoveries == 0);
     CHECK(state.backends[2].attempts.empty());
 }
@@ -191,7 +189,7 @@ TEST_CASE("Name constraints survive fallback and select the first usable match",
     state.backends[1].adapters[2].preferred = true;
     state.backends[1].failures              = {0};
     const auto selected                     = SelectRenderer(Backends, {.adapterName = "  aMd  "}, {});
-    CHECK(std::string(selected->GetBackendName()) == "D3D11");
+    CHECK(selected.type == RendererType::D3D11);
     CHECK(state.backends[0].attempts.empty());
     CHECK(state.backends[1].attempts == std::vector<int>{0, 1});
     CHECK(state.backends[2].attempts.empty());
@@ -212,7 +210,7 @@ TEST_CASE("Index overrides conflicting name and disables adapter and API fallbac
     else
     {
         const auto selected = SelectRenderer(Backends, options, {});
-        CHECK(std::string(selected->GetBackendName()) == "Vulkan");
+        CHECK(selected.type == RendererType::Vulkan);
     }
     CHECK(state.backends[0].attempts == std::vector<int>{0});
     CHECK(state.backends[1].discoveries == 0);
@@ -239,7 +237,7 @@ TEST_CASE("Missing runtime falls back automatically and explicit Vulkan fails", 
     state.backends[1].adapters       = {Adapter(0, Acceleration::Hardware)};
     {
         const auto selected = SelectRenderer(Backends, {}, {});
-        CHECK(std::string(selected->GetBackendName()) == "D3D11");
+        CHECK(selected.type == RendererType::D3D11);
     }
     CHECK_THROWS_WITH(SelectRenderer(Backends, {.renderer = RendererType::Vulkan}, {}),
                       Catch::Matchers::ContainsSubstring("runtime unavailable"));
@@ -248,7 +246,7 @@ TEST_CASE("Missing runtime falls back automatically and explicit Vulkan fails", 
     else if (GetDefaultRenderer() == RendererType::D3D11)
     {
         const auto selected = SelectRenderer(Backends, {.adapterIndex = 0}, {});
-        CHECK(std::string(selected->GetBackendName()) == "D3D11");
+        CHECK(selected.type == RendererType::D3D11);
     }
 }
 
@@ -280,7 +278,7 @@ TEST_CASE("An explicitly selected GL context initializes once regardless of acce
     Fixture state;
     state.backends[2].gl = GENERATE(Acceleration::Hardware, Acceleration::Unknown, Acceleration::Software);
     const auto renderer  = SelectRenderer(Backends, {.renderer = RendererType::OpenGL}, {});
-    CHECK(renderer->GetAcceleration() == state.backends[2].gl);
+    CHECK(renderer.backend->GetSelectedAdapter().acceleration == state.backends[2].gl);
     CHECK(state.backends[2].attempts.size() == 1);
     CHECK(state.backends[0].discoveries == 0);
     CHECK(state.backends[1].discoveries == 0);
