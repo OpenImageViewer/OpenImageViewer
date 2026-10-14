@@ -784,3 +784,30 @@ TEST_CASE("Shared decode retains its operation while coroutine callbacks restore
     CHECK(completed[1] == second);
     CHECK(observed->GetCallCount() == 1);
 }
+
+TEST_CASE("Coroutine tasks become ready after local destruction finishes", "[task][lifetime]")
+{
+    Task<int> pending = Task<int>::CreatePending();
+    std::latch entered(1), release(1);
+    auto completion = [](Task<int> source, std::latch& entered, std::latch& release) -> Task<int>
+    {
+        struct Guard
+        {
+            std::latch& entered;
+            std::latch& release;
+            ~Guard()
+            {
+                entered.count_down();
+                release.wait();
+            }
+        } guard{entered, release};
+        co_return co_await source;
+    }(pending, entered, release);
+
+    std::jthread producer([&] { pending.SetValue(42); });
+    entered.wait();
+    CHECK_FALSE(completion.await_ready());
+    release.count_down();
+    producer.join();
+    CHECK(completion.get() == 42);
+}
