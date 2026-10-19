@@ -17,6 +17,20 @@
 
 namespace
 {
+    // Owned-input dispatch must stay absent from the client API.
+    template <class T>
+    concept ExposesOwnedInputAPI = requires { &T::DecodeOwned; } || requires { &T::PreferOwnedInput; };
+
+    static_assert(!ExposesOwnedInputAPI<IMCodec::IImagePlugin>);
+    static_assert(!ExposesOwnedInputAPI<IMCodec::ImageCodec>);
+    static_assert(!ExposesOwnedInputAPI<IMCodec::ImageLoader>);
+
+    template <class T>
+    concept ExposesInputRetention = requires { &T::Retain; } || requires { &T::AcquireInput; };
+
+    static_assert(!ExposesInputRetention<IMCodec::ImageBuffer>);
+    static_assert(!ExposesInputRetention<IMCodec::ImageBufferPool>);
+
     constexpr void WriteUint32(std::span<std::byte> bytes, std::size_t offset, std::uint32_t value)
     {
         for (std::size_t byteIndex = 0; byteIndex < sizeof(value); ++byteIndex)
@@ -242,40 +256,147 @@ TEST_CASE("DDS uncompressed BGRA and partial block rows retain their pitches", "
     REQUIRE(image->GetBuffer()[139] == std::byte{255});
 }
 
-TEST_CASE("DDS AYUV remains unsupported until ImageCodec has native YUV formats", "[ImageCompatibility][DDS][AYUV]")
+TEST_CASE("DDS temporary AYUV conversion preserves colors and alpha", "[ImageCompatibility][DDS][AYUV]")
 {
     using namespace IMCodec;
-    constexpr uint32_t ayuvFormat = 100;  // DXGI_FORMAT_AYUV
-    std::array<uint8_t, 64> pixels{};
-
-    SECTION("AYUV RTV clear with zero alpha")
-    {
-        // Reproduce the supplied 4x4 DDS: AYUV stores bytes as V, U, Y, A.
-        for (size_t offset = 0; offset < pixels.size(); offset += 4)
-            pixels[offset] = 255;
-    }
-    SECTION("Limited-range black, white, red and blue with distinct alpha")
-    {
-        constexpr std::array<uint8_t, 16> inputRow{128, 128, 16, 255, 128, 128, 235, 255,
-                                                   240, 90,  81, 128, 110, 240, 41,  64};
-        for (size_t row = 0; row < 4; ++row)
-            std::copy(inputRow.begin(), inputRow.end(), pixels.begin() + row * inputRow.size());
-    }
-
-    auto dds = MakeDDS(0, pixels, 4, 4, 1, ayuvFormat);
-    // Match the supplied file's uncompressed pitch, depth and header flags.
+    // AYUV bytes are V, U, Y, A. Include out-of-range chroma and transparent colored pixels.
+    constexpr std::array<uint8_t, 20> inputRow{128, 128, 16,  255, 128, 128, 235, 255, 240, 90,
+                                               81,  128, 110, 240, 41,  64,  255, 0,   0,   0};
+    constexpr std::array<uint8_t, 20> expected{0, 0,   0, 255, 255, 255, 255, 255, 255, 0,
+                                               0, 128, 0, 0,   255, 64,  184, 0,   0,   0};
+    std::vector<uint8_t> pixels;
+    for (size_t row = 0; row < 4; ++row)
+        pixels.insert(pixels.end(), inputRow.begin(), inputRow.end());
+    auto dds = MakeDDS(0, pixels, 5, 4, 1, 100);  // DXGI_FORMAT_AYUV
     WriteUint32(dds, 8, 0x0002100f);
-    WriteUint32(dds, 20, 16);
+    WriteUint32(dds, 20, 20);
     WriteUint32(dds, 24, 1);
     ImageSharedPtr image;
-    REQUIRE(DecodeDDS(dds, image) == ImageResult::FormatNotSupported);
-    REQUIRE(image == nullptr);
-
-    REQUIRE(DecodeDDS(MakeOnePixelDxt1DDS(), image) == ImageResult::Success);
+    for (const auto flags : {ImageLoadFlags::None, ImageLoadFlags::LoadOnlyFirstImage})
+    {
+        REQUIRE(DecodeDDS(dds, image, flags) == ImageResult::Success);
+        REQUIRE(image->GetTexelFormat() == TexelFormat::I_R8_G8_B8_A8);
+        REQUIRE(image->GetWidth() == 5);
+        REQUIRE(image->GetHeight() == 4);
+        REQUIRE(image->GetRowPitchInBytes() == expected.size());
+        REQUIRE(image->GetSizeInMemory() == pixels.size());
+        for (size_t row = 0; row < 4; ++row)
+            REQUIRE(std::memcmp(image->GetBuffer() + row * expected.size(), expected.data(), expected.size()) == 0);
+    }
     const auto previous = image;
-    REQUIRE(DecodeDDS(dds, image) == ImageResult::FormatNotSupported);
+    REQUIRE(DecodeDDS(std::span(dds).first(dds.size() - 1), image) == ImageResult::FileIsCorrupted);
     REQUIRE(image == previous);
-    REQUIRE(DecodeDDS(dds, image, ImageLoadFlags::LoadOnlyFirstImage) == ImageResult::FormatNotSupported);
+    std::fill(dds.begin(), dds.end(), std::byte{});
+    REQUIRE(std::memcmp(image->GetBuffer(), expected.data(), expected.size()) == 0);
+}
+
+TEST_CASE("DDS temporary YUV conversion handles packed and planar chroma", "[ImageCompatibility][DDS][YUV]")
+{
+    using namespace IMCodec;
+    // Each row alternates black and white. Subsampled chroma is neutral.
+    for (const uint32_t format : {103u, 107u, 110u})  // NV12, YUY2, NV11
+    {
+        INFO("DXGI format " << format);
+        const std::array<uint8_t, 16> planar{16,  235, 16,  235, 16,  235, 16,  235,
+                                             128, 128, 128, 128, 128, 128, 128, 128};
+        const std::array<uint8_t, 16> packed{16, 128, 235, 128, 16, 128, 235, 128,
+                                             16, 128, 235, 128, 16, 128, 235, 128};
+        const auto payload = format == 107 ? std::span(packed) : std::span(planar);
+        const auto dds     = MakeDDS(0, payload.first(format == 103 ? 12 : 16), 4, 2, 1, format);
+        ImageSharedPtr image;
+        REQUIRE(DecodeDDS(dds, image) == ImageResult::Success);
+        REQUIRE(image->GetTexelFormat() == TexelFormat::I_R8_G8_B8_A8);
+        REQUIRE(image->GetRowPitchInBytes() == 16);
+        REQUIRE(image->GetSizeInMemory() == 32);
+        for (size_t pixel = 0; pixel < 8; ++pixel)
+        {
+            for (size_t channel = 0; channel < 3; ++channel)
+                REQUIRE(image->GetBuffer()[pixel * 4 + channel] == static_cast<std::byte>(pixel % 2 ? 255 : 0));
+            REQUIRE(image->GetBuffer()[pixel * 4 + 3] == std::byte{255});
+        }
+        const auto previous = image;
+        REQUIRE(DecodeDDS(std::span(dds).first(dds.size() - 1), image) == ImageResult::FileIsCorrupted);
+        REQUIRE(image == previous);
+    }
+}
+
+TEST_CASE("DDS temporary YUV conversion accepts high-bit-depth formats", "[ImageCompatibility][DDS][YUV]")
+{
+    using namespace IMCodec;
+    for (const uint32_t format : {101u, 102u, 104u, 105u, 108u, 109u})  // Y410, Y416, P010, P016, Y210, Y216
+    {
+        INFO("DXGI format " << format);
+        std::vector<uint8_t> pixels;
+        if (format == 101)
+        {
+            pixels.resize(16);
+            // Neutral black, with 2/3 alpha in Y410's two-bit alpha channel.
+            for (size_t offset = 0; offset < pixels.size(); offset += 4)
+                WriteUint32(std::as_writable_bytes(std::span(pixels)), offset,
+                            512u | (64u << 10) | (512u << 20) | (2u << 30));
+        }
+        else
+        {
+            std::vector<uint16_t> words;
+            if (format == 102)
+                words = {32768, 4096, 32768, 32768, 32768, 4096, 32768, 32768,
+                         32768, 4096, 32768, 32768, 32768, 4096, 32768, 32768};
+            else if (format == 104 || format == 105)
+                words = {4096, 4096, 4096, 4096, 32768, 32768};
+            else
+                words = {4096, 32768, 4096, 32768, 4096, 32768, 4096, 32768};
+            // DDS words are little-endian regardless of the test host.
+            for (const auto word : words)
+            {
+                pixels.push_back(static_cast<uint8_t>(word));
+                pixels.push_back(static_cast<uint8_t>(word >> 8));
+            }
+        }
+        ImageSharedPtr image;
+        REQUIRE(DecodeDDS(MakeDDS(0, pixels, 2, 2, 1, format), image) == ImageResult::Success);
+        REQUIRE(image->GetTexelFormat() == TexelFormat::I_R8_G8_B8_A8);
+        REQUIRE(image->GetRowPitchInBytes() == 8);
+        REQUIRE(image->GetSizeInMemory() == 16);
+        for (size_t pixel = 0; pixel < 4; ++pixel)
+        {
+            for (size_t channel = 0; channel < 3; ++channel)
+                REQUIRE(image->GetBuffer()[pixel * 4 + channel] == std::byte{0});
+            const auto alpha = static_cast<std::byte>(format == 101 ? 170 : format == 102 ? 128 : 255);
+            REQUIRE(image->GetBuffer()[pixel * 4 + 3] == alpha);
+        }
+    }
+}
+
+TEST_CASE("DDS YUV mipmaps own their converted pixels", "[ImageCompatibility][DDS][YUV]")
+{
+    using namespace IMCodec;
+    std::array<uint8_t, 20> pixels{};  // AYUV 2x2 and 1x1
+    for (size_t offset = 0; offset < pixels.size(); offset += 4)
+    {
+        pixels[offset] = pixels[offset + 1] = 128;
+        pixels[offset + 2]                  = offset < 16 ? 16 : 235;
+        pixels[offset + 3]                  = 255;
+    }
+    const auto dds                                = MakeDDS(0, pixels, 2, 2, 2, 100);
+    auto input                                    = std::make_shared<LLUtils::Buffer>(dds.data(), dds.size());
+    std::weak_ptr<const LLUtils::Buffer> lifetime = input;
+    ImageLoader loader;
+    ImageSharedPtr image;
+    REQUIRE(loader.Decode(input->data(), input->size(), ImageLoadFlags::None, {}, LLUTILS_TEXT("dds"),
+                          PluginTraverseMode::NoTraverse, image) == ImageResult::Success);
+    input.reset();
+    REQUIRE(lifetime.expired());
+    REQUIRE(image->GetNumSubImages() == 1);
+    REQUIRE(image->GetBuffer()[0] == std::byte{0});
+    const auto mip = image->GetSubImage(0);
+    REQUIRE(mip->GetTexelFormat() == TexelFormat::I_R8_G8_B8_A8);
+    REQUIRE(mip->GetRowPitchInBytes() == 4);
+    REQUIRE(mip->GetBuffer()[0] == std::byte{255});
+    REQUIRE(DecodeDDS(dds, image, ImageLoadFlags::LoadOnlyFirstImage) == ImageResult::Success);
+    REQUIRE(image->GetNumSubImages() == 0);
+    const auto previous = image;
+    const std::array<uint8_t, 6> opaque{};
+    REQUIRE(DecodeDDS(MakeDDS(0, opaque, 2, 2, 1, 106), image) == ImageResult::FormatNotSupported);
     REQUIRE(image == previous);
 }
 
@@ -332,7 +453,7 @@ TEST_CASE("DDS legacy expansion falls back to an owning load", "[ImageCompatibil
     }
 }
 
-TEST_CASE("DDS retained input keeps every mip alive and detaches on mutation", "[ImageCompatibility][DDS]")
+TEST_CASE("DDS native pixels and every mip remain independent of caller input", "[ImageCompatibility][DDS]")
 {
     using namespace IMCodec;
     std::array<uint8_t, 84> pixels{};  // 4x4, 2x2, 1x1 RGBA
@@ -345,27 +466,32 @@ TEST_CASE("DDS retained input keeps every mip alive and detaches on mutation", "
     ImageSharedPtr image;
     {
         ImageLoader loader;
-        REQUIRE(loader.DecodeOwned(input, ImageLoadFlags::None, {}, LLUTILS_TEXT("dds"), PluginTraverseMode::NoTraverse,
-                                   image) == ImageResult::Success);
+        REQUIRE(loader.Decode(input->data(), input->size(), ImageLoadFlags::None, {}, LLUTILS_TEXT("dds"),
+                              PluginTraverseMode::NoTraverse, image) == ImageResult::Success);
     }
-    REQUIRE(image->GetBuffer() == payload);
-    REQUIRE(image->GetSubImage(0)->GetBuffer() == payload + 64);
+    REQUIRE(image->GetBuffer() != payload);
+    REQUIRE(image->GetSubImage(0)->GetBuffer() != payload + 64);
     auto tail = image->GetSubImage(1);
-    REQUIRE(tail->GetBuffer() == payload + 80);
+    REQUIRE(tail->GetBuffer() != payload + 80);
+    REQUIRE(std::memcmp(image->GetBuffer(), payload, 64) == 0);
+    REQUIRE(std::memcmp(image->GetSubImage(0)->GetBuffer(), payload + 64, 16) == 0);
     auto clone = image->GetImageItem()->data;
-    REQUIRE(std::as_const(clone).data() != payload);
-    REQUIRE(std::memcmp(std::as_const(clone).data(), payload, 64) == 0);
+    REQUIRE(std::as_const(clone).data() != image->GetBuffer());
+    REQUIRE(std::memcmp(std::as_const(clone).data(), image->GetBuffer(), 64) == 0);
+    const auto* originalPixels = image->GetBuffer();
+    input->data()[148]         = std::byte{17};
+    REQUIRE(image->GetBuffer()[0] == std::byte{0});
     auto* writable = image->GetImageItem()->data.data();
-    REQUIRE(writable != payload);
+    REQUIRE(writable == originalPixels);
     writable[0] = std::byte{255};
-    REQUIRE(payload[0] == std::byte{0});
+    REQUIRE(payload[0] == std::byte{17});
     REQUIRE(image->GetBuffer()[0] == std::byte{255});
+    REQUIRE(std::as_const(clone).data()[0] == std::byte{0});
     input.reset();
-    image.reset();
-    REQUIRE_FALSE(lifetime.expired());
-    REQUIRE(tail->GetBuffer()[0] == std::byte{80});
-    tail.reset();
     REQUIRE(lifetime.expired());
+    REQUIRE(image->GetSubImage(0)->GetBuffer()[0] == std::byte{64});
+    image.reset();
+    REQUIRE(tail->GetBuffer()[0] == std::byte{80});
 }
 
 TEST_CASE("Image buffers recycle only after the final image owner and preserve move semantics", "[DDS]")
@@ -446,7 +572,7 @@ TEST_CASE("DDS file pixels survive file truncation and deletion", "[ImageCompati
     auto bytes = MakeDDS(0, pixels, 512, 512, 2, 28);
     WriteUint32(bytes, 8, 0x2100f);  // Canonical uncompressed mip chain with row pitch.
     WriteUint32(bytes, 20, 512 * 4);
-    const auto path = std::filesystem::temp_directory_path() / "oiv-dds-retained-lifetime.dds";
+    const auto path = std::filesystem::temp_directory_path() / "oiv-dds-independent-lifetime.dds";
     {
         std::ofstream file(path, std::ios::binary);
         file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
@@ -462,8 +588,9 @@ TEST_CASE("DDS file pixels survive file truncation and deletion", "[ImageCompati
     std::filesystem::remove(path);
     REQUIRE(std::memcmp(image->GetBuffer(), pixels.data(), baseBytes) == 0);
     REQUIRE(std::memcmp(image->GetSubImage(0)->GetBuffer(), pixels.data() + baseBytes, mipBytes) == 0);
-    const auto* retained = image->GetBuffer();
-    REQUIRE(image->GetImageItem()->data.data() != retained);  // The file path actually retained immutable input.
+    const auto* ownedPixels = image->GetBuffer();
+    // The disabled retention path must not trigger a detach on writable access.
+    REQUIRE(image->GetImageItem()->data.data() == ownedPixels);
     REQUIRE(std::memcmp(image->GetBuffer(), pixels.data(), baseBytes) == 0);
 }
 
@@ -488,23 +615,7 @@ TEST_CASE("DDS legacy packed conversion preserves alpha across a full mip chain"
     }
 }
 
-TEST_CASE("Shared DDS input storage returns to the pool after its final owner", "[DDS]")
-{
-    using namespace IMCodec;
-    constexpr size_t size = ImageBufferPool::MinimumPooledBytes + 148;
-    auto input            = ImageBufferPool::AcquireInput(size);
-    auto* address         = input->data();
-    ImageBuffer surface;
-    surface.Retain(input, address + 148, size - 148);
-    input.reset();
-    auto other = ImageBufferPool::AcquireInput(size);
-    REQUIRE(other->data() != address);
-    surface.Free();
-    auto recycled = ImageBufferPool::AcquireInput(size);
-    REQUIRE(recycled->data() == address);
-}
-
-TEST_CASE("Empty image buffers copy and detach without zero-sized aligned allocation", "[DDS]")
+TEST_CASE("Empty image buffers copy and mutate without zero-sized aligned allocation", "[DDS]")
 {
     using namespace IMCodec;
     ImageBuffer empty;
@@ -513,13 +624,9 @@ TEST_CASE("Empty image buffers copy and detach without zero-sized aligned alloca
     REQUIRE(copy.data() == nullptr);
     copy.Allocate(0);
     REQUIRE(copy.data() == nullptr);
-    auto input                                 = std::make_shared<LLUtils::Buffer>(1);
-    std::weak_ptr<const LLUtils::Buffer> owner = input;
-    empty.Retain(input, input->data(), 0);
-    input.reset();
+    empty.Read(nullptr, 0, 0);
+    empty.Write(nullptr, 0, 0);
     REQUIRE(empty.data() == nullptr);
-    REQUIRE(owner.expired());
-    REQUIRE(ImageBufferPool::AcquireInput(0)->data() == nullptr);
     REQUIRE(ImageBufferPool(0).Acquire(0).data() == nullptr);
 }
 

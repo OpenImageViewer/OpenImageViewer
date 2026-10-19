@@ -223,8 +223,12 @@ TEST_CASE("ImageLoader decodes ImageMagick compatibility matrix", "[ImageCompati
                 REQUIRE(loadedImage->GetNumSubImages() == image.expectedSubImageTexelFormats.size());
                 for (uint16_t i = 0; i < loadedImage->GetNumSubImages(); ++i)
                 {
-                    REQUIRE(loadedImage->GetSubImage(i)->GetTexelFormat() ==
-                            TexelFormatFromName(image.expectedSubImageTexelFormats[i]));
+                    const auto frame = loadedImage->GetSubImage(i);
+                    REQUIRE(frame->GetTexelFormat() == TexelFormatFromName(image.expectedSubImageTexelFormats[i]));
+                    if (image.format == "png" && image.variant == "animated")
+                        for (uint32_t y = 0; y < frame->GetHeight(); ++y)
+                            for (uint32_t x = 0; x < frame->GetWidth(); ++x)
+                                REQUIRE(frame->GetBufferAt(x, y)[3] == std::byte{255});
                 }
             }
         }
