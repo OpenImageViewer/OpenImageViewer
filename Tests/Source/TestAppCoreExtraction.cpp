@@ -50,6 +50,7 @@
 #include <atomic>
 #include <chrono>
 #include <climits>
+#include <cmath>
 #include <condition_variable>
 #include <filesystem>
 #include <fstream>
@@ -1258,9 +1259,8 @@ TEST_CASE("ImageOpenController classifies load results", "[AppCore]")
             OIV::ImageLoadStatus::UnsupportedFormat);
     REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(std::unexpected(OIV::ImageLoadError::UnknownError)) ==
             OIV::ImageLoadStatus::UnknownError);
-    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(
-                OIV::ViewerImage{.pixels = CreateTestImage(OIV::ImageOpenController::MaxSupportedDimension + 1, 1)}) ==
-            OIV::ImageLoadStatus::TooLarge);
+    REQUIRE(OIV::ImageOpenController::ClassifyLoadResult(OIV::ViewerImage{.pixels = CreateTestImage(16385, 1)}) ==
+            OIV::ImageLoadStatus::Loaded);
 }
 
 TEST_CASE("ImageLoadPresentationPolicy maps load results to UI decisions", "[AppCore]")
@@ -2192,4 +2192,113 @@ TEST_CASE("Viewer checkerboard shades retain their existing color pairs", "[AppC
           std::array{LLUtils::Color{{102, 102, 102, 255}}, LLUtils::Color{{51, 51, 51, 255}}});
     CHECK(OIV::ViewerPresentationPolicy::CheckerboardColors(TransparencyShade::Darker) ==
           std::array{LLUtils::Color{{51, 51, 51, 255}}, LLUtils::Color{{0, 0, 0, 255}}});
+}
+
+TEST_CASE("AppSettingsPolicy converts logarithmic screen-space budgets and validates reuse tolerance", "[AppCore]")
+{
+    using ActionType        = OIV::AppSettingsPolicy::ActionType;
+    const auto budgetKey    = LLUTILS_TEXT("viewsettings/large_image/screenspaceworkfactorlog2");
+    const auto toleranceKey = LLUTILS_TEXT("viewsettings/large_image/screenspacezoomtolerance");
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("-2")).floatValue == Catch::Approx(0.25));
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("0")).floatValue == Catch::Approx(1.0));
+    const auto budget = OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("4"));
+    CHECK(budget.type == ActionType::ScreenSpaceWorkFactor);
+    CHECK(budget.floatValue == Catch::Approx(16.0));
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("5")).floatValue == Catch::Approx(32.0));
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("0.5")).floatValue ==
+          Catch::Approx(std::sqrt(2.0)));
+
+    const auto tolerance = OIV::AppSettingsPolicy::ParseAction(toleranceKey, LLUTILS_TEXT("0.25"));
+    CHECK(tolerance.type == ActionType::ScreenSpaceZoomTolerance);
+    CHECK(tolerance.floatValue == Catch::Approx(0.25));
+    CHECK(OIV::AppSettingsPolicy::ParseAction(toleranceKey, LLUTILS_TEXT("0")).type ==
+          ActionType::ScreenSpaceZoomTolerance);
+    CHECK(OIV::AppSettingsPolicy::ParseAction(toleranceKey, LLUTILS_TEXT("-0.1")).type == ActionType::None);
+    for (const auto value : {LLUTILS_TEXT(""), LLUTILS_TEXT("bad"), LLUTILS_TEXT("4junk"), LLUTILS_TEXT("nan"),
+                             LLUTILS_TEXT("inf"), LLUTILS_TEXT("-inf"), LLUTILS_TEXT("1e400")})
+    {
+        CAPTURE(value);
+        CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, value).type == ActionType::None);
+        CHECK(OIV::AppSettingsPolicy::ParseAction(toleranceKey, value).type == ActionType::None);
+    }
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("1024")).type == ActionType::None);
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("-1075")).type == ActionType::None);
+}
+
+TEST_CASE("AppSettingsPolicy validates the nested large-image idle delay and ignores old flat settings", "[AppCore]")
+{
+    using ActionType = OIV::AppSettingsPolicy::ActionType;
+    const auto key   = LLUTILS_TEXT("viewsettings/large_image/screenspacedelayms");
+    const std::pair<LLUtils::native_string_type, int64_t> valid[]{{LLUTILS_TEXT("1"), 1},
+                                                                  {LLUTILS_TEXT("100"), 100},
+                                                                  {LLUTILS_TEXT("100.0"), 100},
+                                                                  {LLUTILS_TEXT("1000"), 1000},
+                                                                  {LLUTILS_TEXT("4294967295"), 4294967295}};
+    for (const auto& [value, expected] : valid)
+    {
+        CAPTURE(value);
+        const auto action = OIV::AppSettingsPolicy::ParseAction(key, value);
+        CHECK(action.type == ActionType::ScreenSpaceDelayMs);
+        CHECK(action.integralValue == expected);
+    }
+    for (const auto value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("-1"), LLUTILS_TEXT("0.5"), LLUTILS_TEXT("100.5"),
+                             LLUTILS_TEXT("4294967296"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"), LLUTILS_TEXT("-inf"),
+                             LLUTILS_TEXT("1e400"), LLUTILS_TEXT("100ms"), LLUTILS_TEXT("")})
+    {
+        CAPTURE(value);
+        CHECK(OIV::AppSettingsPolicy::ParseAction(key, value).type == ActionType::None);
+    }
+    CHECK(OIV::AppSettingsPolicy::ParseAction(LLUTILS_TEXT("viewsettings/screenspaceworkfactorlog2"), LLUTILS_TEXT("4"))
+              .type == ActionType::None);
+    CHECK(
+        OIV::AppSettingsPolicy::ParseAction(LLUTILS_TEXT("viewsettings/screenspacezoomtolerance"), LLUTILS_TEXT("0.25"))
+            .type == ActionType::None);
+    CHECK(OIV::AppSettingsPolicy::ParseAction(LLUTILS_TEXT("viewsettings/screenspacedelayms"), LLUTILS_TEXT("100"))
+              .type == ActionType::None);
+}
+
+TEST_CASE("AppSettingsPolicy parses exact screen-space pixel-buffer byte targets", "[AppCore]")
+{
+    using ActionType = OIV::AppSettingsPolicy::ActionType;
+    const auto key   = LLUTILS_TEXT("viewsettings/large_image/screenspacepixelbuffertargetbytes");
+    const std::pair<LLUtils::native_string_type, int64_t> valid[]{{LLUTILS_TEXT("1"), 1},
+                                                                  {LLUTILS_TEXT("67108864"), 67108864},
+                                                                  {LLUTILS_TEXT("9007199254740993"), 9007199254740993},
+                                                                  {LLUTILS_TEXT("9223372036854775807"),
+                                                                   9223372036854775807}};
+    for (const auto& [value, expected] : valid)
+    {
+        CAPTURE(value);
+        const auto action = OIV::AppSettingsPolicy::ParseAction(key, value);
+        CHECK(action.type == ActionType::ScreenSpacePixelBufferTargetBytes);
+        CHECK(action.integralValue == expected);
+    }
+    for (const auto value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("-1"), LLUTILS_TEXT("1.5"), LLUTILS_TEXT("64.0"),
+                             LLUTILS_TEXT("1e6"), LLUTILS_TEXT("9223372036854775808"), LLUTILS_TEXT("nan"),
+                             LLUTILS_TEXT("inf"), LLUTILS_TEXT("64bytes"), LLUTILS_TEXT("")})
+    {
+        CAPTURE(value);
+        CHECK(OIV::AppSettingsPolicy::ParseAction(key, value).type == ActionType::None);
+    }
+}
+
+TEST_CASE("AppSettingsPolicy accepts finite positive fractional screen-space texel thresholds", "[AppCore]")
+{
+    using ActionType = OIV::AppSettingsPolicy::ActionType;
+    const auto key   = LLUTILS_TEXT("viewsettings/large_image/screenspacetexelthresholdpixels");
+    const std::pair<LLUtils::native_string_type, double> valid[]{{LLUTILS_TEXT("5.0"), 5.0},
+                                                                 {LLUTILS_TEXT("2.5"), 2.5},
+                                                                 {LLUTILS_TEXT("0.25"), 0.25}};
+    for (const auto& [value, expected] : valid)
+    {
+        const auto action = OIV::AppSettingsPolicy::ParseAction(key, value);
+        CHECK(action.type == ActionType::ScreenSpaceTexelThresholdPixels);
+        CHECK(action.floatValue == Catch::Approx(expected));
+    }
+    for (const auto value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("-1"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"),
+                             LLUTILS_TEXT("-inf"), LLUTILS_TEXT("1e400"), LLUTILS_TEXT("5pixels"), LLUTILS_TEXT("")})
+    {
+        CAPTURE(value);
+        CHECK(OIV::AppSettingsPolicy::ParseAction(key, value).type == ActionType::None);
+    }
 }

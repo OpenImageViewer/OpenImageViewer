@@ -16,10 +16,6 @@ namespace OIV
                 return {false, false, false, {}};
             case ImageLoadStatus::Loaded:
                 return {loadResult.DecodeSucceeded(), true, false, {}};
-            case ImageLoadStatus::TooLarge:
-                return {false, false, true,
-                        LLUTILS_TEXT("Can not load the file: "s) + formattedFilePath +
-                            LLUTILS_TEXT(", image dimensions are more than 16384: ")};
             case ImageLoadStatus::UnsupportedFormat:
                 return {false, false, true,
                         LLUTILS_TEXT("Can not load the file: "s) + formattedFilePath +

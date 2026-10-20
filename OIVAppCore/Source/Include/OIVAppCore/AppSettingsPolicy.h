@@ -38,6 +38,11 @@ namespace OIV
         {
             None,
             MaxZoom,
+            ScreenSpaceDelayMs,
+            ScreenSpaceWorkFactor,
+            ScreenSpaceZoomTolerance,
+            ScreenSpacePixelBufferTargetBytes,
+            ScreenSpaceTexelThresholdPixels,
             ImageMarginX,
             ImageMarginY,
             MinImageSize,

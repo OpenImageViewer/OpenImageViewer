@@ -19,7 +19,7 @@ namespace OIV
 {
     bool ImageLoadResult::DecodeSucceeded() const
     {
-        return status == ImageLoadStatus::Loaded || status == ImageLoadStatus::TooLarge;
+        return status == ImageLoadStatus::Loaded;
     }
 
     OIVImageFileLoader::OIVImageFileLoader(IMCodec::ImageLoader& imageLoader) : fImageLoader(imageLoader) {}
@@ -94,18 +94,14 @@ namespace OIV
         return LoadFile(filePath, traverseMode, context);
     }
 
-    ImageLoadStatus ImageOpenController::ClassifyLoadResult(const ImageFileLoadResult& result,
-                                                            std::uint32_t maxSupportedDimension)
+    ImageLoadStatus ImageOpenController::ClassifyLoadResult(const ImageFileLoadResult& result)
     {
         ImageLoadStatus status = ImageLoadStatus::UnknownError;
         if (!result)
             status = result.error() == ImageLoadError::UnsupportedFormat ? ImageLoadStatus::UnsupportedFormat
                                                                          : ImageLoadStatus::UnknownError;
         else if (result->pixels)
-            status = result->pixels->GetWidth() > maxSupportedDimension ||
-                             result->pixels->GetHeight() > maxSupportedDimension
-                         ? ImageLoadStatus::TooLarge
-                         : ImageLoadStatus::Loaded;
+            status = ImageLoadStatus::Loaded;
         return status;
     }
 }  // namespace OIV

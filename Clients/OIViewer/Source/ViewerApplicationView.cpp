@@ -78,8 +78,8 @@ namespace OIV
     void ViewerApplication::DelayResamplingCallback()
     {
         fTimerNoActiveZoom.SetInterval(0);
-        fImageState.SetResample(true);
-        fImageState.Refresh();
+        fImageState.SetResample(fDownScalingTechnique == DownscalingTechnique::Software);
+        fImageState.RefreshScreenSpace();
         UpdateMainRenderImages();
         fRefreshOperation.Queue();
     }
@@ -163,7 +163,6 @@ namespace OIV
     void ViewerApplication::UpdateRenderViewParams()
     {
         const auto colors                     = ViewerPresentationPolicy::CheckerboardColors(fTransparencyMode);
-        fRenderViewParams.showGrid            = fIsGridEnabled;
         fRenderViewParams.uTransparencyColor1 = colors[0];
         fRenderViewParams.uTransparencyColor2 = colors[1];
         fRefreshOperation.Queue();
@@ -171,7 +170,10 @@ namespace OIV
 
     void ViewerApplication::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
     {
+        const auto previousOffset = fImageState.GetOffset();
         fImageState.SetOffset(ResolveOffset(offset));
+        if (fImageState.IsDownscaled() && previousOffset != fImageState.GetOffset())
+            QueueResampling();
         UpdateMainRenderImages();
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
@@ -307,12 +309,12 @@ namespace OIV
 
     void ViewerApplication::QueueResampling()
     {
-        if (GetResamplingEnabled() && IsImageOpen() && fDownScalingTechnique == DownscalingTechnique::Software)
+        if (GetResamplingEnabled() && IsImageOpen() &&
+            (fDownScalingTechnique == DownscalingTechnique::Software || fImageState.IsDownscaled()))
         {
-            fImageState.SetResample(false);
-            UpdateMainRenderImages();
+            // Restart idle refinement while retaining usable cached detail.
             fTimerNoActiveZoom.SetInterval(0);
-            fTimerNoActiveZoom.SetInterval(fQueueResamplingDelay);
+            fTimerNoActiveZoom.SetInterval(fImageState.IsDownscaled() ? fScreenSpaceDelayMs : fQueueResamplingDelay);
         }
     }
 
@@ -362,9 +364,9 @@ namespace OIV
             PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
             PointF64 offset         = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
 
-            QueueResampling();
-
+            fImageState.SetResample(false);
             fImageState.SetScale(zoomValue);
+            QueueResampling();
 
             fRefreshOperation.Begin();
 
@@ -460,6 +462,7 @@ namespace OIV
         const auto clientArea     = fWindow.GetCanvasWindow().GetClientAreaMetrics();
         const auto scale          = clientArea.Scale();
         const LWS::PixelSize size = clientArea.pixels.value_or(LWS::PixelSize{});
+        fImageState.SetViewportSize({size.x, size.y});
         // Forward zero extents as well: minimized or unconfigured canvases must suspend presentation.
         if (fViewportSize != size)
         {
@@ -472,6 +475,8 @@ namespace OIV
             fLabelManager.SetContentScale(*scale);
             UpdateWelcomeMessageLayout();
             AutoPlaceImage();
+            if (fImageState.IsDownscaled())
+                QueueResampling();
             const LLUtils::PointI32 point{size.x, size.y};
             fVirtualStatusBar.ClientSizeChanged(point);
 

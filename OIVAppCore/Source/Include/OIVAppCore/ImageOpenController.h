@@ -20,7 +20,6 @@ namespace OIV
     {
         Loaded,
         UnsupportedFormat,
-        TooLarge,
         UnknownError,
         FolderLoadQueued,
         NoSupportedFiles
@@ -92,8 +91,6 @@ namespace OIV
     {
       public:
 
-        static constexpr std::uint32_t MaxSupportedDimension = 16384;
-
         explicit ImageOpenController(std::unique_ptr<IImageFileLoader> imageFileLoader,
                                      BrowseSessionController* fileSessionController = nullptr);
 
@@ -103,8 +100,7 @@ namespace OIV
         ImageLoadResult LoadFileOrFolder(const LLUtils::native_string_type& filePath,
                                          IMCodec::PluginTraverseMode traverseMode, const ImageLoadContext& context);
 
-        static ImageLoadStatus ClassifyLoadResult(const ImageFileLoadResult& result,
-                                                  std::uint32_t maxSupportedDimension = MaxSupportedDimension);
+        static ImageLoadStatus ClassifyLoadResult(const ImageFileLoadResult& result);
 
       private:
 

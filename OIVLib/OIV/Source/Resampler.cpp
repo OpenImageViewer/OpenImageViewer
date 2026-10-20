@@ -1,387 +1,115 @@
-#include <LLUtils/Thread.h>
 #include <ImageProcessing/Resampler.h>
-#include <algorithm>
-#include <cmath>
-#include <LLUtils/PlatformUtility.h>
-#include <LLUtils/Exception.h>
 #include <System.h>
 
+#include <algorithm>
+#include <cstring>
+#include <LLUtils/Exception.h>
+#include <array>
+#include <bit>
+#include <span>
+
 namespace OIV
 {
-    void Resampler::Init()
+    namespace
     {
-        // Lazy initialize.
-        if (fInitialized == false)
+        struct ResamplerParams
         {
-            fNumOfIdealThreadsForResampling = System::GetIdealNumThreadsForMemoryOperations();
-            fTasks.resize(fNumOfIdealThreadsForResampling);
-            fThreads.resize(fNumOfIdealThreadsForResampling);
-            fInitialized = true;
-        }
-    }
+            uint32_t* targetBuffer;
+            uint32_t targetWidth;
+            uint32_t targetHeight;
+            const std::byte* sourceBuffer;
+            uint32_t sourceWidth;
+            uint32_t sourceHeight;
+            size_t sourceRowPitchInBytes;
+        };
 
-    void Resampler::Resample(const ResamplerParams& params)
-    {
-        Init();
-
-        const double ratiox = static_cast<double>(params.sourceWidth) / params.targetWidth;
-        const double ratioy = static_cast<double>(params.sourceHeight) / params.targetHeight;
-
-        const int32_t diffHor  = static_cast<int32_t>(std::round(ratiox) / 2.0);
-        const int32_t diffVert = static_cast<int32_t>(std::round(ratioy) / 2.0);
-
-        ResamplerBox box{-diffHor, -diffVert, diffHor, diffVert};
-
-        if (box.right == 0)
-            box.right = 1;
-        if (box.bottom == 0)
-            box.bottom = 1;
-
-        const int totalThreads   = fNumOfIdealThreadsForResampling;
-        const size_t totalPixels = params.targetWidth * params.targetHeight;
-        // uint32_t resampledRowPitch = sourceImage->GetRowPitchInBytes();
-        // uint32_t pixelSize = sourceImage->GetBytesPerTexel();
-
-        // uint32_t * sourceBuffer = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(sourceImage->GetBufferAt(0,
-        // 0))); uint32_t * targetBuffer = const_cast<uint32_t*>(reinterpret_cast<const
-        // uint32_t*>(resampled->GetBufferAt(0, 0)));
-
-#if RESAMPLE_THREAD_POOL
-        static std::atomic_int count = 0;
-#endif
-
-        ResampleTask templateTask;
-        templateTask.resampleParams = params;
-        templateTask.box            = box;
-
-        templateTask.ratioX            = ratiox;
-        templateTask.ratioY            = ratioy;
-        templateTask.TaskID            = 1000;
-        templateTask.totalThreads      = totalThreads;
-        templateTask.totalTargetTexels = totalPixels;
-#if RESAMPLE_THREAD_POOL
-        static std::condition_variable allTasksDone;
-        static std::condition_variable cv;
-        static std::mutex mtx;
-        static std::mutex mtx1;
-
-        static std::function<void()> callback = []()
+        struct SampleSpan
         {
-            if (++count == totalThreads)
+            uint32_t first;
+            uint32_t end;
+            // Edge positions within a source texel, in units of the target axis length.
+            uint32_t firstOffset;
+            uint32_t lastEnd;
+
+            uint32_t Weight(uint32_t sample, uint32_t unit) const
             {
-                allTasksDone.notify_one();
+                const uint32_t left  = sample == first ? firstOffset : 0;
+                const uint32_t right = sample + 1 == end ? lastEnd : unit;
+                return right - left;
             }
         };
-        templateTask.Callback = &callback;
-        templateTask.cv       = &cv;
-        templateTask.mtx      = &mtx;
 
-        static std::vector<ResampleTask> tasks(totalThreads);
-#endif
-
-#if 0
-		bool static created = false;
-
-		if (created == false)
-		{
-			for (int i = 0; i < totalThreads; i++)
-			{
-				tasks[i] = templateTask;
-				threads[i] = std::thread(&ResampleUnit, &tasks[i]);
-
-
-			}
-
-			while (count < totalThreads)
-			{
-				Sleep(0);
-			}
-
-			//std::unique_lock<std::mutex> lock(mtx1);
-			//allTasksDone.wait(lock);
-
-
-			//while (count < totalThreads)
-			//{
-			//	Sleep(1);
-			//}
-			//All threads has been initialzied.
-
-
-			created = true;
-		}
-
-		count = 0;
-		for (int i = 0; i < totalThreads; i++)
-		{
-			tasks[i] = templateTask;
-			tasks[i].TaskID = i;
-		}
-
-		cv.notify_all();
-
-		std::unique_lock<std::mutex> lock(mtx1);
-		allTasksDone.wait(lock);
-
-		//cv.notify_all();
-#endif
-
-        for (int i = 0; i < totalThreads; i++)
+        std::vector<SampleSpan> BuildSampleSpans(uint32_t sourceSize, uint32_t targetSize)
         {
-            fTasks[i] = templateTask;
-            ;
-            fTasks[i].TaskID = i;
-            fThreads[i]      = LLUtils::StartThread(&Resampler::ResampleThreadEntryPoint, this, &fTasks[i]);
-        }
-
-        for (int i = 0; i < totalThreads; i++)
-            fThreads[i].join();
-
-#if 0
-		for (int i = 0; i < totalThreads; i++)
-		{
-			int threadnumber = i;
-			threads[i] = std::thread([&, threadnumber]
-				{
-					uint32_t currentTargetPixel = threadnumber;
-
-					AverageParams params1;
-					params1.horSpan = diffHor;
-					params1.vertSpan = diffVert;
-					params1.imageBuffer = sourceBuffer;
-					params1.ImageHeight = sourceImage->GetHeight();
-					params1.ImageWidth = sourceImage->GetWidth();
-
-					while (currentTargetPixel < totalPixels)
-					{
-						const uint32_t targetY = currentTargetPixel / width;
-						const uint32_t targetX = currentTargetPixel % width;
-
-						params1.ImageX = static_cast<uint32_t>((targetX + 0.5) * ratiox);
-						params1.ImageY = static_cast<uint32_t>((targetY + 0.5) * ratioy);
-
-						targetBuffer[currentTargetPixel] = GetAverageAt(params1);
-						currentTargetPixel += totalThreads;
-					}
-				}
-			).detach();
-		}
-#endif
-    }
-
-    LLUTILS_FORCE_INLINE uint32_t Resampler::GetAverageAt(const AverageParams& params)
-    {
-#pragma pack(push, 1)
-        struct Color
-        {
-            uint8_t b;
-            uint8_t g;
-            uint8_t r;
-            uint8_t a;
-        };
-
-        struct Color16
-        {
-            uint16_t b;
-            uint16_t g;
-            uint16_t r;
-            uint16_t a;
-        };
-
-        struct Color32
-        {
-            uint32_t b;
-            uint32_t g;
-            uint32_t r;
-            uint32_t a;
-        };
-
-        alignas(16) Color32 accum{};
-
-        // alignas(16) thread_local static Color RGBA_PAIR[8192];
-
-        // alignas(16)  Color16 accumColor[2]{};
-
-        const size_t sourceYStart = std::max<size_t>(0, params.box.top + params.ImageY);
-        const size_t sourceYEnd   = std::min<size_t>(params.ImageHeight, params.ImageY + params.box.bottom);
-        const size_t sourcexStart = std::max<size_t>(0, params.box.left + params.ImageX);
-        const size_t sourceXEnd   = std::min<size_t>(params.ImageWidth, params.ImageX + params.box.right);
-
-        const size_t totalPixels = (sourceXEnd - sourcexStart) * (sourceYEnd - sourceYStart);
-
-#pragma pack(pop, 1)
-#if 0
-
-		//method 1
-		int currentPixel = 0;
-		while (currentPixel < totalPixels)
-		{
-
-			const uint32_t sourceY = currentPixel / horSpan;
-			const uint32_t sourceX = currentPixel % horSpan;
-
-			const IMUtil::PixelUtil::BitTexel32Ex c = *reinterpret_cast<const IMUtil::PixelUtil::BitTexel32Ex*>
-				(params.imageBuffer + (sourceX + sourcexStart) + (sourceY + sourceYStart) * params.ImageWidth);
-			//accum.A += c.W;
-			accum.R += c.Z;
-			accum.G += c.Y;
-			accum.B += c.X;
-
-			currentPixel++;
-		}
-
-#elif 0
-        // method 2
-        int sourceX = sourcexStart;
-        int sourceY = sourceYStart;
-        while (sourceX < sourceXEnd)
-        {
-            const IMUtil::PixelUtil::BitTexel32Ex c = *reinterpret_cast<const IMUtil::PixelUtil::BitTexel32Ex*>(
-                params.imageBuffer + sourceX + sourceY * params.ImageWidth);
-            // accum.A += c.W;
-            accum.R += c.Z;
-            accum.G += c.Y;
-            accum.B += c.X;
-
-            if (++sourceX == sourceXEnd)
+            std::vector<SampleSpan> spans(targetSize);
+            for (uint32_t index = 0; index < targetSize; ++index)
             {
-                sourceX = sourcexStart;
-                if (++sourceY == sourceYEnd)
-                    break;
+                const uint64_t first = static_cast<uint64_t>(index) * sourceSize;
+                const uint64_t last  = first + sourceSize - 1;
+                spans[index]         = {
+                    .first       = static_cast<uint32_t>(first / targetSize),
+                    .end         = static_cast<uint32_t>(last / targetSize + 1),
+                    .firstOffset = static_cast<uint32_t>(first % targetSize),
+                    .lastEnd     = static_cast<uint32_t>(last % targetSize + 1),
+                };
             }
+            return spans;
         }
 
-#elif 1
-        // method 3
-
-        //_mm256_lo
-        //__m256i v1(;
-        //__m256i v2(= 12;
-        //__m256i v3 = _mm256_add_epi16(v1, v2);
-
-        for (size_t sourceY = sourceYStart; sourceY < sourceYEnd; sourceY++)
+        // Keep the direct (fused) 2D weighted average, with boundaries prepared once for all row workers.
+        // Single-worker benchmarks also tried full-image and row-streamed two-pass filters, plus column sums
+        // with a running integral. Those variants needed intermediate buffers and did not consistently win,
+        // including common half-size reductions. Keep exact integer weights and only final normalization.
+        // A single output row cannot amortize horizontal boundary preparation across rows.
+        void ResampleRows(const ResamplerParams& params, std::span<const SampleSpan> columns,
+                          std::span<const SampleSpan> rows, size_t firstRow, size_t lastRow)
         {
-            // Byte strides preserve padding even when a row start is not aligned to a 32-bit texel.
-            const auto* row = params.imageBuffer + sourceY * params.imageRowPitchInBytes;
-            for (size_t sourceX = sourcexStart; sourceX < sourceXEnd; sourceX++)
+            // Scaling coordinates by target dimensions makes fractional overlaps exact integers.
+            // Every output footprint has area sourceWidth * sourceHeight in these units.
+            const uint32_t unitX         = params.targetWidth;
+            const uint32_t unitY         = params.targetHeight;
+            const uint64_t footprintArea = static_cast<uint64_t>(params.sourceWidth) * params.sourceHeight;
+            for (size_t y = firstRow; y < lastRow; ++y)
             {
-                const auto* c = reinterpret_cast<const Color*>(row + sourceX * sizeof(Color));
-                accum.b += c->b;
-                accum.g += c->g;
-                accum.r += c->r;
-                accum.a += c->a;
-            }
-        }
-
-        alignas(16) Color c{static_cast<uint8_t>(accum.b / totalPixels), static_cast<uint8_t>(accum.g / totalPixels),
-                            static_cast<uint8_t>(accum.r / totalPixels), static_cast<uint8_t>(accum.a / totalPixels)};
-
-        /*Color c{ static_cast<uint8_t>((accumColor[0].b + accumColor[1].b) / totalPixels)
-            , static_cast<uint8_t>   ((accumColor[0].g + accumColor[1].g) / totalPixels)
-            , static_cast<uint8_t>   ((accumColor[0].r + accumColor[1].r) / totalPixels)
-            , static_cast<uint8_t>   ((accumColor[0].a + accumColor[1].a) / totalPixels)
-        };*/
-
-#elif 0
-        // box 3x3
-        // method 3
-        const size_t two            = 1;
-        const uint32_t* bufferStart = params.imageBuffer + sourcexStart + sourceYStart * params.ImageWidth;
-        const Color* c0             = reinterpret_cast<const Color*>(bufferStart + 0 + 0 * params.ImageWidth);
-
-        const Color* c1 = reinterpret_cast<const Color*>(bufferStart + 1 + 0 * params.ImageWidth);
-        const Color* c2 = reinterpret_cast<const Color*>(bufferStart + two + 0 * params.ImageWidth);
-        const Color* c3 = reinterpret_cast<const Color*>(bufferStart + 0 + 1 * params.ImageWidth);
-        const Color* c4 = reinterpret_cast<const Color*>(bufferStart + 1 + 1 * params.ImageWidth);
-        const Color* c5 = reinterpret_cast<const Color*>(bufferStart + two + 1 * params.ImageWidth);
-        const Color* c6 = reinterpret_cast<const Color*>(bufferStart + 0 + two * params.ImageWidth);
-        const Color* c7 = reinterpret_cast<const Color*>(bufferStart + 1 + two * params.ImageWidth);
-        const Color* c8 = reinterpret_cast<const Color*>(bufferStart + two + two * params.ImageWidth);
-
-        /*accum.A = (c0->a  + c1->a + c2>-a + c3->a + c4->a + c5->a + c6->a + c7->a + c8->a) /;
-        accum.R = c0->r;
-        accum.G = c0->g;
-        accum.B = c0->b;*/
-
-        Color c{static_cast<uint8_t>(
-                    (static_cast<size_t>(c0->b) + c1->b + c2->b + c3->b + c4->b + c5->b + c6->b + c7->b + c8->b) /
-                    totalPixels),
-                static_cast<uint8_t>(
-                    (static_cast<size_t>(c0->g) + c1->g + c2->g + c3->g + c4->g + c5->g + c6->g + c7->g + c8->g) /
-                    totalPixels),
-                static_cast<uint8_t>(
-                    (static_cast<size_t>(c0->r) + c1->r + c2->r + c3->r + c4->r + c5->r + c6->r + c7->r + c8->r) /
-                    totalPixels),
-                static_cast<uint8_t>(
-                    (static_cast<size_t>(c0->a) + c1->a + c2->a + c3->a + c4->a + c5->a + c6->a + c7->a + c8->a) /
-                    totalPixels)};
-
-#endif
-
-        return *reinterpret_cast<uint32_t*>(&c);
-    }
-
-    void Resampler::ResampleThreadEntryPoint(ResampleTask* task)
-    {
-#if RESAMPLE_THREAD_POOL
-        // while (true)
-        {
-            // if (task->TaskID < 100)
-            {
-#endif
-                const size_t targetWidth      = task->resampleParams.targetWidth;
-                const size_t targetHeight     = task->resampleParams.targetHeight;
-                const double ratiox           = task->ratioX;
-                const double ratioy           = task->ratioY;
-                const std::byte* sourceBuffer = task->resampleParams.sourceBuffer;
-                const size_t totalThreads     = task->totalThreads;
-                const size_t sourceWidth      = task->resampleParams.sourceWidth;
-                const size_t sourceHeight     = task->resampleParams.sourceHeight;
-
-                uint32_t* targetBuffer = task->resampleParams.targetBuffer;
-
-                AverageParams params1;
-                params1.imageBuffer          = sourceBuffer;
-                params1.imageRowPitchInBytes = task->resampleParams.sourceRowPitchInBytes;
-                params1.ImageHeight          = sourceHeight;
-                params1.ImageWidth           = sourceWidth;
-                params1.box                  = task->box;
-
-                const size_t startY = task->TaskID * (targetHeight / totalThreads);
-                const size_t endY   = task->TaskID == totalThreads - 1
-                                          ? targetHeight
-                                          : (task->TaskID + 1) * (targetHeight / totalThreads);
-
-                for (size_t targetY = startY; targetY < endY; targetY++)
-                    for (size_t targetX = 0; targetX < targetWidth; targetX++)
-                    // while (currentTargetPixel < totalTargetTexels)
+                const auto& vertical = rows[y];
+                for (size_t x = 0; x < params.targetWidth; ++x)
+                {
+                    const auto& horizontal = columns[x];
+                    // 64-bit sums cover 256K x 256K sources even when reduced to a single output pixel.
+                    std::array<uint64_t, 4> sum{};
+                    for (uint32_t sourceY = vertical.first; sourceY < vertical.end; ++sourceY)
                     {
-                        //				const size_t targetY = currentTargetPixel / targetWidth;
-                        // const size_t targetX = currentTargetPixel - targetY * targetWidth;
-
-                        params1.ImageX = static_cast<size_t>((targetX + 0.5) * ratiox +
-                                                             0.5);  // adding 0.5 before casting instead of rounding
-                        params1.ImageY = static_cast<size_t>((targetY + 0.5) * ratioy + 0.5);  // much faster solution.
-
-                        targetBuffer[targetY * targetWidth + targetX] = GetAverageAt(params1);
-                        // targetBuffer[currentTargetPixel] = GetAverageAt(params1);
-                        // currentTargetPixel += totalThreads;
+                        const uint64_t weightY = vertical.Weight(sourceY, unitY);
+                        const auto* row        = params.sourceBuffer +
+                                                 static_cast<size_t>(sourceY) * params.sourceRowPitchInBytes;
+                        for (uint32_t sourceX = horizontal.first; sourceX < horizontal.end; ++sourceX)
+                        {
+                            const uint64_t weight = horizontal.Weight(sourceX, unitX) * weightY;
+                            // Byte reads also support crops whose original row pitch is not four-byte aligned.
+                            const auto* pixel = reinterpret_cast<const uint8_t*>(row + static_cast<size_t>(sourceX) *
+                                                                                           sizeof(uint32_t));
+                            for (size_t channel = 0; channel < sum.size(); ++channel)
+                                sum[channel] += pixel[channel] * weight;
+                        }
                     }
-
-#if RESAMPLE_THREAD_POOL
+                    std::array<uint8_t, 4> pixel{};
+                    for (size_t channel = 0; channel < sum.size(); ++channel)
+                        pixel[channel] = static_cast<uint8_t>(sum[channel] / footprintArea);
+                    params.targetBuffer[y * params.targetWidth + x] = std::bit_cast<uint32_t>(pixel);
+                }
             }
-
-            (*task->Callback)();
-            std::unique_lock<std::mutex> lock(*task->mtx);
-            task->cv->wait(lock);
         }
-#endif
-    }
-}  // namespace OIV
-namespace OIV
-{
-    IMCodec::ImageSharedPtr Resampler::Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize)
+    }  // namespace
+
+    IMCodec::ImageSharedPtr Resampler::Resample(IMCodec::ImageSharedPtr sourceImage, LLUtils::PointI32 targetSize,
+                                                std::optional<LLUtils::RectI32> sourceRect)
     {
+        const LLUtils::RectI32 imageRect{{0, 0}, static_cast<LLUtils::PointI32>(sourceImage->GetDimensions())};
+        const auto region = sourceRect.value_or(imageRect);
+        if (region.IsEmpty() || !region.IsInside(imageRect) || targetSize.x <= 0 || targetSize.y <= 0)
+            LL_EXCEPTION(LLUtils::Exception::ErrorCode::BadParameters,
+                         "Invalid resampling dimensions or source region");
+
         const uint32_t width  = targetSize.x;
         const uint32_t height = targetSize.y;
 
@@ -394,19 +122,51 @@ namespace OIV
         desc.rowPitchInBytes         = width * sourceImage->GetBytesPerTexel();
         desc.texelFormatDecompressed = sourceImage->GetTexelFormat();
         desc.texelFormatStorage      = sourceImage->GetOriginalTexelFormat();
-        imageItem->data.Allocate(width * height * sourceImage->GetBytesPerTexel());
+        imageItem->data.Allocate(static_cast<size_t>(desc.rowPitchInBytes) * height);
 
         ImageSharedPtr resampled = std::make_shared<IMCodec::Image>(imageItem, ImageItemType::Unknown);
-        ResamplerParams params;
-        params.sourceBuffer          = sourceImage->GetBufferAt(0, 0);
-        params.sourceRowPitchInBytes = sourceImage->GetRowPitchInBytes();
-        params.sourceWidth           = sourceImage->GetWidth();
-        params.sourceHeight          = sourceImage->GetHeight();
-        params.targetBuffer = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(resampled->GetBufferAt(0, 0)));
-        params.targetWidth  = width;
-        params.targetHeight = height;
-
-        Resample(params);
+        const auto origin        = region.GetCorner(LLUtils::Corner::TopLeft);
+        const size_t sourcePitch = sourceImage->GetRowPitchInBytes();
+        const auto* sourceBuffer = sourceImage->GetBuffer() + static_cast<size_t>(origin.y) * sourcePitch +
+                                   static_cast<size_t>(origin.x) * sourceImage->GetBytesPerTexel();
+        if (width == region.GetWidth() && height == region.GetHeight())
+        {
+            for (uint32_t y = 0; y < height; ++y)
+                std::memcpy(imageItem->data.data() + static_cast<size_t>(y) * desc.rowPitchInBytes,
+                            sourceBuffer + static_cast<size_t>(y) * sourcePitch, desc.rowPitchInBytes);
+        }
+        else
+        {
+            const ResamplerParams params{
+                .targetBuffer          = reinterpret_cast<uint32_t*>(imageItem->data.data()),
+                .targetWidth           = width,
+                .targetHeight          = height,
+                .sourceBuffer          = sourceBuffer,
+                .sourceWidth           = static_cast<uint32_t>(region.GetWidth()),
+                .sourceHeight          = static_cast<uint32_t>(region.GetHeight()),
+                .sourceRowPitchInBytes = sourcePitch,
+            };
+            const auto columns = BuildSampleSpans(params.sourceWidth, width);
+            const auto rows    = BuildSampleSpans(params.sourceHeight, height);
+            if (fThreads.empty())
+                fThreads.resize(System::GetIdealNumThreadsForMemoryOperations());
+            // Each worker receives at least one output row. Thin images need no empty worker launches.
+            const size_t threadCount = std::min(fThreads.size(), static_cast<size_t>(params.targetHeight));
+            if (threadCount == 1)
+                ResampleRows(params, columns, rows, 0, params.targetHeight);
+            else
+            {
+                for (size_t index = 0; index < threadCount; ++index)
+                {
+                    const size_t firstRow = static_cast<size_t>(params.targetHeight) * index / threadCount;
+                    const size_t lastRow  = static_cast<size_t>(params.targetHeight) * (index + 1) / threadCount;
+                    fThreads[index]       = std::thread([&params, &columns, &rows, firstRow, lastRow]
+                                                        { ResampleRows(params, columns, rows, firstRow, lastRow); });
+                }
+                for (size_t index = 0; index < threadCount; ++index)
+                    fThreads[index].join();
+            }
+        }
 
         return resampled;
     }
