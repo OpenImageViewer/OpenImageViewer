@@ -52,7 +52,7 @@ namespace OIV
     {
         std::size_t container = 0;
         void* nativeDisplay   = nullptr;
-        std::filesystem::path dataPath;
+        std::filesystem::path cacheDirectory;
         int gpuIndex            = -1;
         const char* adapterName = nullptr;
         std::optional<Acceleration> acceleration;

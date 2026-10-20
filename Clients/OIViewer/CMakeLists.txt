@@ -17,14 +17,6 @@ target_sources(${TargetName} PRIVATE ${OIVIEWER_SOURCE_FILES})
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Win32")
 
-    include(FetchContent)
-    FetchContent_Declare(
-        winreg
-        GIT_REPOSITORY https://github.com/GiovanniDicanio/WinReg.git
-        GIT_TAG v6.4.0
-    )
-    FetchContent_MakeAvailable(winreg)
-
     add_subdirectory(SrcPlatform/Win32)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Linux")
@@ -99,9 +91,6 @@ target_include_directories(${TargetName} PRIVATE
     ${ExternalFolder}/xxHash
 )
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_include_directories(${TargetName} PRIVATE ${winreg_SOURCE_DIR}/WinReg)
-endif()
 
 target_link_libraries(${TargetName} PRIVATE
     CLI11::CLI11
@@ -119,10 +108,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         user32.lib
         gdi32.lib
         shell32.lib
+        WinReg::WinReg
         advapi32.lib
         ole32.lib
         msimg32.lib
         comdlg32.lib
+        comctl32.lib
+        shlwapi.lib
+        bcrypt.lib
+        crypt32.lib
         shcore.lib
         hid
     )

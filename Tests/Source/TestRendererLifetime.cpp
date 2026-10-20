@@ -32,10 +32,11 @@
 TEST_CASE("Renderer construction publishes only successful owners", "[renderer][lifetime]")
 {
     std::unique_ptr<OIV::Renderer> renderer;
-    REQUIRE_THROWS_WITH(renderer = OIV::CreateRenderer({}, {.renderer = static_cast<OIV::RendererType>(-1)}).renderer,
-                        Catch::Matchers::ContainsSubstring("not available"));
+    REQUIRE_THROWS_WITH(
+        renderer = OIV::CreateRenderer({}, {}, {.renderer = static_cast<OIV::RendererType>(-1)}).renderer,
+        Catch::Matchers::ContainsSubstring("not available"));
     REQUIRE(renderer == nullptr);
-    auto created = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null});
+    auto created = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null});
     REQUIRE(created.type == OIV::RendererType::Null);
     REQUIRE(created.renderer != nullptr);
     renderer = std::move(created.renderer);
@@ -45,8 +46,8 @@ TEST_CASE("Renderer construction publishes only successful owners", "[renderer][
 
 TEST_CASE("Separate renderers own independent lifetimes", "[renderer][lifetime]")
 {
-    auto first       = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null}).renderer;
-    auto second      = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null}).renderer;
+    auto first       = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null}).renderer;
+    auto second      = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null}).renderer;
     auto surviving   = std::make_optional(first->CreateImage({}));
     auto independent = second->CreateImage({});
     first->Shutdown();
@@ -54,7 +55,7 @@ TEST_CASE("Separate renderers own independent lifetimes", "[renderer][lifetime]"
     REQUIRE_NOTHROW(first->Redraw());
     REQUIRE_NOTHROW(second->Redraw());
     surviving.reset();
-    first = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null}).renderer;
+    first = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null}).renderer;
     REQUIRE(first->GetSelectedAdapter().name.empty());
 }
 
@@ -78,7 +79,7 @@ TEST_CASE("File decoding finishes without an OIV instance before renderer initia
     std::unique_ptr<OIV::Renderer> renderer;
     SECTION("Successful initialization wraps the existing pixels on the calling thread")
     {
-        REQUIRE_NOTHROW(renderer = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null}).renderer);
+        REQUIRE_NOTHROW(renderer = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null}).renderer);
         OIV::ViewerImage image{std::move(decoded), std::move(metaData), OIV::ImageSource::File, fixture.native()};
         auto presentation = renderer->CreateImage(image.pixels);
         CHECK(image.path == fixture.native());
@@ -87,7 +88,8 @@ TEST_CASE("File decoding finishes without an OIV instance before renderer initia
     }
     SECTION("Initialization failure leaves data safe to release without a renderer")
     {
-        REQUIRE_THROWS(renderer = OIV::CreateRenderer({}, {.renderer = static_cast<OIV::RendererType>(-1)}).renderer);
+        REQUIRE_THROWS(
+            renderer = OIV::CreateRenderer({}, {}, {.renderer = static_cast<OIV::RendererType>(-1)}).renderer);
         decoded.reset();
         metaData.reset();
         SUCCEED("Decoded data has no renderer registration to release");
@@ -214,7 +216,7 @@ TEST_CASE("Renderer lifecycle leaves worker exception reporting independent", "[
     constexpr unsigned lifecycleCount = 1000;
     for (unsigned iteration = 0; iteration < lifecycleCount; ++iteration)
     {
-        auto renderer = OIV::CreateRenderer({}, {.renderer = OIV::RendererType::Null}).renderer;
+        auto renderer = OIV::CreateRenderer({}, {}, {.renderer = OIV::RendererType::Null}).renderer;
         renderer->Shutdown();
     }
     worker.request_stop();
@@ -245,7 +247,7 @@ TEST_CASE("Renderer shutdown releases native state before surviving presentation
     REQUIRE(display);
     nativeDisplay = *display;
 #endif
-    auto renderer = OIV::CreateRenderer({reinterpret_cast<std::size_t>(*handle), nativeDisplay}).renderer;
+    auto renderer = OIV::CreateRenderer({reinterpret_cast<std::size_t>(*handle), nativeDisplay}, {}).renderer;
     auto image    = std::make_optional(renderer->CreateImage({}));
     bool released = false;
     auto listener = window.Listen(

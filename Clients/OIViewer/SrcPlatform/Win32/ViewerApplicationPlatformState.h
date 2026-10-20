@@ -41,6 +41,7 @@ namespace OIV
 
         LWS::NotificationIconGroup notificationIcons;
         LWS::NotificationIconGroup::NotificationIconEvent::Subscription notificationSubscription;
+        HWND associationDialog{};
         HMODULE settingsModule                    = nullptr;
         DLL_DIRECTORY_COOKIE settingsDllDirectory = nullptr;
     };

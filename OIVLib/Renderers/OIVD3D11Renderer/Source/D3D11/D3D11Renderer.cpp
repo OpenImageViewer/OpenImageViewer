@@ -231,7 +231,12 @@ namespace OIV
         fImageSimpleFragmentShader = std::make_unique<D3D11FragmentShader>(fDevice);
         fImageSimpleFragmentShader->SetSourceFileName(programsPath / L"QuadSimpleFP.shader");
 
-        std::filesystem::path shaderCachePath = std::filesystem::path(fDataPath) / L"ShaderCache/.";
+#ifdef _DEBUG
+        constexpr auto buildMode = "Debug";
+#else
+        constexpr auto buildMode = "Release";
+#endif
+        const auto shaderCachePath = fCacheDirectory.empty() ? path{} : fCacheDirectory / buildMode;
 
         D3D11Utility::LoadShader(fImageVertexShader, shaderCachePath);
         D3D11Utility::LoadShader(fImageFragmentShader, shaderCachePath);
@@ -241,8 +246,8 @@ namespace OIV
 
     void D3D11Renderer::Init(const OIV::RendererInitialization& initParams)
     {
-        fDataPath = initParams.dataPath;
-        fDevice   = std::make_shared<D3D11Device>();
+        fCacheDirectory = initParams.cacheDirectory;
+        fDevice         = std::make_shared<D3D11Device>();
         fDevice->Create(reinterpret_cast<HWND>(initParams.container), initParams.gpuIndex, initParams.adapterName,
                         initParams.acceleration);
 

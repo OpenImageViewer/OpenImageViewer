@@ -195,7 +195,5 @@ namespace OIV
         float fSaturation{1.0F};
         // Whether the existing texel-grid visualization is enabled.
         bool fShowGrid{};
-        // Backend cache/data directory supplied by API composition.
-        std::filesystem::path fDataPath;
     };
 }  // namespace OIV

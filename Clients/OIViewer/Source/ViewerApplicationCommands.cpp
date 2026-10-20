@@ -758,6 +758,7 @@ namespace OIV
              {"cmd_pasteFromClipboard", std::bind(&ViewerApplication::CMD_PasteFromClipboard, this, _1, _2)},
              {"cmd_imageManipulation", std::bind(&ViewerApplication::CMD_ImageManipulation, this, _1, _2)},
              {"cmd_navigate", std::bind(&ViewerApplication::CMD_Navigate, this, _1, _2)},
+             {"cmd_file_associations", std::bind(&ViewerApplication::CMD_FileAssociations, this, _1, _2)},
              {"cmd_shell", std::bind(&ViewerApplication::CMD_Shell, this, _1, _2)},
              {"cmd_delete_file", std::bind(&ViewerApplication::CMD_DeleteFile, this, _1, _2)},
              {"cmd_set_window_size", std::bind(&ViewerApplication::CMD_SetWindowSize, this, _1, _2)},

@@ -118,6 +118,7 @@ namespace OIV
         if (!fIsShuttingDown.exchange(true))
         {
             fUiLifetime.reset();
+            StopFileAssociationOperation();
             fRefreshTimer.Enable(false);
             fMouseInput->Cancel();
             if (fAutoScroll != nullptr && fAutoScroll->IsAutoScrolling())
@@ -165,17 +166,17 @@ namespace OIV
         };
     }
 
-    ViewerApplication::ViewerApplication(LWS::PlatformContext& platform)
-        : fPlatform(platform), fRefreshTimer(platform,
-                                             [this]()
-                                             {
-                                                 HandleEventCallback(
-                                                     [this]()
-                                                     {
-                                                         OnRefreshTimer();
-                                                         return true;
-                                                     });
-                                             }),
+    ViewerApplication::ViewerApplication(LWS::PlatformContext& platform, const UserDirectories& directories)
+        : fPlatform(platform), fUserDirectories(directories), fRefreshTimer(platform,
+                                                                            [this]()
+                                                                            {
+                                                                                HandleEventCallback(
+                                                                                    [this]()
+                                                                                    {
+                                                                                        OnRefreshTimer();
+                                                                                        return true;
+                                                                                    });
+                                                                            }),
           fWindow(platform), fRefreshOperation(
                                  [this]()
                                  {

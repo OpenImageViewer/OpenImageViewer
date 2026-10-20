@@ -152,8 +152,8 @@ namespace OIV
         using MapImageEntry = std::map<uint64_t, ImageEntry>;
         // Renderer-local GPU cache with successful upload revisions and retirement ownership.
         MapImageEntry fImageEntries;
-        // Backend cache/data directory supplied by API composition.
-        std::filesystem::path fDataPath;
+        // Backend cache directory supplied by application composition. Empty disables persistent caching.
+        std::filesystem::path fCacheDirectory;
         // Opaque canvas clear color.
         LLUtils::ColorF32 fBackgroundColor = {static_cast<uint8_t>(45), static_cast<uint8_t>(45),
                                               static_cast<uint8_t>(48), static_cast<uint8_t>(255)};

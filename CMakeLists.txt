@@ -202,6 +202,16 @@ add_subdirectory(./External/LWS)
     endif()
 
 if (OIV_BUILD_CLIENT OR OIV_BUILD_TESTS)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        include(FetchContent)
+        FetchContent_Declare(winreg
+            GIT_REPOSITORY https://github.com/GiovanniDicanio/WinReg.git
+            GIT_TAG v12.0.0)
+        FetchContent_MakeAvailable(winreg)
+        add_library(oiv_winreg INTERFACE)
+        add_library(WinReg::WinReg ALIAS oiv_winreg)
+        target_include_directories(oiv_winreg SYSTEM INTERFACE "${winreg_SOURCE_DIR}/Include")
+    endif()
     set(CLI11_BUILD_DOCS OFF CACHE BOOL "" FORCE)
     set(CLI11_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(CLI11_BUILD_TESTS OFF CACHE BOOL "" FORCE)

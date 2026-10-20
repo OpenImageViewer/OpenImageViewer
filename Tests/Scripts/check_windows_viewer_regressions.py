@@ -22,11 +22,13 @@ SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE = 3, 6, 9
 user = ctypes.WinDLL("user32", use_last_error=True)
 callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
 user.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+user.EnumChildWindows.argtypes = [wintypes.HWND, callback_type, wintypes.LPARAM]
 user.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
 user.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
 user.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
 user.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 user.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+user.IsWindowVisible.argtypes = [wintypes.HWND]
 user.IsIconic.argtypes = [wintypes.HWND]
 user.IsZoomed.argtypes = [wintypes.HWND]
 user.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
@@ -65,7 +67,7 @@ def find_window(process):
         if owner.value == process.pid:
             name = ctypes.create_unicode_buffer(128)
             user.GetClassNameW(window, name, len(name))
-            if name.value == "LWS_WINDOW_CLASS" and title(window):
+            if name.value == "LWS_WINDOW_CLASS" and title(window) and user.IsWindowVisible(window):
                 windows.append(window)
         return True
 
@@ -73,13 +75,40 @@ def find_window(process):
     return windows[0] if windows else None
 
 
-def wait_for(process, predicate, description, timeout=20):
+def find_association_prompt(process):
+    # Identify only this process's association dialog.
+    prompts = []
+    @callback_type
+    def visit(window, _):
+        owner = wintypes.DWORD()
+        user.GetWindowThreadProcessId(window, ctypes.byref(owner))
+        if owner.value == process.pid and title(window) == "Open Image Viewer":
+            texts = []
+
+            @callback_type
+            def child(control, _):
+                texts.append(title(control).replace("&", ""))
+                return True
+
+            user.EnumChildWindows(window, child, 0)
+            if {"Associate", "Ask next time", "Don't ask for this copy", "Don't ask for any copy"}.issubset(texts):
+                prompts.append(window)
+        return True
+
+    user.EnumWindows(visit, 0)
+    return prompts[0] if prompts else None
+
+
+def wait_for(process, predicate, description, timeout=20, dismiss_associations=True):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if process.poll() is not None:
             output, _ = process.communicate()
             raise RuntimeError(f"{description}: process exited {process.returncode}: "
                                + output.decode(errors="replace")[-2000:])
+        if dismiss_associations and (prompt := find_association_prompt(process)):
+            # Defer without modifying associations or reminder preferences.
+            user.PostMessageW(prompt, 0x400 + 102, 2, 0)  # TDM_CLICK_BUTTON, IDCANCEL
         result = predicate()
         if result:
             return result
@@ -126,7 +155,16 @@ def exercise(executable, renderer, label, path, expected_name=None, browse_names
             press(window, VK_RIGHT, extended=True)
             wait_for(process, lambda: name in title(window), f"browse to {name}")
 
-        normal = rectangle(window)
+        # Cold shader compilation and startup settings can change placement before the first layout settles.
+        previous = None
+        stable_since = time.monotonic()
+        def stable_rectangle():
+            nonlocal previous, stable_since
+            current = rectangle(window)
+            if current != previous:
+                previous, stable_since = current, time.monotonic()
+            return current if time.monotonic() - stable_since >= .3 else None
+        normal = wait_for(process, stable_rectangle, f"{label} startup placement")
         user.ShowWindowAsync(window, SW_MINIMIZE)
         wait_for(process, lambda: user.IsIconic(window), f"{label} minimize")
         user.ShowWindowAsync(window, SW_RESTORE)
@@ -156,10 +194,41 @@ def exercise(executable, renderer, label, path, expected_name=None, browse_names
             process.communicate(timeout=5)
 
 
+def exercise_association_prompt_shutdown(executable, renderer):
+    processes = []
+    command = [str(executable)] + (["--renderer", renderer] if renderer else [])
+    try:
+        first = subprocess.Popen(command, cwd=executable.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        processes.append(first)
+        wait_for(first, lambda: find_association_prompt(first), "association prompt", dismiss_associations=False)
+        second = subprocess.Popen(command, cwd=executable.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        processes.append(second)
+        wait_for(second, lambda: find_window(second), "second viewer startup", dismiss_associations=False)
+        # Leave the first prompt open while the second process completes its background check.
+        time.sleep(1)
+        if find_association_prompt(second):
+            raise RuntimeError("Two viewer processes displayed association prompts concurrently")
+        for process in processes:
+            if not user.PostMessageW(find_window(process), WM_CLOSE, 0, 0):
+                raise ctypes.WinError(ctypes.get_last_error())
+            output, _ = process.communicate(timeout=10)
+            if process.returncode != 0:
+                raise RuntimeError(f"Close with a pending prompt exited {process.returncode}: "
+                                   + output.decode(errors="replace")[-2000:])
+        print("PASS associations: four choices, no concurrent prompt, orderly close while prompting", flush=True)
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.kill()
+                process.communicate(timeout=5)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("executable", type=Path)
     parser.add_argument("--renderer")
+    parser.add_argument("--association-prompt", action="store_true",
+                        help="Also test prompt concurrency and shutdown, requires missing defaults and no saved prompt flag")
     args = parser.parse_args()
     executable = args.executable.resolve(strict=True)
     root = Path(__file__).resolve().parents[2]
@@ -191,6 +260,8 @@ def main():
                     failed.kill()
                 failed.wait()
         print(f"PASS {args.renderer}: failed initialization reports once and exits cleanly", flush=True)
+    if args.association_prompt:
+        exercise_association_prompt_shutdown(executable, args.renderer)
     exercise(executable, args.renderer, "empty", None)
     exercise(executable, args.renderer, "image", fixture, "cat.jpg")
     corpus = (root / "External/ImageCodec/External/FreeImageRe/TestAPI").resolve(strict=True)

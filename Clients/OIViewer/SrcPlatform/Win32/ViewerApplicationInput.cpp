@@ -192,6 +192,8 @@ namespace OIV
 
     void ViewerApplication::CloseApplication(bool closeToTray)
     {
+        // The task dialog has its own modal loop, which does not observe the LWS quit flag.
+        StopFileAssociationOperation();
         const HANDLE mutex = CreateMutex(
             nullptr, FALSE, (LLUtils::native_string_type(Globals::ProgramGuid) + LLUTILS_TEXT("_CLOSEAPP")).c_str());
         if (mutex == nullptr)

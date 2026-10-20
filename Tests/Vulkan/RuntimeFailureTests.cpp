@@ -48,8 +48,8 @@ TEST_CASE("Default and indexed D3D11 startup do not require Vulkan", "[vulkan][l
     const auto path =
         (std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "runtime-failure-cache").wstring();
     const OIV::RendererInitialization params{
-        .container = reinterpret_cast<size_t>(window.handle),
-        .dataPath  = path.c_str(),
+        .container      = reinterpret_cast<size_t>(window.handle),
+        .cacheDirectory = path.c_str(),
     };
     for (const auto& options : {OIV::RendererOptions{}, OIV::RendererOptions{.adapterIndex = 0}})
     {

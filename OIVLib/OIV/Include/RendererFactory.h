@@ -12,5 +12,7 @@ namespace OIV
 
     // Select and initialize privately, publishing an owner only after startup succeeds.
     // Release every RenderImage before destroying this owner or replacing it.
-    RendererCreation CreateRenderer(NativeRenderTarget target, const RendererOptions& options = {});
+    // An empty cache directory disables persistent caches. Resource lookup remains installation-relative.
+    RendererCreation CreateRenderer(NativeRenderTarget target, const std::filesystem::path& cacheDirectory,
+                                    const RendererOptions& options = {});
 }  // namespace OIV
