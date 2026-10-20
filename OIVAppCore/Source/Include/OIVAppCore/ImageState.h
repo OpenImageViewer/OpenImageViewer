@@ -4,6 +4,7 @@
 #include <ImageUtil/AxisAlignedTransform.h>
 #include <array>
 #include <optional>
+#include <OIVAppCore/ScreenSpaceGeometry.h>
 
 namespace OIV
 {
@@ -18,6 +19,8 @@ namespace OIV
         GeometricTransform,
         // Geometry converted and normalized for rendering without changing dimensions.
         RenderFormat,
+        // Full-image fallback within the texture limit, shared with RenderFormat when it fits.
+        Downscaled,
         // Optional zoom downsample displayed at one client pixel per texel.
         Resampled,
         // Internal bound for stage storage and the clean-stage sentinel.
@@ -48,6 +51,25 @@ namespace OIV
         const IMCodec::ImageSharedPtr& GetSelectedSource() const;
         IMCodec::ImageSharedPtr GetVisibleImage() const;
         LLUtils::PointF64 GetVisibleSize() const;
+        bool IsDownscaled() const;
+        const IMCodec::ImageSharedPtr& GetCachedScreenSpaceImage() const { return fScreenSpaceCache.image; }
+        // Capture selection and client-space placement together so a frame evaluates cache reuse only once.
+        struct Presentation
+        {
+            IMCodec::ImageSharedPtr image;
+            LLUtils::PointF64 scale = LLUtils::PointF64::One;
+            LLUtils::PointF64 offset{};
+            bool canShowPixelGrid = false;
+        };
+        Presentation GetPresentation() const;
+        void SetViewportSize(LLUtils::PointI32 size) { fViewportSize = size; }
+        // Validated settings affect the next view evaluation or generation. Usable caches survive changes.
+        void SetScreenSpaceWorkFactor(double factor) { fScreenSpaceWorkFactor = factor; }
+        void SetScreenSpaceZoomTolerance(double tolerance) { fScreenSpaceZoomTolerance = tolerance; }
+        void SetScreenSpacePixelBufferTargetBytes(uint64_t bytes) { fScreenSpacePixelBufferTargetBytes = bytes; }
+        void SetScreenSpaceTexelThresholdPixels(double pixels) { fScreenSpaceTexelThresholdPixels = pixels; }
+        // Generate detail only after interaction settles. Observation never allocates pixels.
+        void RefreshScreenSpace();
         bool GetUseRainbowNormalization() const { return fUseRainbowNormalization; }
         IMUtil::AxisAlignedRotation GetAxisAlignedRotation() const { return fTransform.rotation; }
         IMUtil::AxisAlignedFlip GetAxisAlignedFlip() const { return fTransform.flip; }
@@ -76,6 +98,21 @@ namespace OIV
         void SetDirtyStage(ImageProcessingStage stage);
         IMCodec::ImageSharedPtr ProcessStage(ImageProcessingStage stage, IMCodec::ImageSharedPtr input);
         void AdvanceSourceGeneration();
+        ScreenSpaceGeometry::View GetScreenSpaceView() const;
+        LLUtils::PointF64 GetRenderScale(const IMCodec::ImageSharedPtr& image) const;
+        struct ScreenSpaceCache
+        {
+            IMCodec::ImageSharedPtr image;
+            LLUtils::RectI32 sourceRect{};
+        };
+        // View-dependent pixels are separate from content stages and remain available across pan and zoom.
+        ScreenSpaceCache fScreenSpaceCache;
+        LLUtils::PointI32 fViewportSize{};
+        double fScreenSpaceWorkFactor    = 16.0;
+        double fScreenSpaceZoomTolerance = 0.25;
+        // Soft target for one output pixel buffer. Required viewport coverage may exceed it.
+        uint64_t fScreenSpacePixelBufferTargetBytes = ScreenSpaceGeometry::DefaultPixelBufferTargetBytes;
+        double fScreenSpaceTexelThresholdPixels     = ScreenSpaceGeometry::DefaultTexelThresholdPixels;
         // User geometric changes applied after the selected source's file orientation.
         IMUtil::AxisAlignedTransform fTransform{};
         // First invalid stage, Count when all requested results are current.
@@ -90,7 +127,7 @@ namespace OIV
         bool fResample = false;
         // Current zoom in client pixels per geometric texel.
         LLUtils::PointF64 fScale = LLUtils::PointF64::One;
-        // Desired client placement, rounded by viewer presentation policy.
+        // Desired client placement, rounded when evaluating presentation geometry.
         LLUtils::PointF64 fOffset = LLUtils::PointF64::Zero;
         // Persistent CPU resampler reuses its allocation and threading configuration.
         Resampler fResampler;

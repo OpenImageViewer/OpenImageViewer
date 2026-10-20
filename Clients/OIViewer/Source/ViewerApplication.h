@@ -248,7 +248,7 @@ namespace OIV
         void ToggleGrid();
         void UpdateRenderViewParams();
         void Pan(const LLUtils::PointF64& panAmount);
-        // One wheel step is one logical detent; fractional steps are supported.
+        // One wheel step is one logical detent. Fractional steps are supported.
         void Zoom(double wheelSteps, int zoomX = -1, int zoomY = -1);
         void ZoomInternal(double steps, int zoomX, int zoomY);
         void FitToClientAreaAndCenter();
@@ -378,7 +378,7 @@ namespace OIV
         std::optional<LWS::PixelSize> fViewportSize;
         // Optional main-image registrations, never created for CPU-only stages.
         std::optional<RenderImage> fMainRenderImage;
-        // Retained software-resampled registration, released when its pixels are discarded.
+        // Retained software-resampled or viewport-detail registration, released with its CPU pixels.
         std::optional<RenderImage> fResampledRenderImage;
         // Current per-image filter policy belongs to viewer presentation.
         OIV::FilterType fImageFilter = OIV::FilterType::None;
@@ -422,6 +422,7 @@ namespace OIV
         std::thread::id fMainThreadID = std::this_thread::get_id();
         SelectionRect fSelectionRect;
         uint32_t fQueueResamplingDelay        = 50;
+        uint32_t fScreenSpaceDelayMs          = 100;
         LLUtils::RectI32 fImageSpaceSelection = LLUtils::RectI32::Zero;
         LWS::Timer fTimerTopMostRetention;
         LWS::Timer fTimerSlideShow;

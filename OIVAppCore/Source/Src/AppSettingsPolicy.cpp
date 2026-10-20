@@ -2,6 +2,33 @@
 #include <OIVAppCore/AppSettingsPolicy.h>
 
 #include <cmath>
+#include <limits>
+#include <optional>
+#include <stdexcept>
+
+namespace
+{
+    // Share complete-number and finite-value checks across large-image and animation settings.
+    // Callers retain their own range rules and leave existing settings unchanged on conversion failure.
+    std::optional<double> ParseFiniteFloat(const LLUtils::native_string_type& value)
+    {
+        std::optional<double> result;
+        try
+        {
+            size_t end          = 0;
+            const double number = std::stod(value, &end);
+            if (end == value.size() && std::isfinite(number))
+                result = number;
+        }
+        catch (const std::invalid_argument&)
+        {
+        }
+        catch (const std::out_of_range&)
+        {
+        }
+        return result;
+    }
+}  // namespace
 
 namespace OIV
 {
@@ -23,6 +50,56 @@ namespace OIV
     AppSettingsPolicy::Action AppSettingsPolicy::ParseAction(const LLUtils::native_string_type& key,
                                                              const LLUtils::native_string_type& value)
     {
+        const bool isWorkFactor        = key == LLUTILS_TEXT("viewsettings/large_image/screenspaceworkfactorlog2");
+        const bool isDelay             = key == LLUTILS_TEXT("viewsettings/large_image/screenspacedelayms");
+        const bool isPixelBufferTarget = key ==
+                                         LLUTILS_TEXT("viewsettings/large_image/screenspacepixelbuffertargetbytes");
+        const bool isTexelThreshold = key == LLUTILS_TEXT("viewsettings/large_image/screenspacetexelthresholdpixels");
+        if (isWorkFactor || isDelay || isPixelBufferTarget || isTexelThreshold ||
+            key == LLUTILS_TEXT("viewsettings/large_image/screenspacezoomtolerance"))
+        {
+            Action action;
+            if (isPixelBufferTarget)
+            {
+                // Parse bytes directly as an integer so large values keep their exact precision.
+                try
+                {
+                    size_t end          = 0;
+                    const int64_t bytes = std::stoll(value, &end);
+                    if (end == value.size() && bytes > 0)
+                        action = {ActionType::ScreenSpacePixelBufferTargetBytes, 0.0, bytes};
+                }
+                catch (const std::invalid_argument&)
+                {
+                }
+                catch (const std::out_of_range&)
+                {
+                }
+            }
+            else if (const auto number = ParseFiniteFloat(value))
+            {
+                if (isDelay)
+                {
+                    // Zero disables the timer. Idle refinement requires positive whole milliseconds.
+                    if (*number >= 1.0 && *number <= std::numeric_limits<uint32_t>::max() &&
+                        std::trunc(*number) == *number)
+                        action = {ActionType::ScreenSpaceDelayMs, 0.0, static_cast<int64_t>(*number)};
+                }
+                else
+                {
+                    // Convert log2 once at the configuration boundary. Each +1 doubles the work budget.
+                    const double effective = isWorkFactor ? std::exp2(*number) : *number;
+                    if (std::isfinite(effective) &&
+                        ((isWorkFactor || isTexelThreshold) ? effective > 0.0 : effective >= 0.0))
+                        action = {isWorkFactor       ? ActionType::ScreenSpaceWorkFactor
+                                  : isTexelThreshold ? ActionType::ScreenSpaceTexelThresholdPixels
+                                                     : ActionType::ScreenSpaceZoomTolerance,
+                                  effective};
+                }
+            }
+            return action;
+        }
+
         if (key == LLUTILS_TEXT("viewsettings/maxzoom"))
             return {ActionType::MaxZoom, ParseFloat(value)};
         if (key == LLUTILS_TEXT("viewsettings/imagemargins/x"))
@@ -38,34 +115,22 @@ namespace OIV
         if (key == LLUTILS_TEXT("animation/minframeintervalms") ||
             key == LLUTILS_TEXT("animation/slowframeintervalms") || key == LLUTILS_TEXT("animation/slowspeedpercent"))
         {
-            // Settings JSON can represent milliseconds as either 3 or 3.0. Reject fractional,
-            // malformed and nonfinite values before converting them to the typed action.
+            // Accept integer and floating JSON spellings, but require whole milliseconds for intervals.
             Action action;
-            try
+            if (const auto number = ParseFiniteFloat(value); number && *number > 0.0)
             {
-                size_t end          = 0;
-                const double parsed = std::stod(value, &end);
-                if (end == value.size() && std::isfinite(parsed) && parsed > 0.0)
+                if (key == LLUTILS_TEXT("animation/slowspeedpercent"))
                 {
-                    if (key == LLUTILS_TEXT("animation/slowspeedpercent"))
-                    {
-                        if (parsed <= 100.0)
-                            action = {ActionType::AnimationSlowSpeedPercent, parsed};
-                    }
-                    else if (parsed <= SequencerPolicy::MaxTimerIntervalMs && std::trunc(parsed) == parsed)
-                    {
-                        action = {key == LLUTILS_TEXT("animation/minframeintervalms")
-                                      ? ActionType::AnimationMinFrameInterval
-                                      : ActionType::AnimationSlowFrameInterval,
-                                  0.0, static_cast<int64_t>(parsed)};
-                    }
+                    if (*number <= 100.0)
+                        action = {ActionType::AnimationSlowSpeedPercent, *number};
                 }
-            }
-            catch (const std::invalid_argument&)
-            {
-            }
-            catch (const std::out_of_range&)
-            {
+                else if (*number <= SequencerPolicy::MaxTimerIntervalMs && std::trunc(*number) == *number)
+                {
+                    action = {key == LLUTILS_TEXT("animation/minframeintervalms")
+                                  ? ActionType::AnimationMinFrameInterval
+                                  : ActionType::AnimationSlowFrameInterval,
+                              0.0, static_cast<int64_t>(*number)};
+                }
             }
             return action;
         }

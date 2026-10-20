@@ -154,7 +154,7 @@ namespace OIV
         return [this, lifetime = fUiWeakLifetime, callback = std::move(callback)]()
         {
             // Normal platform shutdown drains tasks after the viewer is destroyed. Both run on the UI thread,
-            // so checking the token before any owner access is sufficient; it need not retain the viewer.
+            // so checking the token before any owner access is sufficient. It need not retain the viewer.
             if (!lifetime.expired())
                 HandleEventCallback(
                     [&]()
@@ -255,7 +255,7 @@ namespace OIV
         fDPIadjustmentFactor = {params.monitorDesc.contentScale.x, params.monitorDesc.contentScale.y};
     }
 
-    // Update the RenderFormat and Resampled presentations from cached ImageState results.
+    // Update GPU-sized fallback and detail presentations from cached ImageState results.
     // This one-way update creates, updates or releases renderer registrations without
     // processing pixels or drawing a frame.
     void ViewerApplication::UpdateMainRenderImages()
@@ -280,23 +280,24 @@ namespace OIV
             else
                 presentation.emplace(renderer.CreateImage(pixels, properties));
         };
-        const auto& resampled = fImageState.GetRetainedImage(ImageProcessingStage::Resampled);
+        const auto presentation = fImageState.GetPresentation();
+        const auto& fallback    = fImageState.GetRetainedImage(ImageProcessingStage::Downscaled);
+        const bool showFallback = presentation.image == fallback;
         RenderImageProperties properties{
-            .position        = fImageState.GetOffset().Round(),
-            .scale           = fImageState.GetScale(),
+            .position        = presentation.offset,
+            .scale           = presentation.scale,
             .opacity         = 1.0,
-            .visible         = !resampled,
+            .visible         = showFallback,
             .filterType      = fImageFilter,
             .imageRenderMode = OIV::ImageRenderMode::MainImage,
         };
-        // Keep the hidden full-resolution registration so its GPU texture can be reused
-        // when switching back from the resampled result.
-        updateRenderImage(fMainRenderImage, fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat),
-                          properties);
-        // Software resampling already incorporates zoom into the pixels, so display them at 1:1.
-        properties.scale   = LLUtils::PointF64::One;
-        properties.visible = static_cast<bool>(resampled);
-        updateRenderImage(fResampledRenderImage, resampled, properties);
+        // Keep hidden registrations for texture reuse. Their placement is refreshed when selected,
+        // so only the visible layer needs its own transform during this update.
+        updateRenderImage(fMainRenderImage, fallback, properties);
+        properties.visible = !showFallback;
+        updateRenderImage(fResampledRenderImage,
+                          showFallback ? fImageState.GetCachedScreenSpaceImage() : presentation.image, properties);
+        fRenderViewParams.showGrid = fIsGridEnabled && presentation.canShowPixelGrid;
     }
 
     void ViewerApplication::PresentPreparedFrame()
@@ -470,6 +471,26 @@ namespace OIV
         {
             case AppSettingsPolicy::ActionType::MaxZoom:
                 fMaxPixelSize = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ScreenSpaceDelayMs:
+                fScreenSpaceDelayMs = static_cast<uint32_t>(action.integralValue);
+                QueueResampling();
+                break;
+            case AppSettingsPolicy::ActionType::ScreenSpaceWorkFactor:
+                fImageState.SetScreenSpaceWorkFactor(action.floatValue);
+                QueueResampling();
+                break;
+            case AppSettingsPolicy::ActionType::ScreenSpaceZoomTolerance:
+                fImageState.SetScreenSpaceZoomTolerance(action.floatValue);
+                QueueResampling();
+                break;
+            case AppSettingsPolicy::ActionType::ScreenSpacePixelBufferTargetBytes:
+                fImageState.SetScreenSpacePixelBufferTargetBytes(static_cast<uint64_t>(action.integralValue));
+                QueueResampling();
+                break;
+            case AppSettingsPolicy::ActionType::ScreenSpaceTexelThresholdPixels:
+                fImageState.SetScreenSpaceTexelThresholdPixels(action.floatValue);
+                QueueResampling();
                 break;
             case AppSettingsPolicy::ActionType::ImageMarginX:
                 fImageMargins.x = action.floatValue;

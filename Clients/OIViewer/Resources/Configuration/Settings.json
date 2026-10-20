@@ -8,6 +8,13 @@
   },
   "viewsettings": {
     "maxzoom": 100.0,
+    "large_image": {
+      "screenspacedelayms": 100,
+      "screenspaceworkfactorlog2": 4.0,
+      "screenspacezoomtolerance": 0.25,
+      "screenspacepixelbuffertargetbytes": 67108864,
+      "screenspacetexelthresholdpixels": 5.0
+    },
     "minimagesize": 150.0,
     "slideshowinterval": 2000.0,
     "quickbrowsedelay": 100.0,

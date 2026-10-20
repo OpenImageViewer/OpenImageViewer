@@ -114,6 +114,8 @@ namespace OIV
         fRefreshOperation.Begin();
         fImageState.Refresh();
         UpdateMainRenderImages();
+        if (fImageState.IsDownscaled())
+            QueueResampling();
         fRefreshOperation.End(true);
     }
 
@@ -306,7 +308,7 @@ namespace OIV
         }
 
         // Frame zero is already displayed by ImageState. Time its full duration and advance to
-        // frame one on the first tick; even speed input before that tick now preserves progress.
+        // frame one on the first tick. Even speed input before that tick now preserves progress.
         if (oivImage.pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame &&
             oivImage.pixels->GetNumSubImages() != 0)
         {

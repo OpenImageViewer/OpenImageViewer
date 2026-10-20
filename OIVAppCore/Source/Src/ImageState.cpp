@@ -18,18 +18,84 @@ namespace OIV
     IMCodec::ImageSharedPtr ImageState::GetVisibleImage() const
     {
         const auto& resampled = GetRetainedImage(ImageProcessingStage::Resampled);
-        return resampled ? resampled : GetRetainedImage(ImageProcessingStage::RenderFormat);
+        const auto& fallback  = resampled ? resampled : GetRetainedImage(ImageProcessingStage::Downscaled);
+        const bool useDetail  = fallback && fScreenSpaceCache.image &&
+                                ScreenSpaceGeometry::CanReuse(
+                                    GetScreenSpaceView(),
+                                    {fScreenSpaceCache.sourceRect,
+                                     static_cast<LLUtils::PointI32>(fScreenSpaceCache.image->GetDimensions())},
+                                    fScreenSpaceZoomTolerance, fScreenSpaceTexelThresholdPixels);
+        return useDetail ? fScreenSpaceCache.image : fallback;
     }
     LLUtils::PointF64 ImageState::GetVisibleSize() const
     {
-        auto image = GetRetainedImage(ImageProcessingStage::Resampled);
-        if (!image)
-            image = GetRetainedImage(ImageProcessingStage::GeometricTransform);
+        auto image = GetRetainedImage(ImageProcessingStage::GeometricTransform);
         if (!image)
             image = GetSelectedSource();
-        const auto dimensions = image ? static_cast<LLUtils::PointF64>(image->GetDimensions())
-                                      : LLUtils::PointF64::Zero;
-        return GetRetainedImage(ImageProcessingStage::Resampled) ? dimensions : dimensions * fScale;
+        return image ? static_cast<LLUtils::PointF64>(image->GetDimensions()) * fScale : LLUtils::PointF64::Zero;
+    }
+    bool ImageState::IsDownscaled() const
+    {
+        const auto& fallback = GetRetainedImage(ImageProcessingStage::Downscaled);
+        return fallback && fallback != GetRetainedImage(ImageProcessingStage::RenderFormat);
+    }
+    ScreenSpaceGeometry::View ImageState::GetScreenSpaceView() const
+    {
+        return {
+            .imageSize    = GetRetainedImage(ImageProcessingStage::RenderFormat)->GetDimensions(),
+            .fallbackSize = GetRetainedImage(ImageProcessingStage::Downscaled)->GetDimensions(),
+            .viewportSize = fViewportSize,
+            .scale        = fScale,
+            .offset       = fOffset.Round(),
+        };
+    }
+    LLUtils::PointF64 ImageState::GetRenderScale(const IMCodec::ImageSharedPtr& image) const
+    {
+        return fScale *
+               static_cast<LLUtils::PointF64>(GetRetainedImage(ImageProcessingStage::RenderFormat)->GetDimensions()) /
+               static_cast<LLUtils::PointF64>(image->GetDimensions());
+    }
+    ImageState::Presentation ImageState::GetPresentation() const
+    {
+        Presentation presentation{
+            .image  = GetVisibleImage(),
+            .scale  = fScale,
+            .offset = fOffset.Round(),
+        };
+        if (presentation.image)
+        {
+            const bool detail = presentation.image == fScreenSpaceCache.image;
+            if (detail)
+            {
+                const LLUtils::PointF64 sourceSize{static_cast<double>(fScreenSpaceCache.sourceRect.GetWidth()),
+                                                   static_cast<double>(fScreenSpaceCache.sourceRect.GetHeight())};
+                presentation.scale = sourceSize * fScale /
+                                     static_cast<LLUtils::PointF64>(presentation.image->GetDimensions());
+                presentation.offset += static_cast<LLUtils::PointF64>(
+                                           fScreenSpaceCache.sourceRect.GetCorner(LLUtils::Corner::TopLeft)) *
+                                       fScale;
+            }
+            else
+                presentation.scale = GetRenderScale(presentation.image);
+            presentation.canShowPixelGrid = !IsDownscaled() || detail;
+        }
+        return presentation;
+    }
+    void ImageState::RefreshScreenSpace()
+    {
+        Refresh();
+        if (IsDownscaled() && (!fScreenSpaceCache.image || GetVisibleImage() != fScreenSpaceCache.image))
+        {
+            if (const auto plan = ScreenSpaceGeometry::BuildPlan(GetScreenSpaceView(), fScreenSpaceWorkFactor,
+                                                                 fScreenSpacePixelBufferTargetBytes,
+                                                                 fScreenSpaceTexelThresholdPixels))
+            {
+                auto image = fResampler.Resample(GetRetainedImage(ImageProcessingStage::RenderFormat),
+                                                 plan->textureSize, plan->sourceRect);
+                // Publish only after generation succeeds so failure retains usable cached pixels.
+                fScreenSpaceCache = {std::move(image), plan->sourceRect};
+            }
+        }
     }
     void ImageState::AdvanceSourceGeneration()
     {
@@ -46,6 +112,7 @@ namespace OIV
     }
     void ImageState::SetSelectedSource(IMCodec::ImageSharedPtr image)
     {
+        fScreenSpaceCache = {};
         fImages.fill(nullptr);
         fImages[static_cast<size_t>(ImageProcessingStage::Source)] = std::move(image);
         fDirtyStage                                                = ImageProcessingStage::GeometricTransform;
@@ -53,6 +120,7 @@ namespace OIV
     }
     void ImageState::ClearAll()
     {
+        fScreenSpaceCache = {};
         fImages.fill(nullptr);
         fOpenedImage.reset();
         fDirtyStage = ImageProcessingStage::GeometricTransform;
@@ -60,6 +128,8 @@ namespace OIV
     }
     void ImageState::SetDirtyStage(ImageProcessingStage stage)
     {
+        if (stage <= ImageProcessingStage::RenderFormat)
+            fScreenSpaceCache = {};
         fDirtyStage = std::min(fDirtyStage, stage);
         // Observation exposes only valid cached results. Invalidated outputs release
         // their data at the model boundary, without waiting for a later frame.
@@ -112,13 +182,13 @@ namespace OIV
     }
     void ImageState::Refresh()
     {
-        Refresh(fResample ? ImageProcessingStage::Resampled : ImageProcessingStage::RenderFormat);
+        Refresh(fResample ? ImageProcessingStage::Resampled : ImageProcessingStage::Downscaled);
     }
     void ImageState::Refresh(ImageProcessingStage requiredStage)
     {
         assert(requiredStage >= ImageProcessingStage::Source && requiredStage < ImageProcessingStage::Count);
         requiredStage = std::min(requiredStage,
-                                 fResample ? ImageProcessingStage::Resampled : ImageProcessingStage::RenderFormat);
+                                 fResample ? ImageProcessingStage::Resampled : ImageProcessingStage::Downscaled);
         if (GetSelectedSource())
         {
             // Cache prerequisites in order and publish only successfully processed replacements.
@@ -149,12 +219,33 @@ namespace OIV
                     LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable to convert image");
                 return result;
             }
+            case ImageProcessingStage::Downscaled:
+            {
+                auto image          = input;
+                const auto size     = static_cast<LLUtils::PointF64>(input->GetDimensions());
+                constexpr int limit = ScreenSpaceGeometry::MaxTextureDimension;
+                if (size.x > limit || size.y > limit)
+                {
+                    const auto rounded = static_cast<LLUtils::PointI32>(
+                        (size * (limit / std::max(size.x, size.y))).Round());
+                    image = fResampler.Resample(input,
+                                                {std::clamp(rounded.x, 1, limit), std::clamp(rounded.y, 1, limit)});
+                }
+                return image;
+            }
             case ImageProcessingStage::Resampled:
-                return fScale.x > ResampleScaleThreshold || fScale.y > ResampleScaleThreshold
-                           ? nullptr
-                           : fResampler.Resample(
-                                 input, static_cast<LLUtils::PointI32>(
-                                            (static_cast<LLUtils::PointF64>(input->GetDimensions()) * fScale).Round()));
+            {
+                IMCodec::ImageSharedPtr image;
+                // Compare the fallback texel's displayed size because it may already be reduced.
+                const auto scale = GetRenderScale(input);
+                if (scale.x <= ResampleScaleThreshold && scale.y <= ResampleScaleThreshold)
+                {
+                    const auto rounded = static_cast<LLUtils::PointI32>(
+                        (static_cast<LLUtils::PointF64>(input->GetDimensions()) * scale).Round());
+                    image = fResampler.Resample(input, {std::max(rounded.x, 1), std::max(rounded.y, 1)});
+                }
+                return image;
+            }
             default:
                 LL_EXCEPTION_UNEXPECTED_VALUE;
         }
