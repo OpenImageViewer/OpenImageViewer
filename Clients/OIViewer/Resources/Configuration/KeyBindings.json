@@ -13,6 +13,8 @@
     { "Control+S": "SaveFile" },
     { "Control+Shift+O": "OpenContainingFolder" },
     { "Control+L": "OpenLocationInGoogleMaps" },
+    { "Control+Shift+A": "AddFileAssociations" },
+    { "Control+Shift+R": "RemoveFileAssociations" },
     { "GreyDelete": "MoveFileToRecycleBin" },
     { "Shift+GreyDelete": "DeleteFile" },
     { "Alt+Enter": "ToggleFullScren" },

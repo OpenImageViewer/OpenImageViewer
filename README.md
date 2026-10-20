@@ -54,7 +54,9 @@ These are the shipped defaults; press **F1** for the full list of active binding
 | **C** | Crop to the selected area |
 | **H / V** | Flip horizontally / vertically |
 | **Ctrl+S** | Save an image |
+| **Ctrl+Shift+A / Ctrl+Shift+R** | Add / remove file associations |
 | **Ctrl+F1 / Ctrl+F2 / Ctrl+F3** | Sort by name / modification date / extension |
+
 
 ## Command line
 

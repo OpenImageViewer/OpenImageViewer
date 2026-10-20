@@ -3,8 +3,9 @@
 #include <d3d11.h>
 #include <RendererCore/RenderTypes.h>
 #include <LLUtils/FileHelper.h>
-#include <LLUtils/FileSystemHelper.h>
 #include "D3D11Shader.h"
+#include <OIVShared/AtomicFile.h>
+#include <LLUtils/Logging/Logger.h>
 
 namespace OIV
 {
@@ -49,36 +50,56 @@ namespace OIV
             sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 1.0f;
         }
 
-        static void LoadShader(D3D11ShaderUniquePtr& shader, std::filesystem::path cacheFolder)
+        static void LoadShader(D3D11ShaderUniquePtr& shader, const std::filesystem::path& cacheFolder)
         {
-            // Try cache first;
-
-            using path = std::filesystem::path;
-
-            path shaderPath = shader->GetsourceFileName();
-            path cachePath  = (path(cacheFolder) / shaderPath.filename()).replace_extension(L"bin");
-
+            const auto cachePath = cacheFolder.empty()
+                                       ? std::filesystem::path{}
+                                       : (cacheFolder / std::filesystem::path(shader->GetsourceFileName()).filename())
+                                             .replace_extension("bin");
+            // Development builds must pick up shader edits even when the application version is unchanged.
 #ifdef _DEBUG
-            constexpr bool IsDebug = true;
+            constexpr bool readCache = false;
 #else
-            constexpr bool IsDebug = false;
+            constexpr bool readCache = true;
 #endif
-            // Change this value to allow loading from cache in debug mode.
-            constexpr bool UseCacheInDebugMode = false;
-
-            constexpr bool LoadFromCache = IsDebug == false || (IsDebug == true && UseCacheInDebugMode == true);
-
-            if (LoadFromCache == true && std::filesystem::exists(cachePath))
+            bool loaded = false;
+            if (readCache && !cachePath.empty())
             {
-                // Load from cache
-                shader->SetMicroCode(LLUtils::File::ReadAllBytes(cachePath));
-                shader->Load();
+                try
+                {
+                    if (std::filesystem::exists(cachePath))
+                    {
+                        auto code = LLUtils::File::ReadAllBytes(cachePath);
+                        if (code.Size() != 0)
+                        {
+                            shader->SetMicroCode(std::move(code));
+                            shader->Load();
+                            loaded = true;
+                        }
+                    }
+                }
+                catch (const std::exception&)
+                {
+                    // Cached bytecode is disposable. Release it so Load recompiles from the packaged source.
+                    shader->SetMicroCode({});
+                }
             }
-            else
+            if (!loaded)
             {
                 shader->Load();
-                LLUtils::FileSystemHelper::EnsureDirectory(cachePath);
-                LLUtils::File::WriteAllBytes(cachePath, shader->GetShaderData().Size(), shader->GetShaderData().data());
+                if (!cachePath.empty())
+                {
+                    try
+                    {
+                        const auto& code = shader->GetShaderData();
+                        WriteFileAtomically(cachePath, {code.data(), code.Size()});
+                    }
+                    catch (const std::exception&)
+                    {
+                        static const auto category = LLUtils::Logger::RegisterCategory("ShaderCache");
+                        LL_LOG(category, LLUtils::LogLevel::Warning, "Could not save the compiled shader cache");
+                    }
+                }
             }
         }
     };

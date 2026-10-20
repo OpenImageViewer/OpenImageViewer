@@ -516,6 +516,9 @@ namespace OIV
 
         switch (static_cast<InterThreadMessages>(sharedData.id))
         {
+            case InterThreadMessages::FileAssociations:
+                HandleFileAssociationNotice(std::any_cast<const FileAssociationNotice&>(sharedData.data));
+                break;
             case InterThreadMessages::FileChanged:
             {
                 const IFileWatcher::FileChangedEventArgs* fileChangedEventArgs =

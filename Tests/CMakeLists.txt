@@ -1,8 +1,9 @@
 
 # Validate Debug/Ninja builds in build/windows-clang (Visual Studio dev shell) and build/linux-clang (WSL).
 # Build with: cmake --build build/windows-clang  OR  cmake --build build/linux-clang
-# Run tests, tests_font_encoding, and tests_vk_failures from that build's bin/ directory;
-# Windows also runs tests_vk_runtime_failure, with .exe suffixes on all four executables.
+# Run tests from the repository root so relative font fixtures resolve.
+# Also run tests_font_encoding, tests_file_associations, and tests_vk_failures.
+# Windows additionally runs tests_vk_runtime_failure, with .exe suffixes on all executables.
 # Renderer-policy changes need defaults, each renderer alone, Windows all-renderer, and test-only Null checks.
 # Expect D3D11 -> Vulkan -> GL on Windows and Vulkan -> GL on Linux, omitting unbuilt APIs.
 # Restore the default renderer configuration afterward; CPU/software runs do not prove hardware presentation.
@@ -43,12 +44,31 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_sources(${TargetName} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Win32/ContextMenuBackend.cpp
     )
+    # Keep predefined-registry-hive overrides isolated from the general test process.
+    add_executable(tests_file_associations
+        Win32/FileAssociationTests.cpp
+        ../Clients/OIViewer/SrcPlatform/Win32/FileAssociations.cpp
+        ../Clients/OIViewer/SrcPlatform/Win32/FileAssociationDefaults.cpp)
+    target_include_directories(tests_file_associations PRIVATE ../Clients/OIViewer ../Clients/OIViewer/Source)
+    target_include_directories(tests_file_associations PRIVATE ../External/json/single_include)
+    target_link_libraries(tests_file_associations PRIVATE Catch2::Catch2WithMain oivappcore WinReg::WinReg advapi32 shlwapi shell32 ole32 bcrypt crypt32)
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_link_options(tests_file_associations PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+    elseif(MINGW)
+        target_link_options(tests_file_associations PRIVATE "-mconsole" "-municode")
+    endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(${TargetName} PRIVATE OIV_TEST_PLATFORM_LINUX)
     if(NOT TARGET PkgConfig::GTK3)
         find_package(PkgConfig REQUIRED)
         pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     endif()
+    pkg_check_modules(GIOUnix REQUIRED IMPORTED_TARGET gio-unix-2.0)
+    add_executable(tests_file_associations
+        Linux/FileAssociationTests.cpp
+        ../Clients/OIViewer/SrcPlatform/Linux/FileAssociations.cpp)
+    target_include_directories(tests_file_associations PRIVATE ../Clients/OIViewer ../OIVAppCore/Source/Include)
+    target_link_libraries(tests_file_associations PRIVATE Catch2::Catch2WithMain oivappcore PkgConfig::GIOUnix)
     pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET wayland-client)
     target_link_libraries(${TargetName} PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient)
     target_sources(${TargetName} PRIVATE
@@ -150,4 +170,18 @@ else()
     # Observe and dismiss the real GTK dialog in subprocess tests without adding production test hooks.
     add_library(tests_exception_dialog_probe SHARED Exception/LinuxDialogProbe.cpp)
     target_link_libraries(tests_exception_dialog_probe PRIVATE PkgConfig::GTK3 ${CMAKE_DL_LIBS})
+endif()
+
+# Exercise cache ownership between real processes without a window or production test hooks.
+add_executable(tests_storage_process Storage/StorageProcess.cpp)
+target_link_libraries(tests_storage_process PRIVATE oivappcore)
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_link_options(tests_storage_process PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+elseif(MINGW)
+    target_link_options(tests_storage_process PRIVATE "-mconsole" "-municode")
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_library(tests_association_dialog_probe SHARED Associations/LinuxDialogProbe.cpp)
+    target_link_libraries(tests_association_dialog_probe PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient ${CMAKE_DL_LIBS})
 endif()

@@ -402,6 +402,7 @@ namespace OIV
         }
 
         ClipboardSetup::RegisterDefaultFormats(fClipboardHelper);
+        StartFileAssociationOperation(FileAssociationAction::Check);
     }
 
     LLUtils::PointF64 ViewerApplication::GetImageSize(ImageSizeType imageSizeType)

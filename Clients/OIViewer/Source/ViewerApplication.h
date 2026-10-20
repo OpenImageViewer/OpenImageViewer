@@ -1,6 +1,7 @@
 #pragma once
 
 #include <RendererFactory.h>
+#include <OIVAppCore/UserStorage.h>
 #include <LLUtils/Utility.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/Rect.h>
@@ -30,6 +31,8 @@
 #include <OIVAppCore/SequencerPolicy.h>
 #include <OIVAppCore/FolderFileList.h>
 #include <OIVAppCore/FileReloadPolicy.h>
+#include <OIVAppCore/FileAssociationPolicy.h>
+#include <OIVAppCore/FileAssociationSession.h>
 #include <OIVAppCore/BrowseSessionController.h>
 #include <OIVAppCore/FileRemovalPolicy.h>
 #include <OIVAppCore/ImageOpenController.h>
@@ -151,11 +154,11 @@ namespace OIV
       public:
 
         void OnLabelRefreshRequest();
-        explicit ViewerApplication(LWS::PlatformContext& platform);
+        // The storage session and its immutable directories must outlive the viewer and its workers.
+        ViewerApplication(LWS::PlatformContext& platform, const UserDirectories& directories);
         ~ViewerApplication();
         void Init(LLUtils::native_string_type filePath, const RendererOptions& rendering = {});
         LWS::LoopResult Run();
-        static LLUtils::native_string_type GetAppDataFolder();
         static LWS::Handle FindTrayBarWindow();
 
       private:  // types
@@ -206,6 +209,10 @@ namespace OIV
         bool ExecuteCommand(const CommandManager::CommandRequest& request);
         bool ExecutePredefinedCommand(std::string command);
         void PostInitOperations();
+        void StartFileAssociationOperation(FileAssociationAction action);
+        void StopFileAssociationOperation();
+        void CloseFileAssociationDialog();
+        void HandleFileAssociationNotice(const FileAssociationNotice& notice);
 #pragma region Commands
         void CMD_Zoom(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void CMD_ViewState(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
@@ -223,6 +230,7 @@ namespace OIV
         void CMD_ImageManipulation(const CommandManager::CommandRequest& request,
                                    CommandManager::CommandResult& result);
         void CMD_Navigate(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_FileAssociations(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
@@ -360,6 +368,9 @@ namespace OIV
       private:  // member fields
 
         LWS::PlatformContext& fPlatform;
+        const UserDirectories& fUserDirectories;
+        std::unique_ptr<FileAssociationSession> fFileAssociations;
+        uint64_t fAssociationRequestId{};
 
 #pragma region FrameLimiter
         const bool EnableFrameLimiter = true;

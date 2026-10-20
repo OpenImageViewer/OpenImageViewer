@@ -1,5 +1,6 @@
 #include "Main.h"
 #include "ViewerApplication.h"
+#include <OIVAppCore/UserStorage.h>
 #include "HandledException.h"
 #include <LLUtils/Exception.h>
 #include <LLUtils/Logging/Logger.h>
@@ -20,16 +21,14 @@ namespace
     {
       public:
 
-        ViewerLogging()
+        explicit ViewerLogging(const std::filesystem::path& folder)
         {
             LLUtils::LoggerOptions options;
-            const auto folder = std::filesystem::path(OIV::ViewerApplication::GetAppDataFolder()) /
-                                OIV::FormatFullVersion(OIV::CurrentVersion);
             try
             {
                 options.sinks.push_back(
-                    {std::make_shared<LLUtils::FileLogSink>(LLUtils::LogFileOptions{.path = folder / "oiv"})});
-                options.emergencyPath = folder / "oiv.emergency.log";
+                    {std::make_shared<LLUtils::FileLogSink>(LLUtils::LogFileOptions{.path = folder / "OIViewer"})});
+                options.emergencyPath = folder / "OIViewer.emergency.log";
             }
             catch (...)
             {
@@ -62,7 +61,8 @@ OIV::CommandLineExit RunViewer(const OIV::CommandLineParameters& parameters, For
     if (forwardFile != nullptr && OIV::ShouldForwardInput(parameters) && forwardFile(*parameters.inputPath))
         return {};
 
-    const ViewerLogging logging;
+    const OIV::StorageSession storage(OIV::UserDirectories::Resolve(), OIV::FormatFullVersion(OIV::CurrentVersion));
+    const ViewerLogging logging(storage.Directories().state);
     const auto startupCategory = LLUtils::Logger::RegisterCategory("Startup");
     LL_LOG(startupCategory, LLUtils::LogLevel::Info, "OIViewer {} revision {} ({})",
            OIV::FormatFullVersion(OIV::CurrentVersion), OIV_GIT_SHORT_HASH,
@@ -95,7 +95,7 @@ OIV::CommandLineExit RunViewer(const OIV::CommandLineParameters& parameters, For
     platform.SetUnhandledExceptionHandler(OIV::ReportHandledException);
     LWS::LoopResult loopResult;
     {
-        OIV::ViewerApplication viewerApplication(platform);
+        OIV::ViewerApplication viewerApplication(platform, storage.Directories());
         viewerApplication.Init(parameters.inputPath.value_or(LLUtils::native_string_type{}), parameters.rendering);
         loopResult = viewerApplication.Run();
     }

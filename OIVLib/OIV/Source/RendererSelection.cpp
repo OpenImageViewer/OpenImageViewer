@@ -93,12 +93,12 @@ namespace OIV
                                                  candidate.adapter.name + ")";
                         try
                         {
-                            auto renderer           = backend.create();
-                            auto initialization     = params;
-                            initialization.dataPath = (params.dataPath.empty() ? std::filesystem::path(".")
-                                                                               : params.dataPath) /
-                                                      backend.info.name;
-                            initialization.gpuIndex = candidate.adapter.index;
+                            auto renderer                 = backend.create();
+                            auto initialization           = params;
+                            initialization.cacheDirectory = params.cacheDirectory.empty()
+                                                                ? std::filesystem::path{}
+                                                                : params.cacheDirectory / backend.info.name;
+                            initialization.gpuIndex       = candidate.adapter.index;
                             // Index precedence and name filtering were resolved before entering the backend.
                             initialization.adapterName  = nullptr;
                             initialization.acceleration = candidate.needsClassification

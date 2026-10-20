@@ -16,11 +16,6 @@
 
 namespace OIV
 {
-    LLUtils::native_string_type ViewerApplication::GetAppDataFolder()
-    {
-        return LLUtils::PlatformUtility::GetAppDataFolder() + LLUTILS_TEXT("/OIV/");
-    }
-
     LWS::Handle ViewerApplication::FindTrayBarWindow()
     {
         HWND nextChild = nullptr;
@@ -67,7 +62,8 @@ namespace OIV
         const auto canvasHandle = LWS::Win32::GetHwnd(fWindow.GetCanvasWindow());
         if (!canvasHandle.has_value())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to obtain the canvas window handle");
-        auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*canvasHandle), nullptr}, rendering);
+        auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*canvasHandle), nullptr},
+                                       fUserDirectories.GeneratedCache(), rendering);
         fRenderer     = std::move(created.renderer);
         fRendererType = created.type;
     }

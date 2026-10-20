@@ -18,8 +18,7 @@ namespace OIV
             return floatColor.channels;
         }
 
-        std::filesystem::path FindShaderFile(const std::filesystem::path& fileName,
-                                             const std::filesystem::path& cachePath)
+        std::filesystem::path FindShaderFile(const std::filesystem::path& fileName)
         {
             std::error_code ec;
             std::filesystem::path exeDir = LLUtils::PlatformUtility::GetExeFolder();
@@ -31,7 +30,7 @@ namespace OIV
             if (std::filesystem::exists(sharedCache, ec))
                 return sharedCache;
 
-            return cachePath / fileName;
+            return local;
         }
     }  // namespace
 
@@ -75,7 +74,6 @@ namespace OIV
 
         fSwapChainExtent = fContext.GetSwapChainExtent();
 
-        fDataPath     = initParams.dataPath;
         fViewportSize = {static_cast<float>(contextParams.width), static_cast<float>(contextParams.height)};
         if (fContext.GetSwapChain() != VK_NULL_HANDLE)
         {
@@ -114,11 +112,10 @@ namespace OIV
 
     void VKRenderer::CreatePipelines()
     {
-        const std::filesystem::path shaderCachePath     = std::filesystem::path(fDataPath) / "ShaderCache";
-        const std::filesystem::path vertShader          = FindShaderFile("QuadVP.vert.spv", shaderCachePath);
-        const std::filesystem::path fragShader          = FindShaderFile("QuadFP.frag.spv", shaderCachePath);
-        const std::filesystem::path selectionFragShader = FindShaderFile("QuadSelectionFP.frag.spv", shaderCachePath);
-        const std::filesystem::path simpleFragShader    = FindShaderFile("QuadSimpleFP.frag.spv", shaderCachePath);
+        const std::filesystem::path vertShader             = FindShaderFile("QuadVP.vert.spv");
+        const std::filesystem::path fragShader             = FindShaderFile("QuadFP.frag.spv");
+        const std::filesystem::path selectionFragShader    = FindShaderFile("QuadSelectionFP.frag.spv");
+        const std::filesystem::path simpleFragShader       = FindShaderFile("QuadSimpleFP.frag.spv");
         const std::vector<VkImageView> swapChainImageViews = fContext.GetSwapChainImageViews();
 
         auto imagePipeline = std::make_unique<VKPipeline>(

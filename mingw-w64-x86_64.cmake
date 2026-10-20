@@ -28,7 +28,7 @@ add_compile_definitions(_WIN32_WINNT=0x0A00)
 
 set(CASE_SENSITIVE_FIX_FOR_MINGW_PATH ${CMAKE_CURRENT_BINARY_DIR}/mingw-w64/Include)
 file(MAKE_DIRECTORY ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH})
-foreach(header Windows.h WindowsX.h ShlObj.h DbgHelp.h CommCtrl.h ShellScalingApi.h Psapi.h Ole2.h Shellapi.h)
+foreach(header Windows.h WindowsX.h ShlObj.h Shlwapi.h DbgHelp.h CommCtrl.h ShellScalingApi.h Psapi.h Ole2.h Shellapi.h)
     string(TOLOWER ${header} lowercaseHeader)
     execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink /usr/${TOOLCHAIN_PREFIX}/include/${lowercaseHeader} ${CASE_SENSITIVE_FIX_FOR_MINGW_PATH}/${header})
 endforeach()

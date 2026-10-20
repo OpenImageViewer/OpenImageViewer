@@ -15,25 +15,6 @@
 
 namespace OIV
 {
-    LLUtils::native_string_type ViewerApplication::GetAppDataFolder()
-    {
-        const char* configHome = std::getenv("XDG_CONFIG_HOME");
-        std::filesystem::path folder;
-        if (configHome != nullptr && *configHome != '\0')
-        {
-            folder = configHome;
-        }
-        else if (const char* userHome = std::getenv("HOME"); userHome != nullptr && *userHome != '\0')
-        {
-            folder = std::filesystem::path(userHome) / ".config";
-        }
-        else
-        {
-            folder = std::filesystem::temp_directory_path();
-        }
-        return (folder / "OIV").native() + LLUTILS_TEXT("/");
-    }
-
     LWS::Handle ViewerApplication::FindTrayBarWindow()
     {
         return 0;
@@ -72,7 +53,7 @@ namespace OIV
         auto& canvas  = fWindow.GetCanvasWindow();
         auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(canvas)),
                                         *LWS::Wayland::GetDisplay(canvas)},
-                                       rendering);
+                                       fUserDirectories.GeneratedCache(), rendering);
         fRenderer     = std::move(created.renderer);
         fRendererType = created.type;
     }

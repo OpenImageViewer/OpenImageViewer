@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Image.h>
+#include <OIVAppCore/FileAssociationPolicy.h>
 #include <OIVAppCore/BrowseSessionController.h>
 
 #include <cstdint>
@@ -16,7 +17,8 @@ namespace OIV
         AutoScroll,
         FirstFrameDisplayed,
         LoadFileExternally,
-        CountColors
+        CountColors,
+        FileAssociations
     };
 
     struct FileIndexResidencyReadyData

@@ -1,6 +1,18 @@
 {
   "commands": [
     {
+      "GroupID": "AddFileAssociations",
+      "DisplayName": "Add file associations",
+      "Name": "cmd_file_associations",
+      "arguments": "action=add"
+    },
+    {
+      "GroupID": "RemoveFileAssociations",
+      "DisplayName": "Remove file associations",
+      "Name": "cmd_file_associations",
+      "arguments": "action=remove"
+    },
+    {
       "GroupID": "ToggleKeyBindings",
       "DisplayName": "Toggle Key bindings",
       "Name": "cmd_toggle_keybindings",
