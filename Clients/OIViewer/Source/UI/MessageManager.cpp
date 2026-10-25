@@ -13,9 +13,6 @@ namespace OIV
         fTimerHideUserMessage.SetCallback(std::bind(&MessageManager::OnTimer, this));
         std::ignore = fFadeTimer.SetTargetWindow(&associatedWindow);
         fFadeTimer.SetCallback(std::bind(&MessageManager::OnTimer, this));
-
-        fSizeSubscription = EventManager::GetSingleton().SizeChange.Subscribe(
-            std::bind(&MessageManager::OnWindowSizeChange, this, std::placeholders::_1));
     }
 
     void MessageManager::Stop()
@@ -28,13 +25,12 @@ namespace OIV
         fFadeTimer.SetCallback({});
         std::ignore = fTimerHideUserMessage.SetTargetWindow(nullptr);
         std::ignore = fFadeTimer.SetTargetWindow(nullptr);
-        fSizeSubscription.Unsubscribe();
         fMessages.clear();
     }
 
-    void MessageManager::OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams)
+    void MessageManager::OnWindowSizeChange(const LWS::PixelSize& sizeChangedParams)
     {
-        fMaxMessageWidth = sizeChangedParams.width - (fMarginLeft + fMarginRight);
+        fMaxMessageWidth = sizeChangedParams.x - (fMarginLeft + fMarginRight);
 
         bool needrefresh = false;
         for (const auto& messageData : fMessages)
@@ -194,7 +190,6 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create user message.");
 
         messageData.message->SetBackgroundColor(LLUtils::Color(0));
-        messageData.message->SetFontPath(LabelManager::sFontPath);
         messageData.message->SetFontSize(12);
         messageData.message->SetOutlineWidth(2);
         messageData.message->SetPosition(static_cast<LLUtils::PointF64>(LLUtils::PointI32(fMarginLeft, fMarginTop)));

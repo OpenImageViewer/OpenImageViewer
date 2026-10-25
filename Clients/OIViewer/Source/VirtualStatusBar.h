@@ -29,7 +29,6 @@ namespace OIV
                 TextLabel* texelValue = fLabelManager->GetOrCreateTextLabel(labelName);
                 texelValue->SetVisible(fVisible);
                 texelValue->SetBackgroundColor(LLUtils::Color(0, 0, 0, 192));
-                texelValue->SetFontPath(LabelManager::sFixedFontPath);
                 texelValue->SetLineEndFixedWidth(true);
                 texelValue->SetTextRenderMode(FreeType::RenderMode::Antialiased);
                 texelValue->SetFontSize(11);

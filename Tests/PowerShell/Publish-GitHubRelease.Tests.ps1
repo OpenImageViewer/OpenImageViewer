@@ -6,7 +6,7 @@ Describe "Publish-GitHubRelease" {
     BeforeEach {
         $env:GH_TOKEN = "test-token"
         $env:GITHUB_STEP_SUMMARY = ""
-        $archives = @("OIV-windows-runtime.7z", "OIV-linux-runtime.7z", "OIV-symbols.7z")
+        $archives = @("OIV-windows-runtime.7z", "OIV-linux-runtime.7z", "OIV-symbols.7z", "OIV-windows-WLX.zip")
     }
 
     Context "GitHub CLI failures" {
@@ -73,7 +73,8 @@ Describe "Publish-GitHubRelease" {
                 $Arguments[1] -eq "upload" -and
                 $Arguments -contains "OIV-windows-runtime.7z" -and
                 $Arguments -contains "OIV-linux-runtime.7z" -and
-                $Arguments -contains "OIV-symbols.7z"
+                $Arguments -contains "OIV-symbols.7z" -and
+                $Arguments -contains "OIV-windows-WLX.zip"
             }
             Assert-MockCalled Set-TagCommitSha 1 -Scope It -ParameterFilter {
                 $Tag -eq "snapshot" -and $TargetSha -eq "new-sha"
@@ -170,6 +171,7 @@ Describe "Publish-GitHubRelease" {
                         [PSCustomObject]@{ name = "OIV-windows-runtime.7z" },
                         [PSCustomObject]@{ name = "OIV-linux-runtime.7z" },
                         [PSCustomObject]@{ name = "OIV-symbols.7z" },
+                        [PSCustomObject]@{ name = "OIV-windows-WLX.zip" },
                         [PSCustomObject]@{ name = "obsolete.7z" }
                     )
                 }
@@ -208,9 +210,80 @@ Describe "Publish-GitHubRelease" {
             # Assets replaced through --clobber are expected and must not be removed by stale-asset cleanup.
             Assert-MockCalled Invoke-Gh 0 -ParameterFilter {
                 $Arguments[1] -eq "delete-asset" -and $Arguments[3] -in @(
-                    "OIV-windows-runtime.7z", "OIV-linux-runtime.7z", "OIV-symbols.7z"
+                    "OIV-windows-runtime.7z", "OIV-linux-runtime.7z", "OIV-symbols.7z", "OIV-windows-WLX.zip"
                 )
             }
         }
+    }
+}
+
+Describe "Release package selection" {
+    BeforeEach {
+        $directory = Join-Path $TestDrive "packages"
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        Get-ChildItem -LiteralPath $directory -File | Remove-Item
+    }
+
+    function New-TestPackageSet {
+        param([string]$Version)
+        $names = @(
+            "OIV-$Version-Win32-x64-LLVM.7z",
+            "OIV-$Version-linux-x64-LLVM.7z",
+            "OIV-$Version-Win32-x64-LLVM-Symbols.7z",
+            "OIV-$Version-Win32-x64-LLVM-WLX.zip"
+        )
+        foreach ($name in $names) {
+            New-Item -ItemType File -Path (Join-Path $directory $name) | Out-Null
+        }
+    }
+
+    It "selects four separate official-release archives" {
+        New-TestPackageSet "1.2.3"
+        $packages = Get-ReleasePackageSet -Directory $directory -OfficialRelease $true
+        $packages.ReleaseTitle | Should Be "OIV-1.2.3"
+        $packages.ReleaseTag | Should Be "OIV-1.2.3"
+        $packages.Prerelease | Should Be $false
+        Split-Path $packages.WindowsRuntimeArchivePath -Leaf | Should Be "OIV-1.2.3-Win32-x64-LLVM.7z"
+        Split-Path $packages.WindowsWlxArchivePath -Leaf | Should Be "OIV-1.2.3-Win32-x64-LLVM-WLX.zip"
+        $packages.WindowsRuntimeArchivePath | Should Not Be $packages.WindowsWlxArchivePath
+        Test-Path -LiteralPath $packages.LinuxRuntimeArchivePath | Should Be $true
+        Test-Path -LiteralPath $packages.SymbolsArchivePath | Should Be $true
+    }
+
+    It "keeps snapshot version and rolling tag behavior" {
+        New-TestPackageSet "1.2.3.45-deadbeef"
+        $packages = Get-ReleasePackageSet -Directory $directory -OfficialRelease $false
+        $packages.ReleaseTitle | Should Be "OIV-1.2.3.45"
+        $packages.ReleaseTag | Should Be "snapshot"
+        $packages.Prerelease | Should Be $true
+    }
+
+    It "rejects a missing WLX package" {
+        New-TestPackageSet "1.2.3"
+        Remove-Item -LiteralPath (Join-Path $directory "OIV-1.2.3-Win32-x64-LLVM-WLX.zip")
+        { Get-ReleasePackageSet -Directory $directory -OfficialRelease $true } | Should Throw "Windows WLX archive, found 0"
+    }
+
+    It "rejects duplicate WLX packages" {
+        New-TestPackageSet "1.2.3"
+        New-Item -ItemType File -Path (Join-Path $directory "OIV-1.2.3-Win32-x64-VC-WLX.zip") | Out-Null
+        { Get-ReleasePackageSet -Directory $directory -OfficialRelease $true } | Should Throw "Windows WLX archive, found 2"
+    }
+
+    It "rejects mismatched WLX versions" {
+        New-TestPackageSet "1.2.3"
+        Rename-Item -LiteralPath (Join-Path $directory "OIV-1.2.3-Win32-x64-LLVM-WLX.zip") -NewName "OIV-1.2.4-Win32-x64-LLVM-WLX.zip"
+        { Get-ReleasePackageSet -Directory $directory -OfficialRelease $true } | Should Throw "versions do not match"
+    }
+
+    It "rejects snapshot names in official-release mode" {
+        New-TestPackageSet "1.2.3.45-deadbeef"
+        { Get-ReleasePackageSet -Directory $directory -OfficialRelease $true } | Should Throw "selected release mode"
+    }
+
+    It "rejects missing standalone packages" {
+        New-TestPackageSet "1.2.3"
+        Remove-Item -LiteralPath (Join-Path $directory "OIV-1.2.3-linux-x64-LLVM.7z")
+        { Get-ReleasePackageSet -Directory $directory -OfficialRelease $true } | Should Throw "Linux runtime archive, found 0"
     }
 }

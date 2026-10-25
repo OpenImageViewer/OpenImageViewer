@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "HostedWindowController.h"
 
 #include <LLUtils/Exception.h>
 #include "Resource.h"
@@ -36,10 +37,11 @@ namespace OIV
     struct MainWindow::NativeState
     {
         HWND statusBar = nullptr;
+        std::unique_ptr<Win32::HostedWindowController> hosted;
     };
 
-    MainWindow::MainWindow(LWS::PlatformContext& platform)
-        : fWindow(platform), fCanvasWindow(platform), fImageControl(platform),
+    MainWindow::MainWindow(LWS::PlatformContext& platform, const std::filesystem::path& resources)
+        : fResources(resources), fWindow(platform), fCanvasWindow(platform), fImageControl(platform),
           fNativeState(std::make_unique<NativeState>())
     {
         auto connection = fWindow.Listen(
@@ -51,6 +53,23 @@ namespace OIV
     }
 
     MainWindow::~MainWindow() = default;
+
+    LWS::Result MainWindow::Destroy()
+    {
+        return fNativeState->hosted ? fNativeState->hosted->Destroy() : fWindow.Destroy();
+    }
+    LWS::WindowMode MainWindow::GetWindowMode() const
+    {
+        return fNativeState->hosted ? fNativeState->hosted->GetWindowMode() : fWindow.GetWindowMode();
+    }
+    LWS::Result MainWindow::SetWindowMode(LWS::WindowMode mode)
+    {
+        if (!fWindow.GetParent())
+            return fWindow.SetWindowMode(mode);
+        if (!fNativeState->hosted)
+            fNativeState->hosted = std::make_unique<Win32::HostedWindowController>(*this);
+        return fNativeState->hosted->SetWindowMode(mode);
+    }
 
     bool MainWindow::UseMainWindowAsCanvas() const
     {
@@ -87,8 +106,11 @@ namespace OIV
     void MainWindow::SetApplicationIcon()
     {
         IconResources handles;
+        HMODULE module{};
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           reinterpret_cast<LPCWSTR>(&MainWindow::GetIsTrayWindow), &module);
         handles.icon = static_cast<HICON>(
-            LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
+            LoadImageW(module, MAKEINTRESOURCEW(IDI_APP_ICON), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE));
         if (handles.icon == nullptr)
             return;
 
@@ -131,7 +153,7 @@ namespace OIV
         if (fNativeState->statusBar == nullptr)
             return;
 
-        const bool visible = GetShowStatusBar() && fWindow.GetWindowMode() == LWS::WindowMode::Windowed;
+        const bool visible = GetShowStatusBar() && GetWindowMode() == LWS::WindowMode::Windowed;
         ShowWindow(fNativeState->statusBar, visible ? SW_SHOW : SW_HIDE);
         if (visible)
         {

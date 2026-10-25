@@ -1,3 +1,4 @@
+#include "ImageBitmap.h"
 #include <LLUtils/Thread.h>
 #include <array>
 #include <iomanip>
@@ -6,7 +7,7 @@
 #include <future>
 #include <cassert>
 
-#include "ViewerApplication.h"
+#include "Viewer.h"
 
 #include <Version.h>
 
@@ -33,7 +34,6 @@
 #include "Globals.h"
 #include <OIVAppCore/ConfigurationLoader.h>
 #include "CommandRegistry.h"
-#include <OIVAppCore/ColorCountPolicy.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 #include <OIVAppCore/FileChangePolicy.h>
 #include <OIVAppCore/FrameLimiterPolicy.h>
@@ -49,20 +49,24 @@
 #include <OIVAppCore/ViewActionController.h>
 #include <OIVAppCore/ViewCommandPolicy.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
-#include <OIVShared/PixelHelper.h>
 #include <ImageUtil/ImageUtil.h>
-#include "InterThreadMessages.h"
+#include <OIVAppCore/ViewerCompletion.h>
 
 namespace OIV
 {
-    void ViewerApplication::DrainUiCompletions()
+    void Viewer::HandleReloadAction(ReloadAction action, const LLUtils::native_string_type& requestedFile)
     {
-        std::vector<EventData> completions;
-        {
-            const std::scoped_lock lock(fUiCompletionMutex);
-            completions.swap(fUiCompletions);
-            fUiDrainScheduled = false;
-        }
+        // Native dialogs can reactivate the viewer before returning. Keep confirmation in the shared
+        // policy so that reentrant activation cannot submit a second reload while a decision is pending.
+        if (action == ReloadAction::AskUser)
+            action = fFileReloadPolicy.ConfirmReload(ConfirmFileReload(requestedFile));
+        if (action == ReloadAction::RequestNow && fSession.fBrowseSessionController != nullptr)
+            fSession.fBrowseSessionController->RequestCurrentFileReload();
+    }
+
+    void Viewer::DrainUiCompletions()
+    {
+        auto completions = fSession.TakeCompletions();
         for (const auto& completion : completions)
         {
             if (!fIsShuttingDown)
@@ -73,22 +77,14 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
+    void Viewer::AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
         auto bitmapImage = IMUtil::ImageUtil::ConvertImageWithNormalization(image, IMCodec::TexelFormat::I_B8_G8_R8_A8,
                                                                             false);
         if (bitmapImage == nullptr)
             return;
 
-        const LWS::BitmapBuffer bitmapBuffer{
-            .pixels   = {bitmapImage->GetBuffer(),
-                         static_cast<size_t>(bitmapImage->GetRowPitchInBytes()) * bitmapImage->GetHeight()},
-            .format   = LWS::BitmapPixelFormat::Bgra8,
-            .rowOrder = LWS::BitmapRowOrder::TopDown,
-            .width    = bitmapImage->GetWidth(),
-            .height   = bitmapImage->GetHeight(),
-            .rowPitch = bitmapImage->GetRowPitchInBytes(),
-        };
+        const auto bitmapBuffer = MakeBgraBitmapView(*bitmapImage);
 
         LLUtils::native_stringstream title;
         title << imageSlot + 1 << LLUTILS_TEXT('/') << totalImages << LLUTILS_TEXT("  ") << bitmapBuffer.width
@@ -97,29 +93,29 @@ namespace OIV
             {.index = imageSlot, .title = title.str(), .bitmap = std::make_shared<LWS::Bitmap>(bitmapBuffer)});
     }
 
-    void ViewerApplication::UnloadOpenedImaged()
+    void Viewer::UnloadOpenedImaged()
     {
-        if (fBrowseSessionController != nullptr)
-            fBrowseSessionController->InvalidateCurrent();
+        if (fSession.fBrowseSessionController != nullptr)
+            fSession.fBrowseSessionController->InvalidateCurrent();
         fSequencerTimer.SetInterval(0);
-        fSequencerPolicy.Reset();
-        fImageState.ClearAll();
+        fSession.fSequencerPolicy.Reset();
+        fSession.fImageState.ClearAll();
         UpdateMainRenderImages();
         fRefreshOperation.Queue();
         UpdateOpenImageUI();
     }
 
-    void ViewerApplication::RefreshImage()
+    void Viewer::RefreshImage()
     {
         fRefreshOperation.Begin();
-        fImageState.Refresh();
+        fSession.fImageState.Refresh();
         UpdateMainRenderImages();
-        if (fImageState.IsDownscaled())
+        if (fSession.fImageState.IsDownscaled())
             QueueResampling();
         fRefreshOperation.End(true);
     }
 
-    void ViewerApplication::DisplayOpenedFileName()
+    void Viewer::DisplayOpenedFileName()
     {
         if (IsOpenedImageIsAFile())
             SetUserMessage(ViewerPresentationPolicy::FormatOpenedFileMessage(
@@ -128,12 +124,12 @@ namespace OIV
                            MessageFlags::Interchangeable | MessageFlags::Moveable);
     }
 
-    bool ViewerApplication::IsSubImagesVisible() const
+    bool Viewer::IsSubImagesVisible() const
     {
         using namespace IMCodec;
-        if (fImageState.GetOpenedImage() != nullptr)
+        if (fSession.fImageState.GetOpenedImage() != nullptr)
         {
-            const auto mainImage = fImageState.GetOpenedImage()->pixels;
+            const auto mainImage = fSession.fImageState.GetOpenedImage()->pixels;
             return mainImage != nullptr &&
                    SubImagePolicy::IsVisible(mainImage->GetSubImageGroupType(), mainImage->GetNumSubImages());
         }
@@ -143,10 +139,10 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::LoadSubImages()
+    void Viewer::LoadSubImages(bool restoreSelection)
     {
         using namespace IMCodec;
-        auto mainImage    = fImageState.GetOpenedImage();
+        auto mainImage    = fSession.fImageState.GetOpenedImage();
         auto numSubImages = mainImage->pixels->GetNumSubImages();
         if (IsSubImagesVisible())
         {
@@ -167,12 +163,20 @@ namespace OIV
                 AddImageToControl(currentSubImage, static_cast<uint16_t>(currentImage++), totalImages);
             }
             // Reset selected sub image when loading new set of subimages
-            const int selectionIndex = fDisplayBiggestSubImageOnLoad
+            const int selectionIndex = fSession.fDisplayBiggestSubImageOnLoad
                                            ? SubImagePolicy::InitialSelectionIndex(isMainAnActualImage,
                                                                                    mainImage->pixels->GetTotalPixels(),
                                                                                    subImagePixels)
                                            : SubImagePolicy::MainImageIndex;
-            fWindow.GetImageControl().GetImageList().SetSelected(selectionIndex);
+            int selected             = selectionIndex;
+            if (restoreSelection)
+            {
+                selected = SubImagePolicy::MainImageIndex;
+                for (uint16_t i = 0; i < numSubImages; ++i)
+                    if (mainImage->pixels->GetSubImage(i) == fSession.fImageState.GetSelectedSource())
+                        selected = i + (isMainAnActualImage ? 1 : 0);
+            }
+            fWindow.GetImageControl().GetImageList().SetSelected(selected);
             fWindow.GetImageControl().RefreshScrollInfo();
         }
         else
@@ -181,14 +185,14 @@ namespace OIV
         }
     }
 
-    bool ViewerApplication::LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags)
+    bool Viewer::LoadFile(LLUtils::native_string_type filePath, IMCodec::PluginTraverseMode loaderFlags)
     {
         const auto clientSize = fWindow.GetWindow().GetClientAreaMetrics().logical;
-        return ProcessImageLoadResult(fImageOpenController->LoadFile(
+        return ProcessImageLoadResult(fSession.fImageOpenController->LoadFile(
             filePath, loaderFlags, ImageLoadContext{static_cast<int>(clientSize.x), static_cast<int>(clientSize.y)}));
     }
 
-    bool ViewerApplication::ProcessImageLoadResult(const ImageLoadResult& loadResult)
+    bool Viewer::ProcessImageLoadResult(const ImageLoadResult& loadResult)
     {
         const LLUtils::OperationScope operation(loadResult.operationId.value ? loadResult.operationId
                                                                              : LLUtils::OperationScope::Current());
@@ -204,10 +208,11 @@ namespace OIV
 
         if (presentation.shouldLoadImage)
         {
-            if (fBrowseSessionController != nullptr && loadResult.image.pixels != nullptr &&
+            if (fSession.fBrowseSessionController != nullptr && loadResult.image.pixels != nullptr &&
                 loadResult.image.source == ImageSource::File)
             {
-                const auto commitResult = fBrowseSessionController->CommitCurrentFile(loadResult.normalizedPath);
+                const auto commitResult = fSession.fBrowseSessionController->CommitCurrentFile(
+                    loadResult.normalizedPath);
                 if (!commitResult)
                 {
                     const ImageLoadResult commitFailure{ImageLoadStatus::UnknownError, loadResult.normalizedPath, {}};
@@ -233,7 +238,7 @@ namespace OIV
         return presentation.succeeded;
     }
 
-    LLUtils::native_string_type ViewerApplication::DescribeImage(const IMCodec::ImageSharedPtr& pixels)
+    LLUtils::native_string_type Viewer::DescribeImage(const IMCodec::ImageSharedPtr& pixels)
     {
         LLUtils::native_stringstream stream;
         stream << pixels->GetWidth() << LLUTILS_TEXT(" X ") << pixels->GetHeight() << LLUTILS_TEXT(" X ")
@@ -242,10 +247,10 @@ namespace OIV
         return stream.str();
     }
 
-    void ViewerApplication::LoadOivImage(ViewerImage oivImage)
+    void Viewer::LoadOivImage(ViewerImage oivImage)
     {
         // Enter this function only from the main thread.
-        assert("ViewerApplication::FinalizeImageLoad() can be called only from the main thread" && IsMainThread());
+        assert("Viewer::FinalizeImageLoad() can be called only from the main thread" && IsMainThread());
 
         if (oivImage.pixels == nullptr)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Expected a valid image");
@@ -253,24 +258,21 @@ namespace OIV
         fFileDisplayTimer.Start();
 
         fSequencerTimer.SetInterval(0);
-        fCurrentFrame = 0;
-        fSequencerPolicy.Reset(oivImage.pixels);
         fQueueImageInfoLoad = GetImageInfoVisible();
         SetImageInfoVisible(false);
         SetResamplingEnabled(false);
-        fImageState.SetOpenedImage(oivImage);
+        fSession.OpenImage(oivImage);
 
         fRefreshOperation.Begin();
 
-        fImageState.ResetUserState();
-        fImageState.Refresh(ImageProcessingStage::GeometricTransform);
+        fSession.fImageState.Refresh(ImageProcessingStage::GeometricTransform);
 
-        if (fResetTransformationMode == ResetTransformationMode::ResetAll)
+        if (fSession.fResetTransformationMode == ResetTransformationMode::ResetAll)
             FitToClientAreaAndCenter();
 
         AutoPlaceImage();
 
-        fImageState.Refresh();
+        fSession.fImageState.Refresh();
         UpdateMainRenderImages();
         fWindow.SetShowImageControl(IsSubImagesVisible());
         UnloadWelcomeMessage();
@@ -307,54 +309,48 @@ namespace OIV
             fQueueImageInfoLoad = false;
         }
 
-        // Frame zero is already displayed by ImageState. Time its full duration and advance to
-        // frame one on the first tick. Even speed input before that tick now preserves progress.
-        if (oivImage.pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame &&
-            oivImage.pixels->GetNumSubImages() != 0)
-        {
-            const auto& firstFrame = oivImage.pixels->GetSubImage(0);
-            fCurrentFrame          = SequencerPolicy::NextFrame(0, oivImage.pixels->GetNumSubImages());
-            fSequencerTimer.SetInterval(fSequencerPolicy.StartFrame(firstFrame->GetAnimationData().delayMilliseconds));
-        }
+        if (const auto interval = fSession.StartAnimation(); interval != 0)
+            fSequencerTimer.SetInterval(interval);
     }
 
-    void ViewerApplication::UpdateOpenImageUI()
+    void Viewer::UpdateOpenImageUI()
     {
         if (IsImageOpen())
         {
             UpdateTitle();
-            fVirtualStatusBar.SetText("imageDescription", DescribeImage(fImageState.GetRetainedImage(
+            fVirtualStatusBar.SetText("imageDescription", DescribeImage(fSession.fImageState.GetRetainedImage(
                                                               ImageProcessingStage::GeometricTransform)));
         }
     }
 
-    const LLUtils::native_string_type& ViewerApplication::GetOpenedFileName() const
+    const LLUtils::native_string_type& Viewer::GetOpenedFileName() const
     {
         static const LLUtils::native_string_type emptyString;
-        const auto* file = fImageState.GetOpenedImage();
+        const auto* file = fSession.fImageState.GetOpenedImage();
         return file && file->source == ImageSource::File ? file->path : emptyString;
     }
 
-    bool ViewerApplication::IsImageOpen() const
+    bool Viewer::IsImageOpen() const
     {
-        return fImageState.GetOpenedImage() != nullptr;
+        return fSession.fImageState.GetOpenedImage() != nullptr;
     }
 
-    bool ViewerApplication::IsOpenedImageIsAFile() const
+    bool Viewer::IsOpenedImageIsAFile() const
     {
-        return fImageState.GetOpenedImage() != nullptr && fImageState.GetOpenedImage()->source == ImageSource::File;
+        return fSession.fImageState.GetOpenedImage() != nullptr &&
+               fSession.fImageState.GetOpenedImage()->source == ImageSource::File;
     }
 
-    void ViewerApplication::SortFolderFileList()
+    void Viewer::SortFolderFileList()
     {
-        if (fBrowseSessionController != nullptr)
+        if (fSession.fBrowseSessionController != nullptr)
         {
-            fBrowseSessionController->SortFolderFileList();
+            fSession.fBrowseSessionController->SortFolderFileList();
             UpdateTitle();
         }
     }
 
-    void ViewerApplication::ApplyBrowseSessionResult(const BrowseSessionController::BrowseSessionResult& result)
+    void Viewer::ApplyBrowseSessionResult(const BrowseSessionController::BrowseSessionResult& result)
     {
         switch (result.action)
         {
@@ -373,15 +369,17 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
+    void Viewer::OnImageSelectionChanged(const ImageList::ImageSelectionChangeArgs& ImageSelectionChangeArgs)
     {
+        if (fRestoringSession)
+            return;
         auto imageIndex = ImageSelectionChangeArgs.imageIndex;
         if (imageIndex >= 0)
         {
             auto image = GetImageByIndex(imageIndex);
 
-            fImageState.SetSelectedSource(image);
-            fImageState.Refresh(ImageProcessingStage::GeometricTransform);
+            fSession.fImageState.SetSelectedSource(image);
+            fSession.fImageState.Refresh(ImageProcessingStage::GeometricTransform);
             fRefreshOperation.Begin();
             FitToClientAreaAndCenter();
             RefreshImage();
@@ -395,14 +393,14 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::ProcessRemovalOfOpenedFile(const LLUtils::native_string_type& fileName)
+    void Viewer::ProcessRemovalOfOpenedFile(const LLUtils::native_string_type& fileName)
     {
         const bool removeInternalDeletes = (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedInternally) ==
                                            DeletedFileRemovalMode::DeletedInternally;
         const bool removeExternalDeletes = (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) ==
                                            DeletedFileRemovalMode::DeletedExternally;
-        const size_t fileCount           = fBrowseSessionController != nullptr
-                                               ? fBrowseSessionController->GetFolderFileList().GetSize()
+        const size_t fileCount           = fSession.fBrowseSessionController != nullptr
+                                               ? fSession.fBrowseSessionController->GetFolderFileList().GetSize()
                                                : 0;
 
         const auto action = FileRemovalPolicy::Decide(GetOpenedFileName(), fileName, fRequestedFileForRemoval,
@@ -411,8 +409,9 @@ namespace OIV
         {
             const bool replacementRequested = (action == RemovedFileAction::TryStart ||
                                                action == RemovedFileAction::TryNextThenPrevious) &&
-                                              fBrowseSessionController != nullptr &&
-                                              fBrowseSessionController->RequestRemovedFileReplacement(fileName);
+                                              fSession.fBrowseSessionController != nullptr &&
+                                              fSession.fBrowseSessionController->RequestRemovedFileReplacement(
+                                                  fileName);
 
             if (FileRemovalPolicy::ShouldUnloadAfterJumps(action, replacementRequested, false))
             {
@@ -426,14 +425,15 @@ namespace OIV
         UpdateTitle();
     }
 
-    void ViewerApplication::OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
+    void Viewer::OnFileChangedImpl(const IFileWatcher::FileChangedEventArgs* fileChangedEventArgsPtr)
     {
         auto fileChangedEventArgs  = *fileChangedEventArgsPtr;
-        const bool hasActiveFolder = fBrowseSessionController != nullptr;
-        const auto activeFolderID  = hasActiveFolder ? fBrowseSessionController->GetActiveFolderID()
+        const bool hasActiveFolder = fSession.fBrowseSessionController != nullptr;
+        const auto activeFolderID  = hasActiveFolder ? fSession.fBrowseSessionController->GetActiveFolderID()
                                                      : IFileWatcher::FolderID{};
 
-        switch (FileChangePolicy::Decide(fileChangedEventArgs, hasActiveFolder, activeFolderID, fCOnfigurationFolderID,
+        switch (FileChangePolicy::Decide(fileChangedEventArgs, hasActiveFolder, activeFolderID,
+                                         fSession.fConfigurationFolderID,
                                          std::filesystem::path(GetOpenedFileName()).native()))
         {
             case FileChangeAction::CurrentFileChanged:
@@ -453,20 +453,9 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::OnFileChanged(IFileWatcher::FileChangedEventArgs fileChangedEventArgs)
+    void Viewer::OnFileIndexResidencyReady(const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
     {
-        if (fIsShuttingDown == false)
-        {
-            QueueUiCompletion(static_cast<std::underlying_type_t<InterThreadMessages>>(
-                                  InterThreadMessages::FileChanged),
-                              fileChangedEventArgs);
-        }
-    }
-
-    void ViewerApplication::OnFileIndexResidencyReady(const LLUtils::native_string_type& fileName,
-                                                      IMCodec::ImageSharedPtr image)
-    {
-        if (fBrowseSessionController == nullptr || !fBrowseSessionController->IsCurrentFile(fileName))
+        if (fSession.fBrowseSessionController == nullptr || !fSession.fBrowseSessionController->IsCurrentFile(fileName))
         {
             return;
         }
@@ -481,122 +470,77 @@ namespace OIV
                          .source = ImageSource::File,
                          .path   = std::filesystem::path(fileName).lexically_normal().native()};
         IMCodec::ItemMetaDataSharedPtr metaData;
-        if (fImageLoader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success && metaData != nullptr)
+        if (fSession.fImageLoader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success &&
+            metaData != nullptr)
         {
             file.metadata = std::move(metaData);
         }
         LoadOivImage(std::move(file));
     }
 
-    void ViewerApplication::OnCountingColorsCompleted(const CountColorsData& result)
+    void Viewer::OnCountingColorsCompleted(const CountColorsData& result)
     {
-        fIsColorThreadRunning = false;
-        // Worker bookkeeping is completed even when the selected source changed.
-        switch (ColorCountPolicy::DecideCompletion(result.generation, fImageState.GetSourceGeneration(),
-                                                   GetImageInfoVisible()))
-        {
-            case ColorCountCompletionAction::ApplyToCurrentImage:
-                fImageState.CompleteColorCount(ColorCountPolicy::NormalizeCountResult(
-                    result.colorCount, UniqueColorsUninitialized - 1, UniqueColorsFailed));
-                if (GetImageInfoVisible())
-                    ShowImageInfo();
-                break;
-            case ColorCountCompletionAction::CountVisibleImage:
-                CountColorsAsync();
-                break;
-            case ColorCountCompletionAction::Ignore:
-                break;
-        }
+        if (fSession.CompleteColorCount(result, GetImageInfoVisible()) && GetImageInfoVisible())
+            ShowImageInfo();
     }
 
-    void ViewerApplication::OnMessageFromBackgroundThread(const EventData& sharedData)
+    void Viewer::OnMessageFromBackgroundThread(const ViewerCompletion& completion)
     {
-        if (sharedData.data.has_value() == false)
-            LL_EXCEPTION_UNEXPECTED_VALUE;
-
-        switch (static_cast<InterThreadMessages>(sharedData.id))
-        {
-            case InterThreadMessages::FileAssociations:
-                HandleFileAssociationNotice(std::any_cast<const FileAssociationNotice&>(sharedData.data));
-                break;
-            case InterThreadMessages::FileChanged:
+        std::visit(
+            [this](const auto& data)
             {
-                const IFileWatcher::FileChangedEventArgs* fileChangedEventArgs =
-                    std::any_cast<IFileWatcher::FileChangedEventArgs>(&(sharedData.data));
-
-                if (fileChangedEventArgs == nullptr)
-                    LL_EXCEPTION_UNEXPECTED_VALUE;
-
-                OnFileChangedImpl(fileChangedEventArgs);
-                BrowseSessionController::BrowseSessionResult result;
-                if (fBrowseSessionController != nullptr)
-                    result = fBrowseSessionController->OnFileChanged(*fileChangedEventArgs);
-                UpdateTitle();
-                ApplyBrowseSessionResult(result);
-
-                break;
-            }
-            case InterThreadMessages::FileIndexResidencyReady:
-            {
-                const auto& fileIndexResidencyReadyData = std::any_cast<const FileIndexResidencyReadyData&>(
-                    sharedData.data);
-                OnFileIndexResidencyReady(fileIndexResidencyReadyData.fileName, fileIndexResidencyReadyData.image);
-                break;
-            }
-            case InterThreadMessages::CandidateResidencyReady:
-            {
-                const auto& candidateResidencyReadyData = std::any_cast<const CandidateResidencyReadyData&>(
-                    sharedData.data);
-                const auto result =
-                    fBrowseSessionController != nullptr
-                        ? candidateResidencyReadyData.folderLoad
-                              ? fBrowseSessionController->OnFolderOpenCandidateReady(candidateResidencyReadyData)
-                              : fBrowseSessionController->OnBrowseCandidateReady(candidateResidencyReadyData)
-                        : BrowseSessionController::BrowseSessionResult{};
-                ApplyBrowseSessionResult(result);
-                break;
-            }
-            case InterThreadMessages::AutoScroll:
-                LL_EXCEPTION_NOT_IMPLEMENT("Auto scroll not implemented");
-            case InterThreadMessages::CountColors:
-            {
-                const auto& colorsDAta = std::any_cast<const CountColorsData&>(sharedData.data);
-                OnCountingColorsCompleted(colorsDAta);
-                break;
-            }
-
-                LL_EXCEPTION_NOT_IMPLEMENT("Count colors not implemented");
-            case InterThreadMessages::FirstFrameDisplayed:
-                LL_EXCEPTION_NOT_IMPLEMENT("First frame displayed not implemented");
-            case InterThreadMessages::LoadFileExternally:
-                LL_EXCEPTION_NOT_IMPLEMENT("Load file externally not implemented");
-            default:
-                break;
-        }
+                using T = std::decay_t<decltype(data)>;
+                if constexpr (std::is_same_v<T, FileAssociationNotice>)
+                {
+                    if (fShell.associationNotice)
+                        fShell.associationNotice(data);
+                }
+                else if constexpr (std::is_same_v<T, IFileWatcher::FileChangedEventArgs>)
+                {
+                    OnFileChangedImpl(&data);
+                    BrowseSessionController::BrowseSessionResult result;
+                    if (fSession.fBrowseSessionController)
+                        result = fSession.fBrowseSessionController->OnFileChanged(data);
+                    UpdateTitle();
+                    ApplyBrowseSessionResult(result);
+                }
+                else if constexpr (std::is_same_v<T, FileIndexResidencyReadyData>)
+                    OnFileIndexResidencyReady(data.fileName, data.image);
+                else if constexpr (std::is_same_v<T, CandidateResidencyReadyData>)
+                {
+                    const auto result = !fSession.fBrowseSessionController
+                                            ? BrowseSessionController::BrowseSessionResult{}
+                                        : data.folderLoad
+                                            ? fSession.fBrowseSessionController->OnFolderOpenCandidateReady(data)
+                                            : fSession.fBrowseSessionController->OnBrowseCandidateReady(data);
+                    ApplyBrowseSessionResult(result);
+                }
+                else if constexpr (std::is_same_v<T, CountColorsData>)
+                    OnCountingColorsCompleted(data);
+            },
+            completion.data);
     }
 
-    bool ViewerApplication::JumpFiles(FolderFileList::index_type step)
+    bool Viewer::JumpFiles(FolderFileList::index_type step)
     {
-        return fBrowseSessionController != nullptr && fBrowseSessionController->JumpFiles(step);
+        return fSession.fBrowseSessionController != nullptr && fSession.fBrowseSessionController->JumpFiles(step);
     }
 
-    void ViewerApplication::OnImageReady(IMCodec::ImageSharedPtr image) {}
-
-    void ViewerApplication::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height, uint32_t rowPitch,
-                                    IMCodec::TexelFormat texelFormat)
+    void Viewer::LoadRaw(const std::byte* buffer, uint32_t width, uint32_t height, uint32_t rowPitch,
+                         IMCodec::TexelFormat texelFormat)
     {
         const RawBufferParams params{buffer, width, height, rowPitch, texelFormat};
         auto pixels = CreateRawImage(params, {IMUtil::AxisAlignedRotation::None, IMUtil::AxisAlignedFlip::Vertical});
         LoadOivImage(ViewerImage{.pixels = std::move(pixels), .source = ImageSource::Clipboard});
     }
 
-    void ViewerApplication::LoadClipboardText(const LLUtils::native_string_type& text)
+    void Viewer::LoadClipboardText(const LLUtils::native_string_type& text)
     {
         auto textImage = std::make_unique<TextRasterizer>(fFreeType.get());
+        textImage->SetFontPath(fLabelManager.GetFontPath());
         textImage->SetText(text);
         textImage->SetDPI(static_cast<uint32_t>(std::lround(fDPIadjustmentFactor.x * 96.0)),
                           static_cast<uint32_t>(std::lround(fDPIadjustmentFactor.y * 96.0)));
-        textImage->SetFontPath(LabelManager::sFontPath);
         textImage->SetFontSize(10);
         textImage->SetOutlineWidth(0);
         textImage->SetTextColor({48, 48, 48, 255});
@@ -606,7 +550,7 @@ namespace OIV
             LoadOivImage(ViewerImage{.pixels = std::move(pixels), .source = ImageSource::ClipboardText});
     }
 
-    OperationResult ViewerApplication::CopyVisibleToClipBoard()
+    OperationResult Viewer::CopyVisibleToClipBoard()
     {
         OperationResult result = ImageEditPolicy::ValidateSelectionOperation(
             IsImageOpen(), fSelectionRect.GetSelectionRect().IsEmpty());
@@ -615,7 +559,7 @@ namespace OIV
             result                               = OperationResult::UnkownError;
             LLUtils::RectI32 imageSpaceSelection = ClientToImageRounded(fSelectionRect.GetSelectionRect());
             auto cropped                         = IMUtil::ImageUtil::CropImage(
-                fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat), imageSpaceSelection);
+                fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat), imageSpaceSelection);
 
             if (cropped != nullptr)
             {
@@ -629,7 +573,7 @@ namespace OIV
         return result;
     }
 
-    OperationResult ViewerApplication::CropVisibleImage()
+    OperationResult Viewer::CropVisibleImage()
     {
         OperationResult result = ImageEditPolicy::ValidateSelectionOperation(
             IsImageOpen(), fSelectionRect.GetSelectionRect().IsEmpty());
@@ -638,7 +582,7 @@ namespace OIV
             result                        = OperationResult::UnkownError;
             LLUtils::RectI32 imageRectInt = ClientToImageRounded(fSelectionRect.GetSelectionRect());
             auto cropped                  = IMUtil::ImageUtil::CropImage(
-                fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform), imageRectInt);
+                fSession.fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform), imageRectInt);
 
             if (cropped != nullptr)
             {
@@ -651,7 +595,7 @@ namespace OIV
         return result;
     }
 
-    OperationResult ViewerApplication::CutSelectedArea()
+    OperationResult Viewer::CutSelectedArea()
     {
         // Please note that currently this function works on the rasterized image, a more general solution is needed
         // to work on a previous stage image.
@@ -660,7 +604,7 @@ namespace OIV
         if (result == OperationResult::Success)
         {
             result                        = OperationResult::UnkownError;
-            auto rasterized               = fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
+            auto rasterized               = fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
             LLUtils::RectI32 subImageRect = ClientToImageRounded(fSelectionRect.GetSelectionRect());
 
             const LLUtils::RectI32 imageRect = {{0, 0},
@@ -673,7 +617,7 @@ namespace OIV
             {
                 SetClipboardImage(IMUtil::ImageUtil::GetSubImage(rasterized, subImageRect));
                 auto& texelInfo = IMCodec::GetTexelInfo(
-                    fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat)->GetOriginalTexelFormat());
+                    fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat)->GetOriginalTexelFormat());
                 bool hasOpacityChannel = false;
                 for (auto& channel : texelInfo.channles)
                     if (channel.semantic == IMCodec::ChannelSemantic::Opacity)
@@ -684,15 +628,15 @@ namespace OIV
 
                 const auto fillColor = hasOpacityChannel ? LLUtils::Color(0, 0, 0, 0) : LLUtils::Color(0, 0, 0, 255);
                 auto colorFilled     = IMUtil::ImageUtil::FillColor(
-                    fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat), subImageRect, fillColor);
+                    fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat), subImageRect, fillColor);
 
                 if (colorFilled != nullptr)
                 {
                     auto oivColorFilled = ViewerImage{.pixels = colorFilled, .source = ImageSource::GeneratedByLib};
-                    auto lastState      = fResetTransformationMode;
-                    fResetTransformationMode = ResetTransformationMode::DoNothing;
+                    auto lastState      = fSession.fResetTransformationMode;
+                    fSession.fResetTransformationMode = ResetTransformationMode::DoNothing;
                     LoadOivImage(oivColorFilled);
-                    fResetTransformationMode = lastState;
+                    fSession.fResetTransformationMode = lastState;
                     CancelSelection();
                     result = OperationResult::Success;
                 }
@@ -701,50 +645,31 @@ namespace OIV
         return result;
     }
 
-    void ViewerApplication::AfterFirstFrameDisplayed()
+    void Viewer::CompleteInitialization()
     {
-        PostInitOperations();
+        if (!fIsFirstFrameDisplayed)
+        {
+            fIsFirstFrameDisplayed = true;
+            PostInitOperations();
+        }
     }
 
-    void ViewerApplication::PerformReloadFile(const LLUtils::native_string_type& requestedFile)
+    void Viewer::PerformReloadFile(const LLUtils::native_string_type& requestedFile)
     {
         HandleReloadAction(fFileReloadPolicy.OnPendingReloadRequested(requestedFile), requestedFile);
     }
 
-    void ViewerApplication::ProcessCurrentFileChanged()
+    void Viewer::ProcessCurrentFileChanged()
     {
         HandleReloadAction(fFileReloadPolicy.OnCurrentFileChanged(GetOpenedFileName(), GetAppActive()),
                            GetOpenedFileName());
     }
 
-    bool ViewerApplication::LoadFileOrFolder(const LLUtils::native_string_type& filePath,
-                                             IMCodec::PluginTraverseMode traverseMode)
+    bool Viewer::LoadFileOrFolder(const LLUtils::native_string_type& filePath, IMCodec::PluginTraverseMode traverseMode)
     {
         const auto clientSize = fWindow.GetWindow().GetClientAreaMetrics().logical;
-        return ProcessImageLoadResult(fImageOpenController->LoadFileOrFolder(
+        return ProcessImageLoadResult(fSession.fImageOpenController->LoadFileOrFolder(
             filePath, traverseMode, ImageLoadContext{static_cast<int>(clientSize.x), static_cast<int>(clientSize.y)}));
     }
 
-    void ViewerApplication::CountColorsAsync()
-    {
-        if (fImageState.GetSelectedSource() && fImageState.GetColorCountState() == ColorCountState::NotRequested &&
-            !fIsColorThreadRunning)
-        {
-            if (fCountingColorsThread.joinable())
-                fCountingColorsThread.join();
-            const auto generation = fImageState.GetSourceGeneration();
-            auto pixels           = fImageState.GetSelectedSource();
-            fCountingColorsThread = LLUtils::StartThread(
-                [this](IMCodec::ImageSharedPtr image, uint64_t sourceGeneration)
-                {
-                    const auto count = PixelHelper::CountUniqueValues(image);
-                    QueueUiCompletion(static_cast<std::underlying_type_t<InterThreadMessages>>(
-                                          InterThreadMessages::CountColors),
-                                      CountColorsData{sourceGeneration, count});
-                },
-                std::move(pixels), generation);
-            fIsColorThreadRunning = true;
-            fImageState.SetColorCountPending();
-        }
-    }
 }  // namespace OIV

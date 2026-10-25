@@ -1,7 +1,6 @@
 #include <OIVAppCore/MessageHelper.h>
 #include <OIVAppCore/MessageFormatter.h>
 #include <OIVAppCore/ImageInfoPresentationPolicy.h>
-#include <OIVAppCore/ConfigurationLoader.h>
 #include <ImageCodec.h>
 
 #include <RendererCore/Renderer.h>
@@ -37,7 +36,9 @@ namespace OIV
         }
     }  // namespace
 
-    LLUtils::native_string_type MessageHelper::CreateKeyBindingsMessage()
+    LLUtils::native_string_type MessageHelper::CreateKeyBindingsMessage(
+        const ConfigurationLoader::KeyBindingList& keybindingsList,
+        const ConfigurationLoader::CommandGroupList& commands)
     {
         using namespace std;
         // string message = DefaultHeaderColor + "Image information\n";
@@ -50,9 +51,6 @@ namespace OIV
         args.valueColor                                 = MessageFormatter::DefaultValueColor;
         args.spaceBetweenColumns                        = 3;
         MessageFormatter::MessagesValues& messageValues = args.messageValues;
-
-        auto keybindingsList = ConfigurationLoader::LoadKeyBindings();
-        auto commands        = ConfigurationLoader::LoadCommandGroups();
 
         for (const auto& binding : keybindingsList)
         {

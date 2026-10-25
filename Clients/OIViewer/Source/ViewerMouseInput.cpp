@@ -1,6 +1,6 @@
 #include "ViewerMouseInput.h"
 
-#include "ViewerApplication.h"
+#include "Viewer.h"
 #include <ImageProcessing/FileImage.h>
 
 #include <LLUtils/PlatformUtility.h>
@@ -8,7 +8,9 @@
 
 namespace OIV
 {
-    ViewerMouseInput::ViewerMouseInput(ViewerApplication& owner) : fOwner(owner), fMultiClick(owner.fPlatform, 500, 2)
+    // Keep the application's delayed single-click and rocker policy. LWS clickCount reports OS double-clicks,
+    // whose timing and immediate press semantics are not interchangeable with this recognizer.
+    ViewerMouseInput::ViewerMouseInput(Viewer& owner) : fOwner(owner), fMultiClick(owner.fPlatform, 500, 2)
     {
         fMultiClickSubscription = fMultiClick.OnMouseClickEvent.Subscribe([this](const auto& event)
                                                                           { OnMultiClick(event); });
@@ -30,7 +32,7 @@ namespace OIV
         {
             context.altPressed     = fOwner.fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false);
             context.controlPressed = fOwner.fPlatform.IsKeyPressed(LWS::KeyCode::Control).value_or(false);
-            context.windowed       = fOwner.fWindow.GetWindow().GetWindowMode() == LWS::WindowMode::Windowed;
+            context.windowed       = fOwner.fWindow.GetWindowMode() == LWS::WindowMode::Windowed;
         }
         return context;
     }
@@ -121,10 +123,10 @@ namespace OIV
         fOwner.fAutoScroll->ToggleAutoScroll();
         if (fOwner.fAutoScroll->IsAutoScrolling())
         {
-            const auto path = LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExeFolder()) +
-                              LLUTILS_TEXT("./Resources/Cursors/ArrowC.cur");
+            const auto path = (fOwner.fResources / "Cursors" / "ArrowC.cur").native();
             IMCodec::ItemMetaDataSharedPtr metadata;
-            auto pixels = DecodeFileImage(fOwner.fImageLoader, path, metadata, IMCodec::PluginTraverseMode::AnyPlugin);
+            auto pixels = DecodeFileImage(fOwner.fSession.Loader(), path, metadata,
+                                          IMCodec::PluginTraverseMode::AnyPlugin);
             if (pixels)
             {
                 const RenderImageProperties properties{
@@ -181,6 +183,14 @@ namespace OIV
             event.button, event.clickCount,
             {.selectionActive = selectionActive,
              .multiFullScreen = fOwner.fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false)}));
+    }
+
+    void ViewerMouseInput::CaptureLost()
+    {
+        // A host normally releases capture after button-up. Keep the pending click history in that case.
+        // Losing capture while a button is still down interrupts the gesture and must reset all input state.
+        if (fController.HasPressedButtons())
+            Cancel();
     }
 
     void ViewerMouseInput::Cancel()

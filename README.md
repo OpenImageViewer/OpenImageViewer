@@ -83,7 +83,7 @@ Automatic reloading of externally modified images is supported on Windows only.
 64-bit Windows or Linux x86_64, with a driver supporting Direct3D 11, Vulkan 1.1+, or OpenGL 3.0+, as included in the build.
 
 - **Windows:** 7 SP1, 8, 8.1, 10, or 11. Windows 11 24H2 or newer is recommended.
-- **Linux:** official binaries require glibc 2.39+ and a Wayland desktop.
+- **Linux:** official binaries require glibc 2.39+ and a Wayland desktop. File selection requires `xdg-desktop-portal` and a desktop backend such as `xdg-desktop-portal-gtk`, `-gnome`, or `-kde`.
 
 Windows 7 SP1 also requires the [platform update](https://www.microsoft.com/en-us/download/details.aspx?id=36805), [D3DCompiler_47](https://www.catalog.update.microsoft.com/Search.aspx?q=4019990), and [Universal C runtime](https://support.microsoft.com/en-us/topic/update-for-universal-c-runtime-in-windows-c0514201-7fe6-95a3-b0a5-287930f3560c).
 
@@ -114,7 +114,7 @@ CMake can download Vulkan build tools; install 7-Zip for extraction or provide a
 
 ### Linux
 
-Install development packages for GTK 3, Wayland, X11, OpenGL/EGL, and Vulkan, plus `pkg-config` and Wayland protocol tools.
+Install development packages for GTK 3, Wayland, X11, OpenGL/EGL, Vulkan, D-Bus and xkbcommon, plus `pkg-config` and Wayland protocol tools. GTK is still used for image clipboard transfer and confirmation/error dialogs. File selection uses LWS and requires the desktop portal, without a GTK fallback.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
@@ -149,3 +149,13 @@ OIViewer initializes the LLUtils logging runtime before its components and drain
 ## License
 
 OIViewer is distributed under the [OpenImageViewer License](LICENSE.md), which permits sharing and modification with attribution for noncommercial use.
+
+### LWS integration tests
+
+Enable `LWS_BUILD_TESTS` to validate the reconciled windowing library. The viewer does not use LWSUI, so
+`LWS_BUILD_UI` defaults to `OFF` in this repository. Upstream controls remain available as an explicit opt-in.
+On Linux, run the core and portal tests on a private bus (requires the `dbus-daemon` test utility):
+
+```sh
+dbus-run-session --config-file=External/LWS/tests/portal-session.conf -- env LWS_TEST_PORTAL_BUS=1 build/linux-clang/LWSTests
+```

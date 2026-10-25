@@ -19,7 +19,7 @@ namespace OIV
 
     void ViewerApplication::HandleFileAssociationNotice(const FileAssociationNotice& notice)
     {
-        if (fIsShuttingDown || fFileAssociations == nullptr || notice.requestId != fAssociationRequestId)
+        if (fViewer.fIsShuttingDown || fFileAssociations == nullptr || notice.requestId != fAssociationRequestId)
             return;
         if (notice.kind == FileAssociationNotice::Kind::Prompt)
         {
@@ -46,7 +46,7 @@ namespace OIV
                              G_CALLBACK(+[](GtkDialog*, gint response, gpointer context)
                                         {
                                             auto& viewer = *static_cast<ViewerApplication*>(context);
-                                            viewer.HandleEventCallback(
+                                            viewer.fViewer.HandleEventCallback(
                                                 [&]
                                                 {
                                                     const auto choice = response == GTK_RESPONSE_YES
@@ -57,7 +57,8 @@ namespace OIV
                                                                             ? FileAssociationChoice::SuppressForUser
                                                                             : FileAssociationChoice::AskNextTime;
                                                     viewer.CloseFileAssociationDialog();
-                                                    if (!viewer.fIsShuttingDown && viewer.fFileAssociations != nullptr)
+                                                    if (!viewer.fViewer.fIsShuttingDown &&
+                                                        viewer.fFileAssociations != nullptr)
                                                         viewer.fFileAssociations->Respond(choice);
                                                     return true;
                                                 });
@@ -69,7 +70,7 @@ namespace OIV
                 fPlatform,
                 [this]
                 {
-                    HandleEventCallback(
+                    fViewer.HandleEventCallback(
                         [&]
                         {
                             while (gtk_events_pending())
@@ -85,6 +86,6 @@ namespace OIV
             state.associationDialogPump->Enable(true);
         }
         else if (!notice.message.empty())
-            SetUserMessage(notice.message);
+            fViewer.SetUserMessage(notice.message);
     }
 }  // namespace OIV

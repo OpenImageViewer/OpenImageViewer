@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <filesystem>
 
 namespace OIV
 {
@@ -32,7 +33,7 @@ namespace OIV
             Count
         };
 
-        explicit MainWindow(LWS::PlatformContext& platform);
+        explicit MainWindow(LWS::PlatformContext& platform, const std::filesystem::path& resources);
         ~MainWindow();
 
         [[nodiscard]] LWS::Window& GetWindow() { return fWindow; }
@@ -50,6 +51,10 @@ namespace OIV
         void SetCursorType(CursorType type);
         void ShowCanvas();
         void UpdateLayout();
+        [[nodiscard]] LWS::WindowMode GetWindowMode() const;
+        [[nodiscard]] LWS::Result SetWindowMode(LWS::WindowMode mode);
+        void FitToParent();
+        [[nodiscard]] LWS::Result Destroy();
         void ShowStatusBar(bool show);
         void SetShowImageControl(bool show);
         LWS::Window& GetCanvasWindow();
@@ -58,6 +63,8 @@ namespace OIV
         static bool GetIsTrayWindow(LWS::Handle windowHandle);
 
       private:
+
+        const std::filesystem::path fResources;
 
         struct NativeState;
 

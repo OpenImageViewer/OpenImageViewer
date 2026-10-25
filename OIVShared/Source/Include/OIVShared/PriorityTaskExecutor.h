@@ -17,14 +17,12 @@ template <typename Request, typename Response>
 class PriorityTaskExecutor
 {
   public:
-    using TaskId = uint64_t;
-    using ProcessFn = std::function<Response(const Request&)>;
-    using TaskType = Task<Response>;
 
-    explicit PriorityTaskExecutor(
-        size_t threadCount,
-        ProcessFn process)
-        : fProcess(std::move(process))
+    using TaskId    = uint64_t;
+    using ProcessFn = std::function<Response(const Request&)>;
+    using TaskType  = Task<Response>;
+
+    explicit PriorityTaskExecutor(size_t threadCount, ProcessFn process) : fProcess(std::move(process))
     {
         fWorkers.reserve(threadCount);
         for (size_t i = 0; i < threadCount; ++i)
@@ -33,23 +31,27 @@ class PriorityTaskExecutor
         }
     }
 
-    ~PriorityTaskExecutor()
+    ~PriorityTaskExecutor() { Stop(); }
+
+    // Owner-thread shutdown: reject new submissions, cancel queued work, and join in-flight work.
+    void Stop()
     {
-        std::vector<QueueItem> cancelledItems;
+        decltype(fQueue) cancelledItems;
         {
             std::lock_guard lock(fMutex);
+            if (fStopping)
+                return;
             fStopping = true;
 
-            for (const auto& item : fQueue)
-                cancelledItems.push_back(item);
-
-            fQueue.clear();
+            cancelledItems.swap(fQueue);
             fLookup.clear();
         }
 
-        for (auto& item : cancelledItems)
+        // Retain queued requests until workers join, copying only the shared task handle for cancellation.
+        for (const auto& item : cancelledItems)
         {
-            item.Result.SetError(TaskError::ExecutorStopped);
+            auto task = item.Result;
+            task.SetError(TaskError::ExecutorStopped);
             fIdProvider.Release(item.Id);
         }
 
@@ -71,15 +73,8 @@ class PriorityTaskExecutor
                 return task;
             }
 
-            TaskId id = fIdProvider.Acquire();
-            auto it = fQueue.emplace(
-                QueueItem{
-                    priority,
-                    fSequence++,
-                    id,
-                    std::move(request),
-                    task
-                });
+            TaskId id   = fIdProvider.Acquire();
+            auto it     = fQueue.emplace(QueueItem{priority, fSequence++, id, std::move(request), task});
             fLookup[id] = it;
         }
 
@@ -101,7 +96,8 @@ class PriorityTaskExecutor
         return true;
     }
 
-private:
+  private:
+
     struct QueueItem
     {
         int Priority;
@@ -129,15 +125,13 @@ private:
 
             {
                 std::unique_lock lock(fMutex);
-                fCv.wait(lock, [&] {
-                    return fStopping || !fQueue.empty();
-                });
+                fCv.wait(lock, [&] { return fStopping || !fQueue.empty(); });
 
                 if (fStopping && fQueue.empty())
                     return;
 
                 auto it = fQueue.begin();
-                item = std::move(*it);
+                item    = std::move(*it);
                 fLookup.erase(item.Id);
                 fQueue.erase(it);
             }
@@ -157,6 +151,7 @@ private:
     }
 
   private:
+
     std::multiset<QueueItem, Compare> fQueue;
     std::unordered_map<TaskId, decltype(fQueue.begin())> fLookup;
 

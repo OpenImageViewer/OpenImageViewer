@@ -10,7 +10,7 @@ namespace OIV
         const auto requestId = ++fAssociationRequestId;
         auto executable      = LLUtils::PlatformUtility::GetExePath();
         auto manageAssociations =
-            [config = fUserDirectories.config, extensions = fKnownFileTypesSet,
+            [config = fUserDirectories.config, extensions = fSession.KnownFileTypes(),
              executable](FileAssociationAction operation, std::stop_token stop, const FileAssociationNotify& notify)
         {
 #ifdef _WIN32
@@ -24,16 +24,18 @@ namespace OIV
             [this, requestId](FileAssociationNotice notice)
             {
                 notice.requestId = requestId;
-                QueueUiCompletion(static_cast<uint16_t>(InterThreadMessages::FileAssociations), std::move(notice));
+                fViewer.QueueUiCompletion(std::move(notice));
             },
             action);
     }
+
     void ViewerApplication::StopFileAssociationOperation()
     {
         fFileAssociations.reset();
         if (fNativeWindowState != nullptr)
             CloseFileAssociationDialog();
     }
+
     void ViewerApplication::CMD_FileAssociations(const CommandManager::CommandRequest& request,
                                                  CommandManager::CommandResult& result)
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EventManager.h"
+#include <LLUtils/Event.h>
 
 #include <LWS/Platform.hpp>
 
@@ -11,6 +11,8 @@ namespace OIV
     {
       public:
 
+        using ChangeEvent = LLUtils::Event<void(const LWS::MonitorDesc&)>;
+        ChangeEvent Changed;
         void UpdateFromWindow(LWS::Window& window);
 
       private:

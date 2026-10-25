@@ -1,3 +1,4 @@
+#include "ImageBitmap.h"
 #include "MainWindow.h"
 
 #include <ImageLoader.h>
@@ -7,6 +8,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <algorithm>
 #include <utility>
 
 namespace OIV
@@ -18,6 +20,17 @@ namespace OIV
         if (result == LWS::Result::Success)
             return OnCreate();
         return result;
+    }
+
+    void MainWindow::FitToParent()
+    {
+        if (auto* parent = fWindow.GetParent(); parent != nullptr && parent->IsCreated())
+        {
+            auto size   = parent->GetClientAreaMetrics().logical;
+            size.x      = std::max(size.x, 1);
+            size.y      = std::max(size.y, 1);
+            std::ignore = fWindow.RequestPlacement({.position = LWS::Point{0, 0}, .clientSize = size});
+        }
     }
 
     void MainWindow::SetCursorType(CursorType type)
@@ -41,7 +54,7 @@ namespace OIV
         // These bundled cursors all have centered hotspots. Keep the system shape if loading fails.
         constexpr std::array names{"ArrowC.cur", "ArrowE.cur",  "ArrowNE.cur", "ArrowN.cur", "ArrowNW.cur",
                                    "ArrowW.cur", "ArrowSW.cur", "ArrowS.cur",  "ArrowSE.cur"};
-        const auto folder = std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "Resources" / "Cursors";
+        const auto folder = fResources / "Cursors";
         IMCodec::ImageLoader loader;
         for (size_t index = 0; index < names.size(); ++index)
         {
@@ -56,15 +69,7 @@ namespace OIV
                                                                              false);
                     if (image != nullptr)
                     {
-                        const LWS::BitmapBuffer bitmap{
-                            .pixels   = {image->GetBuffer(),
-                                         static_cast<size_t>(image->GetRowPitchInBytes()) * image->GetHeight()},
-                            .format   = LWS::BitmapPixelFormat::Bgra8,
-                            .rowOrder = LWS::BitmapRowOrder::TopDown,
-                            .width    = image->GetWidth(),
-                            .height   = image->GetHeight(),
-                            .rowPitch = image->GetRowPitchInBytes(),
-                        };
+                        const auto bitmap = MakeBgraBitmapView(*image);
                         // CUR files embed a hotspot, but we currently assume the cursor's center.
                         // This matches the bundled assets. A cross-platform loader should preserve the
                         // embedded hotspot alongside the decoded bitmap and pass it to LWS explicitly.
@@ -128,6 +133,8 @@ namespace OIV
             canvasSize.x -= imageListWidth;
 
         UpdateNativeStatusBar(canvasSize);
+        canvasSize.x = std::max(canvasSize.x, 1);
+        canvasSize.y = std::max(canvasSize.y, 1);
         if (!fUseMainWindowAsCanvas)
             std::ignore = fCanvasWindow.RequestPlacement({.position = LWS::Point{0, 0}, .clientSize = canvasSize});
 

@@ -6,11 +6,6 @@
 
 namespace OIV
 {
-    struct ViewerApplication::RawInputState
-    {
-        LinuxKeyBindings keyBindings;
-    };
-
     struct ViewerApplication::NativeWindowState
     {
         GtkWidget* associationDialog{};

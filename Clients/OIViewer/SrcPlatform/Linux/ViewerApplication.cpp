@@ -1,5 +1,4 @@
 #include "ViewerApplication.h"
-
 #include "ViewerApplicationPlatformState.h"
 
 #include <LLUtils/Exception.h>
@@ -15,61 +14,9 @@
 
 namespace OIV
 {
-    LWS::Handle ViewerApplication::FindTrayBarWindow()
-    {
-        return 0;
-    }
-
-    LLUtils::native_string_type ViewerApplication::GetApplicationModulePath()
-    {
-        return LLUtils::PlatformUtility::GetExePath();
-    }
-
-    void ViewerApplication::InitializePlatformState()
-    {
-        fRawInputState.reset(new RawInputState());
-        fNativeWindowState.reset(new NativeWindowState());
-        fFileWatcher.reset();
-        fPresentationReady = false;
-    }
-
-    void ViewerApplication::RawInputStateDeleter::operator()(RawInputState* state) const noexcept
-    {
-        delete state;
-    }
-
-    void ViewerApplication::NativeWindowStateDeleter::operator()(NativeWindowState* state) const noexcept
-    {
-        delete state;
-    }
-
     void ViewerApplication::InitializeNotificationIcons()
     {
         fNotificationIconID = 0;
-    }
-
-    void ViewerApplication::InitializeRenderer(const RendererOptions& rendering)
-    {
-        auto& canvas  = fWindow.GetCanvasWindow();
-        auto created  = CreateRenderer({reinterpret_cast<LWS::Handle>(*LWS::Wayland::GetSurface(canvas)),
-                                        *LWS::Wayland::GetDisplay(canvas)},
-                                       fUserDirectories.GeneratedCache(), rendering);
-        fRenderer     = std::move(created.renderer);
-        fRendererType = created.type;
-    }
-
-    WindowSizeDecision ViewerApplication::GetWindowSizeDecision(const CommandManager::CommandArgs& args) const
-    {
-        const auto& workRect             = fCurrentMonitorProperties.workRect;
-        const auto workAreaTopLeft       = workRect.GetCorner(LLUtils::TopLeft);
-        const auto workAreaBottomRight   = workRect.GetCorner(LLUtils::BottomRight);
-        const WindowWorkingArea workArea = {.left   = workAreaTopLeft.x,
-                                            .top    = workAreaTopLeft.y,
-                                            .right  = workAreaBottomRight.x,
-                                            .bottom = workAreaBottomRight.y};
-        const auto placement             = fWindow.GetWindow().GetPlacement();
-        return ViewCommandPolicy::DecideWindowSize(args, {placement.clientSize.x, placement.clientSize.y},
-                                                   placement.position.value_or(LWS::Point{}), workArea);
     }
 
     LWS::Rect ViewerApplication::GetNotificationIconRect(
@@ -78,8 +25,13 @@ namespace OIV
         LL_EXCEPTION_NOT_IMPLEMENT("Notification icons are not implemented on Linux");
     }
 
-    LWS::LoopResult ViewerApplication::Run()
+    LWS::Handle ViewerApplication::FindTrayBarWindow()
     {
-        return fPlatform.RunMessageLoop();
+        return 0;
+    }
+
+    void ViewerApplication::InitializeShellState()
+    {
+        fNativeWindowState = std::make_unique<NativeWindowState>();
     }
 }  // namespace OIV

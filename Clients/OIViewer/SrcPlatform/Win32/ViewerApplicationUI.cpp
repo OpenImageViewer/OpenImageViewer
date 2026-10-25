@@ -60,8 +60,7 @@ namespace OIV
         params.callback             = &ViewerApplication::NetSettingsCallback_;
         const path templateFile     = netsettingsPath / "Resources/GuiTemplate.json";
         params.templateFilePath     = templateFile.c_str();
-        const path userSettingsFile = programPath / "Resources/Configuration/Settings.json";
-        params.userSettingsFilePath = userSettingsFile.c_str();
+        params.userSettingsFilePath = fViewer.fSettingsFile.c_str();
 
         settingsContext.Create(&params);
         settingsContext.SetVisible(true);

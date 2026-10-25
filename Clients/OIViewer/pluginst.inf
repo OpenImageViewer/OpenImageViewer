@@ -1,0 +1,5 @@
+[plugininstall]
+description=OIViewer image viewer
+type=wlx
+file=OIViewer.wlx
+defaultdir=OIViewer

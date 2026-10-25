@@ -281,7 +281,7 @@ TEST_CASE("Message producers stop before queued timer work can revisit released 
     REQUIRE(window.Create() == LWS::Result::Success);
     OIV::Renderer renderer(std::make_unique<OIV::NullRenderer>());
     FreeType::FreeTypeConnector font;
-    OIV::LabelManager labels(&font);
+    OIV::LabelManager labels(&font, std::filesystem::path("Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf"));
     labels.InitializeRenderer(renderer);
     OIV::MessageManager messages(window, &labels, 5, [] {});
     messages.SetUserMessage(1, OIV::MessageFlags::Persistent, LLUTILS_TEXT("Lifetime"));
@@ -291,7 +291,7 @@ TEST_CASE("Message producers stop before queued timer work can revisit released 
     REQUIRE_NOTHROW(messages.Stop());
     REQUIRE_NOTHROW(messages.Stop());
     labels.RemoveAll();
-    OIV::EventManager::GetSingleton().SizeChange.Raise(OIV::EventManager::SizeChangeEventParams{640, 480});
+    messages.OnWindowSizeChange({640, 480});
     REQUIRE(platform.PostTask([&platform]() { platform.RequestQuit(); }) == LWS::Result::Success);
     CHECK(platform.RunMessageLoop() == LWS::LoopResult::Quit);
     REQUIRE(window.Destroy() == LWS::Result::Success);

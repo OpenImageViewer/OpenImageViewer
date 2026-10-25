@@ -1,4 +1,4 @@
-#include "ViewerApplication.h"
+#include "Viewer.h"
 
 #include <ImageUtil/ImageUtil.h>
 
@@ -17,7 +17,7 @@
 
 namespace OIV
 {
-    void ViewerApplication::DeleteOpenedFile(bool permanently)
+    void Viewer::DeleteOpenedFile(bool permanently)
     {
         const size_t stringLength = GetOpenedFileName().length();
         auto buffer               = std::make_unique<wchar_t[]>(stringLength + 2);
@@ -41,7 +41,7 @@ namespace OIV
             fRequestedFileForRemoval.clear();
     }
 
-    ClipboardDataType ViewerApplication::PasteFromClipBoard()
+    ClipboardDataType Viewer::PasteFromClipBoard()
     {
         ClipboardDataType clipboardType  = ClipboardDataType::None;
         const auto& [formatType, buffer] = fClipboardHelper.GetClipboardData();
@@ -98,7 +98,7 @@ namespace OIV
         return clipboardType;
     }
 
-    bool ViewerApplication::SetClipboardImage(IMCodec::ImageSharedPtr image)
+    bool Viewer::SetClipboardImage(IMCodec::ImageSharedPtr image)
     {
         auto clipboardCompatibleImage = IMUtil::ImageUtil::ConvertImageWithNormalization(
             image, IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
@@ -121,17 +121,11 @@ namespace OIV
         return fClipboardHelper.SetClipboardData(fWindow.GetWindow(), clipboardData) == LWS::ClipboardResult::Success;
     }
 
-    void ViewerApplication::HandleReloadAction(ReloadAction action, const LLUtils::native_string_type& requestedFile)
+    bool Viewer::ConfirmFileReload(const LLUtils::native_string_type& requestedFile)
     {
-        if (action == ReloadAction::AskUser)
-        {
-            using namespace std::string_literals;
-            const int result = MessageBox(*LWS::Win32::GetHwnd(fWindow.GetWindow()),
-                                          (LLUTILS_TEXT("Reload the file: "s) + requestedFile).c_str(),
-                                          LLUTILS_TEXT("File is changed outside of OIV"), MB_YESNO);
-            action           = fFileReloadPolicy.ConfirmReload(result == IDYES);
-        }
-        if (action == ReloadAction::RequestNow && fBrowseSessionController != nullptr)
-            fBrowseSessionController->RequestCurrentFileReload();
+        using namespace std::string_literals;
+        return MessageBox(*LWS::Win32::GetHwnd(fWindow.GetWindow()),
+                          (LLUTILS_TEXT("Reload the file: "s) + requestedFile).c_str(),
+                          LLUTILS_TEXT("File is changed outside of OIV"), MB_YESNO) == IDYES;
     }
 }  // namespace OIV

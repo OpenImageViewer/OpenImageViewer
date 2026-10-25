@@ -72,7 +72,7 @@ jobs:
           # Pin the installer so release toolchain setup changes only through review.
           curl --proto '=https' --tlsv1.2 -fsSLo llvm.sh https://raw.githubusercontent.com/opencollab/llvm-jenkins.debian.net/c5ecff7c7208c8b5225e1f6e6ae6f2539e1d31ea/llvm.sh
           sudo bash llvm.sh 22
-          sudo apt-get install -y llvm-22 libvulkan-dev libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev p7zip-full wayland-protocols libgmp-dev libmpfr-dev libmpc-dev
+          sudo apt-get install -y llvm-22 libvulkan-dev libgl1-mesa-dev libgtk-3-dev libwayland-dev libx11-dev libdbus-1-dev libxkbcommon-dev p7zip-full wayland-protocols libgmp-dev libmpfr-dev libmpc-dev
           # GCC_ROOT redirects the host compiler's headers. Keep our variable project-specific.
           echo "OIV_GCC_ROOT=$RUNNER_TOOL_CACHE/gcc-$GCC_VERSION" >> "$GITHUB_ENV"
 
@@ -160,6 +160,27 @@ jobs:
         shell: pwsh
         run: ./publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnableConfigure $false -EnableBuild $false
 
+      # The frontend replaces the executable target, so give WLX its own CMake cache and output directory.
+      # Linux retains its standalone package until a GTK/Qt lister frontend exists.
+      - name: Build and stage Windows WLX package
+        if: matrix.platform == 'Windows'
+        shell: pwsh
+        run: |
+          ./publish.ps1 -BuildDir publish-wlx -BuildTarget package_wlx -EnablePackage $false -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -CMakeDefinitions @{
+              lerc = "OFF"
+              OIV_BUILD_WLX = "ON"
+              OIV_BUILD_RENDERER_D3D11 = "ON"
+              OIV_BUILD_RENDERER_VK = "OFF"
+              OIV_BUILD_RENDERER_GL = "OFF"
+              OIV_BUILD_TESTS = "OFF"
+              LWS_BUILD_TESTS = "OFF"
+          }
+          if ($LASTEXITCODE -ne 0) { throw "WLX packaging failed" }
+          $runtime = @(Get-ChildItem -LiteralPath publish -Recurse -File | Where-Object { $_.Name -match '^OIV-.+-Win32-[^-]+-[^-.]+\.7z$' })
+          if ($runtime.Count -ne 1) { throw "Expected exactly one Windows runtime archive for WLX naming" }
+          # Reuse the runtime basename to keep release version, source hash and platform naming identical.
+          Copy-Item -LiteralPath "publish-wlx/OIViewer-wlx-x64.zip" -Destination (Join-Path $runtime[0].DirectoryName "$($runtime[0].BaseName)-WLX.zip")
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
@@ -203,55 +224,21 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $archivePattern = '^OIV-.+(?:\.[^.]+)+$'
-          $symbolsPattern = '-Symbols(?:\.[^.]+)+$'
-          $archives = @(Get-ChildItem -Path "release-package" -Recurse -File | Where-Object { $_.Name -match $archivePattern })
-          $archiveGroups = [ordered]@{
-              "Windows runtime" = @($archives | Where-Object { $_.Name -notmatch $symbolsPattern -and $_.Name -match '-Win32-[^-]+-[^-.]+\.' })
-              "Linux runtime"   = @($archives | Where-Object { $_.Name -notmatch $symbolsPattern -and $_.Name -match '-linux-[^-]+-[^-.]+\.' })
-              "symbols"         = @($archives | Where-Object { $_.Name -match $symbolsPattern })
+          . ./.github/scripts/Publish-GitHubRelease.ps1
+          $packages = Get-ReleasePackageSet -Directory "release-package" -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE))
+          $outputs = [ordered]@{
+              windows_runtime_archive_path = $packages.WindowsRuntimeArchivePath
+              linux_runtime_archive_path = $packages.LinuxRuntimeArchivePath
+              windows_wlx_archive_path = $packages.WindowsWlxArchivePath
+              symbols_archive_path = $packages.SymbolsArchivePath
+              release_title = $packages.ReleaseTitle
+              release_tag = $packages.ReleaseTag
+              prerelease = $packages.Prerelease.ToString().ToLowerInvariant()
           }
-          foreach ($group in $archiveGroups.GetEnumerator()) {
-              if ($group.Value.Count -ne 1) {
-                  $archiveList = if ($group.Value.Count -eq 0) { "<none>" } else { ($group.Value.FullName -join "`n") }
-                  throw "Expected exactly one $($group.Key) archive, found $($group.Value.Count):`n$archiveList"
-              }
+          foreach ($entry in $outputs.GetEnumerator()) {
+              "$($entry.Key)=$($entry.Value)" >> $env:GITHUB_OUTPUT
+              Write-Host "$($entry.Key): $($entry.Value)"
           }
-
-          $windowsRuntimeArchive = $archiveGroups["Windows runtime"][0]
-          $linuxRuntimeArchive = $archiveGroups["Linux runtime"][0]
-          $symbolsArchive = $archiveGroups["symbols"][0]
-          $releaseArchives = @($windowsRuntimeArchive, $linuxRuntimeArchive, $symbolsArchive)
-          $officialRelease = [bool]::Parse($env:OFFICIAL_RELEASE)
-          $titlePattern = if ($officialRelease) {
-              '^(?<title>OIV-\d+\.\d+\.\d+)-.+(?:\.[^.]+)+$'
-          } else {
-              '^(?<title>OIV-\d+\.\d+\.\d+\.\d+)-[0-9a-f]+-.+(?:\.[^.]+)+$'
-          }
-          $releaseTitle = $null
-          foreach ($archive in $releaseArchives) {
-              if ($archive.Name -notmatch $titlePattern) {
-                  throw "Archive name '$($archive.Name)' does not match the selected release mode."
-              }
-              $archiveTitle = $Matches.title
-              if ($releaseTitle -and $archiveTitle -ne $releaseTitle) {
-                  throw "Release archive versions do not match: $(($releaseArchives.Name | ForEach-Object { "'$_'" }) -join ', ')."
-              }
-              $releaseTitle = $archiveTitle
-          }
-          $releaseTag = if ($officialRelease) { $releaseTitle } else { "snapshot" }
-          $prerelease = (-not $officialRelease).ToString().ToLowerInvariant()
-
-          "windows_runtime_archive_path=$($windowsRuntimeArchive.FullName)" >> $env:GITHUB_OUTPUT
-          "linux_runtime_archive_path=$($linuxRuntimeArchive.FullName)" >> $env:GITHUB_OUTPUT
-          "symbols_archive_path=$($symbolsArchive.FullName)" >> $env:GITHUB_OUTPUT
-          "release_title=$releaseTitle" >> $env:GITHUB_OUTPUT
-          "release_tag=$releaseTag" >> $env:GITHUB_OUTPUT
-          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
-          "Selected Windows runtime archive $($windowsRuntimeArchive.FullName)"
-          "Selected Linux runtime archive $($linuxRuntimeArchive.FullName)"
-          "Selected symbols archive $($symbolsArchive.FullName)"
-          "Release title $releaseTitle"
 
       - name: Publish release
         shell: pwsh
@@ -263,6 +250,7 @@ jobs:
           PRERELEASE: ${{ steps.package.outputs.prerelease }}
           WINDOWS_RUNTIME_ARCHIVE_PATH: ${{ steps.package.outputs.windows_runtime_archive_path }}
           LINUX_RUNTIME_ARCHIVE_PATH: ${{ steps.package.outputs.linux_runtime_archive_path }}
+          WINDOWS_WLX_ARCHIVE_PATH: ${{ steps.package.outputs.windows_wlx_archive_path }}
           SYMBOLS_ARCHIVE_PATH: ${{ steps.package.outputs.symbols_archive_path }}
         run: >
           ./.github/scripts/Publish-GitHubRelease.ps1
@@ -272,4 +260,4 @@ jobs:
           -Title $env:RELEASE_TITLE
           -Prerelease ([bool]::Parse($env:PRERELEASE))
           -MutableTag ([bool]::Parse($env:PRERELEASE))
-          -Archives @($env:WINDOWS_RUNTIME_ARCHIVE_PATH, $env:LINUX_RUNTIME_ARCHIVE_PATH, $env:SYMBOLS_ARCHIVE_PATH)
+          -Archives @($env:WINDOWS_RUNTIME_ARCHIVE_PATH, $env:LINUX_RUNTIME_ARCHIVE_PATH, $env:WINDOWS_WLX_ARCHIVE_PATH, $env:SYMBOLS_ARCHIVE_PATH)

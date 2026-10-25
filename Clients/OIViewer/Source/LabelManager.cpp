@@ -1,22 +1,14 @@
 #include "LabelManager.h"
 
 #include <cmath>
-#include "EventManager.h"
 #include "FreeTypeWrapper/FreeTypeConnector.h"
 
 namespace OIV
 {
 
-    LabelManager::LabelManager(FreeType::FreeTypeConnector* freeType)
+    LabelManager::LabelManager(FreeType::FreeTypeConnector* freeType, const std::filesystem::path& fontPath)
+        : fFreeType(freeType), fFontPath(fontPath.native())
     {
-        fMonitorSubscription = EventManager::GetSingleton().MonitorChange.Subscribe(
-            std::bind(&LabelManager::OnMonitorChange, this, std::placeholders::_1));
-        fFreeType = freeType;
-    }
-
-    void LabelManager::OnMonitorChange(const EventManager::MonitorChangeEventParams& params)
-    {
-        SetContentScale(params.monitorDesc.contentScale);
     }
 
     void LabelManager::SetContentScale(const LWS::ContentScale& scale)
@@ -99,7 +91,7 @@ namespace OIV
         text->SetOpacity(1.0);
 
         text->SetDPI(std::get<0>(fDPI), std::get<1>(fDPI));
-        text->SetFontPath(sFontPath);
+        text->SetFontPath(fFontPath);
         text->SetFontSize(12);
         text->SetOutlineWidth(2);
         text->SetBackgroundColor(LLUtils::Color(0, 0, 0, 180));

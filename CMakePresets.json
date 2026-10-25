@@ -162,6 +162,30 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "windows-wlx-debug",
+            "inherits": "x64-debug-clang-cl",
+            "binaryDir": "${sourceDir}/build/windows-wlx-debug",
+            "cacheVariables": {
+                "OIV_BUILD_WLX": true,
+                "OIV_BUILD_RENDERER_D3D11": true,
+                "OIV_BUILD_RENDERER_VK": false,
+                "OIV_BUILD_RENDERER_GL": false,
+                "OIV_BUILD_TESTS": true
+            }
+        },
+        {
+            "name": "windows-wlx-release",
+            "inherits": "x64-release-clang-cl",
+            "binaryDir": "${sourceDir}/build/windows-wlx-release",
+            "cacheVariables": {
+                "OIV_BUILD_WLX": true,
+                "OIV_BUILD_RENDERER_D3D11": true,
+                "OIV_BUILD_RENDERER_VK": false,
+                "OIV_BUILD_RENDERER_GL": false,
+                "OIV_BUILD_TESTS": false
+            }
         }
     ],
     "buildPresets": [
@@ -204,6 +228,21 @@
         {
             "name": "linux-gcc-release",
             "configurePreset": "linux-gcc-release"
+        },
+        {
+            "name": "windows-wlx-debug",
+            "configurePreset": "windows-wlx-debug",
+            "targets": [
+                "OIViewerWlx",
+                "tests"
+            ]
+        },
+        {
+            "name": "windows-wlx-release",
+            "configurePreset": "windows-wlx-release",
+            "targets": [
+                "package_wlx"
+            ]
         }
     ]
 }

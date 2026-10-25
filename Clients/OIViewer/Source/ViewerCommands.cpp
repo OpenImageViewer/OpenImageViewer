@@ -6,7 +6,7 @@
 #include <future>
 #include <cassert>
 
-#include "ViewerApplication.h"
+#include "Viewer.h"
 
 #include <Version.h>
 
@@ -22,7 +22,7 @@
 #include <OIVAppCore/ShellIntegrationHelper.h>
 #include "Helpers/ShellCommandHandler.h"
 
-#include "PlatformFileDialog.h"
+#include <LWS/FileDialog.hpp>
 
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
@@ -31,7 +31,6 @@
 #include "Globals.h"
 #include <OIVAppCore/ConfigurationLoader.h>
 #include "CommandRegistry.h"
-#include <OIVAppCore/ColorCountPolicy.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 #include <OIVAppCore/FileChangePolicy.h>
 #include <OIVAppCore/FrameLimiterPolicy.h>
@@ -47,14 +46,12 @@
 #include <OIVAppCore/ViewActionController.h>
 #include <OIVAppCore/ViewCommandPolicy.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
-#include <OIVShared/PixelHelper.h>
 #include <ImageUtil/ImageUtil.h>
-#include "InterThreadMessages.h"
+#include <OIVAppCore/ViewerCompletion.h>
 
 namespace OIV
 {
-    void ViewerApplication::CMD_Zoom(const CommandManager::CommandRequest& request,
-                                     CommandManager::CommandResult& result)
+    void Viewer::CMD_Zoom(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         if (IsImageOpen())
         {
@@ -64,8 +61,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_ViewState(const CommandManager::CommandRequest& request,
-                                          CommandManager::CommandResult& result)
+    void Viewer::CMD_ViewState(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -91,7 +87,7 @@ namespace OIV
         {
             ToggleGrid();
             result.resValue = LLUTILS_TEXT("Grid ");
-            result.resValue += fIsGridEnabled == true ? LLUTILS_TEXT("on") : LLUTILS_TEXT("off");
+            result.resValue += fSession.fIsGridEnabled == true ? LLUTILS_TEXT("on") : LLUTILS_TEXT("off");
         }
         else if (type == "slideShow")
         {
@@ -102,14 +98,15 @@ namespace OIV
         else if (type == "toggleNormalization")
         {
             // Change normalization mode
-            fImageState.SetUseRainbowNormalization(!fImageState.GetUseRainbowNormalization());
+            fSession.fImageState.SetUseRainbowNormalization(!fSession.fImageState.GetUseRainbowNormalization());
             RefreshImage();
-            result.resValue = fImageState.GetUseRainbowNormalization() ? LLUTILS_TEXT("Rainbow normalization")
-                                                                       : LLUTILS_TEXT("Grayscale normalization");
+            result.resValue = fSession.fImageState.GetUseRainbowNormalization()
+                                  ? LLUTILS_TEXT("Rainbow normalization")
+                                  : LLUTILS_TEXT("Grayscale normalization");
         }
         else if (type == "imageFilterUp")
         {
-            if (fImageState.GetVisibleImage() != nullptr)
+            if (fSession.fImageState.GetVisibleImage() != nullptr)
             {
                 SetFilterLevel(static_cast<OIV::FilterType>(static_cast<int>(GetFilterType()) + 1));
                 filterTypeChanged = true;
@@ -117,7 +114,7 @@ namespace OIV
         }
         else if (type == "imageFilterDown")
         {
-            if (fImageState.GetVisibleImage() != nullptr)
+            if (fSession.fImageState.GetVisibleImage() != nullptr)
             {
                 SetFilterLevel(static_cast<OIV::FilterType>(static_cast<int>(GetFilterType()) - 1));
                 filterTypeChanged = true;
@@ -135,22 +132,23 @@ namespace OIV
         }
         else if (type == "toggleresetoffset")
         {
-            fResetTransformationMode = static_cast<ResetTransformationMode>(
-                (static_cast<int>(fResetTransformationMode) + 1) % static_cast<int>(ResetTransformationMode::Count));
-            result.resValue = fResetTransformationMode == ResetTransformationMode::DoNothing
+            fSession.fResetTransformationMode = static_cast<ResetTransformationMode>(
+                (static_cast<int>(fSession.fResetTransformationMode) + 1) %
+                static_cast<int>(ResetTransformationMode::Count));
+            result.resValue = fSession.fResetTransformationMode == ResetTransformationMode::DoNothing
                                   ? LLUTILS_TEXT("Don't auto reset image state")
                                   : LLUTILS_TEXT("Auto reset image state");
         }
         else if (type == "toggletransparencymode")
         {
-            fTransparencyMode = static_cast<OIV::TransparencyShade>((static_cast<int>(fTransparencyMode) + 1) %
-                                                                    static_cast<int>(OIV::TransparencyShade::Count));
+            fSession.fTransparencyMode = static_cast<OIV::TransparencyShade>(
+                (static_cast<int>(fSession.fTransparencyMode) + 1) % static_cast<int>(OIV::TransparencyShade::Count));
             UpdateRenderViewParams();
 
             LLUtils::native_string_type userMessage = LLUTILS_TEXT("Transparency: ");
             LLUtils::native_string_type transparencyMode;
 
-            switch (fTransparencyMode)
+            switch (fSession.fTransparencyMode)
             {
                 case OIV::TransparencyShade::Light:
                     transparencyMode = LLUTILS_TEXT("Light");
@@ -172,7 +170,7 @@ namespace OIV
         }
         else if (type == "toggledownsamplingtechnique")
         {
-            DownscalingTechnique technique = GetNextEnumValue(fDownScalingTechnique);
+            DownscalingTechnique technique = GetNextEnumValue(fSession.fDownScalingTechnique);
 
             LLUtils::native_string_type downscaleTechnique;
 
@@ -203,7 +201,7 @@ namespace OIV
 
         if (fullscreenModeChanged == true)
         {
-            switch (fWindow.GetWindow().GetWindowMode())
+            switch (fWindow.GetWindowMode())
             {
                 case LWS::WindowMode::FullscreenAllMonitors:
                     result.resValue = LLUTILS_TEXT("Multi full screen");
@@ -238,8 +236,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request,
-                                                  [[maybe_unused]] CommandManager::CommandResult& result)
+    void Viewer::CMD_ToggleKeyBindings(const CommandManager::CommandRequest& request,
+                                       [[maybe_unused]] CommandManager::CommandResult& result)
     {
         auto type = request.args.GetArgValue("type");
         if (type == "imageinfo")  // Toggle image info
@@ -257,11 +255,9 @@ namespace OIV
             }
 
             text         = fLabelManager.GetOrCreateTextLabel("keyBindings");
-            auto message = MessageHelper::CreateKeyBindingsMessage();
-
+            auto message = MessageHelper::CreateKeyBindingsMessage(fConfiguredBindings, fConfiguredCommands);
             text->SetText(message);
             text->SetBackgroundColor({0, 0, 0, 216});
-            text->SetFontPath(LabelManager::sFixedFontPath);
             text->SetFontSize(12);
             text->SetOutlineWidth(2);
             text->SetPosition({20, 60});
@@ -276,12 +272,13 @@ namespace OIV
         }
         else if (type == "settings")  // Show settings
         {
-            ShowSettings();
+            if (fShell.showSettings)
+                fShell.showSettings();
         }
     }
 
-    void ViewerApplication::CMD_ShowSystemInfo([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                               [[maybe_unused]] CommandManager::CommandResult& result)
+    void Viewer::CMD_ShowSystemInfo([[maybe_unused]] const CommandManager::CommandRequest& request,
+                                    [[maybe_unused]] CommandManager::CommandResult& result)
     {
         TextLabel* text = fLabelManager.GetTextLabel("systemInfo");
         if (text != nullptr)
@@ -310,7 +307,6 @@ namespace OIV
 
         text->SetText(message);
         text->SetBackgroundColor({0, 0, 0, 216});
-        text->SetFontPath(LabelManager::sFixedFontPath);
         text->SetFontSize(12);
         text->SetOutlineWidth(2);
         text->SetPosition({20, 60});
@@ -324,8 +320,8 @@ namespace OIV
             fRefreshOperation.Queue();
     }
 
-    void ViewerApplication::CMD_OpenFile([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                         [[maybe_unused]] CommandManager::CommandResult& response)
+    void Viewer::CMD_OpenFile([[maybe_unused]] const CommandManager::CommandRequest& request,
+                              [[maybe_unused]] CommandManager::CommandResult& response)
     {
         std::string cmd = request.args.GetArgValue("cmd");
         if (cmd == "savefile")
@@ -334,7 +330,7 @@ namespace OIV
             LLUtils::native_string_type defaultFileName;
             if (IsImageOpen())
             {
-                auto openedImage = fImageState.GetOpenedImage();
+                auto openedImage = fSession.fImageState.GetOpenedImage();
                 auto imageSource = openedImage->source;
                 switch (imageSource)
                 {
@@ -355,10 +351,10 @@ namespace OIV
                         break;
                 }
 
-                auto result = PlatformFileDialog::Show(LWS::FileDialogType::SaveFile, fSaveComDlgFilters,
-                                                       LLUTILS_TEXT("Save an image"), fWindow.GetWindow(),
-                                                       LLUTILS_TEXT("*.") + fDefaultSaveFileExtension,
-                                                       fDefaultSaveFileFormatIndex, defaultFileName, saveFilePath);
+                auto result = LWS::FileDialog::Show(LWS::FileDialogType::SaveFile, fSaveComDlgFilters,
+                                                    LLUTILS_TEXT("Save an image"), fWindow.GetWindow(),
+                                                    fDefaultSaveFileExtension, fDefaultSaveFileFormatIndex,
+                                                    defaultFileName, saveFilePath);
 
                 if (result == LWS::FileDialogResult::Success)
                 {
@@ -369,7 +365,7 @@ namespace OIV
                     if (sv.empty() == false)
                         sv = sv.substr(1);
 
-                    auto rasterized = fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
+                    auto rasterized = fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
 
                     if (IMUtil::ImageUtil::HasAlphaChannelAndInUse(rasterized) == false)
                         rasterized = IMUtil::ImageUtil::Convert(
@@ -377,7 +373,7 @@ namespace OIV
 
                     LLUtils::Buffer encodedBuffer;
 
-                    fImageLoader.Encode(rasterized, sv.data(), encodedBuffer);
+                    fSession.fImageLoader.Encode(rasterized, sv.data(), encodedBuffer);
                     LLUtils::File::WriteAllBytes(saveFilePath, encodedBuffer.size(), encodedBuffer.data());
                 }
             }
@@ -386,17 +382,17 @@ namespace OIV
         else
         {
             LLUtils::native_string_type openFilePath;
-            auto result = PlatformFileDialog::Show(LWS::FileDialogType::OpenFile, fOpenComDlgFilters,
-                                                   LLUTILS_TEXT("Open image"), fWindow.GetWindow(), {}, 0, {},
-                                                   openFilePath);
+            auto result = LWS::FileDialog::Show(LWS::FileDialogType::OpenFile, fOpenComDlgFilters,
+                                                LLUTILS_TEXT("Open image"), fWindow.GetWindow(), {}, 0, {},
+                                                openFilePath);
 
             if (result == LWS::FileDialogResult::Success)
                 LoadFile(openFilePath, IMCodec::PluginTraverseMode::NoTraverse);
         }
     }
 
-    void ViewerApplication::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request,
-                                                     CommandManager::CommandResult& response)
+    void Viewer::CMD_AxisAlignedTransform(const CommandManager::CommandRequest& request,
+                                          CommandManager::CommandResult& response)
     {
         const AxisAlignedTransformCommand command = ImageTransformCommandPolicy::ParseAxisAlignedTransform(
             request.args);
@@ -405,12 +401,12 @@ namespace OIV
         {
             TransformImage(command.rotation, command.flip);
             response.resValue = ImageTransformCommandPolicy::FormatAxisAlignedTransformResult(
-                fImageState.GetAxisAlignedRotation(), fImageState.GetAxisAlignedFlip());
+                fSession.fImageState.GetAxisAlignedRotation(), fSession.fImageState.GetAxisAlignedFlip());
         }
     }
 
-    void ViewerApplication::CMD_ToggleColorCorrection([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                                      CommandManager::CommandResult& result)
+    void Viewer::CMD_ToggleColorCorrection([[maybe_unused]] const CommandManager::CommandRequest& request,
+                                           CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -421,8 +417,7 @@ namespace OIV
             result.resValue = LLUTILS_TEXT("Reset color correction to default");
     }
 
-    void ViewerApplication::CMD_SetWindowSize(const CommandManager::CommandRequest& request,
-                                              CommandManager::CommandResult& result)
+    void Viewer::CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         const WindowSizeDecision decision = GetWindowSizeDecision(request.args);
 
@@ -430,10 +425,10 @@ namespace OIV
         switch (decision.mode)
         {
             case WindowSizeMode::Fullscreen:
-                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Fullscreen);
+                applied = fWindow.SetWindowMode(LWS::WindowMode::Fullscreen);
                 break;
             case WindowSizeMode::MultiFullscreen:
-                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::FullscreenAllMonitors);
+                applied = fWindow.SetWindowMode(LWS::WindowMode::FullscreenAllMonitors);
                 break;
             case WindowSizeMode::Maximized:
                 // Use native maximization for "Window size entire screen" to preserve the normal restore placement.
@@ -442,7 +437,7 @@ namespace OIV
                 applied = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Maximized);
                 break;
             case WindowSizeMode::Windowed:
-                applied = fWindow.GetWindow().SetWindowMode(LWS::WindowMode::Windowed);
+                applied = fWindow.SetWindowMode(LWS::WindowMode::Windowed);
                 if (applied == LWS::Result::Success)
                     applied = fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Restored);
                 if (applied == LWS::Result::Success)
@@ -461,34 +456,35 @@ namespace OIV
         result.resValue = LLUtils::StringUtility::ToNativeString(request.displayName);
     }
 
-    void ViewerApplication::CMD_SortFiles(const CommandManager::CommandRequest& request,
-                                          CommandManager::CommandResult& result)
+    void Viewer::CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        const SortCommandDecision decision = SortCommandPolicy::Decide(request.args, fFileSorter.GetSortType());
+        const SortCommandDecision decision = SortCommandPolicy::Decide(request.args,
+                                                                       fSession.fFileSorter.GetSortType());
 
         if (decision.valid)
         {
             if (decision.reverseDirection)
-                fFileSorter.SetActiveSortDirection(SortCommandPolicy::Reverse(fFileSorter.GetActiveSortDirection()));
+                fSession.fFileSorter.SetActiveSortDirection(
+                    SortCommandPolicy::Reverse(fSession.fFileSorter.GetActiveSortDirection()));
             else
-                fFileSorter.SetSortType(decision.sortType);
+                fSession.fFileSorter.SetSortType(decision.sortType);
         }
 
         SortFolderFileList();
         result.resValue = SortCommandPolicy::FormatSortResult(request.displayName,
-                                                              fFileSorter.GetActiveSortDirection());
+                                                              fSession.fFileSorter.GetActiveSortDirection());
     }
 
-    void ViewerApplication::CMD_Sequencer(const CommandManager::CommandRequest& request,
-                                          CommandManager::CommandResult& result)
+    void Viewer::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        auto openedImage = fImageState.GetOpenedImage();
+        auto openedImage = fSession.fImageState.GetOpenedImage();
         if (openedImage != nullptr &&
             openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
         {
             if (SequencerPolicy::IsChangeSpeedCommand(request.args))
             {
-                auto change = fSequencerPolicy.ChangeSpeed(SequencerPolicy::ParseSpeedChangePercent(request.args));
+                auto change = fSession.fSequencerPolicy.ChangeSpeed(
+                    SequencerPolicy::ParseSpeedChangePercent(request.args));
                 if (change.retimed)
                     UpdateSequencerInterval();
                 result.resValue = std::move(change.message);
@@ -496,18 +492,17 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::UpdateSequencerInterval()
+    void Viewer::UpdateSequencerInterval()
     {
         if (fSequencerTimer.GetInterval() != 0)
         {
             // Retiming has already preserved the unplayed fraction. A due frame needs a prompt
             // callback; zero would stop the platform timer instead of advancing the animation.
-            fSequencerTimer.SetInterval(std::max(1u, fSequencerPolicy.RemainingFrameMs()));
+            fSequencerTimer.SetInterval(std::max(1u, fSession.fSequencerPolicy.RemainingFrameMs()));
         }
     }
 
-    void ViewerApplication::CMD_DeleteFile(const CommandManager::CommandRequest& request,
-                                           CommandManager::CommandResult& result)
+    void Viewer::CMD_DeleteFile(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         using namespace LLUtils;
         using namespace std;
@@ -521,8 +516,8 @@ namespace OIV
         result.resValue = LLUtils::StringUtility::ToNativeString(request.displayName);
     }
 
-    void ViewerApplication::CMD_ColorCorrection(const CommandManager::CommandRequest& request,
-                                                CommandManager::CommandResult& result)
+    void Viewer::CMD_ColorCorrection(const CommandManager::CommandRequest& request,
+                                     CommandManager::CommandResult& result)
     {
         const ColorCorrectionCommand command = ColorCorrectionCommandPolicy::Parse(request.args);
         if (command.IsValid() == false)
@@ -532,19 +527,19 @@ namespace OIV
         switch (command.channel)
         {
             case ColorCorrectionChannel::Gamma:
-                value = &fColorExposure.gamma;
+                value = &fSession.fColorExposure.gamma;
                 break;
             case ColorCorrectionChannel::Exposure:
-                value = &fColorExposure.exposure;
+                value = &fSession.fColorExposure.exposure;
                 break;
             case ColorCorrectionChannel::Offset:
-                value = &fColorExposure.offset;
+                value = &fSession.fColorExposure.offset;
                 break;
             case ColorCorrectionChannel::Saturation:
-                value = &fColorExposure.saturation;
+                value = &fSession.fColorExposure.saturation;
                 break;
             case ColorCorrectionChannel::Contrast:
-                value = &fColorExposure.contrast;
+                value = &fSession.fColorExposure.contrast;
                 break;
             case ColorCorrectionChannel::None:
                 break;
@@ -558,8 +553,7 @@ namespace OIV
         UpdateExposure();
     }
 
-    void ViewerApplication::CMD_Pan(const CommandManager::CommandRequest& request,
-                                    CommandManager::CommandResult& result)
+    void Viewer::CMD_Pan(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         const PanCommand command = ViewCommandPolicy::ParsePan(request.args);
 
@@ -584,8 +578,8 @@ namespace OIV
         result.resValue = ViewCommandPolicy::FormatPanResult(request.displayName, command.amount);
     }
 
-    void ViewerApplication::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
-                                                CommandManager::CommandResult& result)
+    void Viewer::CMD_CopyToClipboard(const CommandManager::CommandRequest& request,
+                                     CommandManager::CommandResult& result)
     {
         using namespace std;
         string cmd = request.args.GetArgValue("cmd");
@@ -618,8 +612,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
-                                                   CommandManager::CommandResult& result)
+    void Viewer::CMD_PasteFromClipboard([[maybe_unused]] const CommandManager::CommandRequest& request,
+                                        CommandManager::CommandResult& result)
     {
         switch (PasteFromClipBoard())
         {
@@ -635,8 +629,8 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
-                                                  CommandManager::CommandResult& result)
+    void Viewer::CMD_ImageManipulation(const CommandManager::CommandRequest& request,
+                                       CommandManager::CommandResult& result)
     {
         using namespace std;
         const string cmd = request.args.GetArgValue("cmd");
@@ -652,7 +646,7 @@ namespace OIV
 
         else if (cmd == "selectAll")
         {
-            if (fImageState.GetOpenedImage() != nullptr)
+            if (fSession.fImageState.GetOpenedImage() != nullptr)
             {
                 result.resValue = LLUtils::StringUtility::ToNativeString(request.displayName);
                 using namespace LLUtils;
@@ -680,8 +674,7 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_Placement(const CommandManager::CommandRequest& request,
-                                          CommandManager::CommandResult& result)
+    void Viewer::CMD_Placement(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         switch (ViewCommandPolicy::ParsePlacement(request.args))
         {
@@ -701,8 +694,8 @@ namespace OIV
         result.resValue = ViewCommandPolicy::FormatPlacementResult(request.displayName);
     }
 
-    void ViewerApplication::CMD_Navigate(const CommandManager::CommandRequest& request,
-                                         [[maybe_unused]] CommandManager::CommandResult& result)
+    void Viewer::CMD_Navigate(const CommandManager::CommandRequest& request,
+                              [[maybe_unused]] CommandManager::CommandResult& result)
     {
         const NavigationCommand command = ViewCommandPolicy::ParseNavigation(request.args);
         if (command.subImage)
@@ -721,10 +714,10 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::CMD_Shell(const CommandManager::CommandRequest& request,
-                                      CommandManager::CommandResult& result)
+    void Viewer::CMD_Shell(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        result.resValue = ShellCommandHandler::Execute(request, GetOpenedFileName(), fImageState.GetOpenedImage());
+        result.resValue = ShellCommandHandler::Execute(request, GetOpenedFileName(),
+                                                       fSession.fImageState.GetOpenedImage());
     }
 
     template <typename T>
@@ -736,47 +729,52 @@ namespace OIV
         return ss.str();
     }
 
-    void ViewerApplication::AddCommandsAndKeyBindings()
+    void Viewer::AddCommandsAndKeyBindings()
     {
         using namespace std;
         using namespace placeholders;
 
-        CommandRegistry::AddConfiguredCommands(fCommandController.GetCommandManager());
+        const auto directory = fResources / "Configuration";
+        fConfiguredCommands  = ConfigurationLoader::LoadCommandGroups(directory);
+        fConfiguredBindings  = ConfigurationLoader::LoadKeyBindings(directory);
+        CommandRegistry::AddConfiguredCommands(fCommandController.GetCommandManager(), fConfiguredCommands);
         AddPlatformKeyBindings();
-        fCommandController.AddCommandCallbacks(
-            {{"cmd_color_correction", std::bind(&ViewerApplication::CMD_ColorCorrection, this, _1, _2)},
-             {"cmd_view_state", std::bind(&ViewerApplication::CMD_ViewState, this, _1, _2)},
-             {"cmd_toggle_correction", std::bind(&ViewerApplication::CMD_ToggleColorCorrection, this, _1, _2)},
-             {"cmd_toggle_keybindings", std::bind(&ViewerApplication::CMD_ToggleKeyBindings, this, _1, _2)},
-             {"cmd_show_system_info", std::bind(&ViewerApplication::CMD_ShowSystemInfo, this, _1, _2)},
-             {"cmd_axis_aligned_transform", std::bind(&ViewerApplication::CMD_AxisAlignedTransform, this, _1, _2)},
-             {"cmd_open_file", std::bind(&ViewerApplication::CMD_OpenFile, this, _1, _2)},
-             {"cmd_zoom", std::bind(&ViewerApplication::CMD_Zoom, this, _1, _2)},
-             {"cmd_pan", std::bind(&ViewerApplication::CMD_Pan, this, _1, _2)},
-             {"cmd_placement", std::bind(&ViewerApplication::CMD_Placement, this, _1, _2)},
-             {"cmd_copyToClipboard", std::bind(&ViewerApplication::CMD_CopyToClipboard, this, _1, _2)},
-             {"cmd_pasteFromClipboard", std::bind(&ViewerApplication::CMD_PasteFromClipboard, this, _1, _2)},
-             {"cmd_imageManipulation", std::bind(&ViewerApplication::CMD_ImageManipulation, this, _1, _2)},
-             {"cmd_navigate", std::bind(&ViewerApplication::CMD_Navigate, this, _1, _2)},
-             {"cmd_file_associations", std::bind(&ViewerApplication::CMD_FileAssociations, this, _1, _2)},
-             {"cmd_shell", std::bind(&ViewerApplication::CMD_Shell, this, _1, _2)},
-             {"cmd_delete_file", std::bind(&ViewerApplication::CMD_DeleteFile, this, _1, _2)},
-             {"cmd_set_window_size", std::bind(&ViewerApplication::CMD_SetWindowSize, this, _1, _2)},
-             {"cmd_sort_files", std::bind(&ViewerApplication::CMD_SortFiles, this, _1, _2)},
-             {"cmd_sequencer", std::bind(&ViewerApplication::CMD_Sequencer, this, _1, _2)}});
+        std::vector<CommandController::CommandRegistration> registrations{
+            {"cmd_color_correction", std::bind(&Viewer::CMD_ColorCorrection, this, _1, _2)},
+            {"cmd_view_state", std::bind(&Viewer::CMD_ViewState, this, _1, _2)},
+            {"cmd_toggle_correction", std::bind(&Viewer::CMD_ToggleColorCorrection, this, _1, _2)},
+            {"cmd_toggle_keybindings", std::bind(&Viewer::CMD_ToggleKeyBindings, this, _1, _2)},
+            {"cmd_show_system_info", std::bind(&Viewer::CMD_ShowSystemInfo, this, _1, _2)},
+            {"cmd_axis_aligned_transform", std::bind(&Viewer::CMD_AxisAlignedTransform, this, _1, _2)},
+            {"cmd_open_file", std::bind(&Viewer::CMD_OpenFile, this, _1, _2)},
+            {"cmd_zoom", std::bind(&Viewer::CMD_Zoom, this, _1, _2)},
+            {"cmd_pan", std::bind(&Viewer::CMD_Pan, this, _1, _2)},
+            {"cmd_placement", std::bind(&Viewer::CMD_Placement, this, _1, _2)},
+            {"cmd_copyToClipboard", std::bind(&Viewer::CMD_CopyToClipboard, this, _1, _2)},
+            {"cmd_pasteFromClipboard", std::bind(&Viewer::CMD_PasteFromClipboard, this, _1, _2)},
+            {"cmd_imageManipulation", std::bind(&Viewer::CMD_ImageManipulation, this, _1, _2)},
+            {"cmd_navigate", std::bind(&Viewer::CMD_Navigate, this, _1, _2)},
+            {"cmd_file_associations", std::bind(&Viewer::CMD_FileAssociations, this, _1, _2)},
+            {"cmd_shell", std::bind(&Viewer::CMD_Shell, this, _1, _2)},
+            {"cmd_delete_file", std::bind(&Viewer::CMD_DeleteFile, this, _1, _2)},
+            {"cmd_set_window_size", std::bind(&Viewer::CMD_SetWindowSize, this, _1, _2)},
+            {"cmd_sort_files", std::bind(&Viewer::CMD_SortFiles, this, _1, _2)},
+            {"cmd_sequencer", std::bind(&Viewer::CMD_Sequencer, this, _1, _2)}};
+        fCommandController.SetRequestPredicate(fShell.commandAllowed);
+        fCommandController.AddCommandCallbacks(registrations);
     }
 
-    bool ViewerApplication::ExecutePredefinedCommand(std::string command)
+    bool Viewer::ExecutePredefinedCommand(std::string command)
     {
         return fCommandController.ExecutePredefinedCommand(command);
     }
 
-    bool ViewerApplication::ExecuteCommandInternal(const CommandRequestIntenal& requestInternal)
+    bool Viewer::ExecuteCommandInternal(const CommandRequestIntenal& requestInternal)
     {
         return fCommandController.ExecuteCommandInternal(requestInternal.commandName, requestInternal.args);
     }
 
-    bool ViewerApplication::ExecuteCommand(const CommandManager::CommandRequest& request)
+    bool Viewer::ExecuteCommand(const CommandManager::CommandRequest& request)
     {
         return fCommandController.ExecuteCommand(request);
     }

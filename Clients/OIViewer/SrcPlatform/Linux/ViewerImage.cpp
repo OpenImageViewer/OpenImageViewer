@@ -1,4 +1,4 @@
-#include "ViewerApplication.h"
+#include "Viewer.h"
 
 #include <ImageUtil/ImageUtil.h>
 
@@ -63,7 +63,7 @@ namespace
 
 namespace OIV
 {
-    void ViewerApplication::DeleteOpenedFile(bool permanently)
+    void Viewer::DeleteOpenedFile(bool permanently)
     {
         const auto fileNameToRemove = GetOpenedFileName();
         GFile* file                 = g_file_new_for_path(fileNameToRemove.c_str());
@@ -91,7 +91,7 @@ namespace OIV
         }
     }
 
-    ClipboardDataType ViewerApplication::PasteFromClipBoard()
+    ClipboardDataType Viewer::PasteFromClipBoard()
     {
         if (gtk_init_check(nullptr, nullptr) == FALSE)
             return ClipboardDataType::None;
@@ -121,7 +121,7 @@ namespace OIV
         return ClipboardDataType::None;
     }
 
-    bool ViewerApplication::SetClipboardImage(IMCodec::ImageSharedPtr image)
+    bool Viewer::SetClipboardImage(IMCodec::ImageSharedPtr image)
     {
         if (gtk_init_check(nullptr, nullptr) == FALSE)
             return false;
@@ -169,25 +169,17 @@ namespace OIV
         return true;
     }
 
-    void ViewerApplication::HandleReloadAction(ReloadAction action, const LLUtils::native_string_type& requestedFile)
+    bool Viewer::ConfirmFileReload(const LLUtils::native_string_type& requestedFile)
     {
-        if (action == ReloadAction::AskUser)
+        bool accepted = false;
+        if (gtk_init_check(nullptr, nullptr) != FALSE)
         {
-            if (gtk_init_check(nullptr, nullptr) == FALSE)
-            {
-                action = fFileReloadPolicy.ConfirmReload(false);
-            }
-            else
-            {
-                GtkWidget* dialog  = gtk_message_dialog_new(nullptr, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
-                                                            GTK_BUTTONS_YES_NO, "Reload the file: %s?",
-                                                            requestedFile.c_str());
-                const int response = gtk_dialog_run(GTK_DIALOG(dialog));
-                gtk_widget_destroy(dialog);
-                action = fFileReloadPolicy.ConfirmReload(response == GTK_RESPONSE_YES);
-            }
+            GtkWidget* dialog = gtk_message_dialog_new(nullptr, GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+                                                       GTK_BUTTONS_YES_NO, "Reload the file: %s?",
+                                                       requestedFile.c_str());
+            accepted          = gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES;
+            gtk_widget_destroy(dialog);
         }
-        if (action == ReloadAction::RequestNow && fBrowseSessionController != nullptr)
-            fBrowseSessionController->RequestCurrentFileReload();
+        return accepted;
     }
 }  // namespace OIV

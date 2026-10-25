@@ -94,6 +94,7 @@ namespace OIV
                                             const MultiClickContext& context);
 
         void Reset();
+        [[nodiscard]] bool HasPressedButtons() const;
         [[nodiscard]] bool IsCaptured(LWS::MouseButton button) const;
         [[nodiscard]] bool IsRockerActive() const;
         [[nodiscard]] int GetNavigationDirection() const;

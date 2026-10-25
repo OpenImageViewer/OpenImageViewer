@@ -4,7 +4,7 @@
 #include <future>
 #include <cassert>
 
-#include "ViewerApplication.h"
+#include "Viewer.h"
 
 #include <Version.h>
 
@@ -29,7 +29,6 @@
 #include "Globals.h"
 #include <OIVAppCore/ConfigurationLoader.h>
 #include "CommandRegistry.h"
-#include <OIVAppCore/ColorCountPolicy.h>
 #include <OIVAppCore/ColorCorrectionCommandPolicy.h>
 #include <OIVAppCore/FileChangePolicy.h>
 #include <OIVAppCore/FrameLimiterPolicy.h>
@@ -45,13 +44,12 @@
 #include <OIVAppCore/ViewActionController.h>
 #include <OIVAppCore/ViewCommandPolicy.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
-#include <OIVShared/PixelHelper.h>
 #include <ImageUtil/ImageUtil.h>
-#include "InterThreadMessages.h"
+#include <OIVAppCore/ViewerCompletion.h>
 
 namespace OIV
 {
-    void ViewerApplication::OnSelectionRectChanged(const LLUtils::RectI32& selectionRect, bool isVisible)
+    void Viewer::OnSelectionRectChanged(const LLUtils::RectI32& selectionRect, bool isVisible)
     {
         if (isVisible)
             fRenderer->SetSelectionRect(
@@ -64,7 +62,7 @@ namespace OIV
 
     // callback from queued operation
 
-    void ViewerApplication::OnScroll(const LLUtils::PointF64& panAmount)
+    void Viewer::OnScroll(const LLUtils::PointF64& panAmount)
     {
         Pan(panAmount);
 
@@ -75,58 +73,84 @@ namespace OIV
         fWindow.SetCursorType(cursorType);
     }
 
-    void ViewerApplication::DelayResamplingCallback()
+    void Viewer::DelayResamplingCallback()
     {
         fTimerNoActiveZoom.SetInterval(0);
-        fImageState.SetResample(fDownScalingTechnique == DownscalingTechnique::Software);
-        fImageState.RefreshScreenSpace();
+        fSession.fImageState.SetResample(fSession.fDownScalingTechnique == DownscalingTechnique::Software);
+        fSession.fImageState.RefreshScreenSpace();
         UpdateMainRenderImages();
         fRefreshOperation.Queue();
     }
 
-    OIV::FilterType ViewerApplication::GetFilterType() const
+    OIV::FilterType Viewer::GetFilterType() const
     {
-        return fImageFilter;
+        return fSession.fImageFilter;
     }
 
-    void ViewerApplication::UpdateExposure()
+    void Viewer::UpdateExposure()
     {
-        fRenderer->SetExposure(fColorExposure);
+        fRenderer->SetExposure(fSession.fColorExposure);
         fRefreshOperation.Queue();
     }
 
-    bool ViewerApplication::ToggleColorCorrection()
+    bool Viewer::ToggleColorCorrection()
     {
         bool isDefault = true;
-        if (fColorExposure == DefaultColorCorrection)
+        if (fSession.fColorExposure == fSession.DefaultColorCorrection)
         {
-            std::swap(fLastColorExposure, fColorExposure);
+            std::swap(fSession.fLastColorExposure, fSession.fColorExposure);
         }
         else
         {
             isDefault = false;
-            std::swap(fLastColorExposure, fColorExposure);
-            fColorExposure = DefaultColorCorrection;
+            std::swap(fSession.fLastColorExposure, fSession.fColorExposure);
+            fSession.fColorExposure = fSession.DefaultColorCorrection;
         }
         UpdateExposure();
 
         return isDefault;
     }
 
-    void ViewerApplication::ToggleFullScreen(bool multiFullScreen)
+    void Viewer::SetViewFit(ViewFit fit, bool center)
+    {
+        fSession.fFitLargerOnly = fit == ViewFit::FitLargerOnly;
+        if (fit != ViewFit::Original)
+            FitToClientAreaAndCenter();
+        else
+        {
+            fSession.fIsLockFitToScreen = false;
+            SetOriginalSize();
+            if (center)
+                Center();
+        }
+    }
+
+    bool Viewer::ScrollToPercent(int percent)
+    {
+        if (percent < 0 || percent > 100 || !IsImageOpen())
+            return false;
+        auto offset       = GetOffset();
+        const auto canvas = fWindow.GetCanvasPixelSize();
+        const auto image  = GetImageSize(ImageSizeType::Visible);
+        offset.y          = image.y > canvas.y ? (canvas.y - image.y) * percent / 100.0 : (canvas.y - image.y) / 2.0;
+        SetOffset(offset, true);
+        return true;
+    }
+
+    void Viewer::ToggleFullScreen(bool multiFullScreen)
     {
         fRefreshOperation.Begin();
-        const LWS::WindowMode currentMode   = fWindow.GetWindow().GetWindowMode();
+        const LWS::WindowMode currentMode   = fWindow.GetWindowMode();
         const LWS::WindowMode requestedMode = currentMode == LWS::WindowMode::Windowed
                                                   ? (multiFullScreen ? LWS::WindowMode::FullscreenAllMonitors
                                                                      : LWS::WindowMode::Fullscreen)
                                                   : LWS::WindowMode::Windowed;
-        if (fWindow.GetWindow().SetWindowMode(requestedMode) == LWS::Result::Success)
+        if (fWindow.SetWindowMode(requestedMode) == LWS::Result::Success)
             Center();
         fRefreshOperation.End();
     }
 
-    void ViewerApplication::ToggleBorders()
+    void Viewer::ToggleBorders()
     {
         fShowBorders = !fShowBorders;
         {
@@ -137,64 +161,61 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::SetSlideShowEnabled(bool enabled)
+    void Viewer::SetSlideShowEnabled(bool enabled)
     {
-        if (fSlideshowPolicy.IsEnabled() != enabled)
+        if (fSession.fSlideshowPolicy.IsEnabled() != enabled)
         {
-            fSlideshowPolicy.SetEnabled(enabled);
-            fTimerSlideShow.SetInterval(fSlideshowPolicy.GetTimerIntervalMs());
+            fSession.fSlideshowPolicy.SetEnabled(enabled);
+            fTimerSlideShow.SetInterval(fSession.fSlideshowPolicy.GetTimerIntervalMs());
         }
     }
 
-    void ViewerApplication::SetFilterLevel(OIV::FilterType filterType)
+    void Viewer::SetFilterLevel(OIV::FilterType filterType)
     {
-        fImageFilter = std::clamp(filterType, OIV::FilterType::None, OIV::FilterType::Lanczos3);
+        fSession.fImageFilter = std::clamp(filterType, OIV::FilterType::None, OIV::FilterType::Lanczos3);
         UpdateMainRenderImages();
 
         fRefreshOperation.Queue();
     }
 
-    void ViewerApplication::ToggleGrid()
+    void Viewer::ToggleGrid()
     {
-        fIsGridEnabled = !fIsGridEnabled;
+        fSession.fIsGridEnabled = !fSession.fIsGridEnabled;
         UpdateRenderViewParams();
     }
 
-    void ViewerApplication::UpdateRenderViewParams()
+    void Viewer::UpdateRenderViewParams()
     {
-        const auto colors                     = ViewerPresentationPolicy::CheckerboardColors(fTransparencyMode);
+        const auto colors = ViewerPresentationPolicy::CheckerboardColors(fSession.fTransparencyMode);
         fRenderViewParams.uTransparencyColor1 = colors[0];
         fRenderViewParams.uTransparencyColor2 = colors[1];
         fRefreshOperation.Queue();
     }
 
-    void ViewerApplication::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
+    void Viewer::SetOffset(LLUtils::PointF64 offset, bool preserveOffsetLockState)
     {
-        const auto previousOffset = fImageState.GetOffset();
-        fImageState.SetOffset(ResolveOffset(offset));
-        if (fImageState.IsDownscaled() && previousOffset != fImageState.GetOffset())
+        const auto previousOffset = fSession.fImageState.GetOffset();
+        fSession.SetOffset(offset, preserveOffsetLockState);
+        if (fSession.fImageState.IsDownscaled() && previousOffset != fSession.fImageState.GetOffset())
             QueueResampling();
         UpdateMainRenderImages();
         fPreserveImageSpaceSelection.Queue();
         fRefreshOperation.Queue();
-
-        if (preserveOffsetLockState == false)
-            fIsOffsetLocked = false;
     }
 
-    void ViewerApplication::SetOriginalSize()
+    void Viewer::SetOriginalSize()
     {
         SetZoomInternal(1.0, -1, -1);
         Center();
     }
 
-    void ViewerApplication::Pan(const LLUtils::PointF64& panAmount)
+    void Viewer::Pan(const LLUtils::PointF64& panAmount)
     {
-        if (fImageState.GetOpenedImage() != nullptr)
-            SetOffset(panAmount * fDPIadjustmentFactor + fImageState.GetOffset());
+        if (fSession.fImageState.GetOpenedImage() != nullptr)
+            SetOffset(panAmount * fDPIadjustmentFactor + fSession.fImageState.GetOffset());
     }
 
-    void ViewerApplication::Zoom(double wheelSteps, int zoomX, int zoomY)
+    void Viewer::Zoom(double wheelSteps, int zoomX, int zoomY)
     {
         if (IsImageOpen())
         {
@@ -207,14 +228,14 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::ZoomInternal(double steps, int zoomX, int zoomY)
+    void Viewer::ZoomInternal(double steps, int zoomX, int zoomY)
     {
         const double adaptiveAmount = fAdaptiveZoom.Add(steps);
         const double adjustedAmount = ViewActionController::RelativeZoom(GetScale(), adaptiveAmount);
         SetZoomInternal(adjustedAmount, zoomX, zoomY);
     }
 
-    void ViewerApplication::FitToClientAreaAndCenter()
+    void Viewer::FitToClientAreaAndCenter()
     {
         if (IsImageOpen())
         {
@@ -222,10 +243,9 @@ namespace OIV
             const LWS::PixelSize clientSize = fWindow.GetCanvasPixelSize();
             if (clientSize.x > 0 && clientSize.y > 0)  // window might minimized.
             {
-                const double zoom = ViewTransformController::FitScale(PointF64(clientSize.x, clientSize.y),
-                                                                      GetImageSize(ImageSizeType::Transformed));
+                double zoom = fSession.FitScale();
                 fRefreshOperation.Begin();
-                fIsLockFitToScreen = true;
+                fSession.fIsLockFitToScreen = true;
                 SetZoomInternal(zoom, -1, -1, true);
                 Center();
                 fRefreshOperation.End();
@@ -233,16 +253,15 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::UpdateSelectionRectText()
+    void Viewer::UpdateSelectionRectText()
     {
         TextLabel* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
-        auto selectionSizeStr        = SelectionWorkflowPolicy::FormatSelectionSize(fImageSpaceSelection);
+        auto selectionSizeStr        = SelectionWorkflowPolicy::FormatSelectionSize(fSession.fImageSpaceSelection);
 
         if (selectionSizeText == nullptr)
         {
             // Create new user message.
             selectionSizeText = fLabelManager.GetOrCreateTextLabel("selectionSizeText");
-            selectionSizeText->SetFontPath(LabelManager::sFontPath);
             selectionSizeText->SetFontSize(11);
             selectionSizeText->SetBackgroundColor({0, 0, 0, 192});
             selectionSizeText->SetTextColor({170, 170, 170, 255});
@@ -269,56 +288,57 @@ namespace OIV
         selectionSizeText->SetPosition(static_cast<LLUtils::PointF64>(labelPosition));
     }
 
-    void ViewerApplication::SetImageSpaceSelection(const LLUtils::RectI32& rect)
+    void Viewer::SetImageSpaceSelection(const LLUtils::RectI32& rect)
     {
-        fImageSpaceSelection = rect;
+        fSession.SetSelection(rect);
         UpdateSelectionRectText();
     }
 
-    void ViewerApplication::SaveImageSpaceSelection()
+    void Viewer::SaveImageSpaceSelection()
     {
         if (SelectionWorkflowPolicy::ShouldSaveImageSpaceSelection(fSelectionRect.GetOperation()))
             SetImageSpaceSelection(ClientToImageRounded(fSelectionRect.GetSelectionRect()));
     }
 
-    void ViewerApplication::LoadImageSpaceSelection()
+    void Viewer::LoadImageSpaceSelection()
     {
-        if (fImageSpaceSelection.IsEmpty() == false)
+        if (fSession.fImageSpaceSelection.IsEmpty() == false)
         {
             LLUtils::RectI32 r = static_cast<LLUtils::RectI32>(
-                ImageToClient(static_cast<LLUtils::RectF64>(fImageSpaceSelection)));
+                ImageToClient(static_cast<LLUtils::RectF64>(fSession.fImageSpaceSelection)));
             fSelectionRect.UpdateSelection(r);
             UpdateSelectionRectText();
         }
     }
 
-    void ViewerApplication::CancelSelection()
+    void Viewer::CancelSelection()
     {
         TextLabel* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
         if (selectionSizeText != nullptr)
             selectionSizeText->SetVisible(false);
 
         fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, {0, 0});
-        fImageSpaceSelection = decltype(fImageSpaceSelection)::Zero;
+        fSession.fImageSpaceSelection = decltype(fSession.fImageSpaceSelection)::Zero;
     }
 
-    double ViewerApplication::GetMinimumPixelSize()
+    double Viewer::GetMinimumPixelSize()
     {
-        return ViewActionController::MinimumPixelSize(fMinImageSize, GetImageSize(ImageSizeType::Transformed));
+        return ViewActionController::MinimumPixelSize(fSession.fMinImageSize, GetImageSize(ImageSizeType::Transformed));
     }
 
-    void ViewerApplication::QueueResampling()
+    void Viewer::QueueResampling()
     {
         if (GetResamplingEnabled() && IsImageOpen() &&
-            (fDownScalingTechnique == DownscalingTechnique::Software || fImageState.IsDownscaled()))
+            (fSession.fDownScalingTechnique == DownscalingTechnique::Software || fSession.fImageState.IsDownscaled()))
         {
             // Restart idle refinement while retaining usable cached detail.
             fTimerNoActiveZoom.SetInterval(0);
-            fTimerNoActiveZoom.SetInterval(fImageState.IsDownscaled() ? fScreenSpaceDelayMs : fQueueResamplingDelay);
+            fTimerNoActiveZoom.SetInterval(fSession.fImageState.IsDownscaled() ? fScreenSpaceDelayMs
+                                                                               : fQueueResamplingDelay);
         }
     }
 
-    void ViewerApplication::SetResamplingEnabled(bool enable)
+    void Viewer::SetResamplingEnabled(bool enable)
     {
         if (fIsResamplingEnabled != enable)
         {
@@ -326,7 +346,7 @@ namespace OIV
             if (fIsResamplingEnabled == false)
             {
                 fTimerNoActiveZoom.SetInterval(0);
-                fImageState.SetResample(false);
+                fSession.fImageState.SetResample(false);
                 UpdateMainRenderImages();
             }
             else
@@ -336,64 +356,36 @@ namespace OIV
         }
     }
 
-    bool ViewerApplication::GetResamplingEnabled() const
+    bool Viewer::GetResamplingEnabled() const
     {
         return fIsResamplingEnabled;
     }
 
-    void ViewerApplication::SetZoomInternal(double zoomValue, int clientX, int clientY, bool preserveFitToScreenState)
+    void Viewer::SetZoomInternal(double zoom, int clientX, int clientY, bool preserveFit)
     {
-        using namespace LLUtils;
-
-        // Apply zoom limits only if zoom is not bound to the client window
-        if (fIsLockFitToScreen == false)
+        if (fSession.ZoomTo(zoom, {clientX, clientY}, GetCanvasCenter(), preserveFit))
         {
-            // We want to keep the image at least the size of 'MinImagePixelsInSmallAxis' pixels in the smallest axis.
-            zoomValue = ViewActionController::ResolveZoomValue(zoomValue, fIsLockFitToScreen, GetMinimumPixelSize(),
-                                                               fMaxPixelSize);
-        }
-
-        if (zoomValue != fImageState.GetScale().x)
-        {
-            // Save image selection before view change
+            // State changes are complete before touching native resources. Keep selection restoration and
+            // presentation coalesced so zoom never exposes a frame with the previous client-space selection.
             fPreserveImageSpaceSelection.Begin();
-
-            const PointI32 clientZoomPoint = ViewActionController::ResolveZoomPoint({clientX, clientY},
-                                                                                    GetCanvasCenter());
-
-            PointF64 imageZoomPoint = ClientToImage(clientZoomPoint);
-            PointF64 offset         = ViewTransformController::ZoomOffset(imageZoomPoint, GetScale(), zoomValue);
-
-            fImageState.SetResample(false);
-            fImageState.SetScale(zoomValue);
-            QueueResampling();
-
             fRefreshOperation.Begin();
-
-            RefreshImage();
-
-            // preserve offset lock (image centering) if zoom is realtive to the center of the image
-            SetOffset(GetOffset() + offset, ViewActionController::ShouldPreserveOffsetLockForZoom(clientX, clientY));
+            QueueResampling();
+            UpdateMainRenderImages();
+            fPreserveImageSpaceSelection.Queue();
+            fRefreshOperation.Queue();
             fPreserveImageSpaceSelection.End();
-
             fRefreshOperation.End();
-
-            /*UpdateCanvasSize();
-            UpdateUIZoom();*/
-
-            if (preserveFitToScreenState == false)
-                fIsLockFitToScreen = false;
         }
     }
 
-    double ViewerApplication::GetScale() const
+    double Viewer::GetScale() const
     {
-        return fImageState.GetScale().x;
+        return fSession.fImageState.GetScale().x;
     }
 
-    /*void ViewerApplication::UpdateCanvasSize()
+    /*void Viewer::UpdateCanvasSize()
     {
-        if (fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
+        if (fSession.fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
         {
             using namespace  LLUtils;
             const LWS::PixelSize pixels = fWindow.GetCanvasPixelSize();
@@ -408,11 +400,11 @@ namespace OIV
         }
     }*/
 
-    void ViewerApplication::UpdateTexelPos()
+    void Viewer::UpdateTexelPos()
     {
         if (fVirtualStatusBar.GetVisible() == true)
         {
-            if (fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
+            if (fSession.fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
             {
                 using namespace LLUtils;
                 PointF64 storageImageSpace = ClientToImage(fWindow.GetWindowMousePosition());
@@ -432,7 +424,7 @@ namespace OIV
                       storageImageSpace.y >= storageImageSize.y))
                 {
                     LLUtils::native_string_type message = StringUtility::ToNativeString(OIVHelper::ParseTexelValue(
-                        fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform),
+                        fSession.fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform),
                         static_cast<LLUtils::PointI32>(storageImageSpace)));
                     fVirtualStatusBar.SetText("texelValue", message);
                     fVirtualStatusBar.SetOpacity("texelValue", 1.0);
@@ -447,22 +439,23 @@ namespace OIV
         }
     }
 
-    void ViewerApplication::AutoPlaceImage(bool forceCenter)
+    void Viewer::AutoPlaceImage(bool forceCenter)
     {
         fRefreshOperation.Begin();
-        if (ViewActionController::ShouldFitToScreenOnAutoPlace(fIsLockFitToScreen, fIsOffsetLocked))
+        if (ViewActionController::ShouldFitToScreenOnAutoPlace(fSession.fIsLockFitToScreen, fSession.fIsOffsetLocked))
             FitToClientAreaAndCenter();
-        else if (ViewActionController::ShouldCenterOnAutoPlace(fIsLockFitToScreen, fIsOffsetLocked, forceCenter))
+        else if (ViewActionController::ShouldCenterOnAutoPlace(fSession.fIsLockFitToScreen, fSession.fIsOffsetLocked,
+                                                               forceCenter))
             Center();
         fRefreshOperation.End();
     }
 
-    void ViewerApplication::UpdateWindowSize()
+    void Viewer::UpdateWindowSize()
     {
         const auto clientArea     = fWindow.GetCanvasWindow().GetClientAreaMetrics();
         const auto scale          = clientArea.Scale();
         const LWS::PixelSize size = clientArea.pixels.value_or(LWS::PixelSize{});
-        fImageState.SetViewportSize({size.x, size.y});
+        fSession.SetViewport({size.x, size.y});
         // Forward zero extents as well: minimized or unconfigured canvases must suspend presentation.
         if (fViewportSize != size)
         {
@@ -475,60 +468,58 @@ namespace OIV
             fLabelManager.SetContentScale(*scale);
             UpdateWelcomeMessageLayout();
             AutoPlaceImage();
-            if (fImageState.IsDownscaled())
+            if (fSession.fImageState.IsDownscaled())
                 QueueResampling();
             const LLUtils::PointI32 point{size.x, size.y};
             fVirtualStatusBar.ClientSizeChanged(point);
 
-            EventManager::GetSingleton().SizeChange.Raise(
-                EventManager::SizeChangeEventParams{static_cast<int32_t>(size.x), static_cast<int32_t>(size.y)});
+            fMessageManager->OnWindowSizeChange(size);
         }
     }
 
-    void ViewerApplication::Center()
+    void Viewer::Center()
     {
         if (IsImageOpen() == true)
         {
             fRefreshOperation.Begin();
             using namespace LLUtils;
-            PointF64 offset = ViewTransformController::CenterOffset(GetCanvasCenter(),
-                                                                    GetImageSize(ImageSizeType::Visible));
+            PointF64 offset = fSession.CenterOffset(GetCanvasCenter());
             // Lock offset when centering
-            fIsOffsetLocked = true;
+            fSession.fIsOffsetLocked = true;
             SetOffset(offset, true);
             fRefreshOperation.End();
         }
     }
 
-    void ViewerApplication::TransformImage(IMUtil::AxisAlignedRotation relativeRotation, IMUtil::AxisAlignedFlip flip)
+    void Viewer::TransformImage(IMUtil::AxisAlignedRotation relativeRotation, IMUtil::AxisAlignedFlip flip)
     {
         fRefreshOperation.Begin();
         SetResamplingEnabled(false);
-        fImageState.Transform(relativeRotation, flip);
-        fImageState.Refresh(ImageProcessingStage::GeometricTransform);
+        fSession.fImageState.Transform(relativeRotation, flip);
+        fSession.fImageState.Refresh(ImageProcessingStage::GeometricTransform);
         AutoPlaceImage(true);
         RefreshImage();
         fRefreshOperation.End();
         SetResamplingEnabled(true);
     }
 
-    void ViewerApplication::SetDownScalingTechnique(DownscalingTechnique technique)
+    void Viewer::SetDownScalingTechnique(DownscalingTechnique technique)
     {
-        if (technique != fDownScalingTechnique)
+        if (technique != fSession.fDownScalingTechnique)
         {
-            fDownScalingTechnique = technique;
-            switch (fDownScalingTechnique)
+            fSession.fDownScalingTechnique = technique;
+            switch (fSession.fDownScalingTechnique)
             {
                 case DownscalingTechnique::None:
-                    fImageState.SetResample(false);
+                    fSession.fImageState.SetResample(false);
                     UpdateMainRenderImages();
                     break;
                 case DownscalingTechnique::HardwareMipmaps:
-                    fImageState.SetResample(false);
+                    fSession.fImageState.SetResample(false);
                     UpdateMainRenderImages();
                     break;
                 case DownscalingTechnique::Software:
-                    fImageState.SetResample(true);
+                    fSession.fImageState.SetResample(true);
                     break;
                 default:
                     LL_EXCEPTION_UNEXPECTED_VALUE;

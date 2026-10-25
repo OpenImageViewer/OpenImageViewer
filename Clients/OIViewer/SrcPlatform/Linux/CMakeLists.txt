@@ -1,16 +1,17 @@
-target_compile_definitions(OIViewer PRIVATE OIVIEWER_PLATFORM_LINUX)
+target_compile_definitions(${TargetName} PUBLIC OIVIEWER_PLATFORM_LINUX)
 
+# GTK remains necessary for image clipboard transfer and existing confirmation/error dialogs.
+# File selection is provided by LWS through the desktop portal instead of GTK.
 if(NOT TARGET PkgConfig::GTK3)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
 endif()
 pkg_check_modules(GIOUnix REQUIRED IMPORTED_TARGET gio-unix-2.0)
-target_link_libraries(OIViewer PRIVATE PkgConfig::GTK3 PkgConfig::GIOUnix)
+target_link_libraries(${TargetName} PUBLIC PkgConfig::GTK3 PkgConfig::GIOUnix)
 
-target_sources(OIViewer PRIVATE
+target_sources(${TargetName} PRIVATE
     ClipboardSetup.cpp
     ContextMenuBackend.cpp
-    EntryPoint.cpp
     ExceptionHandler.cpp
     ExceptionHandler.h
     FileAssociations.cpp
@@ -20,12 +21,11 @@ target_sources(OIViewer PRIVATE
     LinuxKeyBindings.h
     MainWindow.cpp
     MonitorProvider.cpp
-    PlatformFileDialog.cpp
     ShellCommandHandler.cpp
-    ViewerApplication.cpp
-    ViewerApplicationAssociations.cpp
-    ViewerApplicationImage.cpp
-    ViewerApplicationInput.cpp
-    ViewerApplicationPlatformState.h
-    ViewerApplicationUI.cpp
+    Viewer.cpp
+    ViewerImage.cpp
+    ViewerInput.cpp
+    ViewerPlatformState.h
 )
+
+target_sources(${FrontendTarget} PRIVATE EntryPoint.cpp)

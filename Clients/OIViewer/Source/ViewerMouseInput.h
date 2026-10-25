@@ -10,13 +10,13 @@
 
 namespace OIV
 {
-    class ViewerApplication;
+    class Viewer;
 
     class ViewerMouseInput final
     {
       public:
 
-        explicit ViewerMouseInput(ViewerApplication& owner);
+        explicit ViewerMouseInput(Viewer& owner);
 
         void SetButton(LWS::MouseButton button, bool pressed, bool mouseInside);
         void Move(LWS::Point delta);
@@ -24,6 +24,7 @@ namespace OIV
         // mouseInside means the cursor is over the exposed canvas, not just within its bounds.
         void Wheel(double steps, bool mouseInside);
         void Cancel();
+        void CaptureLost();
         [[nodiscard]] int GetNavigationDirection() const;
 
       private:
@@ -36,7 +37,7 @@ namespace OIV
         void ToggleAutoScroll();
         void StopAutoScroll();
 
-        ViewerApplication& fOwner;
+        Viewer& fOwner;
         MouseGestureController fController;
         MouseMultiClickHandler fMultiClick;
         decltype(MouseMultiClickHandler::OnMouseClickEvent)::Subscription fMultiClickSubscription;
