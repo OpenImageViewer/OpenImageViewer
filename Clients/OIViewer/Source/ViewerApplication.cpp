@@ -1,100 +1,86 @@
-#include <iomanip>
-#include <filesystem>
-#include <thread>
-#include <future>
-#include <cassert>
+#include "ViewerApplication.h"
+#include "ViewerResources.h"
+#include "ViewerApplicationPlatformState.h"
 #include <algorithm>
 #include <cmath>
-
-#include "ViewerApplication.h"
-
-#include <Version.h>
-
-#include <LWS/Platform.hpp>
-#ifdef LWS_HAS_WIN32_BACKEND
-    #include <LWS/Win32/WindowExtensions.hpp>
-#endif
-
-#include <LLUtils/Exception.h>
-#include <LLUtils/FileHelper.h>
-#include <LLUtils/PlatformUtility.h>
-#include <LLUtils/StringUtility.h>
-#include <LLUtils/UniqueIDProvider.h>
-#include <LLUtils/FileSystemHelper.h>
-#include <LLUtils/Rect.h>
-
-#include <OIVAppCore/OIVHelper.h>
-#include "Helpers/ClipboardSetup.h"
-#include <OIVAppCore/MessageHelper.h>
-#include <OIVAppCore/ShellIntegrationHelper.h>
-#include "Helpers/ShellCommandHandler.h"
-
-#include <ImageProcessing/FileImage.h>
-#include "VirtualStatusBar.h"
-#include "MonitorProvider.h"
-
-#include "ContextMenu.h"
-#include "Globals.h"
-#include <OIVAppCore/ConfigurationLoader.h>
-#include "CommandRegistry.h"
-#include <OIVAppCore/ColorCountPolicy.h>
-#include <OIVAppCore/ColorCorrectionCommandPolicy.h>
-#include <OIVAppCore/FileChangePolicy.h>
-#include <OIVAppCore/FrameLimiterPolicy.h>
-#include <OIVAppCore/ImageEditPolicy.h>
-#include <OIVAppCore/ImageFormatCatalogPolicy.h>
-#include <OIVAppCore/ImageLoadPresentationPolicy.h>
-#include <OIVAppCore/ImageTransformCommandPolicy.h>
-#include <OIVAppCore/InputGesturePolicy.h>
-#include <OIVAppCore/SelectionWorkflowPolicy.h>
-#include <OIVAppCore/SequencerPolicy.h>
-#include <OIVAppCore/SortCommandPolicy.h>
-#include <OIVAppCore/SubImagePolicy.h>
-#include <OIVAppCore/ViewActionController.h>
-#include <OIVAppCore/ViewCommandPolicy.h>
-#include <OIVAppCore/ViewerPresentationPolicy.h>
-#include <OIVShared/PixelHelper.h>
-#include <ImageUtil/ImageUtil.h>
-#include "InterThreadMessages.h"
-
 namespace OIV
 {
-    void ViewerApplication::Init(LLUtils::native_string_type relativeFilePath, const RendererOptions& rendering)
+    ViewerApplication::ViewerApplication(LWS::PlatformContext& platform, const UserDirectories& directories)
+        : fPlatform(platform), fUserDirectories(directories),
+          fSession(CreateViewerFileWatcher(), [&platform](std::move_only_function<void()> task)
+                   { return platform.PostTask(std::move(task)) == LWS::Result::Success; }),
+          fTimerTopMostRetention(platform),
+          fViewer(platform, fSession, directories, ResolveViewerResources(directories),
+                  {
+                      .created = [this]
+                      { std::ignore = fViewer.fWindow.GetWindow().Center(LWS::CenterTarget::PrimaryMonitor); },
+                      .ready =
+                          [this]
+                      {
+#ifdef LWS_HAS_WIN32_BACKEND
+                          fViewer.EnableRawMouse();
+#endif
+                          InitializeNotificationIcons();
+                          fNotificationContextMenu = std::make_unique<ContextMenu<int>>(fViewer.fWindow.GetWindow());
+                          fNotificationContextMenu->AddItem(LLUTILS_TEXT("Quit"), int{});
+                          std::ignore = fTimerTopMostRetention.SetTargetWindow(&fViewer.fWindow.GetWindow());
+                          fTimerTopMostRetention.SetCallback(fViewer.MakeSafeCallback([this] { ProcessTopMost(); }));
+                          StartFileAssociationOperation(FileAssociationAction::Check);
+                      },
+                      // Unsubscribe native desktop callbacks while the viewer still exists. These services precede
+                      // the viewer in ownership order and can otherwise outlive its C++ subobject during teardown.
+                      .stop =
+                          [this]
+                      {
+                          StopFileAssociationOperation();
+                          fTimerTopMostRetention.SetInterval(0);
+#ifdef LWS_HAS_WIN32_BACKEND
+                          if (fNativeWindowState)
+                              fNativeWindowState->notificationSubscription.Unsubscribe();
+#endif
+                          fNotificationContextMenu.reset();
+                      },
+                      .close        = [this](bool tray) { CloseApplication(tray); },
+                      .destroyed    = [this] { fPlatform.RequestQuit(); },
+                      .showSettings = [this] { ShowSettings(); },
+                      .topMost =
+                          [this]
+                      {
+                          if (fViewer.fWindow.GetWindow().SetAlwaysOnTop(true) == LWS::Result::Success)
+                          {
+                              fTopMostCounter = 3;
+                              SetTopMostUserMesage();
+                              fTimerTopMostRetention.SetInterval(1000);
+                          }
+                      },
+                      .openExternalFile =
+                          [this](LLUtils::native_string_type path)
+                      {
+                          fViewer.LoadFile(std::move(path), IMCodec::PluginTraverseMode::NoTraverse);
+                          std::ignore = fViewer.fWindow.GetWindow().SetVisible(true);
+                      },
+                      .fileAssociations = [this](const auto& request, auto& result)
+                      { CMD_FileAssociations(request, result); },
+                      .associationNotice = [this](const auto& notice) { HandleFileAssociationNotice(notice); },
+                  })
     {
-        using namespace std;
-        using namespace placeholders;
+        InitializeShellState();
+    }
+    ViewerApplication::~ViewerApplication()
+    {
+        fViewer.Stop();
+    }
 
-        LLUtils::native_string_type filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
-        filePath                             = std::filesystem::path(filePath).lexically_normal();
-
-        const bool isDirectory = std::filesystem::is_directory(filePath);
-
-        const bool isInitialFileProvided = filePath.empty() == false && isDirectory == false;
-        const bool isInitialFileExists   = isInitialFileProvided && filesystem::exists(filePath);
-
-        if (isDirectory)
-            fPendingFolderLoad = filePath;
-
-        // Declare metadata before the future so the worker finishes before it is destroyed
-        // during unwinding. The UI thread reads it only after future::get completes.
-        IMCodec::ItemMetaDataSharedPtr initialMetaData;
-        future<IMCodec::ImageSharedPtr> asyncResult;
-
-        if (isInitialFileExists == true)
-        {
-            fIsTryToLoadInitialFile = true;
-
-            // Decode pixels and metadata while the UI thread initializes the renderer.
-            // No OIV wrapper is constructed on the worker.
-            asyncResult = async(launch::async,
-                                [this, &filePath, &initialMetaData]()
-                                {
-                                    return DecodeFileImage(fImageLoader, filePath, initialMetaData,
-                                                           IMCodec::PluginTraverseMode::AnyPlugin |
-                                                               IMCodec::PluginTraverseMode::AnyFileType);
-                                });
-        }
-
+    void ViewerApplication::Init(LLUtils::native_string_type path, const RendererOptions& options)
+    {
+        fViewer.Init(std::move(path), options, WindowConfig());
+    }
+    LWS::LoopResult ViewerApplication::Run()
+    {
+        return fPlatform.RunMessageLoop();
+    }
+    LWS::WindowConfig ViewerApplication::WindowConfig() const
+    {
         // initialize the windowing system of the window
         // The historical 1200x800 native window was calibrated at 125% scaling. LWS uses 96-DPI logical units, so
         // this client estimate preserves that reference footprint while remaining portable.
@@ -115,393 +101,11 @@ namespace OIV
                 std::max(1, static_cast<int32_t>(std::lround(initialClientSize.y * scale))),
             };
         }
-        const LWS::WindowConfig windowConfig{
+        return {
             .clientSize         = initialClientSize,
-            .styles             = LWS::WindowStyleFlags(WindowChromeStyles),
+            .styles             = LWS::WindowStyleFlags(Viewer::WindowChromeStyles),
             .backgroundColor    = LLUtils::Color(45, 45, 48),
             .dragAndDropEnabled = fPlatform.Supports(LWS::PlatformFeature::DragAndDrop).value_or(false),
         };
-        if (fWindow.Create(windowConfig) != LWS::Result::Success)
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create the main window");
-        std::ignore = fWindow.GetWindow().Center(LWS::CenterTarget::PrimaryMonitor);
-        fMonitorProvider.UpdateFromWindow(fWindow.GetWindow());
-#ifdef LWS_HAS_WIN32_BACKEND
-        std::ignore = LWS::Win32::SetMenuChar(fWindow.GetWindow(), false);
-#endif
-        fWindow.ShowStatusBar(false);
-        std::ignore = fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
-
-        AutoScroll::CreateParams params = {&fWindow.GetWindow(),
-                                           std::bind(&ViewerApplication::OnScroll, this, std::placeholders::_1)};
-        fAutoScroll                     = std::make_unique<AutoScroll>(params);
-
-        auto windowConnection = fWindow.GetWindow().Listen(
-            [this](const LWS::AnyEvent& eventData)
-            {
-                if (std::holds_alternative<LWS::EventWindowDestroying>(eventData))
-                    ReleaseWindowResources();
-                if (std::holds_alternative<LWS::EventWindowDestroyed>(eventData))
-                    fPlatform.RequestQuit();
-                return HandleEventCallback([&]() { return HandleMessages(eventData); }) ? LWS::EventResponse::Handled
-                                                                                        : LWS::EventResponse::Unhandled;
-            });
-        auto canvasConnection = fWindow.GetCanvasWindow().Listen(
-            [this](const LWS::AnyEvent& eventData)
-            {
-                if (std::holds_alternative<LWS::EventWindowDestroying>(eventData))
-                    ReleaseWindowResources();
-                return HandleEventCallback([&]() { return HandleClientWindowMessages(eventData); })
-                           ? LWS::EventResponse::Handled
-                           : LWS::EventResponse::Unhandled;
-            });
-        if (!windowConnection.has_value() || !canvasConnection.has_value())
-            LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to register window listeners");
-        fWindowConnection = std::move(*windowConnection);
-        fCanvasConnection = std::move(*canvasConnection);
-
-        fRefreshOperation.Begin();
-
-        std::ignore = fTimerNoActiveZoom.SetTargetWindow(&fWindow.GetWindow());
-
-        fTimerNoActiveZoom.SetCallback(MakeSafeCallback([this]() { DelayResamplingCallback(); }));
-
-        std::ignore = fTimerNavigation.SetTargetWindow(&fWindow.GetWindow());
-        fTimerNavigation.SetCallback(MakeSafeCallback(
-            [this]()
-            {
-                const int jump = GetRawNavigationDirection();
-
-                if (jump != 0 &&
-                    fLastImageLoadTimeStamp.GetElapsedTimeInteger(LLUtils::StopWatch::Milliseconds) > fQuickBrowseDelay)
-                {
-                    fLastImageLoadTimeStamp.Start();
-                    fLastImageLoadTimeStamp.Stop();
-
-                    if (JumpFiles(jump) == false)
-                    {
-                        fLastImageLoadTimeStamp.Start();
-                    }
-                }
-            }));
-
-        // TODO: move sequencer initialiaztion to PostInitOperations.
-        std::ignore = fSequencerTimer.SetTargetWindow(&fWindow.GetWindow());
-        fSequencerTimer.SetCallback(MakeSafeCallback(
-            [this]()
-            {
-                const auto now = SequencerPolicy::Clock::now();
-                if (const auto remaining = fSequencerPolicy.RemainingFrameMs(now); remaining != 0)
-                {
-                    // A queued tick may predate a speed/settings change. The policy deadline,
-                    // rather than the old platform notification, decides when this frame ends.
-                    fSequencerTimer.SetInterval(remaining);
-                }
-                else
-                {
-                    auto currentImage = fImageState.GetOpenedImage()->pixels->GetSubImage(fCurrentFrame);
-                    fImageState.SetSelectedSource(currentImage);
-                    fSequencerTimer.SetInterval(
-                        fSequencerPolicy.StartFrame(currentImage->GetAnimationData().delayMilliseconds, now));
-                    fCurrentFrame = SequencerPolicy::NextFrame(fCurrentFrame,
-                                                               fImageState.GetOpenedImage()->pixels->GetNumSubImages());
-                    RefreshImage();
-                }
-            }));
-
-        fMessageManager = std::make_unique<MessageManager>(fWindow.GetWindow(), &fLabelManager, 5,
-                                                           MakeSafeCallback([this]() { fRefreshOperation.Queue(); }));
-
-        // Stop LWS buffer attachments before the renderer takes ownership of the canvas. On Wayland,
-        // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
-        std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
-        InitializeRenderer(rendering);
-        UpdateRenderViewParams();
-        fLabelManager.InitializeRenderer(*fRenderer);
-
-        // Capture the canvas extent for the first presentation.
-        UpdateWindowSize();
-        fWindow.ShowCanvas();
-
-        IMCodec::ImageSharedPtr initialImage;
-        if (asyncResult.valid())
-            initialImage = asyncResult.get();
-        const bool isInitialFileLoadedSuccesfuly = initialImage != nullptr;
-
-        // If there is no initial file or the file has failed to load, show the window now, otherwise show the window
-        // after the image has rendered completely at the method FinalizeImageLoad.
-        std::ignore = fWindow.GetWindow().SetVisible(!isInitialFileLoadedSuccesfuly);
-
-        // If initial file is provided but doesn't exist
-        if (isInitialFileProvided && !isInitialFileExists)
-        {
-            using namespace std::string_literals;
-            SetUserMessage(LLUTILS_TEXT("Can not load the file: "s) + filePath + LLUTILS_TEXT(", it doesn't exist"s),
-                           static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
-        }
-
-        fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
-
-        if (isInitialFileLoadedSuccesfuly)
-        {
-            LoadOivImage(ViewerImage{.pixels   = std::move(initialImage),
-                                     .metadata = std::move(initialMetaData),
-                                     .source   = ImageSource::File,
-                                     .path     = std::filesystem::path(filePath).lexically_normal().native()});
-        }
     }
-
-    IMCodec::ImageSharedPtr ViewerApplication::GetImageByIndex(int32_t index)
-    {
-        using namespace IMCodec;
-        auto openedImage = fImageState.GetOpenedImage()->pixels;
-
-        const auto isMainAnActualImage = SubImagePolicy::IncludeMainImage(openedImage->GetItemType());
-        const auto actualIndex         = SubImagePolicy::ActualImageIndexFromDisplayIndex(index, isMainAnActualImage);
-
-        if (actualIndex == SubImagePolicy::MainImageIndex)
-        {
-            return openedImage;
-        }
-        else
-        {
-            return openedImage->GetSubImage(actualIndex);
-        }
-    }
-
-    void ViewerApplication::PostInitOperations()
-    {
-        std::ignore = fTimerTopMostRetention.SetTargetWindow(&fWindow.GetWindow());
-        fTimerTopMostRetention.SetCallback(MakeSafeCallback([this]() { ProcessTopMost(); }));
-
-        std::ignore = fTimerSlideShow.SetTargetWindow(&fWindow.GetWindow());
-        fTimerSlideShow.SetCallback(MakeSafeCallback(
-            [this]()
-            {
-                SetSlideShowEnabled(false);
-
-                if (fBrowseSessionController == nullptr)
-                    return;
-
-                const auto& fileList = fBrowseSessionController->GetFolderFileList();
-                bool foundFile       = JumpFiles(1) ||
-                                       (fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(), fileList.GetSize()) &&
-                                        JumpFiles(FolderFileList::IndexStart));
-
-                SetSlideShowEnabled(foundFile);
-            }));
-
-        fDoubleTap.callback = [this]()
-        {
-            if (fWindow.GetWindow().SetAlwaysOnTop(true) == LWS::Result::Success)
-            {
-                fTopMostCounter = 3;
-                SetTopMostUserMesage();
-                fTimerTopMostRetention.SetInterval(1000);
-            }
-        };
-
-        const ImageFormatCatalog imageFormatCatalog = ImageFormatCatalogPolicy::Build(
-            fImageLoader.GetImageCodec().GetPluginsInfo());
-
-        LWS::ListFileDialogFilters readFilters;
-        LWS::ListFileDialogFilters writeFilters;
-
-        for (const ImageFormatFilter& filter : imageFormatCatalog.readFilters)
-            readFilters.push_back({filter.description, filter.extensions});
-
-        for (const ImageFormatFilter& filter : imageFormatCatalog.writeFilters)
-            writeFilters.push_back({filter.description, filter.extensions});
-
-        fKnownFileTypesSet          = imageFormatCatalog.knownFileTypesSet;
-        fKnownFileTypes             = imageFormatCatalog.knownFileTypes;
-        fDefaultSaveFileExtension   = imageFormatCatalog.defaultSaveFileExtension;
-        fDefaultSaveFileFormatIndex = imageFormatCatalog.defaultSaveFileFormatIndex;
-
-        fOpenComDlgFilters = std::move(readFilters);
-        fSaveComDlgFilters = std::move(writeFilters);
-
-        if (fFileWatcher != nullptr)
-        {
-            fFileWatchSubscription = fFileWatcher->GetFileChangedEvent().Subscribe(
-                std::bind(&ViewerApplication::OnFileChanged, this, std::placeholders::_1));
-        }
-
-        fBrowseSessionController = std::make_unique<BrowseSessionController>(
-            fFileWatcher.get(), &fFileSorter, fKnownFileTypesSet, fKnownFileTypes, fImageResidencyCache,
-            [this](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
-            {
-                if (!fIsShuttingDown)
-                {
-                    QueueUiCompletion(static_cast<std::underlying_type_t<InterThreadMessages>>(
-                                          InterThreadMessages::FileIndexResidencyReady),
-                                      FileIndexResidencyReadyData{fileName, image});
-                }
-            },
-            [this](const BrowseSessionController::BrowseCandidateCompletion& completion)
-            {
-                if (!fIsShuttingDown)
-                {
-                    QueueUiCompletion(static_cast<std::underlying_type_t<InterThreadMessages>>(
-                                          InterThreadMessages::CandidateResidencyReady),
-                                      CandidateResidencyReadyData{completion});
-                }
-            });
-        fImageOpenController->SetBrowseSessionController(fBrowseSessionController.get());
-
-        if (IsOpenedImageIsAFile())
-            (void) fBrowseSessionController->CommitCurrentFile(GetOpenedFileName());
-        UpdateTitle();
-
-        AddCommandsAndKeyBindings();
-
-        fImageSelectionSubscription = fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Subscribe(
-            std::bind(&ViewerApplication::OnImageSelectionChanged, this, std::placeholders::_1));
-
-        std::ignore = fContextMenuTimer.SetTargetWindow(&fWindow.GetWindow());
-        fContextMenuTimer.SetCallback(MakeSafeCallback([this]() { OnContextMenuTimer(); }));
-        fContextMenu = std::make_unique<ContextMenu<MenuItemData>>(fWindow.GetWindow());
-
-        fContextMenu->AddItem(LLUTILS_TEXT("Open"), MenuItemData{"cmd_open_file", ""});
-        fContextMenu->AddItem(LLUTILS_TEXT("Open containing folder"),
-                              MenuItemData{"cmd_shell", "cmd=containingFolder"});
-        fContextMenu->AddItem(LLUTILS_TEXT("Open in new window"), MenuItemData{"cmd_shell", "cmd=newWindow"});
-        fContextMenu->AddItem(LLUTILS_TEXT("Open in photoshop"), MenuItemData{"cmd_shell", "cmd=openPhotoshop"});
-        fContextMenu->AddItem(LLUTILS_TEXT("Quit"), MenuItemData{"cmd_view_state", "type=quit"});
-
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open containing folder"),
-                                 fImageState.GetOpenedImage() != nullptr &&
-                                     fImageState.GetOpenedImage()->source == ImageSource::File);
-        fContextMenu->EnableItem(LLUTILS_TEXT("Open in photoshop"),
-                                 fImageState.GetOpenedImage() != nullptr &&
-                                     fImageState.GetOpenedImage()->source == ImageSource::File);
-
-        InitializeNotificationIcons();
-
-        fNotificationContextMenu = std::make_unique<ContextMenu<int>>(fWindow.GetWindow());
-        fNotificationContextMenu->AddItem(LLUTILS_TEXT("Quit"), int{});
-
-        InitializeRawInput();
-
-        LoadSettings();
-
-        if (fReloadSettingsFileIfChanged && fFileWatcher != nullptr)
-            fCOnfigurationFolderID = fFileWatcher->AddFolder(LLUtils::PlatformUtility::GetExeFolder() +
-                                                             LLUTILS_TEXT("./Resources/Configuration/."));
-
-        if (fPendingFolderLoad.empty() == false)
-        {
-            LoadFileOrFolder(fPendingFolderLoad,
-                             IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType);
-            fPendingFolderLoad.clear();
-        }
-
-        if (IsImageOpen() == false)
-        {
-            ShowWelcomeMessage();
-            UpdateTitle();
-        }
-
-        ClipboardSetup::RegisterDefaultFormats(fClipboardHelper);
-        StartFileAssociationOperation(FileAssociationAction::Check);
-    }
-
-    LLUtils::PointF64 ViewerApplication::GetImageSize(ImageSizeType imageSizeType)
-    {
-        using namespace LLUtils;
-        switch (imageSizeType)
-        {
-            case ImageSizeType::Original:
-                return fImageState.GetRetainedImage(ImageProcessingStage::Source) != nullptr
-                           ? PointF64(fImageState.GetRetainedImage(ImageProcessingStage::Source)->GetDimensions())
-                           : PointF64(0, 0);
-            case ImageSizeType::Transformed:
-                return static_cast<PointF64>(
-                    fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform)->GetDimensions());
-            case ImageSizeType::Visible:
-                return fImageState.GetVisibleSize();
-
-            default:
-                LL_EXCEPTION_UNEXPECTED_VALUE;
-        }
-    }
-
-    LLUtils::PointI32 ViewerApplication::SnapToScreenSpaceImagePixels(LLUtils::PointI32 pointOnScreen)
-    {
-        return SelectionWorkflowPolicy::SnapToImagePixels(pointOnScreen, GetScale(), GetOffset());
-    }
-
-    LLUtils::RectI32 ViewerApplication::ClientToImageRounded(LLUtils::RectI32 clientRect) const
-    {
-        return static_cast<LLUtils::RectI32>(ClientToImage(clientRect).Round());
-    }
-
-    LLUtils::PointF64 ViewerApplication::GetOffset() const
-    {
-        return fImageState.GetOffset();
-    }
-
-    LLUtils::PointF64 ViewerApplication::ImageToClient(LLUtils::PointF64 imagepos) const
-    {
-        return ViewTransformController::ImageToClient(imagepos, GetScale(), GetOffset());
-    }
-
-    LLUtils::RectF64 ViewerApplication::ImageToClient(LLUtils::RectF64 clientRect) const
-    {
-        return ViewTransformController::ImageToClient(clientRect, GetScale(), GetOffset());
-    }
-
-    LLUtils::PointF64 ViewerApplication::ClientToImage(LLUtils::PointI32 clientPos) const
-    {
-        return ViewTransformController::ClientToImage(static_cast<LLUtils::PointF64>(clientPos), GetScale(),
-                                                      GetOffset());
-    }
-
-    LLUtils::RectF64 ViewerApplication::ClientToImage(LLUtils::RectI32 clientRect) const
-    {
-        return ViewTransformController::ClientToImage(static_cast<LLUtils::RectF64>(clientRect), GetScale(),
-                                                      GetOffset());
-    }
-
-    LLUtils::PointF64 ViewerApplication::GetCanvasCenter()
-    {
-        using namespace LLUtils;
-
-        PointF64 canvasCenter;
-
-        if (fWindow.GetWindow().GetWindowMode() != LWS::WindowMode::FullscreenAllMonitors) [[likely]]
-        {
-            const LWS::PixelSize size = fWindow.GetCanvasPixelSize();
-            canvasCenter              = PointF64(size.x, size.y) / 2.0;
-        }
-        else [[unlikely]]
-        {
-            const auto primaryMonitor   = fPlatform.GetPrimaryMonitor(false)->monitorRect;
-            const auto boundingArea     = *fPlatform.GetBoundingMonitorArea();
-            const auto primaryMonitorP0 = primaryMonitor.GetCorner(TopLeft);
-            const auto boundingAreaP0   = boundingArea.GetCorner(TopLeft);
-
-            using point_type     = PointF64::point_type;
-            const auto leftDelta = primaryMonitorP0.x - boundingAreaP0.x;
-            const auto topDelta  = primaryMonitorP0.y - boundingAreaP0.y;
-
-            const LLUtils::PointF64 primaryScreenOffset = LLUtils::PointF64(static_cast<point_type>(leftDelta),
-                                                                            static_cast<point_type>(topDelta));
-
-            const LLUtils::PointF64 primaryScreenSize = LLUtils::PointF64(
-                static_cast<point_type>(primaryMonitor.GetWidth()),
-                static_cast<point_type>(primaryMonitor.GetHeight()));
-
-            canvasCenter = primaryScreenOffset + primaryScreenSize / 2.0;
-        }
-        return canvasCenter;
-    }
-
-    LLUtils::PointF64 ViewerApplication::ResolveOffset(const LLUtils::PointF64& point)
-    {
-        using namespace LLUtils;
-        const LWS::PixelSize size = fWindow.GetCanvasPixelSize();
-        return ViewTransformController::ResolveOffset(point, PointF64(size.x, size.y),
-                                                      GetImageSize(ImageSizeType::Visible), fImageMargins);
-    }
-
 }  // namespace OIV

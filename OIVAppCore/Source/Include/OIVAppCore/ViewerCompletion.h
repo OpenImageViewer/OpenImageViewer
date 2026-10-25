@@ -6,21 +6,10 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 
 namespace OIV
 {
-    enum class InterThreadMessages : uint16_t
-    {
-        FileChanged,
-        FileIndexResidencyReady,
-        CandidateResidencyReady,
-        AutoScroll,
-        FirstFrameDisplayed,
-        LoadFileExternally,
-        CountColors,
-        FileAssociations
-    };
-
     struct FileIndexResidencyReadyData
     {
         LLUtils::native_string_type fileName;
@@ -36,5 +25,13 @@ namespace OIV
         uint64_t generation;
         // Unique color count or the existing failure sentinel.
         int64_t colorCount;
+    };
+    // Each payload carries its own type. There is no independent numeric tag that can disagree with the data.
+    using CompletionPayload = std::variant<FileIndexResidencyReadyData, CandidateResidencyReadyData, CountColorsData,
+                                           FileAssociationNotice, IFileWatcher::FileChangedEventArgs>;
+    struct ViewerCompletion
+    {
+        CompletionPayload data;
+        LLUtils::OperationId operationId;
     };
 }  // namespace OIV

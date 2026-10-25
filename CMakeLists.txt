@@ -21,6 +21,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 option(OIV_BUILD_CLIENT "Build client application" TRUE)
+option(OIV_BUILD_WLX "Build the Windows x64 WLX frontend instead of the executable" OFF)
+if(OIV_BUILD_WLX)
+    if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "The WLX frontend currently requires Windows x64")
+    endif()
+    if(NOT OIV_BUILD_CLIENT)
+        message(FATAL_ERROR "OIV_BUILD_WLX requires OIV_BUILD_CLIENT")
+    endif()
+endif()
+
 option(OIV_BUILD_TESTS "Build tests application" TRUE)
 option(OIV_OFFICIAL_BUILD "Create official binary of OIV" FALSE)
 option(OIV_OFFICIAL_RELEASE "Build official release of OIV" FALSE)
@@ -187,12 +197,17 @@ add_subdirectory(./External/LLUtils)
 # every translation unit, including consumers with explicit nested include paths.
 include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/External/LLUtils/Include")
 
-set(LWS_BUILD_TESTS OFF CACHE BOOL "Build LWS tests" FORCE)
+option(LWS_BUILD_TESTS "Build LWS tests" OFF)
+# The viewer uses LWS core services. Build optional controls only when explicitly requested.
+option(LWS_BUILD_UI "Build optional LWSUI controls" OFF)
 add_subdirectory(./External/LWS)
 
     add_subdirectory(OIVShared)
 
     option(IMCODEC_BUILD_EXAMPLES "Build Codec FREEIMAGE" FALSE)
+    if(OIV_BUILD_WLX)
+        set(IMCODEC_DELAY_LOAD OFF CACHE BOOL "Delay load codec runtime DLLs on Windows" FORCE)
+    endif()
     add_subdirectory(./External/ImageCodec)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

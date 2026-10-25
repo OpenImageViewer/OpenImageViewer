@@ -6,6 +6,7 @@
 param (
     [string]$BuildType = "RelWithDebInfo",
     [string]$BuildDir = "publish",
+    [ValidateNotNullOrEmpty()][string]$BuildTarget = "OIViewer",
     [bool]$EnableConfigure = $true,
     [bool]$EnableBuild = $true,
     [bool]$EnablePackage = $true,
@@ -1020,6 +1021,7 @@ function New-PublishContext {
         VersionHeader            = $versionHeader
         GitDir                   = $gitDir
         BuildType                = $Options.BuildType
+        BuildTarget              = $Options.BuildTarget
         EnableConfigure          = $Options.EnableConfigure
         EnableBuild              = $Options.EnableBuild
         EnablePackage            = $Options.EnablePackage
@@ -1120,8 +1122,8 @@ function Invoke-CMakeConfigure {
 function Invoke-CMakeBuild {
     param([object]$Context)
 
-    Write-Host "Building OIViewer..."
-    $buildArgs = @("--build", $Context.BuildDir, "--config", $Context.BuildType, "--target", "OIViewer")
+    Write-Host "Building $($Context.BuildTarget)..."
+    $buildArgs = @("--build", $Context.BuildDir, "--config", $Context.BuildType, "--target", $Context.BuildTarget)
     $commandArgs = @{
         FilePath     = Get-RequiredToolPath $Context.Tools "CMake" "CMake build"
         Arguments    = $buildArgs
@@ -1234,6 +1236,7 @@ function Invoke-Package {
 function Run-OIVBuild {
     $options = [PSCustomObject]@{
         BuildType                = $BuildType
+        BuildTarget              = $BuildTarget
         BuildDir                 = $BuildDir
         EnableConfigure          = $EnableConfigure
         EnableBuild              = $EnableBuild
@@ -1285,6 +1288,11 @@ function Run-OIVBuild {
 #---------------------------------------------------------------
 # Top-Level Script Wrapper
 #---------------------------------------------------------------
+
+# Dot-sourcing exposes build helpers for validation without discovering tools or starting a build.
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
 
 $NotifyBuildFailed = $true
 

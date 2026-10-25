@@ -12,10 +12,9 @@ namespace OIV
     {
       public:
 
-        static void AddConfiguredCommands(CommandManager& commandManager)
+        static void AddConfiguredCommands(CommandManager& commandManager,
+                                          const ConfigurationLoader::CommandGroupList& commandGroups)
         {
-            const auto commandGroups = ConfigurationLoader::LoadCommandGroups();
-
             for (const auto& commandGroup : commandGroups)
             {
                 commandManager.AddCommandGroup({commandGroup.commandGroupID, commandGroup.commandDisplayName,

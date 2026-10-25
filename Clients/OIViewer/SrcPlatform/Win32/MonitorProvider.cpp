@@ -23,8 +23,7 @@ namespace OIV
                 if (monitorDesc.has_value() && monitorDesc->handle == monitorHandle)
                 {
                     fMonitorDesc = *monitorDesc;
-                    const EventManager::MonitorChangeEventParams args{.monitorDesc = fMonitorDesc};
-                    EventManager::GetSingleton().MonitorChange.Raise(args);
+                    Changed.Raise(fMonitorDesc);
                 }
             }
         }

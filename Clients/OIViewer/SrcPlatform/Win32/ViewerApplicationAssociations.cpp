@@ -35,11 +35,11 @@ namespace OIV
 
     void ViewerApplication::HandleFileAssociationNotice(const FileAssociationNotice& notice)
     {
-        if (fIsShuttingDown || fFileAssociations == nullptr ||
+        if (fViewer.fIsShuttingDown || fFileAssociations == nullptr ||
             (notice.requestId != 0 && notice.requestId != fAssociationRequestId))
             return;
 
-        const HWND owner = *LWS::Win32::GetHwnd(fWindow.GetWindow());
+        const HWND owner = *LWS::Win32::GetHwnd(fViewer.fWindow.GetWindow());
         switch (notice.kind)
         {
             case FileAssociationNotice::Kind::Prompt:
@@ -68,7 +68,8 @@ namespace OIV
                 int button           = IDCANCEL;
                 const HRESULT result = TaskDialogIndirect(&config, &button, nullptr, nullptr);
                 // A task dialog runs nested dispatch. The owner may have shut down while it was open.
-                if (!fIsShuttingDown && fFileAssociations != nullptr && notice.requestId == fAssociationRequestId)
+                if (!fViewer.fIsShuttingDown && fFileAssociations != nullptr &&
+                    notice.requestId == fAssociationRequestId)
                 {
                     const auto choice = SUCCEEDED(result) && button == IDYES ? FileAssociationChoice::Associate
                                         : SUCCEEDED(result) && button == GlobalOptOutButton
@@ -84,7 +85,7 @@ namespace OIV
             }
             case FileAssociationNotice::Kind::OpenSettings:
             {
-                SetUserMessage(notice.message, 0, MessageFlags::Persistent);
+                fViewer.SetUserMessage(notice.message, 0, MessageFlags::Persistent);
                 LL_LOG(AssociationLog(), LLUtils::LogLevel::Warning, "{}",
                        LLUtils::StringUtility::ToAString(notice.message));
                 auto launched = reinterpret_cast<INT_PTR>(
@@ -100,10 +101,10 @@ namespace OIV
                 break;
             }
             case FileAssociationNotice::Kind::Completed:
-                SetUserMessage(notice.message);
+                fViewer.SetUserMessage(notice.message);
                 break;
             case FileAssociationNotice::Kind::ActionFailed:
-                SetUserMessage(notice.message);
+                fViewer.SetUserMessage(notice.message);
                 [[fallthrough]];
             case FileAssociationNotice::Kind::CheckFailed:
                 LL_LOG(AssociationLog(), LLUtils::LogLevel::Warning, "{}",

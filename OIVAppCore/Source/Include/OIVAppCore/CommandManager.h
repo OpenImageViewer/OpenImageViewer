@@ -110,13 +110,17 @@ namespace OIV
             return {};
         }
 
+        Command* FindCommand(const std::string& name)
+        {
+            const auto it = fCommands.find(name);
+            return it != fCommands.end() ? &it->second : nullptr;
+        }
+
         bool ExecuteCommand(const CommandManager::CommandRequest& request, CommandResult& out_result)
         {
-            auto it = fCommands.find(request.commandName);
-
-            if (it != fCommands.end())
+            if (auto* command = FindCommand(request.commandName))
             {
-                it->second.Execute(request, out_result);
+                command->Execute(request, out_result);
                 return true;
             }
             return false;

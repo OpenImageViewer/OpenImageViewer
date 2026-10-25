@@ -63,6 +63,7 @@ namespace OIV
                        RequestRefreshCallbackType callback);
         // Stop label-dependent producers before LabelManager releases their targets.
         void Stop();
+        void OnWindowSizeChange(const LWS::PixelSize& params);
         void SetUserMessage(uint32_t groupID, MessageFlags commandGroup, const LLUtils::native_string_type& message);
         void UpdateMessagesPosition();
         void RemoveGroup(GroupID groupID);
@@ -77,7 +78,6 @@ namespace OIV
         void CreateMessageTemplate(MessageData& messageData);
         void UpdateMessage(const LLUtils::native_string_type& message, MessageData& messageData);
         void OnRefresh();
-        void OnWindowSizeChange(const EventManager::SizeChangeEventParams& sizeChangedParams);
 
       private:
 
@@ -111,7 +111,5 @@ namespace OIV
         int32_t fMarginTop = 20;
         // Right wrapping margin in client pixels.
         int32_t fMarginRight = 20;
-        // Owned size-change subscription removed before label cleanup.
-        EventManager::SizeChangeEvent::Subscription fSizeSubscription;
     };
 }  // namespace OIV

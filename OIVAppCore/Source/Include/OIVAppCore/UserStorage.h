@@ -12,7 +12,12 @@ namespace OIV
         std::filesystem::path config;
         std::filesystem::path state;
         std::filesystem::path cache;
-        static UserDirectories Resolve();
+        // The frontend supplies one trusted directory name, keeping its settings, state, and cache lease
+        // independent of other profiles. The default preserves the standalone application's storage root.
+        static UserDirectories Resolve(std::string_view applicationName = "OIViewer");
+        // Seed a complete settings file from bundled defaults on first use. Existing user settings win,
+        // and concurrent startups serialize initialization before atomically publishing the file.
+        std::filesystem::path InitializeSettings(const std::filesystem::path& defaults) const;
         std::filesystem::path GeneratedCache() const { return cache / "Generated"; }
     };
 

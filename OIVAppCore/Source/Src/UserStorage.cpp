@@ -3,6 +3,7 @@
 #include <OIVShared/FileLock.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/PlatformUtility.h>
+#include <LLUtils/ScopedFileLock.h>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <fstream>
@@ -48,16 +49,16 @@ namespace OIV
         }
     }  // namespace
 
-    UserDirectories UserDirectories::Resolve()
+    UserDirectories UserDirectories::Resolve(std::string_view applicationName)
     {
 #ifdef _WIN32
         const auto roaming = LLUtils::PlatformUtility::GetAppDataFolder();
         if (roaming.empty())
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Windows roaming AppData is unavailable");
-        const auto root = std::filesystem::path(roaming) / "OIViewer";
+        const auto root = std::filesystem::path(roaming) / applicationName;
         return {root / "Config", root / "State", root / "Cache"};
 #else
-        const auto resolve = [](const char* variable, const char* suffix)
+        const auto resolve = [applicationName](const char* variable, const char* suffix)
         {
             std::filesystem::path base;
             if (const char* configured = std::getenv(variable); configured != nullptr)
@@ -70,11 +71,39 @@ namespace OIV
                                  "An absolute HOME is required for OIViewer user directories");
                 base = std::filesystem::path(home) / suffix;
             }
-            return base / "OIViewer";
+            return base / applicationName;
         };
         return {resolve("XDG_CONFIG_HOME", ".config"), resolve("XDG_STATE_HOME", ".local/state"),
                 resolve("XDG_CACHE_HOME", ".cache")};
 #endif
+    }
+
+    std::filesystem::path UserDirectories::InitializeSettings(const std::filesystem::path& defaults) const
+    {
+        const auto settings    = config / "Settings.json";
+        const auto hasSettings = [&]
+        {
+            const auto status = std::filesystem::status(settings);
+            if (std::filesystem::exists(status) && !std::filesystem::is_regular_file(status))
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::BadParameters, "User settings must be a regular file");
+            return std::filesystem::exists(status);
+        };
+        if (!hasSettings())
+        {
+            std::filesystem::create_directories(config);
+            const LLUtils::ScopedFileLock initialization(config / ".settings-init.lock");
+            if (!hasSettings())
+            {
+                std::ifstream input(defaults, std::ios::binary);
+                if (!input)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Could not open bundled settings");
+                const std::string content{std::istreambuf_iterator<char>(input), {}};
+                if (input.bad())
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Could not read bundled settings");
+                WriteFileAtomically(settings, std::as_bytes(std::span(content.data(), content.size())));
+            }
+        }
+        return settings;
     }
 
     StorageSession::StorageSession(UserDirectories directories, std::string_view version)
@@ -90,8 +119,7 @@ namespace OIV
         fDirectories.cache  = std::filesystem::weakly_canonical(fDirectories.cache);
         ValidateCleanupBoundary(fDirectories);
         std::filesystem::create_directories(fDirectories.cache);
-        FileLock startup(fDirectories.cache / ".startup.lock");
-        startup.Lock(true, true);
+        const LLUtils::ScopedFileLock startup(fDirectories.cache / ".startup.lock");
         fCacheLease       = std::make_unique<FileLock>(fDirectories.cache / ".active.lock");
         const auto marker = fDirectories.cache / "cache-state.json";
         std::string previousVersion;

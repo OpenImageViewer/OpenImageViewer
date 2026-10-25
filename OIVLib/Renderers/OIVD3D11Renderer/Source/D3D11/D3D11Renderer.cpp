@@ -216,11 +216,11 @@ namespace OIV
 
     void D3D11Renderer::CreateShaders()
     {
-        using namespace std;
         using path = std::filesystem::path;
 
-        path executableDirPath = LLUtils::PlatformUtility::GetExeFolder();
-        path programsPath      = executableDirPath / L"Resources/Programs";
+        // A WLX renderer lives in a different module from the host executable. Resolve shader source
+        // beside this module so a cold plugin cache never depends on the standalone application's bytecode.
+        const path programsPath = path(LLUtils::PlatformUtility::GetDllFolder()) / "Resources" / "Programs";
 
         fImageVertexShader = std::make_unique<D3D11VertexShader>(fDevice);
         fImageVertexShader->SetSourceFileName(programsPath / L"QuadVP.shader");

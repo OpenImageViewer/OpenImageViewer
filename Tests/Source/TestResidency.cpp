@@ -302,6 +302,41 @@ TEST_CASE("PriorityTaskExecutor preserves submission order for equal priorities"
     REQUIRE(processedOrder == std::vector<int>{1, 2});
 }
 
+TEST_CASE("Explicit executor shutdown cancels queued work and joins running work", "[TaskExecutor][wlx]")
+{
+    std::latch started(1), release(1);
+    PriorityTaskExecutor<int, int> executor(1,
+                                            [&](int value)
+                                            {
+                                                started.count_down();
+                                                release.wait();
+                                                return value;
+                                            });
+    auto running = executor.Submit(1, 0);
+    started.wait();
+    auto queued         = executor.Submit(2, 0);
+    TaskError cancelled = TaskError::None;
+    std::jthread unblock(
+        [&]
+        {
+            try
+            {
+                (void) queued.get();
+            }
+            catch (TaskError error)
+            {
+                cancelled = error;
+            }
+            release.count_down();
+        });
+    executor.Stop();
+    unblock.join();
+    CHECK(cancelled == TaskError::ExecutorStopped);
+    CHECK(running.get() == 1);
+    CHECK_NOTHROW(executor.Stop());
+    CHECK_THROWS_AS(executor.Submit(3, 0).get(), TaskError);
+}
+
 TEST_CASE("ImageResidencyCache coalesces in-flight requests and caches successful results", "[Residency]")
 {
     auto expectedImage                   = CreateTestImage();

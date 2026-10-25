@@ -1,10 +1,19 @@
 # OIViewer client
 cmake_minimum_required(VERSION 3.20)
 
-set(TargetName OIViewer)
+if(OIV_BUILD_WLX)
+    set(TargetName OIViewerWlx)
+else()
+    set(TargetName OIViewer)
+endif()
 set(ExternalFolder ../../External)
 
-add_executable(${TargetName})
+if(OIV_BUILD_WLX)
+    add_library(${TargetName} SHARED)
+    set_target_properties(${TargetName} PROPERTIES PREFIX "" OUTPUT_NAME OIViewer SUFFIX ".wlx64")
+else()
+    add_executable(${TargetName})
+endif()
 
 file(GLOB_RECURSE OIVIEWER_SOURCE_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp"
@@ -12,7 +21,12 @@ file(GLOB_RECURSE OIVIEWER_SOURCE_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.hpp"
 )
 
-target_sources(${TargetName} PRIVATE ${OIVIEWER_SOURCE_FILES})
+# Reusable UI implementation is compiled once and linked by the selected frontend and tests.
+# Entry points and shell composition remain outside this target.
+list(FILTER OIVIEWER_SOURCE_FILES EXCLUDE REGEX "/(Main|ViewerApplication[^/]*)[.]cpp$")
+add_library(oivviewer STATIC ${OIVIEWER_SOURCE_FILES})
+set(FrontendTarget ${TargetName})
+set(TargetName oivviewer)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(OIVIEWER_PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SrcPlatform/Win32")
@@ -25,6 +39,13 @@ else()
     message(FATAL_ERROR "Unsupported OIViewer platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
+set(TargetName ${FrontendTarget})
+if(NOT OIV_BUILD_WLX)
+    file(GLOB OIV_SHELL_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Source/ViewerApplication*.cpp"
+        "${OIVIEWER_PLATFORM_DIR}/ViewerApplication*.cpp")
+    target_sources(${TargetName} PRIVATE Source/Main.cpp ${OIV_SHELL_SOURCES})
+endif()
+
 if(OIV_GIT_SHORT_HASH STREQUAL "")
     getGitShortHash(${CMAKE_CURRENT_SOURCE_DIR} OIV_GIT_SHORT_HASH)
 endif()
@@ -35,7 +56,7 @@ if(NOT OIV_GIT_SHORT_HASH MATCHES "^[0-9a-f]+$" OR OIV_GIT_SHORT_HASH_LENGTH LES
         "got '${OIV_GIT_SHORT_HASH}'."
     )
 endif()
-target_compile_definitions(${TargetName} PRIVATE OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
+target_compile_definitions(oivviewer PUBLIC OIV_GIT_SHORT_HASH="${OIV_GIT_SHORT_HASH}")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     # The console subsystem makes shells wait. The embedded detached-console policy
@@ -60,7 +81,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND NOT MINGW)
         COMMENT "Compiling resources"
     )
     if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup" "/MANIFEST:NO")
+        target_link_options(${TargetName} PRIVATE "/MANIFEST:NO")
+        if(NOT OIV_BUILD_WLX)
+            target_link_options(${TargetName} PRIVATE "/ENTRY:wmainCRTStartup")
+        endif()
     endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_custom_command(TARGET ${TargetName}
@@ -76,10 +100,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Compiling resources"
     )
-    target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
+    if(NOT OIV_BUILD_WLX)
+        target_link_options(${TargetName} PRIVATE "-mconsole" "-municode")
+    endif()
 endif()
 
-target_include_directories(${TargetName} PRIVATE
+target_include_directories(oivviewer PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
     ${OIVIEWER_PLATFORM_DIR}
     ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include
@@ -92,7 +118,7 @@ target_include_directories(${TargetName} PRIVATE
 )
 
 
-target_link_libraries(${TargetName} PRIVATE
+target_link_libraries(oivviewer PUBLIC
     CLI11::CLI11
     LLUtils::LLUtils
     ImageUtil
@@ -102,8 +128,10 @@ target_link_libraries(${TargetName} PRIVATE
     LWSLib
 )
 
+target_link_libraries(${TargetName} PRIVATE oivviewer)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_link_libraries(${TargetName} PRIVATE
+    target_link_libraries(oivviewer PUBLIC
         kernel32.lib
         user32.lib
         gdi32.lib
@@ -122,7 +150,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     )
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND
+if(NOT OIV_BUILD_WLX AND CMAKE_SYSTEM_NAME STREQUAL "Windows" AND
    (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC"))
     set(OIV_DELAYLOAD_DLLS
         "/DELAYLOAD:\"libpng16.dll\""
@@ -171,4 +199,21 @@ if(NOT MINGW_POST_BUILD_DONT_COPY_BINARIES AND MINGW AND CMAKE_CROSSCOMPILING AN
     add_custom_command(TARGET ${TargetName} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${MINGW_ROOT}/bin/libwinpthread-1.dll $<TARGET_FILE_DIR:${TargetName}>/)
+endif()
+
+if(OIV_BUILD_WLX)
+    add_custom_command(TARGET ${TargetName} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/WLX.md" "$<TARGET_FILE_DIR:${TargetName}>/WLX.md"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/pluginst.inf" "$<TARGET_FILE_DIR:${TargetName}>/pluginst.inf"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/LICENSE.md" "$<TARGET_FILE_DIR:${TargetName}>/LICENSE.md")
+    add_custom_target(package_wlx
+        COMMAND ${CMAKE_COMMAND}
+            "-DPLUGIN_FILE=$<TARGET_FILE:${TargetName}>"
+            "-DOUTPUT_FILE=${CMAKE_BINARY_DIR}/OIViewer-wlx-x64.zip"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/PackageWlx.cmake"
+        DEPENDS ${TargetName}
+        VERBATIM)
 endif()

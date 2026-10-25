@@ -1,7 +1,6 @@
 #include <LLUtils/Logging/Logger.h>
 #include <OIVAppCore/ConfigurationLoader.h>
 #include <LLUtils/FileHelper.h>
-#include <LLUtils/PlatformUtility.h>
 #include <LLUtils/Exception.h>
 #include <nlohmann/json.hpp>
 
@@ -19,13 +18,12 @@ namespace
 
 namespace OIV
 {
-    ConfigurationLoader::CommandGroupList ConfigurationLoader::LoadCommandGroups()
+    ConfigurationLoader::CommandGroupList ConfigurationLoader::LoadCommandGroups(const std::filesystem::path& directory)
     {
         using namespace nlohmann;
         using namespace LLUtils;
 
-        const auto path      = std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "Resources" /
-                               "Configuration" / "Commands.json";
+        const auto path      = directory / "Commands.json";
         std::string jsonText = File::ReadAllText<std::string>(path.native());
         auto jsonObject      = json::parse(jsonText);
         auto commands        = jsonObject["commands"];
@@ -41,13 +39,12 @@ namespace OIV
         return commandsList;
     }
 
-    ConfigurationLoader::KeyBindingList ConfigurationLoader::LoadKeyBindings()
+    ConfigurationLoader::KeyBindingList ConfigurationLoader::LoadKeyBindings(const std::filesystem::path& directory)
     {
         using namespace nlohmann;
         using namespace LLUtils;
 
-        const auto path      = std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "Resources" /
-                               "Configuration" / "KeyBindings.json";
+        const auto path      = directory / "KeyBindings.json";
         std::string jsonText = File::ReadAllText<std::string>(path.native());
         auto jsonObject      = json::parse(jsonText);
         auto keyBindings     = jsonObject["KeyBindings"];
@@ -65,7 +62,7 @@ namespace OIV
         return keyBindingsList;
     }
 
-    ConfigurationLoader::MapSettings ConfigurationLoader::LoadSettings()
+    ConfigurationLoader::MapSettings ConfigurationLoader::LoadSettings(const std::filesystem::path& file)
     {
         using namespace nlohmann;
         using namespace LLUtils;
@@ -74,8 +71,7 @@ namespace OIV
 
         try
         {
-            const auto path      = std::filesystem::path(LLUtils::PlatformUtility::GetExeFolder()) / "Resources" /
-                                   "Configuration" / "Settings.json";
+            const auto path      = file;
             std::string jsonText = File::ReadAllText<std::string>(path.native());
             auto jsonObject      = json::parse(jsonText);
 

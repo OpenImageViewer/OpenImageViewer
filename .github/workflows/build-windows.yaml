@@ -79,6 +79,7 @@ jobs:
         -DCMAKE_C_COMPILER=clang-cl
         -DCMAKE_CXX_COMPILER=clang-cl
         -DCMAKE_BUILD_TYPE=Debug
+        -DLWS_BUILD_TESTS=ON
         -DOIV_BUILD_RENDERER_D3D11=ON
         -DOIV_BUILD_RENDERER_VK=ON
         -DOIV_BUILD_RENDERER_GL=ON
@@ -89,6 +90,8 @@ jobs:
     - name: Run renderer and CLI tests
       shell: pwsh
       run: |
+        & "$env:BUILD_DIR/bin/LWSTests.exe"
+        if ($LASTEXITCODE -ne 0) { throw "LWS tests failed" }
         & "$env:BUILD_DIR/bin/tests.exe"
         if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
         & "$env:BUILD_DIR/bin/tests_font_encoding.exe"

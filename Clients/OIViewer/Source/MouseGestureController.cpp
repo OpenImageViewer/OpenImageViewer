@@ -1,4 +1,5 @@
 #include "MouseGestureController.h"
+#include <algorithm>
 
 namespace OIV
 {
@@ -213,6 +214,11 @@ namespace OIV
         // movement makes the user's drag intent unambiguous.
         fDragDelta += static_cast<LLUtils::Point<int64_t>>(delta);
         return fDragDelta.x * fDragDelta.x + fDragDelta.y * fDragDelta.y > DragThresholdSquared;
+    }
+
+    bool MouseGestureController::HasPressedButtons() const
+    {
+        return std::ranges::any_of(fButtons, [](bool pressed) { return pressed; });
     }
 
     bool MouseGestureController::IsDown(LWS::MouseButton button) const

@@ -1,10 +1,8 @@
 #pragma once
 
 #include <RendererCore/RenderTypes.h>
-#include <LLUtils/PlatformUtility.h>
+#include <LWS/WindowTypes.hpp>
 #include "TextLabel.h"
-
-#include "EventManager.h"
 
 #include <filesystem>
 #include <map>
@@ -24,15 +22,8 @@ namespace OIV
     {
       public:
 
-        inline static const std::filesystem::path sFontsFolder         = std::filesystem::path(
-                                                                             LLUtils::PlatformUtility::GetExeFolder()) /
-                                                                         "Resources" / "Fonts";
-        inline static const LLUtils::native_string_type sFontPath      = (sFontsFolder / "CascadiaCode.ttf").native();
-        inline static const LLUtils::native_string_type sFixedFontPath = (sFontsFolder / "CascadiaCode.ttf").native();
-
-      public:
-
-        LabelManager(FreeType::FreeTypeConnector* freeType);
+        LabelManager(FreeType::FreeTypeConnector* freeType, const std::filesystem::path& fontPath);
+        const LLUtils::native_string_type& GetFontPath() const { return fFontPath; }
         void InitializeRenderer(Renderer& renderer);
         void Prepare(Renderer& renderer);
         void RemoveAll();
@@ -43,7 +34,6 @@ namespace OIV
 
       private:
 
-        void OnMonitorChange(const EventManager::MonitorChangeEventParams& params);
         std::unique_ptr<TextLabel> CreateTemplatedText();
         using TextLabels = std::map<std::string, std::unique_ptr<TextLabel>>;
 
@@ -59,7 +49,7 @@ namespace OIV
         FreeType::FreeTypeConnector* fFreeType;
         // Borrowed stable facade enables empty registration at label creation after initialization.
         Renderer* fRenderer = nullptr;
-        // Owned monitor-change subscription invalidating label DPI.
-        EventManager::MonitorChangeEvent::Subscription fMonitorSubscription;
+        // The frontend resolves the font path once, independently of the host executable.
+        LLUtils::native_string_type fFontPath;
     };
 }  // namespace OIV

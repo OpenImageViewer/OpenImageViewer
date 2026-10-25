@@ -62,6 +62,7 @@ namespace OIV
             bool canShowPixelGrid = false;
         };
         Presentation GetPresentation() const;
+        LLUtils::PointI32 GetViewportSize() const { return fViewportSize; }
         void SetViewportSize(LLUtils::PointI32 size) { fViewportSize = size; }
         // Validated settings affect the next view evaluation or generation. Usable caches survive changes.
         void SetScreenSpaceWorkFactor(double factor) { fScreenSpaceWorkFactor = factor; }

@@ -30,6 +30,7 @@ if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     set_source_files_properties(Source/TestSequencer.cpp Source/TestUnitFormatter.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
 endif()
 
+if(NOT OIV_BUILD_CLIENT)
 target_sources(${TargetName} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/UI/MessageManager.cpp
@@ -39,11 +40,13 @@ target_sources(${TargetName} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseMultiClickHandler.cpp
 )
 
+endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
-    target_sources(${TargetName} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Win32/ContextMenuBackend.cpp
-    )
+    target_sources(${TargetName} PRIVATE ../Clients/OIViewer/SrcPlatform/Win32/WlxPreview.cpp)
+    if(NOT OIV_BUILD_CLIENT)
+        target_sources(${TargetName} PRIVATE ../Clients/OIViewer/SrcPlatform/Win32/ContextMenuBackend.cpp)
+    endif()
     # Keep predefined-registry-hive overrides isolated from the general test process.
     add_executable(tests_file_associations
         Win32/FileAssociationTests.cpp
@@ -71,11 +74,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_libraries(tests_file_associations PRIVATE Catch2::Catch2WithMain oivappcore PkgConfig::GIOUnix)
     pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET wayland-client)
     target_link_libraries(${TargetName} PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient)
+    if(NOT OIV_BUILD_CLIENT)
     target_sources(${TargetName} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Linux/PlatformFileDialog.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Linux/ContextMenuBackend.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Linux/LinuxKeyBindings.cpp
     )
+    endif()
 endif()
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/include)
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer)
@@ -184,4 +188,9 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_library(tests_association_dialog_probe SHARED Associations/LinuxDialogProbe.cpp)
     target_link_libraries(tests_association_dialog_probe PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient ${CMAKE_DL_LIBS})
+endif()
+
+if(OIV_BUILD_CLIENT)
+    target_link_libraries(tests PRIVATE oivviewer)
+    target_compile_definitions(tests PRIVATE OIV_TEST_VIEWER)
 endif()

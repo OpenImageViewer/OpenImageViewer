@@ -2,6 +2,7 @@
 
 #include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ViewerImage.h>
+#include <OIVAppCore/ConfigurationLoader.h>
 #include <string_view>
 #include <optional>
 #include <RendererCore/RendererOptions.h>
@@ -40,7 +41,9 @@ namespace OIV
                                                                   const IMCodec::ImageSharedPtr& rasterized,
                                                                   double displayTime, int64_t uniqueValues,
                                                                   IMCodec::ImageCodec& imageCodec);
-        static LLUtils::native_string_type CreateKeyBindingsMessage();
+        // Formatting uses the same frontend-selected configuration as command dispatch, never host paths.
+        static LLUtils::native_string_type CreateKeyBindingsMessage(
+            const ConfigurationLoader::KeyBindingList& bindings, const ConfigurationLoader::CommandGroupList& commands);
         // Collect system and renderer details on the renderer's owning thread, then format the overlay.
         static LLUtils::native_string_type CreateSystemInfoMessage(const SystemInfoContext& context);
         static LLUtils::native_string_type GetFileTime(const LLUtils::native_string_type& filePath);

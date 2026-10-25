@@ -10,8 +10,8 @@ namespace OIV
     {
     };
 
-    MainWindow::MainWindow(LWS::PlatformContext& platform)
-        : fWindow(platform), fCanvasWindow(platform), fImageControl(platform),
+    MainWindow::MainWindow(LWS::PlatformContext& platform, const std::filesystem::path& resources)
+        : fResources(resources), fWindow(platform), fCanvasWindow(platform), fImageControl(platform),
           fNativeState(std::make_unique<NativeState>())
     {
         auto connection = fWindow.Listen(
@@ -24,6 +24,19 @@ namespace OIV
 
     MainWindow::~MainWindow() = default;
 
+    LWS::Result MainWindow::Destroy()
+    {
+        return fWindow.Destroy();
+    }
+
+    LWS::WindowMode MainWindow::GetWindowMode() const
+    {
+        return fWindow.GetWindowMode();
+    }
+    LWS::Result MainWindow::SetWindowMode(LWS::WindowMode mode)
+    {
+        return fWindow.SetWindowMode(mode);
+    }
     bool MainWindow::UseMainWindowAsCanvas() const
     {
         const auto& platform = fWindow.GetPlatformContext();

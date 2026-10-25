@@ -46,6 +46,60 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# Package selection is shared by the workflow and offline tests. A release is complete only when all
+# four products exist, so a missing WLX build cannot silently turn into a standalone-only release.
+function Get-ReleasePackageSet {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Directory,
+        [Parameter(Mandatory)][bool]$OfficialRelease
+    )
+
+    $symbolsPattern = '-Symbols(?:\.[^.]+)+$'
+    $wlxPattern = '-Win32-[^-]+-[^-.]+-WLX\.zip$'
+    $archives = @(Get-ChildItem -LiteralPath $Directory -Recurse -File | Where-Object { $_.Name -match '^OIV-.+(?:\.[^.]+)+$' })
+    $groups = [ordered]@{
+        "Windows runtime" = @($archives | Where-Object { $_.Name -notmatch $symbolsPattern -and $_.Name -notmatch $wlxPattern -and $_.Name -match '-Win32-[^-]+-[^-.]+\.' })
+        "Linux runtime" = @($archives | Where-Object { $_.Name -notmatch $symbolsPattern -and $_.Name -match '-linux-[^-]+-[^-.]+\.' })
+        "Windows WLX" = @($archives | Where-Object { $_.Name -match $wlxPattern })
+        "symbols" = @($archives | Where-Object { $_.Name -match $symbolsPattern })
+    }
+    foreach ($group in $groups.GetEnumerator()) {
+        if ($group.Value.Count -ne 1) {
+            $found = if ($group.Value.Count -eq 0) { "<none>" } else { $group.Value.FullName -join "`n" }
+            throw "Expected exactly one $($group.Key) archive, found $($group.Value.Count):`n$found"
+        }
+    }
+
+    $titlePattern = if ($OfficialRelease) {
+        '^(?<title>OIV-\d+\.\d+\.\d+)-.+(?:\.[^.]+)+$'
+    } else {
+        '^(?<title>OIV-\d+\.\d+\.\d+\.\d+)-[0-9a-f]+-.+(?:\.[^.]+)+$'
+    }
+    $title = $null
+    foreach ($group in $groups.GetEnumerator()) {
+        $archive = $group.Value[0]
+        if ($archive.Name -notmatch $titlePattern) {
+            throw "Archive name '$($archive.Name)' does not match the selected release mode."
+        }
+        $archiveTitle = $Matches.title
+        if ($title -and $archiveTitle -ne $title) {
+            throw "Release archive versions do not match."
+        }
+        $title = $archiveTitle
+    }
+
+    [PSCustomObject]@{
+        WindowsRuntimeArchivePath = $groups["Windows runtime"][0].FullName
+        LinuxRuntimeArchivePath = $groups["Linux runtime"][0].FullName
+        WindowsWlxArchivePath = $groups["Windows WLX"][0].FullName
+        SymbolsArchivePath = $groups["symbols"][0].FullName
+        ReleaseTitle = $title
+        ReleaseTag = if ($OfficialRelease) { $title } else { "snapshot" }
+        Prerelease = -not $OfficialRelease
+    }
+}
+
 function Invoke-GhNative {
     param([string[]]$Arguments)
 

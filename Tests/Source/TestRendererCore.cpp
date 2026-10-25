@@ -252,7 +252,7 @@ TEST_CASE("Label manager registers pre-initialization labels in creation order",
     auto* backend = owner.get();
     OIV::Renderer renderer(std::move(owner));
     FreeType::FreeTypeConnector font;
-    OIV::LabelManager labels(&font);
+    OIV::LabelManager labels(&font, std::filesystem::path("Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf"));
     auto* first = labels.GetOrCreateTextLabel("z-first");
     auto* last  = labels.GetOrCreateTextLabel("a-last");
     first->SetFontPath(LLUTILS_TEXT("Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf"));
@@ -374,4 +374,21 @@ TEST_CASE("Backend ownership ends exactly once at renderer shutdown", "[renderer
     CHECK(destroyed == 1);
     REQUIRE_NOTHROW(image.reset());
     CHECK(destroyed == 1);
+}
+
+TEST_CASE("Viewer label scales are independent", "[renderer][wlx]")
+{
+    FreeType::FreeTypeConnector font;
+    const std::filesystem::path path("Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf");
+    OIV::LabelManager first(&font, path);
+    OIV::LabelManager second(&font, path);
+    auto* left  = first.GetOrCreateTextLabel("scale");
+    auto* right = second.GetOrCreateTextLabel("scale");
+    left->SetText(LLUTILS_TEXT("Independent viewer"));
+    right->SetText(LLUTILS_TEXT("Independent viewer"));
+    const auto original = right->GetMetrics().pixelSize;
+    CHECK(left->GetMetrics().pixelSize == original);
+    first.SetContentScale({2.0, 2.0});
+    CHECK(left->GetMetrics().pixelSize.x > original.x);
+    CHECK(right->GetMetrics().pixelSize == original);
 }

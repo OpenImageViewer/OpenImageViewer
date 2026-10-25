@@ -64,6 +64,7 @@ namespace OIV
       public:
 
         ImageResidencyCache();
+        void Stop() { fTaskExecutor.Stop(); }
         explicit ImageResidencyCache(std::unique_ptr<RequestProcessorType> processor, size_t threadCount = 0);
         TicketID requestResidencyAsync(const LLUtils::native_string_type& filePath,
                                        ImageResidencyCacheItemType itemType);

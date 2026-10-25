@@ -5,6 +5,8 @@
 #include <LLUtils/PlatformUtility.h>
 #include <nlohmann/json.hpp>
 #include <atomic>
+#include <array>
+#include <latch>
 #include <chrono>
 #include <fstream>
 #include <thread>
@@ -277,4 +279,111 @@ TEST_CASE("User storage supports Unicode directory names", "[storage][AppCore]")
     }
     REQUIRE(std::filesystem::exists(fixture.directories.cache / "cache-state.json"));
     REQUIRE_NOTHROW(OIV::StorageSession(fixture.directories, "1.0.0.1"));
+}
+
+TEST_CASE("WLX resolves its own profile without changing the standalone root", "[storage][wlx]")
+{
+    const auto normal = OIV::UserDirectories::Resolve();
+    const auto plugin = OIV::UserDirectories::Resolve("OIViewer.WLX");
+#ifdef _WIN32
+    const auto roaming = std::filesystem::path(LLUtils::PlatformUtility::GetAppDataFolder());
+    CHECK(normal.config == roaming / "OIViewer/Config");
+    CHECK(plugin.config == roaming / "OIViewer.WLX/Config");
+    CHECK(plugin.state == roaming / "OIViewer.WLX/State");
+    CHECK(plugin.cache == roaming / "OIViewer.WLX/Cache");
+#else
+    CHECK(plugin.config == normal.config.parent_path() / "OIViewer.WLX");
+    CHECK(plugin.state == normal.state.parent_path() / "OIViewer.WLX");
+    CHECK(plugin.cache == normal.cache.parent_path() / "OIViewer.WLX");
+#endif
+    CHECK(plugin.config != normal.config);
+    CHECK(plugin.state != normal.state);
+    CHECK(plugin.cache != normal.cache);
+}
+
+TEST_CASE("User settings are seeded once from bundled defaults", "[storage][wlx]")
+{
+    StorageFixture fixture;
+    fixture.directories.config /= "new-profile";
+    const auto defaults        = fixture.root / "defaults.json";
+    const std::string original = "{\r\n  \"fit\": true\r\n}\r\n";
+    std::ofstream(defaults, std::ios::binary) << original;
+    const auto settings = fixture.directories.InitializeSettings(defaults);
+    CHECK(settings == fixture.directories.config / "Settings.json");
+    CHECK(Read(settings) == original);
+    SECTION("Changed defaults never overwrite user edits")
+    {
+        std::ofstream(settings) << "{\"fit\": false}";
+        std::ofstream(defaults) << "{\"fit\": true, \"newSetting\": 1}";
+        CHECK(fixture.directories.InitializeSettings(defaults) == settings);
+        CHECK(Read(settings) == "{\"fit\": false}");
+    }
+    SECTION("Existing settings do not require the bundled file")
+    {
+        std::filesystem::remove(defaults);
+        CHECK(fixture.directories.InitializeSettings(defaults) == settings);
+        CHECK(Read(settings) == original);
+    }
+}
+
+TEST_CASE("Missing defaults do not leave an empty user settings file", "[storage][wlx]")
+{
+    StorageFixture fixture;
+    CHECK_THROWS(fixture.directories.InitializeSettings(fixture.root / "missing.json"));
+    CHECK_FALSE(std::filesystem::exists(fixture.directories.config / "Settings.json"));
+}
+
+TEST_CASE("Concurrent first startups publish one complete settings file", "[storage][wlx]")
+{
+    StorageFixture fixture;
+    const auto defaults       = fixture.root / "defaults.json";
+    const std::string content = "{\"fit\": true, \"label\": \"shared schema\"}";
+    std::ofstream(defaults, std::ios::binary) << content;
+    std::latch start(1);
+    std::array<std::exception_ptr, 2> errors{};
+    std::array<std::filesystem::path, 2> settings;
+    const auto initialize = [&](size_t index)
+    {
+        start.wait();
+        try
+        {
+            settings[index] = fixture.directories.InitializeSettings(defaults);
+        }
+        catch (...)
+        {
+            errors[index] = std::current_exception();
+        }
+    };
+    std::jthread first(initialize, 0), second(initialize, 1);
+    start.count_down();
+    first.join();
+    second.join();
+    for (const auto& error : errors)
+        if (error)
+            std::rethrow_exception(error);
+    REQUIRE(settings[0] == settings[1]);
+    CHECK(Read(settings[0]) == content);
+}
+
+TEST_CASE("Standalone and WLX cache leases do not block different versions", "[storage][wlx]")
+{
+    StorageFixture fixture;
+    const auto pluginRoot = fixture.root / "OIViewer.WLX";
+    const OIV::UserDirectories plugin{pluginRoot / "Config", pluginRoot / "State", pluginRoot / "Cache"};
+    OIV::StorageSession standalone(fixture.directories, "1.0.0.1");
+    OIV::StorageSession hosted(plugin, "2.0.0.1");
+    CHECK(nlohmann::json::parse(Read(fixture.directories.cache / "cache-state.json"))["version"] == "1.0.0.1");
+    CHECK(nlohmann::json::parse(Read(plugin.cache / "cache-state.json"))["version"] == "2.0.0.1");
+    CHECK_THROWS(OIV::StorageSession(plugin, "3.0.0.1"));
+    CHECK_THROWS(OIV::StorageSession(fixture.directories, "2.0.0.1"));
+}
+
+TEST_CASE("Settings initialization rejects a directory without changing its contents", "[storage][wlx]")
+{
+    StorageFixture fixture;
+    const auto settings = fixture.directories.config / "Settings.json";
+    std::filesystem::create_directory(settings);
+    std::ofstream(settings / "keep") << "keep";
+    CHECK_THROWS(fixture.directories.InitializeSettings(fixture.root / "unused-defaults.json"));
+    CHECK(Read(settings / "keep") == "keep");
 }

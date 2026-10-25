@@ -21,11 +21,21 @@ namespace OIV
             CommandManager::CommandCallback callback;
         };
 
+        enum class DispatchResult
+        {
+            Unknown,
+            Blocked,
+            Dispatched
+        };
+        using RequestPredicate = bool (*)(const CommandManager::CommandRequest&);
+
         using CommandResultSink = std::function<void(const LLUtils::native_string_type&)>;
 
         explicit CommandController(CommandResultSink resultSink = {}) : fResultSink(std::move(resultSink)) {}
 
         CommandManager& GetCommandManager() { return fCommandManager; }
+
+        void SetRequestPredicate(RequestPredicate predicate) { fRequestPredicate = predicate; }
 
         void SetResultSink(CommandResultSink resultSink) { fResultSink = std::move(resultSink); }
 
@@ -51,20 +61,28 @@ namespace OIV
 
         bool ExecuteCommand(const CommandManager::CommandRequest& request)
         {
+            return DispatchCommand(request) != DispatchResult::Unknown;
+        }
+
+        DispatchResult DispatchCommand(const CommandManager::CommandRequest& request)
+        {
+            // A blocked known command is still recognized. Input routing must not forward half a gesture
+            // to the host merely because its action is disabled in the current frontend.
+            auto* command = fCommandManager.FindCommand(request.commandName);
+            if (!command)
+                return DispatchResult::Unknown;
+            if (fRequestPredicate && !fRequestPredicate(request))
+                return DispatchResult::Blocked;
             CommandManager::CommandResult result;
-            if (fCommandManager.ExecuteCommand(request, result))
-            {
-                if (result.resValue.empty() == false && fResultSink)
-                    fResultSink(result.resValue);
-
-                return true;
-            }
-
-            return false;
+            command->Execute(request, result);
+            if (!result.resValue.empty() && fResultSink)
+                fResultSink(result.resValue);
+            return DispatchResult::Dispatched;
         }
 
       private:
 
+        RequestPredicate fRequestPredicate{};
         CommandManager fCommandManager;
         CommandResultSink fResultSink;
     };
