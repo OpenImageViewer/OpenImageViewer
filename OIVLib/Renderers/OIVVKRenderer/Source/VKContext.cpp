@@ -457,15 +457,11 @@ namespace OIV
             }
         }
 
-        VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-        for (const auto& mode : {VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR})
-        {
-            if (std::find(presentModes.begin(), presentModes.end(), mode) != presentModes.end())
-            {
-                presentMode = mode;
-                break;
-            }
-        }
+        // Both mailbox and FIFO synchronize presentation to avoid tearing.
+        // FIFO is required by Vulkan, so only the preferred mailbox mode needs a lookup.
+        const auto presentMode = std::ranges::find(presentModes, VK_PRESENT_MODE_MAILBOX_KHR) != presentModes.end()
+                                     ? VK_PRESENT_MODE_MAILBOX_KHR
+                                     : VK_PRESENT_MODE_FIFO_KHR;
 
         uint32_t imageCount = capabilities.minImageCount + 1;
         if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)

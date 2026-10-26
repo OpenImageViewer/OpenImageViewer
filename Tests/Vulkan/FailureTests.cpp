@@ -79,8 +79,10 @@ namespace
     // Track externally observable ownership/synchronization, including waits that would hang on a real driver.
     struct Driver
     {
-        uint32_t graphicsFamily = 0;
-        uint32_t presentFamily  = 0;
+        std::vector<VkPresentModeKHR> presentModes{VK_PRESENT_MODE_FIFO_KHR};
+        VkPresentModeKHR selectedPresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+        uint32_t graphicsFamily              = 0;
+        uint32_t presentFamily               = 0;
         std::vector<uint32_t> createdQueueFamilies;
         std::set<uint32_t> descriptorBindingCounts;
         struct PhysicalDevice
@@ -403,9 +405,9 @@ extern "C"
     VKAPI_ATTR VkResult VKAPI_CALL vkGetPhysicalDeviceSurfacePresentModesKHR(VkPhysicalDevice, VkSurfaceKHR,
                                                                              uint32_t* count, VkPresentModeKHR* modes)
     {
-        *count = 1;
+        *count = static_cast<uint32_t>(driver.presentModes.size());
         if (modes != nullptr)
-            *modes = VK_PRESENT_MODE_FIFO_KHR;
+            std::ranges::copy(driver.presentModes, modes);
         return VK_SUCCESS;
     }
     VKAPI_ATTR VkResult VKAPI_CALL vkCreateSwapchainKHR(VkDevice, const VkSwapchainCreateInfoKHR* info,
@@ -413,7 +415,8 @@ extern "C"
     {
         REQUIRE(info->imageExtent.width > 0);
         REQUIRE(info->imageExtent.height > 0);
-        driver.createdExtent = info->imageExtent;
+        driver.selectedPresentMode = info->presentMode;
+        driver.createdExtent       = info->imageExtent;
         ++driver.swapChainCreations;
         const VkResult result = driver.Create(swapchain, Failure::SwapChain);
         if (result == VK_SUCCESS)
@@ -1739,6 +1742,18 @@ TEST_CASE("Vulkan selected adapter contains versions without additional property
     CHECK(adapter.driverVersion == "0");
     CHECK(&renderer.GetSelectedAdapter() == &adapter);
     CHECK(driver.devices[0].propertyQueries == 1);
+}
+
+TEST_CASE("Vulkan presentation stays synchronized when mailbox is unavailable", "[vulkan][vsync]")
+{
+    driver              = {};
+    const bool mailbox  = GENERATE(false, true);
+    driver.presentModes = {VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR};
+    if (mailbox)
+        driver.presentModes.push_back(VK_PRESENT_MODE_MAILBOX_KHR);
+    TestRenderer renderer;
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .cacheDirectory = LLUTILS_TEXT("."), .gpuIndex = -1}));
+    CHECK(driver.selectedPresentMode == (mailbox ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR));
 }
 
 TEST_CASE("Vulkan uploads native CMYK as opaque RGBA without changing source pixels", "[vulkan][CMYK]")
