@@ -1087,7 +1087,9 @@ TEST_CASE("ImageInfoPresentationPolicy builds file image rows", "[AppCore]")
 
     const auto* channelsRow = FindRow(rows, "channels info");
     REQUIRE(channelsRow != nullptr);
-    REQUIRE(channelsRow->values.at(0).text == LLUTILS_TEXT("R:8 G:8 B:8 A:8"));
+    REQUIRE(channelsRow->values.at(0).text ==
+            LLUTILS_TEXT("<textcolor=#ff0000>R<textcolor=#ffffff>:8 <textcolor=#00ff00>G<textcolor=#ffffff>:8 "
+                         "<textcolor=#0000ff>B<textcolor=#ffffff>:8 <textcolor=#ffffff>A<textcolor=#ffffff>:8"));
 
     const auto* codecRow = FindRow(rows, "Codec used");
     REQUIRE(codecRow != nullptr);
@@ -2301,4 +2303,18 @@ TEST_CASE("AppSettingsPolicy accepts finite positive fractional screen-space tex
         CAPTURE(value);
         CHECK(OIV::AppSettingsPolicy::ParseAction(key, value).type == ActionType::None);
     }
+}
+
+TEST_CASE("Image information uses pure additive and subtractive channel colors", "[AppCore][CMYK]")
+{
+    using IMCodec::ChannelSemantic;
+    CHECK(OIV::MessageFormatter::PickColor(ChannelSemantic::Red) == "<textcolor=#ff0000>");
+    CHECK(OIV::MessageFormatter::PickColor(ChannelSemantic::Green) == "<textcolor=#00ff00>");
+    CHECK(OIV::MessageFormatter::PickColor(ChannelSemantic::Blue) == "<textcolor=#0000ff>");
+    CHECK(OIV::MessageFormatter::PickColor(ChannelSemantic::Opacity) == "<textcolor=#ffffff>");
+    const auto channels = OIV::ImageInfoPresentationPolicy::FormatTexelInfo(
+        IMCodec::GetTexelInfo(IMCodec::TexelFormat::I_C8_M8_Y8_K8));
+    CHECK(channels ==
+          LLUTILS_TEXT("<textcolor=#00ffff>C<textcolor=#ffffff>:8 <textcolor=#ff00ff>M<textcolor=#ffffff>:8 "
+                       "<textcolor=#ffff00>Y<textcolor=#ffffff>:8 <textcolor=#ffffff>K<textcolor=#ffffff>:8"));
 }

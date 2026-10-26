@@ -131,11 +131,14 @@ namespace OIV
     const std::string& MessageFormatter::PickColor(IMCodec::ChannelSemantic semantic)
     {
         using namespace IMCodec;
-        const static std::string blue  = "<textcolor=#006dff>";
-        const static std::string green = "<textcolor=#00ff00>";
-        const static std::string red   = "<textcolor=#ff1c21>";
-        const static std::string white = "<textcolor=#ffffff>";
-        const static std::string other = "<textcolor=#ff8930>";
+        const static std::string blue    = "<textcolor=#0000ff>";
+        const static std::string green   = "<textcolor=#00ff00>";
+        const static std::string red     = "<textcolor=#ff0000>";
+        const static std::string white   = "<textcolor=#ffffff>";
+        const static std::string other   = "<textcolor=#ff8930>";
+        const static std::string cyan    = "<textcolor=#00ffff>";
+        const static std::string magenta = "<textcolor=#ff00ff>";
+        const static std::string yellow  = "<textcolor=#ffff00>";
 
         switch (semantic)
         {
@@ -146,6 +149,14 @@ namespace OIV
             case ChannelSemantic::Blue:
                 return blue;
             case ChannelSemantic::Opacity:
+                return white;
+            case ChannelSemantic::Cyan:
+                return cyan;
+            case ChannelSemantic::Magenta:
+                return magenta;
+            case ChannelSemantic::Yellow:
+                return yellow;
+            case ChannelSemantic::Black:
                 return white;
             case ChannelSemantic::Monochrome:
             case ChannelSemantic::Float:
@@ -167,6 +178,14 @@ namespace OIV
                 return "G";
             case IMCodec::ChannelSemantic::Blue:
                 return "B";
+            case IMCodec::ChannelSemantic::Cyan:
+                return "C";
+            case IMCodec::ChannelSemantic::Magenta:
+                return "M";
+            case IMCodec::ChannelSemantic::Yellow:
+                return "Y";
+            case IMCodec::ChannelSemantic::Black:
+                return "K";
             case IMCodec::ChannelSemantic::Opacity:
                 return "A";
                 break;

@@ -1740,3 +1740,24 @@ TEST_CASE("Vulkan selected adapter contains versions without additional property
     CHECK(&renderer.GetSelectedAdapter() == &adapter);
     CHECK(driver.devices[0].propertyQueries == 1);
 }
+
+TEST_CASE("Vulkan uploads native CMYK as opaque RGBA without changing source pixels", "[vulkan][CMYK]")
+{
+    driver = {};
+    TestPixels image;
+    auto& item                               = image.image->GetImageItem();
+    item->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_C8_M8_Y8_K8;
+    constexpr std::array<std::byte, 4> ink{std::byte{0}, std::byte{255}, std::byte{255}, std::byte{0}};
+    item->data.Write(ink.data(), 0, ink.size());
+    TestRenderer renderer;
+    REQUIRE_NOTHROW(renderer.Init({.container = 1, .cacheDirectory = LLUTILS_TEXT("."), .gpuIndex = -1}));
+    REQUIRE(renderer.Register(&image) == 0);
+    constexpr std::array<std::byte, 4> rgba{std::byte{255}, std::byte{0}, std::byte{0}, std::byte{255}};
+    for (int frame = 0; frame < 2; ++frame)
+    {
+        REQUIRE_NOTHROW(renderer.Redraw());
+        CHECK(std::equal(rgba.begin(), rgba.end(), driver.mappedData.begin()));
+        CHECK(driver.bufferCreations == 1);
+        CHECK(std::memcmp(image.image->GetBuffer(), ink.data(), ink.size()) == 0);
+    }
+}

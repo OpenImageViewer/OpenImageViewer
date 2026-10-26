@@ -469,11 +469,15 @@ namespace OIV
         ViewerImage file{.pixels = std::move(image),
                          .source = ImageSource::File,
                          .path   = std::filesystem::path(fileName).lexically_normal().native()};
+        file.metadata = file.pixels->GetImageItem()->metaData;
         IMCodec::ItemMetaDataSharedPtr metaData;
         if (fSession.fImageLoader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success &&
             metaData != nullptr)
         {
-            file.metadata = std::move(metaData);
+            if (file.metadata)
+                file.metadata->exifData = std::move(metaData->exifData);
+            else
+                file.metadata = std::move(metaData);
         }
         LoadOivImage(std::move(file));
     }
@@ -586,7 +590,9 @@ namespace OIV
 
             if (cropped != nullptr)
             {
-                auto oivCropped = ViewerImage{.pixels = cropped, .source = ImageSource::GeneratedByLib};
+                auto oivCropped = ViewerImage{.pixels     = cropped,
+                                              .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
+                                              .source     = ImageSource::GeneratedByLib};
                 LoadOivImage(oivCropped);
                 CancelSelection();
                 result = OperationResult::Success;
@@ -632,7 +638,9 @@ namespace OIV
 
                 if (colorFilled != nullptr)
                 {
-                    auto oivColorFilled = ViewerImage{.pixels = colorFilled, .source = ImageSource::GeneratedByLib};
+                    auto oivColorFilled = ViewerImage{.pixels     = colorFilled,
+                                                      .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
+                                                      .source     = ImageSource::GeneratedByLib};
                     auto lastState      = fSession.fResetTransformationMode;
                     fSession.fResetTransformationMode = ResetTransformationMode::DoNothing;
                     LoadOivImage(oivColorFilled);
