@@ -331,24 +331,22 @@ namespace OIV
             if (IsImageOpen())
             {
                 auto openedImage = fSession.fImageState.GetOpenedImage();
-                auto imageSource = openedImage->source;
-                switch (imageSource)
+                if (!openedImage->sourceName.empty())
+                    defaultFileName = openedImage->sourceName;
+                else
                 {
-                    case ImageSource::ClipboardText:
-                        defaultFileName = LLUTILS_TEXT("text");
-                        break;
-                    case ImageSource::File:
+                    switch (openedImage->source)
                     {
-                        std::filesystem::path p = openedImage->path;
-                        defaultFileName         = p.stem();
+                        case ImageSource::ClipboardText:
+                            defaultFileName = LLUTILS_TEXT("text");
+                            break;
+                        case ImageSource::Clipboard:
+                            defaultFileName = LLUTILS_TEXT("clipboard");
+                            break;
+                        default:
+                            defaultFileName = LLUTILS_TEXT("image");
+                            break;
                     }
-                    break;
-                    case ImageSource::Clipboard:
-                        defaultFileName = LLUTILS_TEXT("clipboard");
-                        break;
-                    default:
-                        defaultFileName = LLUTILS_TEXT("image");
-                        break;
                 }
 
                 auto result = LWS::FileDialog::Show(LWS::FileDialogType::SaveFile, fSaveComDlgFilters,

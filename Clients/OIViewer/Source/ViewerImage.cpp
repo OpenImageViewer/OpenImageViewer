@@ -592,7 +592,8 @@ namespace OIV
             {
                 auto oivCropped = ViewerImage{.pixels     = cropped,
                                               .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
-                                              .source     = ImageSource::GeneratedByLib};
+                                              .source     = ImageSource::GeneratedByLib,
+                                              .sourceName = fSession.fImageState.GetOpenedImage()->sourceName};
                 LoadOivImage(oivCropped);
                 CancelSelection();
                 result = OperationResult::Success;
@@ -640,7 +641,8 @@ namespace OIV
                 {
                     auto oivColorFilled = ViewerImage{.pixels     = colorFilled,
                                                       .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
-                                                      .source     = ImageSource::GeneratedByLib};
+                                                      .source     = ImageSource::GeneratedByLib,
+                                                      .sourceName = fSession.fImageState.GetOpenedImage()->sourceName};
                     auto lastState      = fSession.fResetTransformationMode;
                     fSession.fResetTransformationMode = ResetTransformationMode::DoNothing;
                     LoadOivImage(oivColorFilled);
