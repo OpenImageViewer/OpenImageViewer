@@ -88,7 +88,10 @@ namespace OIV::Win32
             if (result != LWS::Result::Success)
                 return result;
             state.escaped = false;
-            std::ignore   = state.fullscreen->SetVisible(false);
+            // Reset the mode so the next entry reapplies fullscreen geometry. Restoring the saved
+            // placement can show the shell again, so hide it only after the mode transition.
+            std::ignore = state.fullscreen->SetWindowMode(LWS::WindowMode::Windowed);
+            std::ignore = state.fullscreen->SetVisible(false);
         }
         owner.FitToParent();
         SetFocus(*LWS::Win32::GetHwnd(owner.GetWindow()));
