@@ -17,29 +17,11 @@ namespace OIV
 {
     const std::string& OIVHelper::PickColor(IMCodec::ChannelSemantic semantic)
     {
-        using namespace IMCodec;
-        static const std::string blue  = "<textcolor=#006dff>";
-        static const std::string green = "<textcolor=#00ff00>";
-        static const std::string red   = "<textcolor=#ff1c21>";
-        static const std::string white = "<textcolor=#ffffff>";
+        // Preserve this API's fallback for unspecified or unknown semantics while sharing the palette.
         static const std::string other = "<textcolor=#ff8930>";
-
-        switch (semantic)
-        {
-            case ChannelSemantic::Red:
-                return red;
-            case ChannelSemantic::Green:
-                return green;
-            case ChannelSemantic::Blue:
-                return blue;
-            case ChannelSemantic::Opacity:
-                return white;
-            case ChannelSemantic::Monochrome:
-            case ChannelSemantic::Float:
-            case ChannelSemantic::None:
-            default:
-                return other;
-        }
+        return semantic >= IMCodec::ChannelSemantic::Red && semantic <= IMCodec::ChannelSemantic::Black
+                   ? MessageFormatter::PickColor(semantic)
+                   : other;
     }
 
     std::string OIVHelper::ParseTexelValue(IMCodec::ImageSharedPtr image, LLUtils::PointI32 pixelPos)

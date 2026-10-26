@@ -12,6 +12,10 @@ file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.cpp"
 )
 
+if(NOT TARGET CodecJPG)
+    list(FILTER sourceFiles EXCLUDE REGEX "/TestJpegCodec[.]cpp$")
+endif()
+
 set(ExternalFolder "${CMAKE_CURRENT_SOURCE_DIR}/../External")
 cmake_path(ABSOLUTE_PATH ExternalFolder NORMALIZE OUTPUT_VARIABLE ExternalFolder)
 
@@ -87,6 +91,15 @@ target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../
 target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../OIVLib/OIV/Source)
 target_compile_definitions(${TargetName} PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
 target_link_libraries(${TargetName} PRIVATE CLI11::CLI11 Catch2::Catch2WithMain oivshared oivappcore RendererCore ImageCodec tiff LWSLib)
+
+if(TARGET CodecJPG)
+    target_link_libraries(${TargetName} PRIVATE libjpeg-turbo::libjpeg-turbo)
+endif()
+
+if(OIV_BUILD_RENDERER_D3D11)
+    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_D3D11_RENDERER)
+    target_link_libraries(${TargetName} PRIVATE OIVD3D11Renderer)
+endif()
 
 if(OIV_BUILD_RENDERER_GL)
     target_compile_definitions(${TargetName} PRIVATE OIV_TEST_GL_RENDERER)

@@ -1,5 +1,6 @@
 #include <LLUtils/StringDefs.h>
 #include <OIVAppCore/ImageInfoPresentationPolicy.h>
+#include <OIVAppCore/MessageFormatter.h>
 
 #include <OIVShared/UnitFormatter.h>
 
@@ -38,43 +39,6 @@ namespace OIV
             rows.push_back(std::move(row));
         }
 
-        const char* FormatSemantic(IMCodec::ChannelSemantic semantic)
-        {
-            switch (semantic)
-            {
-                case IMCodec::ChannelSemantic::Red:
-                    return "R";
-                case IMCodec::ChannelSemantic::Green:
-                    return "G";
-                case IMCodec::ChannelSemantic::Blue:
-                    return "B";
-                case IMCodec::ChannelSemantic::Opacity:
-                    return "A";
-                case IMCodec::ChannelSemantic::Monochrome:
-                    return "Monochrome";
-                case IMCodec::ChannelSemantic::Float:
-                    return "Float";
-                case IMCodec::ChannelSemantic::None:
-                default:
-                    return "Undefined";
-            }
-        }
-
-        const char* FormatDataType(IMCodec::ChannelDataType dataType)
-        {
-            switch (dataType)
-            {
-                case IMCodec::ChannelDataType::Float:
-                    return "float";
-                case IMCodec::ChannelDataType::SignedInt:
-                    return "signed";
-                case IMCodec::ChannelDataType::UnsignedInt:
-                    return "unsigned";
-                case IMCodec::ChannelDataType::None:
-                default:
-                    return "undefined";
-            }
-        }
     }  // namespace
 
     ImageInfoPresentationPolicy::ImageInfoRows ImageInfoPresentationPolicy::Build(
@@ -155,7 +119,35 @@ namespace OIV
         if (image != nullptr && image->metadata != nullptr)
         {
             const IMCodec::ItemMetaDataSharedPtr& metaData = image->metadata;
-            const IMCodec::ExifData& exifData              = metaData->exifData;
+            // Report source provenance even when the displayed image has been converted to RGB.
+            if (metaData->sourceColorSpace != IMCodec::SourceColorSpace::Unknown)
+            {
+                const char* colorSpace = "Unknown";
+                switch (metaData->sourceColorSpace)
+                {
+                    case IMCodec::SourceColorSpace::RGB:
+                        colorSpace = "RGB";
+                        break;
+                    case IMCodec::SourceColorSpace::YCbCr:
+                        colorSpace = "YCbCr";
+                        break;
+                    case IMCodec::SourceColorSpace::Gray:
+                        colorSpace = "Grayscale";
+                        break;
+                    case IMCodec::SourceColorSpace::CMYK:
+                        colorSpace = "CMYK";
+                        break;
+                    case IMCodec::SourceColorSpace::YCCK:
+                        colorSpace = "YCCK";
+                        break;
+                    case IMCodec::SourceColorSpace::Unknown:
+                        break;
+                }
+                AddRow(rows, "Original color space", {LLUtils::StringUtility::ToNativeString(colorSpace)});
+                AddRow(rows, "Source ICC profile",
+                       {metaData->iccProfile.empty() ? LLUTILS_TEXT("None") : LLUTILS_TEXT("Present")});
+            }
+            const IMCodec::ExifData& exifData = metaData->exifData;
             if (exifData.longitude != std::numeric_limits<double>::max())
                 AddRow(rows, "Longitude", {FormatNumber(exifData.longitude, 6)});
 
@@ -248,13 +240,16 @@ namespace OIV
         for (size_t i = 0; i < texelInfo.numChannles; i++)
         {
             const IMCodec::ChannelInfo& channel = texelInfo.channles[i];
-            stream << LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
-                          std::string(FormatSemantic(channel.semantic)))
-                   << LLUTILS_TEXT(':');
+            stream << LLUtils::StringUtility::ToNativeString(MessageFormatter::PickColor(
+                          channel.semantic == IMCodec::ChannelSemantic::None ? IMCodec::ChannelSemantic::Opacity
+                                                                             : channel.semantic))
+                   << LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
+                          std::string(MessageFormatter::FormatSemantic(channel.semantic)))
+                   << LLUTILS_TEXT("<textcolor=#ffffff>") << LLUTILS_TEXT(':');
             if (sameDataTypeForAllChannels == false || channel.semantic == IMCodec::ChannelSemantic::Monochrome)
                 stream << LLUTILS_TEXT('(')
                        << LLUtils::StringUtility::ConvertString<LLUtils::native_string_type>(
-                              std::string(FormatDataType(channel.channelDataType)))
+                              std::string(MessageFormatter::FormatDataType(channel.channelDataType)))
                        << LLUTILS_TEXT(')');
 
             stream << static_cast<int>(channel.width);

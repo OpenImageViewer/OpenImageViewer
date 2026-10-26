@@ -78,11 +78,17 @@ namespace OIV
         if (loader.Decode(fileName, imageLoadFlags, params, traverseMode, image) == IMCodec::ImageResult::Success &&
             image)
         {
-            // Apply orientation while pixels are private to the loader, then publish
-            // the oriented main image and subimages alongside the original metadata.
-            if (loader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success)
+            // Keep decoder color provenance while adding EXIF and applying orientation privately.
+            metaData = image->GetImageItem()->metaData;
+            IMCodec::ItemMetaDataSharedPtr exifMetaData;
+            if (loader.LoadMetaData(fileName, exifMetaData) == IMCodec::ImageResult::Success && exifMetaData)
             {
-                const auto orientation = metaData->exifData.orientation;
+                if (metaData)
+                    metaData->exifData = std::move(exifMetaData->exifData);
+                else
+                    metaData = std::move(exifMetaData);
+                image->GetImageItem()->metaData = metaData;
+                const auto orientation          = metaData->exifData.orientation;
                 if (orientation > 1)
                     image = ApplyExifRotation(image, orientation);
                 for (uint16_t i = 0; i < image->GetNumSubImages(); ++i)

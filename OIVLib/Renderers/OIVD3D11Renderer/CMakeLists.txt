@@ -27,7 +27,7 @@ if(NOT OIV_D3D11_LIBRARIES_AVAILABLE)
         "Make sure the Windows SDK kit is installed correctly and available to the selected toolchain, "
         "or set OIV_BUILD_RENDERER_D3D11=OFF.")
 endif()
-target_link_libraries(${TargetName} PRIVATE ${oivD3D11Libraries} LLUtils::LLUtils oivshared)
+target_link_libraries(${TargetName} PRIVATE ${oivD3D11Libraries} LLUtils::LLUtils oivshared ImageUtil)
 
 target_link_libraries(${TargetName} PUBLIC RendererCore)
 
