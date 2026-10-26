@@ -17,5 +17,7 @@ namespace OIV
         ImageSource source = ImageSource::GeneratedByLib;
         // Normalized native file path for File, empty for every other source.
         LLUtils::native_string_type path;
+        // Extension-free save suggestion retained by derived images without a file identity.
+        LLUtils::native_string_type sourceName;
     };
 }  // namespace OIV

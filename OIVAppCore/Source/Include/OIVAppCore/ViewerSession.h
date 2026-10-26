@@ -8,6 +8,7 @@
 #include <OIVAppCore/AppSettingsPolicy.h>
 #include <OIVShared/FileSorter.h>
 #include <atomic>
+#include <filesystem>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -71,6 +72,8 @@ namespace OIV
         // Accept a successfully decoded CPU image. Preparing processing stages remains explicit.
         void OpenImage(ViewerImage image)
         {
+            if (image.source == ImageSource::File)
+                image.sourceName = std::filesystem::path(image.path).stem().native();
             fCurrentFrame = 0;
             fSequencerPolicy.Reset(image.pixels);
             fImageState.SetOpenedImage(std::move(image));

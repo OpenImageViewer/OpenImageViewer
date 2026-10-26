@@ -361,3 +361,20 @@ TEST_CASE("Replacing a fully initialized viewer preserves pending file navigatio
 }
     #endif
 #endif
+
+TEST_CASE("Derived images retain their source save name without a file identity", "[session][appcore]")
+{
+    OIV::ViewerSession session;
+    auto original   = SessionImage();
+    original.source = OIV::ImageSource::File;
+    original.path   = LLUTILS_TEXT("C:/pictures/original.photo.jpg");
+    session.OpenImage(std::move(original));
+    const auto name = session.Image().GetOpenedImage()->sourceName;
+    REQUIRE(name == LLUTILS_TEXT("original.photo"));
+    auto derived       = SessionImage();
+    derived.sourceName = name;
+    session.OpenImage(std::move(derived));
+    REQUIRE(session.Image().GetOpenedImage()->sourceName == name);
+    REQUIRE(session.Image().GetOpenedImage()->path.empty());
+    REQUIRE(session.Image().GetOpenedImage()->source == OIV::ImageSource::GeneratedByLib);
+}
