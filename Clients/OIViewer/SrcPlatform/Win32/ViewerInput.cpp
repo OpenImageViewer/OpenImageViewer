@@ -153,6 +153,18 @@ namespace OIV
     {
         if (const auto* key = std::get_if<LWS::Win32::KeyEvent>(&eventData))
         {
+            if (key->pressed && key->virtualKey == VK_ESCAPE && (key->keyData & (1U << 30)) != 0)
+                return 0;
+            // Dismiss the selection before Escape can close or return to the host.
+            if (key->pressed && key->virtualKey == VK_ESCAPE &&
+                owner.fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+            {
+                owner.fMouseInput->Cancel();
+                owner.CancelSelection();
+                return 0;
+            }
+            if (key->virtualKey == VK_MENU || key->virtualKey == VK_LMENU || key->virtualKey == VK_RMENU)
+                owner.UpdateSelectionCursor(key->pressed);
             if (owner.fShell.forwardKey && key->pressed && key->virtualKey == VK_ESCAPE)
             {
                 owner.CloseApplication(false);

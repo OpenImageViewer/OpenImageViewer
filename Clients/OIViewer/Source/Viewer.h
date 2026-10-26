@@ -296,6 +296,7 @@ namespace OIV
         void UpdateExposure();
         bool ToggleColorCorrection();
         void CancelSelection();
+        void UpdateSelectionCursor(bool altPressed);
         void LoadSubImages(bool restoreSelection = false);
         void AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages);
         void OnContextMenuTimer();
