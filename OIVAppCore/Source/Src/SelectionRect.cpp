@@ -1,10 +1,8 @@
 #include <OIVAppCore/SelectionRect.h>
 
-#include <LLUtils/Exception.h>
-
 #include <algorithm>
-#include <array>
-#include <iterator>
+#include <cmath>
+#include <cstdint>
 
 namespace OIV
 {
@@ -18,191 +16,153 @@ namespace OIV
         return fSelectionRect;
     }
 
-    LLUtils::Corner SelectionRect::OppositeCorner(const LLUtils::Corner corner) const
+    void SelectionRect::SetContentScale(LLUtils::PointF64 scale)
     {
-        using namespace LLUtils;
-        switch (corner)
+        fEdgeTolerance   = {std::max(1, static_cast<int>(std::lround(EdgeTolerance * scale.x))),
+                            std::max(1, static_cast<int>(std::lround(EdgeTolerance * scale.y)))};
+        fCornerTolerance = {std::max(1, static_cast<int>(std::lround(CornerTolerance * scale.x))),
+                            std::max(1, static_cast<int>(std::lround(CornerTolerance * scale.y)))};
+    }
+
+    SelectionRect::Handle SelectionRect::HitTest(const LLUtils::PointI32& point) const
+    {
+        Handle handle = Handle::None;
+        if (fOperation == Operation::EndDrag && !fSelectionRect.IsEmpty())
         {
-        case Corner::TopRight:
-            return BottomLeft;
-        case Corner::BottomLeft:
-            return TopRight;
-        case Corner::TopLeft:
-            return BottomRight;
-        case Corner::BottomRight:
-            return TopLeft;
-        case Corner::None:
-            LL_EXCEPTION(Exception::ErrorCode::LogicError, "corner must be set to get opposite corner");
-        default:
-            LL_EXCEPTION_UNEXPECTED_VALUE;
+            const auto minimum = fSelectionRect.GetCorner(LLUtils::TopLeft);
+            const auto maximum = fSelectionRect.GetCorner(LLUtils::BottomRight);
+            // Keep tolerances fixed in logical pixels, but reserve the middle of small selections for moving.
+            const int horizontalLimit = (fSelectionRect.GetWidth() - 1) / 4;
+            const int verticalLimit   = (fSelectionRect.GetHeight() - 1) / 4;
+            const int cornerX         = std::min(fCornerTolerance.x, horizontalLimit);
+            const int cornerY         = std::min(fCornerTolerance.y, verticalLimit);
+            const int edgeX           = std::min(fEdgeTolerance.x, horizontalLimit);
+            const int edgeY           = std::min(fEdgeTolerance.y, verticalLimit);
+            const auto left           = std::abs(static_cast<int64_t>(point.x) - minimum.x);
+            const auto right          = std::abs(static_cast<int64_t>(point.x) - maximum.x);
+            const auto top            = std::abs(static_cast<int64_t>(point.y) - minimum.y);
+            const auto bottom         = std::abs(static_cast<int64_t>(point.y) - maximum.y);
+            const bool withinX        = point.x >= minimum.x && point.x <= maximum.x;
+            const bool withinY        = point.y >= minimum.y && point.y <= maximum.y;
+
+            // Corners take priority over edges, and only the remaining interior moves the rectangle.
+            if (left <= cornerX && top <= cornerY)
+                handle = Handle::TopLeft;
+            else if (right <= cornerX && top <= cornerY)
+                handle = Handle::TopRight;
+            else if (left <= cornerX && bottom <= cornerY)
+                handle = Handle::BottomLeft;
+            else if (right <= cornerX && bottom <= cornerY)
+                handle = Handle::BottomRight;
+            else if (withinX && top <= edgeY)
+                handle = Handle::Top;
+            else if (withinX && bottom <= edgeY)
+                handle = Handle::Bottom;
+            else if (withinY && left <= edgeX)
+                handle = Handle::Left;
+            else if (withinY && right <= edgeX)
+                handle = Handle::Right;
+            else if (withinX && withinY)
+                handle = Handle::Move;
         }
+        return handle;
     }
 
-    LLUtils::Corner SelectionRect::GetClosestCorner(const LLUtils::PointI32& point) const
+    SelectionRect::SelectionRect(SelectionRectChangedCallback callback) : fCallback(callback) {}
+
+    void SelectionRect::SetSelection(const Operation operation, const LLUtils::PointI32& posWindowSpace,
+                                     std::optional<Handle> hitHandle)
     {
-        using namespace LLUtils;
-        std::array< decltype(fSelectionRect)::Point_Type::point_type, 4> distances =
-        {
-              point.DistanceSquared(fSelectionRect.GetCorner(Corner::TopLeft))
-            , point.DistanceSquared(fSelectionRect.GetCorner(Corner::BottomRight))
-            , point.DistanceSquared(fSelectionRect.GetCorner(Corner::TopRight))
-            , point.DistanceSquared(fSelectionRect.GetCorner(Corner::BottomLeft))
-        };
-
-        auto dist = std::distance(distances.begin(), std::min_element(distances.begin(), distances.end()));
-
-        switch (dist)
-        {
-        case 0:
-            return Corner::TopLeft;
-        case 1:
-            return Corner::BottomRight;
-        case 2:
-            return Corner::TopRight;
-        case 3:
-            return Corner::BottomLeft;
-        }
-
-        LL_EXCEPTION(Exception::ErrorCode::LogicError, "Unexpected value");
-    }
-
-    SelectionRect::SelectionRect(SelectionRectChangedCallback callback) : fCallback(callback)
-    {
-
-    }
-
-    void SelectionRect::SetSelection(const Operation operation, const LLUtils::PointI32& posWindowSpace)
-    {
-        
-        //Corner constants
-        constexpr int CornerDragFactor = 6;
-        constexpr double InflationFactor = 0.1;
-        constexpr int MinInflation = 5;
-        
-        //Edge constants
-        constexpr int EdgeDragFactor = 8;
-        constexpr int minCaptureWidth = 8;
-
         switch (operation)
         {
-        case Operation::NoOp:
-            return; // return - Don't change state
+            case Operation::NoOp:
+                return;  // return - Don't change state
 
-        case Operation::BeginDrag:
+            case Operation::BeginDrag:
 
-            //Begin drawing the selection rect
-            if (fOperation == Operation::NoOp)
-            {
-                fSelectStartPoint = posWindowSpace;
-                fOperation = operation;
-            }
-
-            //Begin Dragging or resizing the selection rect
-            if (fOperation == Operation::EndDrag)
-            {
-                decltype(fSelectionRect)::Point_Type inflationRate =
-                {   std::max(MinInflation, static_cast<int>(fSelectionRect.GetWidth() * InflationFactor))
-                  , std::max(MinInflation, static_cast<int>(fSelectionRect.GetHeight() * InflationFactor))
-                };
-
-                decltype(fSelectionRect) infaltedRect = fSelectionRect.Infalte(inflationRate.x, inflationRate.y);
-                
-                const bool isInside = infaltedRect.IsInside(posWindowSpace);
-
-                if (isInside)
+                // Begin drawing the selection rect
+                if (fOperation == Operation::NoOp)
                 {
-                    LLUtils::Corner corner = GetClosestCorner(posWindowSpace);
+                    fSelectStartPoint = posWindowSpace;
+                    fOperation        = operation;
+                }
 
-                    decltype(fSelectionRect)::Point_Type distanceToCorner = (infaltedRect.GetCorner(corner) - posWindowSpace).Abs();
-                    const bool shouldDragCorner = distanceToCorner.x < fSelectionRect.GetWidth() / CornerDragFactor && distanceToCorner.y < fSelectionRect.GetHeight() / CornerDragFactor;
-
-                    if (shouldDragCorner == true)
-                    {
-                        //Selection rect already visible, re-drag
-                        fOperation = Operation::BeginDrag;
-                        fSelectStartPoint = fSelectionRect.GetCorner(OppositeCorner(corner));
-                        fLockMode = LockMode::NoLock;
-                    }
+                // Begin Dragging or resizing the selection rect
+                if (fOperation == Operation::EndDrag)
+                {
+                    const auto handle = hitHandle ? *hitHandle : HitTest(posWindowSpace);
+                    fLockMode         = LockMode::NoLock;
+                    if (handle == Handle::Move)
+                        fSelectEndPoint = posWindowSpace;
                     else
                     {
-                        int captureWidth = std::max(minCaptureWidth, fSelectionRect.GetWidth() / EdgeDragFactor);
-                        int captureHeight = std::max(minCaptureWidth, fSelectionRect.GetHeight() / EdgeDragFactor);
-                        LLUtils::PointI32 minimum = fSelectionRect.GetCorner(LLUtils::Corner::TopLeft);
-                        LLUtils::PointI32 maximum = fSelectionRect.GetCorner(LLUtils::Corner::BottomRight);
- 
-                        // resize from lower edge.
-                        if (maximum.y - posWindowSpace.y < captureHeight)
+                        fOperation = Operation::BeginDrag;
+                        switch (handle)
                         {
-                            fOperation = Operation::BeginDrag;
-                            fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::Corner::TopLeft);
-                            fLockMode = LockMode::LockWidth;
-                        }
-                        // resize from upper edge.
-                        else if (posWindowSpace.y - minimum.y < captureHeight)
-                        {
-                            fOperation = Operation::BeginDrag;
-                            fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::Corner::BottomRight);
-                            fLockMode = LockMode::LockWidth;
-                        }
-                        // resize from right edge.
-                        else if (maximum.x - posWindowSpace.x < captureWidth)
-                        {
-                            fOperation = Operation::BeginDrag;
-                            fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::Corner::TopLeft);
-                            fLockMode = LockMode::LockHeight;
-                        }
-                        // resize from left edge.
-                        else if (posWindowSpace.x - minimum.x < captureWidth)
-                        {
-                            fOperation = Operation::BeginDrag;
-                            fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::Corner::TopRight);
-                            fLockMode = LockMode::LockHeight;
-                        }
-                        else
-                        {
-                            //Move the rectangle
-                            fSelectEndPoint = posWindowSpace;
-                            fLockMode = LockMode::NoLock;
+                            case Handle::TopLeft:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::BottomRight);
+                                break;
+                            case Handle::TopRight:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::BottomLeft);
+                                break;
+                            case Handle::BottomLeft:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::TopRight);
+                                break;
+                            case Handle::BottomRight:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::TopLeft);
+                                break;
+                            case Handle::Top:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::BottomRight);
+                                fLockMode         = LockMode::LockWidth;
+                                break;
+                            case Handle::Bottom:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::TopLeft);
+                                fLockMode         = LockMode::LockWidth;
+                                break;
+                            case Handle::Left:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::TopRight);
+                                fLockMode         = LockMode::LockHeight;
+                                break;
+                            case Handle::Right:
+                                fSelectStartPoint = fSelectionRect.GetCorner(LLUtils::TopLeft);
+                                fLockMode         = LockMode::LockHeight;
+                                break;
+                            default:
+                                fSelectStartPoint = posWindowSpace;
+                                break;
                         }
                     }
                 }
-                else
-                {
-                    //outside of the rectange - start a new selection rect.
-                    fSelectStartPoint = posWindowSpace;
-                    fOperation = Operation::BeginDrag;
-                    fLockMode = LockMode::NoLock;
-                }
+                break;
 
-            }
-            break;
-
-
-        case Operation::Drag:
+            case Operation::Drag:
             {
-                //Changing the size of the selection rect
+                // Changing the size of the selection rect
                 if (fOperation == Operation::BeginDrag || fOperation == Operation::Drag)
                 {
                     using namespace LLUtils;
                     decltype(fSelectionRect)::Point_Type topLeft = fSelectionRect.GetCorner(LLUtils::Corner::TopLeft);
-                    decltype(fSelectionRect)::Point_Type bottomRight = fSelectionRect.GetCorner(LLUtils::Corner::BottomRight);
+                    decltype(fSelectionRect)::Point_Type bottomRight = fSelectionRect.GetCorner(
+                        LLUtils::Corner::BottomRight);
 
                     auto diff = (posWindowSpace - fSelectStartPoint).Abs();
 
                     if (diff.x != 0 && diff.y != 0)
                     {
-
-                        PointI32 p0 = {
-                           fLockMode == LockMode::LockWidth ? topLeft.x : std::min<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
-                           fLockMode == LockMode::LockHeight ? topLeft.y : std::min<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
-                        };
-                        PointI32 p1 = {
-                           fLockMode == LockMode::LockWidth ? bottomRight.x : std::max<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
-                           fLockMode == LockMode::LockHeight ? bottomRight.y : std::max<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)
-                        };
-                        fSelectionRect = { p0,p1 };
+                        PointI32 p0    = {fLockMode == LockMode::LockWidth
+                                              ? topLeft.x
+                                              : std::min<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
+                                          fLockMode == LockMode::LockHeight
+                                              ? topLeft.y
+                                              : std::min<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)};
+                        PointI32 p1    = {fLockMode == LockMode::LockWidth
+                                              ? bottomRight.x
+                                              : std::max<PointI32::point_type>(posWindowSpace.x, fSelectStartPoint.x),
+                                          fLockMode == LockMode::LockHeight
+                                              ? bottomRight.y
+                                              : std::max<PointI32::point_type>(posWindowSpace.y, fSelectStartPoint.y)};
+                        fSelectionRect = {p0, p1};
                         NotifySelectionRectChanged(true);
-                        
                     }
                     fOperation = operation;
                 }
@@ -217,28 +177,27 @@ namespace OIV
                 }
             }
             break;
-        case Operation::EndDrag:
+            case Operation::EndDrag:
 
-            //Update operation state only when finshing setting the selection rect.
-            if (fOperation == Operation::Drag)
-                fOperation = operation;
+                // Update operation state only when finshing setting the selection rect.
+                if (fOperation == Operation::Drag)
+                    fOperation = operation;
 
-
-            break;
-        case Operation::CancelSelection:
-            fSelectionRect = {};
-            fSelectStartPoint={};
-            fSelectEndPoint={};
-            fOperation = Operation::NoOp;
-            fLockMode = LockMode::NoLock;
-            NotifySelectionRectChanged(false);
-            break;
+                break;
+            case Operation::CancelSelection:
+                fSelectionRect    = {};
+                fSelectStartPoint = {};
+                fSelectEndPoint   = {};
+                fOperation        = Operation::NoOp;
+                fLockMode         = LockMode::NoLock;
+                NotifySelectionRectChanged(false);
+                break;
         }
     }
 
-    void SelectionRect::UpdateSelection(const LLUtils::RectI32 & selectionRect)
+    void SelectionRect::UpdateSelection(const LLUtils::RectI32& selectionRect)
     {
         fSelectionRect = selectionRect;
         NotifySelectionRectChanged(true);
     }
-}
+}  // namespace OIV

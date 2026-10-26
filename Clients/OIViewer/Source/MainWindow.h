@@ -30,6 +30,11 @@ namespace OIV
             South,
             SouthEast,
             SizeAll,
+            ResizeEW,
+            ResizeNS,
+            ResizeNESW,
+            ResizeNWSE,
+            SelectionMove,
             Count
         };
 
@@ -88,6 +93,9 @@ namespace OIV
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNWSE), LWS::Cursor::FromShape(LWS::CursorShape::SizeEW),
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNESW), LWS::Cursor::FromShape(LWS::CursorShape::SizeNS),
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNWSE), LWS::Cursor::FromShape(LWS::CursorShape::SizeAll),
+            LWS::Cursor::FromShape(LWS::CursorShape::SizeEW),   LWS::Cursor::FromShape(LWS::CursorShape::SizeNS),
+            LWS::Cursor::FromShape(LWS::CursorShape::SizeNESW), LWS::Cursor::FromShape(LWS::CursorShape::SizeNWSE),
+            LWS::Cursor::FromShape(LWS::CursorShape::SizeAll),
         };
         bool fCursorsInitialized    = false;
         bool fUseMainWindowAsCanvas = false;

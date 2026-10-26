@@ -41,6 +41,8 @@ namespace OIV
     {
         fMultiClick.SetMouseDelta(static_cast<int16_t>(delta.x), static_cast<int16_t>(delta.y));
         ApplyDecision(fController.Move(delta, fOwner.fContextMenu->IsVisible()));
+        if (fOwner.fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+            fOwner.UpdateSelectionCursor(fOwner.fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false));
     }
 
     void ViewerMouseInput::ApplyDecision(const MouseGestureController::Decision& decision)
@@ -74,11 +76,14 @@ namespace OIV
                 ToggleAutoScroll();
                 break;
             case MouseGestureController::Action::BeginSelection:
+            {
+                const auto position = fOwner.fWindow.GetCanvasMousePosition();
                 fOwner.fSelectionRect.SetSelection(SelectionRect::Operation::BeginDrag,
-                                                   fOwner.SnapToScreenSpaceImagePixels(
-                                                       fOwner.fWindow.GetCanvasMousePosition()));
+                                                   fOwner.SnapToScreenSpaceImagePixels(position),
+                                                   fOwner.fSelectionRect.HitTest(position));
                 fOwner.SaveImageSpaceSelection();
                 break;
+            }
             case MouseGestureController::Action::EndSelection:
                 fOwner.fSelectionRect.SetSelection(SelectionRect::Operation::EndDrag,
                                                    fOwner.SnapToScreenSpaceImagePixels(

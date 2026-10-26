@@ -311,6 +311,45 @@ namespace OIV
         }
     }
 
+    void Viewer::UpdateSelectionCursor(bool altPressed)
+    {
+        if (fAutoScroll->IsAutoScrolling())
+            return;
+        if (altPressed && (fSelectionRect.GetOperation() == SelectionRect::Operation::BeginDrag ||
+                           fSelectionRect.GetOperation() == SelectionRect::Operation::Drag))
+            return;
+        auto shape = MainWindow::CursorType::SystemDefault;
+        if (altPressed && fSelectionRect.GetOperation() == SelectionRect::Operation::EndDrag &&
+            fWindow.GetCanvasWindow().IsMouseInClientRect())
+        {
+            switch (fSelectionRect.HitTest(fWindow.GetCanvasMousePosition()))
+            {
+                case SelectionRect::Handle::TopLeft:
+                case SelectionRect::Handle::BottomRight:
+                    shape = MainWindow::CursorType::ResizeNWSE;
+                    break;
+                case SelectionRect::Handle::TopRight:
+                case SelectionRect::Handle::BottomLeft:
+                    shape = MainWindow::CursorType::ResizeNESW;
+                    break;
+                case SelectionRect::Handle::Top:
+                case SelectionRect::Handle::Bottom:
+                    shape = MainWindow::CursorType::ResizeNS;
+                    break;
+                case SelectionRect::Handle::Left:
+                case SelectionRect::Handle::Right:
+                    shape = MainWindow::CursorType::ResizeEW;
+                    break;
+                case SelectionRect::Handle::Move:
+                    shape = MainWindow::CursorType::SelectionMove;
+                    break;
+                default:
+                    break;
+            }
+        }
+        fWindow.SetCursorType(shape);
+    }
+
     void Viewer::CancelSelection()
     {
         TextLabel* selectionSizeText = fLabelManager.GetTextLabel("selectionSizeText");
@@ -319,6 +358,7 @@ namespace OIV
 
         fSelectionRect.SetSelection(SelectionRect::Operation::CancelSelection, {0, 0});
         fSession.fImageSpaceSelection = decltype(fSession.fImageSpaceSelection)::Zero;
+        UpdateSelectionCursor(false);
     }
 
     double Viewer::GetMinimumPixelSize()
@@ -465,6 +505,7 @@ namespace OIV
         if (scale.has_value() && size.x > 0 && size.y > 0)
         {
             fDPIadjustmentFactor = {scale->x, scale->y};
+            fSelectionRect.SetContentScale(fDPIadjustmentFactor);
             fLabelManager.SetContentScale(*scale);
             UpdateWelcomeMessageLayout();
             AutoPlaceImage();

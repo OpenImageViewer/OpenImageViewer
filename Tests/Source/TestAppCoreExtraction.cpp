@@ -2305,6 +2305,32 @@ TEST_CASE("AppSettingsPolicy accepts finite positive fractional screen-space tex
     }
 }
 
+TEST_CASE("Selection resize hover matches the active drag areas", "[AppCore]")
+{
+    using Selection = OIV::SelectionRect;
+    Selection selection([](const auto&, bool) {});
+    REQUIRE(selection.HitTest({0, 0}) == Selection::Handle::None);
+    selection.SetSelection(Selection::Operation::BeginDrag, {100, 100});
+    selection.SetSelection(Selection::Operation::Drag, {300, 300});
+    selection.SetSelection(Selection::Operation::EndDrag, {300, 300});
+    REQUIRE(selection.HitTest({100, 100}) == Selection::Handle::TopLeft);
+    REQUIRE(selection.HitTest({300, 100}) == Selection::Handle::TopRight);
+    REQUIRE(selection.HitTest({100, 300}) == Selection::Handle::BottomLeft);
+    REQUIRE(selection.HitTest({300, 300}) == Selection::Handle::BottomRight);
+    REQUIRE(selection.HitTest({200, 100}) == Selection::Handle::Top);
+    REQUIRE(selection.HitTest({200, 300}) == Selection::Handle::Bottom);
+    REQUIRE(selection.HitTest({100, 200}) == Selection::Handle::Left);
+    REQUIRE(selection.HitTest({300, 200}) == Selection::Handle::Right);
+    REQUIRE(selection.HitTest({200, 200}) == Selection::Handle::Move);
+    REQUIRE(selection.HitTest({0, 0}) == Selection::Handle::None);
+    selection.SetSelection(Selection::Operation::BeginDrag, {200, 100});
+    selection.SetSelection(Selection::Operation::Drag, {200, 80});
+    REQUIRE(selection.GetSelectionRect().GetWidth() == 200);
+    REQUIRE(selection.GetSelectionRect().GetCorner(LLUtils::TopLeft) == LLUtils::PointI32{100, 80});
+    selection.SetSelection(Selection::Operation::CancelSelection, {});
+    REQUIRE(selection.HitTest({100, 80}) == Selection::Handle::None);
+}
+
 TEST_CASE("Image information uses pure additive and subtractive channel colors", "[AppCore][CMYK]")
 {
     using IMCodec::ChannelSemantic;
@@ -2317,4 +2343,82 @@ TEST_CASE("Image information uses pure additive and subtractive channel colors",
     CHECK(channels ==
           LLUTILS_TEXT("<textcolor=#00ffff>C<textcolor=#ffffff>:8 <textcolor=#ff00ff>M<textcolor=#ffffff>:8 "
                        "<textcolor=#ffff00>Y<textcolor=#ffffff>:8 <textcolor=#ffffff>K<textcolor=#ffffff>:8"));
+}
+
+TEST_CASE("Selection resize tolerances stay fixed as the rectangle grows", "[AppCore][selection]")
+{
+    using Selection = OIV::SelectionRect;
+    const int size  = GENERATE(200, 2000);
+    Selection selection([](const auto&, bool) {});
+    selection.SetSelection(Selection::Operation::BeginDrag, {100, 100});
+    selection.SetSelection(Selection::Operation::Drag, {100 + size, 100 + size});
+    selection.SetSelection(Selection::Operation::EndDrag, {100 + size, 100 + size});
+    const int center = 100 + size / 2;
+    CHECK(selection.HitTest({center, 94}) == Selection::Handle::Top);
+    CHECK(selection.HitTest({center, 93}) == Selection::Handle::None);
+    CHECK(selection.HitTest({center, 106}) == Selection::Handle::Top);
+    CHECK(selection.HitTest({center, 107}) == Selection::Handle::Move);
+    CHECK(selection.HitTest({94, center}) == Selection::Handle::Left);
+    CHECK(selection.HitTest({93, center}) == Selection::Handle::None);
+    CHECK(selection.HitTest({106, center}) == Selection::Handle::Left);
+    CHECK(selection.HitTest({107, center}) == Selection::Handle::Move);
+    CHECK(selection.HitTest({100 + size + 6, center}) == Selection::Handle::Right);
+    CHECK(selection.HitTest({100 + size + 7, center}) == Selection::Handle::None);
+    CHECK(selection.HitTest({center, 100 + size + 6}) == Selection::Handle::Bottom);
+    CHECK(selection.HitTest({center, 100 + size + 7}) == Selection::Handle::None);
+    CHECK(selection.HitTest({90, 90}) == Selection::Handle::TopLeft);
+    CHECK(selection.HitTest({110, 110}) == Selection::Handle::TopLeft);
+    CHECK(selection.HitTest({89, 89}) == Selection::Handle::None);
+    CHECK(selection.HitTest({111, 111}) == Selection::Handle::Move);
+    selection.SetSelection(Selection::Operation::BeginDrag, {center, 107});
+    selection.SetSelection(Selection::Operation::Drag, {center + 5, 117});
+    CHECK(selection.GetSelectionRect().GetCorner(LLUtils::TopLeft) == LLUtils::PointI32{105, 110});
+}
+
+TEST_CASE("Small selections keep an interior move target", "[AppCore][selection]")
+{
+    using Selection  = OIV::SelectionRect;
+    const int width  = GENERATE(2, 8, 20, 40, 200);
+    const int height = GENERATE(2, 8, 20, 40, 200);
+    Selection selection([](const auto&, bool) {});
+    selection.SetSelection(Selection::Operation::BeginDrag, {100, 100});
+    selection.SetSelection(Selection::Operation::Drag, {100 + width, 100 + height});
+    selection.SetSelection(Selection::Operation::EndDrag, {100 + width, 100 + height});
+    CHECK(selection.HitTest({100 + width / 2, 100 + height / 2}) == Selection::Handle::Move);
+    CHECK(selection.HitTest({100, 100}) == Selection::Handle::TopLeft);
+    CHECK(selection.HitTest({100 + width, 100 + height}) == Selection::Handle::BottomRight);
+}
+
+TEST_CASE("Selection hit areas scale with display DPI rather than image zoom", "[AppCore][selection]")
+{
+    using Selection = OIV::SelectionRect;
+    Selection selection([](const auto&, bool) {});
+    selection.SetContentScale({2.0, 1.5});
+    selection.SetSelection(Selection::Operation::BeginDrag, {100, 100});
+    selection.SetSelection(Selection::Operation::Drag, {500, 500});
+    selection.SetSelection(Selection::Operation::EndDrag, {500, 500});
+    CHECK(selection.HitTest({88, 300}) == Selection::Handle::Left);
+    CHECK(selection.HitTest({87, 300}) == Selection::Handle::None);
+    CHECK(selection.HitTest({300, 91}) == Selection::Handle::Top);
+    CHECK(selection.HitTest({300, 90}) == Selection::Handle::None);
+    CHECK(selection.HitTest({80, 85}) == Selection::Handle::TopLeft);
+    CHECK(selection.HitTest({79, 85}) == Selection::Handle::None);
+    selection.SetContentScale({1.0, 1.0});
+    CHECK(selection.HitTest({88, 300}) == Selection::Handle::None);
+}
+
+TEST_CASE("Selection drag activation honors the unsnapped hover target", "[AppCore][selection]")
+{
+    using Selection = OIV::SelectionRect;
+    Selection selection([](const auto&, bool) {});
+    selection.SetSelection(Selection::Operation::BeginDrag, {100, 100});
+    selection.SetSelection(Selection::Operation::Drag, {300, 300});
+    selection.SetSelection(Selection::Operation::EndDrag, {300, 300});
+    const auto hover = selection.HitTest({200, 93});
+    REQUIRE(hover == Selection::Handle::None);
+    // At high zoom an outside pointer can snap onto the old edge. It must still start a new rectangle.
+    selection.SetSelection(Selection::Operation::BeginDrag, {200, 100}, hover);
+    selection.SetSelection(Selection::Operation::Drag, {220, 120});
+    CHECK(selection.GetSelectionRect().GetCorner(LLUtils::TopLeft) == LLUtils::PointI32{200, 100});
+    CHECK(selection.GetSelectionRect().GetCorner(LLUtils::BottomRight) == LLUtils::PointI32{220, 120});
 }

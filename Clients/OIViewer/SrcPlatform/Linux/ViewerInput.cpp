@@ -26,9 +26,20 @@ namespace OIV
 
     bool Viewer::handleKeyInput(const LWS::AnyEvent& eventData)
     {
+        if (std::holds_alternative<LWS::EventKeyDown>(eventData) || std::holds_alternative<LWS::EventKeyUp>(eventData))
+            UpdateSelectionCursor(fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false));
         const auto* keyEvent = std::get_if<LWS::EventKeyDown>(&eventData);
         if (keyEvent == nullptr)
             return false;
+
+        if (keyEvent->key == LWS::KeyCode::Escape && keyEvent->repeat)
+            return true;
+        if (keyEvent->key == LWS::KeyCode::Escape && fSelectionRect.GetOperation() != SelectionRect::Operation::NoOp)
+        {
+            fMouseInput->Cancel();
+            CancelSelection();
+            return true;
+        }
 
         const LinuxKeyModifiers modifiers{
             .control = fPlatform.IsKeyPressed(LWS::KeyCode::Control).value_or(false),

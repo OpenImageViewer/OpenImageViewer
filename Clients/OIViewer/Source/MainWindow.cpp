@@ -38,14 +38,15 @@ namespace OIV
         if (type == fCurrentCursorType || type < CursorType::SystemDefault || type >= CursorType::Count)
             return;
 
-        if (type != CursorType::SystemDefault && !fCursorsInitialized)
+        if (type != CursorType::SystemDefault && type <= CursorType::SizeAll && !fCursorsInitialized)
             InitializeCursors();
 
         fCurrentCursorType = type;
-        if (type == CursorType::SystemDefault)
-            std::ignore = fWindow.SetMouseCursor(LWS::Cursor::FromShape(LWS::CursorShape::Arrow));
-        else
-            std::ignore = fWindow.SetMouseCursor(fCursors[static_cast<size_t>(type) - 1]);
+        const auto cursor  = type == CursorType::SystemDefault ? LWS::Cursor::FromShape(LWS::CursorShape::Arrow)
+                                                               : fCursors[static_cast<size_t>(type) - 1];
+        std::ignore        = fWindow.SetMouseCursor(cursor);
+        if (!fUseMainWindowAsCanvas)
+            std::ignore = fCanvasWindow.SetMouseCursor(cursor);
     }
 
     void MainWindow::InitializeCursors()
