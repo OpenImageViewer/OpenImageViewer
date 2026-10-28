@@ -17,7 +17,9 @@ namespace OIV
         Source,
         // Source after user rotation and flipping, shared if unchanged.
         GeometricTransform,
-        // Geometry converted and normalized for rendering without changing dimensions.
+        // Geometry after an optional sample-to-linear lookup, shared when no table is active.
+        TransferFunction,
+        // Linear results encoded for display, or other geometry converted for rendering.
         RenderFormat,
         // Full-image fallback within the texture limit, shared with RenderFormat when it fits.
         Downscaled,

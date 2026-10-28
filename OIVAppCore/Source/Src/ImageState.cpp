@@ -209,8 +209,11 @@ namespace OIV
                                fTransform.flip != IMUtil::AxisAlignedFlip::None
                            ? IMUtil::ImageUtil::Transform(fTransform, input)
                            : input;
+            case ImageProcessingStage::TransferFunction:
+                return IMUtil::ImageUtil::ApplyTransferFunction(input);
             case ImageProcessingStage::RenderFormat:
             {
+                input       = IMUtil::ImageUtil::EncodeLinearImageForDisplay(input);
                 auto result = input->GetTexelFormat() == IMCodec::TexelFormat::I_R8_G8_B8_A8
                                   ? input
                                   : IMUtil::ImageUtil::ConvertImageWithNormalization(

@@ -12,6 +12,10 @@ file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
     "./Source/*.cpp"
 )
 
+if(NOT TARGET CodecTiff OR NOT TARGET CodecJPG)
+    list(FILTER sourceFiles EXCLUDE REGEX "/TestDngCodec[.]cpp$")
+endif()
+
 if(NOT TARGET CodecJPG)
     list(FILTER sourceFiles EXCLUDE REGEX "/TestJpegCodec[.]cpp$")
 endif()
@@ -29,9 +33,17 @@ target_compile_definitions(tests_font_encoding PRIVATE OIV_TEST_SOURCE_DIR=\"${C
 target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTypeWrapper LLUtils::LLUtils)
 
 add_executable (${TargetName} ${sourceFiles})
+if(TARGET CodecPNG AND TARGET CodecJPG)
+    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_TRANSFER_ENCODERS=1)
+endif()
+if(TARGET CodecFreeImage)
+    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_DNG_FALLBACK=1)
+endif()
 # Exercise NaN/infinity rejection and overflowing frame durations with IEEE semantics.
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set_source_files_properties(Source/TestSequencer.cpp Source/TestUnitFormatter.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+    set_source_files_properties(Source/TestSequencer.cpp Source/TestUnitFormatter.cpp Source/TestTransferFunction.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+else()
+    set_source_files_properties(Source/TestTransferFunction.cpp PROPERTIES COMPILE_OPTIONS "-fno-fast-math")
 endif()
 
 if(NOT OIV_BUILD_CLIENT)

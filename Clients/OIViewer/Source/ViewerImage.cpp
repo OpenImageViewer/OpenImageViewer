@@ -27,6 +27,7 @@
 
 #include <ImageProcessing/TextRasterizer.h>
 #include <ImageProcessing/RawImage.h>
+#include <ImageUtil/ImageUtil.h>
 #include "VirtualStatusBar.h"
 #include "MonitorProvider.h"
 
@@ -49,7 +50,6 @@
 #include <OIVAppCore/ViewActionController.h>
 #include <OIVAppCore/ViewCommandPolicy.h>
 #include <OIVAppCore/ViewerPresentationPolicy.h>
-#include <ImageUtil/ImageUtil.h>
 #include <OIVAppCore/ViewerCompletion.h>
 
 namespace OIV
@@ -79,6 +79,8 @@ namespace OIV
 
     void Viewer::AddImageToControl(IMCodec::ImageSharedPtr image, uint16_t imageSlot, uint16_t totalImages)
     {
+        // Sidebar bitmaps bypass ImageState, so apply the same sample and display conversions here.
+        image = IMUtil::ImageUtil::EncodeLinearImageForDisplay(IMUtil::ImageUtil::ApplyTransferFunction(image));
         auto bitmapImage = IMUtil::ImageUtil::ConvertImageWithNormalization(image, IMCodec::TexelFormat::I_B8_G8_R8_A8,
                                                                             false);
         if (bitmapImage == nullptr)

@@ -56,7 +56,7 @@ namespace OIV
                       .openExternalFile =
                           [this](LLUtils::native_string_type path)
                       {
-                          fViewer.LoadFile(std::move(path), IMCodec::PluginTraverseMode::NoTraverse);
+                          fViewer.LoadFile(std::move(path), IMCodec::PluginTraverseMode::SuitablePlugin);
                           std::ignore = fViewer.fWindow.GetWindow().SetVisible(true);
                       },
                       .fileAssociations = [this](const auto& request, auto& result)

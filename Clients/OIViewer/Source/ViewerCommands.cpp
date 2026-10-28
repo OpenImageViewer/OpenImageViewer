@@ -356,23 +356,16 @@ namespace OIV
 
                 if (result == LWS::FileDialogResult::Success)
                 {
-                    LLUtils::native_string_type extension = LLUtils::StringUtility::ToLower(
-                        std::filesystem::path(saveFilePath).extension().native());
-                    LLUtils::native_string_view sv(extension);
-
-                    if (sv.empty() == false)
-                        sv = sv.substr(1);
-
+                    // Refresh full-resolution render pixels to bake pending transfers through cached stages.
+                    // Source and geometric pixels remain available unchanged for original-texel inspection.
+                    fSession.fImageState.Refresh(ImageProcessingStage::RenderFormat);
                     auto rasterized = fSession.fImageState.GetRetainedImage(ImageProcessingStage::RenderFormat);
-
-                    if (IMUtil::ImageUtil::HasAlphaChannelAndInUse(rasterized) == false)
-                        rasterized = IMUtil::ImageUtil::Convert(
-                            rasterized, IMCodec::TexelFormat::I_R8_G8_B8);  // Get rid of the Alpha channel
-
-                    LLUtils::Buffer encodedBuffer;
-
-                    fSession.fImageLoader.Encode(rasterized, sv.data(), encodedBuffer);
-                    LLUtils::File::WriteAllBytes(saveFilePath, encodedBuffer.size(), encodedBuffer.data());
+                    if (rasterized && !IMUtil::ImageUtil::HasAlphaChannelAndInUse(rasterized))
+                        rasterized = IMUtil::ImageUtil::Convert(rasterized, IMCodec::TexelFormat::I_R8_G8_B8);
+                    if (!rasterized)
+                        response.resValue = LLUTILS_TEXT("Unable to prepare the image for saving.");
+                    else if (fSession.fImageLoader.Encode(rasterized, saveFilePath) != IMCodec::ImageResult::Success)
+                        response.resValue = LLUTILS_TEXT("Unable to encode the image in the selected format.");
                 }
             }
         }
@@ -385,7 +378,7 @@ namespace OIV
                                                 openFilePath);
 
             if (result == LWS::FileDialogResult::Success)
-                LoadFile(openFilePath, IMCodec::PluginTraverseMode::NoTraverse);
+                LoadFile(openFilePath, IMCodec::PluginTraverseMode::SuitablePlugin);
         }
     }
 

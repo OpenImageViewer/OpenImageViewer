@@ -50,6 +50,8 @@ namespace OIV::Win32
                 IMCodec::ImageLoadFlags::Preview | IMCodec::ImageLoadFlags::LoadOnlyFirstImage, parameters));
             if (image == nullptr)
                 return nullptr;
+            // Host previews bypass ImageState but need the same transfer and display encoding.
+            image = IMUtil::ImageUtil::EncodeLinearImageForDisplay(IMUtil::ImageUtil::ApplyTransferFunction(image));
             image = IMUtil::ImageUtil::ConvertImageWithNormalization(image, IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
             if (image == nullptr)
                 return nullptr;
