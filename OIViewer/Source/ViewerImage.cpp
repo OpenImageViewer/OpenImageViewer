@@ -472,15 +472,6 @@ namespace OIV
                          .source = ImageSource::File,
                          .path   = std::filesystem::path(fileName).lexically_normal().native()};
         file.metadata = file.pixels->GetImageItem()->metaData;
-        IMCodec::ItemMetaDataSharedPtr metaData;
-        if (fSession.fImageLoader.LoadMetaData(fileName, metaData) == IMCodec::ImageResult::Success &&
-            metaData != nullptr)
-        {
-            if (file.metadata)
-                file.metadata->exifData = std::move(metaData->exifData);
-            else
-                file.metadata = std::move(metaData);
-        }
         LoadOivImage(std::move(file));
     }
 

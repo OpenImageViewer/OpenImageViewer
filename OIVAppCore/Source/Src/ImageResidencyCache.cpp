@@ -1,5 +1,6 @@
 #include <LLUtils/Logging/Logger.h>
 #include <OIVAppCore/ImageResidencyCache.h>
+#include <ImageProcessing/FileImage.h>
 
 namespace
 {
@@ -16,11 +17,10 @@ namespace OIV
     bool ImageResidencyCacheProcessor::ProcessResidencyRequest(const ImageResidencyCacheKey& key,
                                                                 ImageResidencyCacheValue& outValue)
     {
-        using namespace IMCodec;
-
-        auto res = fImageLoader.Decode(std::get<0>(key), ImageLoadFlags::None, {},
-                                        PluginTraverseMode::AnyFileType | PluginTraverseMode::AnyPlugin, outValue);
-        return res == ImageResult::Success;
+        IMCodec::ItemMetaDataSharedPtr metadata;
+        outValue = DecodeFileImage(fImageLoader, std::get<0>(key), metadata,
+                                   IMCodec::PluginTraverseMode::AnyFileType | IMCodec::PluginTraverseMode::AnyPlugin);
+        return outValue != nullptr;
     }
 
     ImageResidencyCache::ImageResidencyCache() : ImageResidencyCache(std::make_unique<ImageResidencyCacheProcessor>())
