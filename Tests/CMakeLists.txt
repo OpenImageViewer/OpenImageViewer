@@ -1,221 +1,118 @@
-
-# Validate Debug/Ninja builds in build/windows-clang (Visual Studio dev shell) and build/linux-clang (WSL).
-# Build with: cmake --build build/windows-clang  OR  cmake --build build/linux-clang
-# Run tests from the repository root so relative font fixtures resolve.
-# Also run tests_font_encoding, tests_file_associations, and tests_vk_failures.
-# Windows additionally runs tests_vk_runtime_failure, with .exe suffixes on all executables.
-# Renderer-policy changes need defaults, each renderer alone, Windows all-renderer, and test-only Null checks.
-# Expect D3D11 -> Vulkan -> GL on Windows and Vulkan -> GL on Linux, omitting unbuilt APIs.
-# Restore the default renderer configuration afterward; CPU/software runs do not prove hardware presentation.
-file(GLOB_RECURSE sourceFiles CONFIGURE_DEPENDS
-    "./Source/*.h"
-    "./Source/*.cpp"
-)
-
-if(NOT TARGET CodecTiff OR NOT TARGET CodecJPG)
-    list(FILTER sourceFiles EXCLUDE REGEX "/TestDngCodec[.]cpp$")
-endif()
-
-if(NOT TARGET CodecJPG)
-    list(FILTER sourceFiles EXCLUDE REGEX "/TestJpegCodec[.]cpp$")
-endif()
+# Cross-module integration tests and project-level test utilities stay in this directory.
+file(GLOB integrationTestSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Core/Test*.cpp")
 
 set(ExternalFolder "${CMAKE_CURRENT_SOURCE_DIR}/../External")
 cmake_path(ABSOLUTE_PATH ExternalFolder NORMALIZE OUTPUT_VARIABLE ExternalFolder)
 
-set(TargetName tests)
-
-# FreeType's native PNG dependency and ImageCodec's APNG library export overlapping
-# symbols on Linux. Exercise the font boundary in its own executable.
-add_executable(tests_font_encoding FontEncoding/TestFontEncoding.cpp)
-target_include_directories(tests_font_encoding PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
-target_compile_definitions(tests_font_encoding PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
-target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTypeWrapper LLUtils::LLUtils)
-
-add_executable (${TargetName} ${sourceFiles})
-if(TARGET CodecPNG AND TARGET CodecJPG)
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_TRANSFER_ENCODERS=1)
-endif()
-if(TARGET CodecFreeImage)
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_DNG_FALLBACK=1)
-endif()
-# Exercise NaN/infinity rejection and overflowing frame durations with IEEE semantics.
-if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set_source_files_properties(Source/TestSequencer.cpp Source/TestUnitFormatter.cpp Source/TestTransferFunction.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
-else()
-    set_source_files_properties(Source/TestTransferFunction.cpp PROPERTIES COMPILE_OPTIONS "-fno-fast-math")
-endif()
-
-if(NOT OIV_BUILD_CLIENT)
-target_sources(${TargetName} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/CommandLine.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/UI/MessageManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/LabelManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/ImageList.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseGestureController.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source/MouseMultiClickHandler.cpp
+add_executable(tests
+    ${integrationTestSources}
+    RendererIntegration/TestViewerSession.cpp
+    ../External/ImageCodec/Tests/ImageMagickTestCorpus.cpp
 )
-
+target_include_directories(tests PRIVATE
+    ../External/ImageCodec/Tests
+    ../External/json/include
+    ../OIViewer
+    ../OIViewer/Source
+    ../OIVAppCore/Source/Src
+)
+target_compile_definitions(tests PRIVATE
+    "OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\""
+    "OIV_IMAGE_CORPUS_DIR=\"${ExternalFolder}/ImageCodec/Tests\""
+)
+target_link_libraries(tests PRIVATE
+    CLI11::CLI11
+    Catch2::Catch2WithMain
+    oivshared
+    oivappcore
+    RendererCore
+    ImageCodec
+    ImageUtil
+    tiff
+    LWSLib
+)
+if(TARGET libjpeg-turbo::libjpeg-turbo)
+    target_link_libraries(tests PRIVATE libjpeg-turbo::libjpeg-turbo)
 endif()
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/LInput/Include)
-    target_sources(${TargetName} PRIVATE ../Clients/OIViewer/SrcPlatform/Win32/WlxPreview.cpp)
-    if(NOT OIV_BUILD_CLIENT)
-        target_sources(${TargetName} PRIVATE ../Clients/OIViewer/SrcPlatform/Win32/ContextMenuBackend.cpp)
-    endif()
-    # Keep predefined-registry-hive overrides isolated from the general test process.
-    add_executable(tests_file_associations
-        Win32/FileAssociationTests.cpp
-        ../Clients/OIViewer/SrcPlatform/Win32/FileAssociations.cpp
-        ../Clients/OIViewer/SrcPlatform/Win32/FileAssociationDefaults.cpp)
-    target_include_directories(tests_file_associations PRIVATE ../Clients/OIViewer ../Clients/OIViewer/Source)
-    target_include_directories(tests_file_associations PRIVATE ../External/json/single_include)
-    target_link_libraries(tests_file_associations PRIVATE Catch2::Catch2WithMain oivappcore WinReg::WinReg advapi32 shlwapi shell32 ole32 bcrypt crypt32)
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(tests_file_associations PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-    elseif(MINGW)
-        target_link_options(tests_file_associations PRIVATE "-mconsole" "-municode")
-    endif()
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_PLATFORM_LINUX)
-    if(NOT TARGET PkgConfig::GTK3)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
-    endif()
-    pkg_check_modules(GIOUnix REQUIRED IMPORTED_TARGET gio-unix-2.0)
-    add_executable(tests_file_associations
-        Linux/FileAssociationTests.cpp
-        ../Clients/OIViewer/SrcPlatform/Linux/FileAssociations.cpp)
-    target_include_directories(tests_file_associations PRIVATE ../Clients/OIViewer ../OIVAppCore/Source/Include)
-    target_link_libraries(tests_file_associations PRIVATE Catch2::Catch2WithMain oivappcore PkgConfig::GIOUnix)
-    pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET wayland-client)
-    target_link_libraries(${TargetName} PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient)
-    if(NOT OIV_BUILD_CLIENT)
-    target_sources(${TargetName} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Linux/ContextMenuBackend.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/SrcPlatform/Linux/LinuxKeyBindings.cpp
-    )
-    endif()
-endif()
-target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/json/include)
-target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer)
-target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../Clients/OIViewer/Source)
-target_include_directories(${TargetName} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../OIVLib/OIV/Source)
-target_compile_definitions(${TargetName} PRIVATE OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
-target_link_libraries(${TargetName} PRIVATE CLI11::CLI11 Catch2::Catch2WithMain oivshared oivappcore RendererCore ImageCodec tiff LWSLib)
-
-if(TARGET CodecJPG)
-    target_link_libraries(${TargetName} PRIVATE libjpeg-turbo::libjpeg-turbo)
-endif()
-
 if(OIV_BUILD_RENDERER_D3D11)
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_D3D11_RENDERER)
-    target_link_libraries(${TargetName} PRIVATE OIVD3D11Renderer)
+    target_link_libraries(tests PRIVATE OIVD3D11Renderer)
 endif()
-
 if(OIV_BUILD_RENDERER_GL)
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_GL_RENDERER)
-    target_link_libraries(${TargetName} PRIVATE OIVGLRenderer)
+    target_link_libraries(tests PRIVATE OIVGLRenderer)
 endif()
-
 if(OIV_BUILD_RENDERER_VK)
-    target_compile_definitions(${TargetName} PRIVATE OIV_TEST_VK_RENDERER)
-    target_link_libraries(${TargetName} PRIVATE OIVVKRenderer)
+    target_link_libraries(tests PRIVATE OIVVKRenderer)
 
     if(WIN32)
-        # Provide the same loader object with an absent module name. The static renderer
-        # library then uses these symbols; installed system DLLs are never touched.
         add_executable(tests_vk_runtime_failure
-            Vulkan/RuntimeFailureTests.cpp
-            ../Clients/OIViewer/Source/CommandLine.cpp
-            ../OIVLib/Renderers/OIVVKRenderer/Source/VKRuntimeWindows.cpp
+            RendererIntegration/RuntimeFailureTests.cpp
+            ../OIViewer/Source/CommandLine.cpp
+            ../Renderers/OIVVKRenderer/Source/VKRuntimeWindows.cpp
         )
         target_compile_definitions(tests_vk_runtime_failure PRIVATE OIV_VK_TEST_MISSING_RUNTIME
             $<TARGET_PROPERTY:OIVVKRenderer,COMPILE_DEFINITIONS>)
         target_include_directories(tests_vk_runtime_failure PRIVATE
-            ../Clients/OIViewer/Source ../OIVLib/OIV/Source ../OIVLib/Renderers/OIVVKRenderer/Source)
-        target_link_libraries(tests_vk_runtime_failure PRIVATE oiv CLI11::CLI11 Catch2::Catch2WithMain Vulkan::Headers user32)
-        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-            target_link_options(tests_vk_runtime_failure PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-        elseif(MINGW)
-            target_link_options(tests_vk_runtime_failure PRIVATE "-mconsole" "-municode")
-        endif()
+            ../OIViewer/Source ../OIVAppCore/Source/Src ../Renderers/OIVVKRenderer/Source)
+        target_link_libraries(tests_vk_runtime_failure PRIVATE
+            oivappcore CLI11::CLI11 Catch2::Catch2WithMain Vulkan::Headers user32)
     endif()
+endif()
 
-    # Keep Vulkan failure doubles isolated from the normal renderer tests and the real Vulkan loader.
-    # They exercise failure control flow and resource lifetime; real driver presentation needs viewer smoke tests.
-    add_executable(tests_vk_failures
-        Vulkan/FailureTests.cpp
-        ../OIVLib/Renderers/OIVVKRenderer/Source/VKContext.cpp
-        ../OIVLib/Renderers/OIVVKRenderer/Source/VKPipeline.cpp
-        ../OIVLib/Renderers/OIVVKRenderer/Source/VKRenderer.cpp
-        ../OIVLib/Renderers/OIVVKRenderer/Source/VKTexture.cpp
+if(NOT OIV_BUILD_CLIENT)
+    target_sources(tests PRIVATE
+        ../OIViewer/Source/CommandLine.cpp
+        ../OIViewer/Source/UI/MessageManager.cpp
+        ../OIViewer/Source/LabelManager.cpp
+        ../OIViewer/Source/ImageList.cpp
+        ../OIViewer/Source/MouseGestureController.cpp
+        ../OIViewer/Source/MouseMultiClickHandler.cpp
     )
-    add_dependencies(tests_vk_failures VKShaders)
-    target_compile_definitions(tests_vk_failures PRIVATE OIV_VK_TEST_DOUBLES $<TARGET_PROPERTY:OIVVKRenderer,COMPILE_DEFINITIONS>)
-    if(WIN32)
-        target_link_libraries(tests_vk_failures PRIVATE user32)
-    endif()
-    target_include_directories(tests_vk_failures PRIVATE
-        ../OIVLib/Renderers/OIVVKRenderer/Source
-        ../OIVLib/OIV/Include
-    )
-    target_link_libraries(tests_vk_failures PRIVATE Catch2::Catch2WithMain RendererCore ImageCodec ImageUtil LLUtils::LLUtils Vulkan::Headers)
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(tests_vk_failures PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-    elseif(MINGW)
-        target_link_options(tests_vk_failures PRIVATE "-mconsole" "-municode")
-    endif()
 endif()
 
-# The shared Catch2 runner uses wmain under the root Unicode definitions.
-foreach(testTarget IN ITEMS ${TargetName} tests_font_encoding tests_logging tests_utilities)
-    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(${testTarget} PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-    elseif(MINGW)
-        set_target_properties(${testTarget} PROPERTIES WIN32_EXECUTABLE FALSE)
-        target_link_options(${testTarget} PRIVATE "-mconsole" "-municode")
-    endif()
-endforeach()
-
-# Fatal behavior and allocation failures run in isolated children, using the real platform reporter.
 if(WIN32)
-    set(OIV_EXCEPTION_PLATFORM Win32)
-else()
-    set(OIV_EXCEPTION_PLATFORM Linux)
-endif()
-add_executable(tests_exception_process
-    Exception/FailureProcess.cpp
-    ../Clients/OIViewer/Source/ExceptionReporting.cpp
-    ../Clients/OIViewer/SrcPlatform/${OIV_EXCEPTION_PLATFORM}/ExceptionHandler.cpp)
-target_include_directories(tests_exception_process PRIVATE
-    ../Clients/OIViewer/Source ../Clients/OIViewer/SrcPlatform/${OIV_EXCEPTION_PLATFORM})
-target_link_libraries(tests_exception_process PRIVATE LLUtils::LLUtils)
-if(WIN32)
-    target_link_libraries(tests_exception_process PRIVATE user32 shell32 ole32)
-else()
-    target_link_libraries(tests_exception_process PRIVATE PkgConfig::GTK3)
-
-    # Observe and dismiss the real GTK dialog in subprocess tests without adding production test hooks.
-    add_library(tests_exception_dialog_probe SHARED Exception/LinuxDialogProbe.cpp)
-    target_link_libraries(tests_exception_dialog_probe PRIVATE PkgConfig::GTK3 ${CMAKE_DL_LIBS})
-endif()
-
-# Exercise cache ownership between real processes without a window or production test hooks.
-add_executable(tests_storage_process Storage/StorageProcess.cpp)
-target_link_libraries(tests_storage_process PRIVATE oivappcore)
-if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    target_link_options(tests_storage_process PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
-elseif(MINGW)
-    target_link_options(tests_storage_process PRIVATE "-mconsole" "-municode")
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    add_library(tests_association_dialog_probe SHARED Associations/LinuxDialogProbe.cpp)
-    target_link_libraries(tests_association_dialog_probe PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient ${CMAKE_DL_LIBS})
+    target_include_directories(tests PRIVATE ${ExternalFolder}/LInput/Include)
+    if(NOT OIV_BUILD_CLIENT)
+        target_sources(tests PRIVATE ../OIViewer/SrcPlatform/Win32/ContextMenuBackend.cpp)
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(tests PRIVATE OIV_TEST_PLATFORM_LINUX)
+    if(NOT TARGET PkgConfig::GTK3)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+    endif()
+    if(NOT TARGET PkgConfig::WaylandClient)
+        pkg_check_modules(WaylandClient REQUIRED IMPORTED_TARGET wayland-client)
+    endif()
+    target_link_libraries(tests PRIVATE PkgConfig::GTK3 PkgConfig::WaylandClient)
+    if(NOT OIV_BUILD_CLIENT)
+        target_sources(tests PRIVATE
+            ../OIViewer/SrcPlatform/Linux/ContextMenuBackend.cpp
+            ../OIViewer/SrcPlatform/Linux/LinuxKeyBindings.cpp
+        )
+    endif()
 endif()
 
 if(OIV_BUILD_CLIENT)
     target_link_libraries(tests PRIVATE oivviewer)
     target_compile_definitions(tests PRIVATE OIV_TEST_VIEWER)
 endif()
+add_test(NAME oiv.integration COMMAND tests --reporter compact)
+
+# FreeType and ImageCodec both use native PNG dependencies; keep their integration test isolated.
+add_executable(tests_font_encoding FontEncoding/TestFontEncoding.cpp)
+target_include_directories(tests_font_encoding PRIVATE ${ExternalFolder}/FreeTypeWrapper/FreeTypeWrapper/Include)
+target_compile_definitions(tests_font_encoding PRIVATE
+    "OIV_TEST_SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\"")
+target_link_libraries(tests_font_encoding PRIVATE Catch2::Catch2WithMain FreeTypeWrapper LLUtils::LLUtils)
+add_test(NAME oiv.font_encoding COMMAND tests_font_encoding --reporter compact)
+
+foreach(testTarget IN ITEMS tests tests_font_encoding tests_imagecodec tests_vk_runtime_failure)
+    if(TARGET ${testTarget})
+        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+            target_link_options(${testTarget} PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+        elseif(MINGW)
+            set_target_properties(${testTarget} PROPERTIES WIN32_EXECUTABLE FALSE)
+            target_link_options(${testTarget} PRIVATE "-mconsole" "-municode")
+        endif()
+    endif()
+endforeach()

@@ -5,7 +5,7 @@ description: Review a complete OIViewer/OpenImageViewer Git change for correctne
 
 # OIV Code Review
 
-Read and apply [the canonical skill](../../../skills/oiv-code-review/SKILL.md)
+Read and apply [the canonical skill](../../../.skills/oiv-code-review/SKILL.md)
 before performing this task. Resolve its supporting references and scripts
 relative to the canonical skill directory, not this entrypoint.
 

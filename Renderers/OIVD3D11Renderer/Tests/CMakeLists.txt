@@ -1,0 +1,11 @@
+add_executable(tests_oivd3d11renderer TestD3D11Cmyk.cpp)
+target_compile_definitions(tests_oivd3d11renderer PRIVATE OIV_TEST_D3D11_RENDERER)
+target_link_libraries(tests_oivd3d11renderer PRIVATE Catch2::Catch2WithMain OIVD3D11Renderer)
+add_test(NAME renderer.d3d11.unit COMMAND tests_oivd3d11renderer --reporter compact)
+
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_link_options(tests_oivd3d11renderer PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+elseif(MINGW)
+    set_target_properties(tests_oivd3d11renderer PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_link_options(tests_oivd3d11renderer PRIVATE "-mconsole" "-municode")
+endif()

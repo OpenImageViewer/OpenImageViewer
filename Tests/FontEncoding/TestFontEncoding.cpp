@@ -9,7 +9,7 @@
 TEST_CASE("Font loading keeps code-page handling at the native file boundary", "[string][font]")
 {
     const auto font = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
-                      "Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf";
+                      "OIViewer/Resources/Fonts/CascadiaCode.ttf";
     REQUIRE(std::filesystem::exists(font));
     const auto measure = [](const std::filesystem::path& path)
     {
@@ -68,7 +68,7 @@ TEST_CASE("Cached text measurements preserve rasterized pixels", "[font][bitmap]
     FreeType::FreeTypeConnector connector;
     FreeType::TextCreateParams params{};
     params.fontPath     = (std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
-                           "Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf")
+                           "OIViewer/Resources/Fonts/CascadiaCode.ttf")
                               .native();
     params.text         = LLUTILS_TEXT("<textcolor=#ff0000>O<textcolor=#00ff00>I<textcolor=#0000ff>V\nText");
     params.fontSize     = 24;
@@ -104,7 +104,7 @@ TEST_CASE("Repeated text measurements release temporary glyphs", "[font][memory]
     FreeType::FreeTypeConnector connector;
     FreeType::TextMesureParams params{};
     params.createParams.fontPath = (std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
-                                    "Clients/OIViewer/Resources/Fonts/CascadiaCode.ttf")
+                                    "OIViewer/Resources/Fonts/CascadiaCode.ttf")
                                        .native();
     params.createParams.text     = LLUTILS_TEXT("<textcolor=#4a80e2>Welcome to OIV\nDrag here an image to start\n"
                                                 "Press F1 to show key bindings");

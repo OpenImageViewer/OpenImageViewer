@@ -26,18 +26,30 @@ def main():
     cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
     compiler = re.search(r"^CMAKE_CXX_COMPILER:[^=]+=(.+)$", cache, re.MULTILINE).group(1).strip()
     debug = "CMAKE_BUILD_TYPE:STRING=Debug" in cache
-    relative_source = "Clients/OIViewer/Source/ViewerApplicationUI.cpp"
+    relative_source = "OIViewer/Source/ViewerApplicationUI.cpp"
     if args.baseline_ref:
-        source = subprocess.check_output(
-            ["git", "show", f"{args.baseline_ref}:{relative_source}"], cwd=root, text=True, encoding="utf-8"
-        )
+        try:
+            source = subprocess.check_output(
+                ["git", "show", f"{args.baseline_ref}:{relative_source}"],
+                cwd=root,
+                text=True,
+                encoding="utf-8",
+            )
+        except subprocess.CalledProcessError:
+            # Baselines predating the source tree move still store the viewer under Clients/.
+            source = subprocess.check_output(
+                ["git", "show", f"{args.baseline_ref}:Clients/OIViewer/Source/ViewerApplicationUI.cpp"],
+                cwd=root,
+                text=True,
+                encoding="utf-8",
+            )
     else:
         source = (root / relative_source).read_text(encoding="utf-8")
     start = source.index("std::function<void()> ViewerApplication::MakeSafeCallback(")
     # The next method is the constructor. Keep the complete factory definition unchanged.
     end = source.index("ViewerApplication::ViewerApplication(", start)
     definition = source[start:end].rstrip()
-    fixture = (root / "Tests/ViewerCallbacks/CallbackLifetime.cpp.in").read_text(encoding="utf-8")
+    fixture = (root / "OIViewer/Tests/ViewerCallbacks/CallbackLifetime.cpp.in").read_text(encoding="utf-8")
     generated = fixture.replace("// @MAKE_SAFE_CALLBACK@", definition)
     output = build / "callback-lifetime-check" / ("baseline" if args.baseline_ref else "current")
     output.mkdir(parents=True, exist_ok=True)

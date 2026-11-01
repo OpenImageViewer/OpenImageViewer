@@ -72,9 +72,9 @@ With no graphics options, **Windows prefers D3D11, then Vulkan**, and **Linux pr
 
 Edit the files in `Resources/Configuration` beside the executable, then restart OIViewer:
 
-- [Settings.json](Clients/OIViewer/Resources/Configuration/Settings.json): viewing and browsing settings.
-- [KeyBindings.json](Clients/OIViewer/Resources/Configuration/KeyBindings.json): keyboard shortcuts.
-- [Commands.json](Clients/OIViewer/Resources/Configuration/Commands.json): command definitions.
+- [Settings.json](OIViewer/Resources/Configuration/Settings.json): viewing and browsing settings.
+- [KeyBindings.json](OIViewer/Resources/Configuration/KeyBindings.json): keyboard shortcuts.
+- [Commands.json](OIViewer/Resources/Configuration/Commands.json): command definitions.
 
 Automatic reloading of externally modified images is supported on Windows only.
 

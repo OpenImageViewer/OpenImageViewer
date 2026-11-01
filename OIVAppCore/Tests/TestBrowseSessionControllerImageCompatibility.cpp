@@ -1,0 +1,414 @@
+#include <LLUtils/StringDefs.h>
+#include "ImageMagickBrowsingCorpus.h"
+
+#include <catch2/catch_all.hpp>
+
+#include <OIVAppCore/BrowseSessionController.h>
+#include <OIVAppCore/IFileWatcher.h>
+#include <OIVShared/FileSorter.h>
+#include <OIVAppCore/ImageResidencyCache.h>
+
+#include <ImageLoader.h>
+
+#include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <tuple>
+#include <vector>
+
+namespace
+{
+    class FakeFileWatcher : public OIV::IFileWatcher
+    {
+      public:
+
+        void StopNotifications() override {}
+
+        bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override { return fFolder == folder; }
+
+        FolderID AddFolder(const LLUtils::native_string_type& folder) override
+        {
+            fFolder = folder;
+            return fFolderID;
+        }
+
+        void RemoveFolder(FolderID folderID) override
+        {
+            if (folderID == fFolderID)
+                fFolder.clear();
+        }
+
+        void RemoveFolder(const LLUtils::native_string_type& folder) override
+        {
+            if (folder == fFolder)
+                fFolder.clear();
+        }
+
+        OnFileChangedEventArgsEvent& GetFileChangedEvent() override { return fEvent; }
+
+      private:
+
+        FolderID fFolderID = 11;
+        LLUtils::native_string_type fFolder;
+        OnFileChangedEventArgsEvent fEvent;
+    };
+
+    struct BrowseObserver
+    {
+        struct LoadedEvent
+        {
+            LLUtils::native_string_type fileName;
+            bool hasImage = false;
+        };
+
+        void MarkLoaded(const LLUtils::native_string_type& fileName, bool hasImage = true)
+        {
+            {
+                std::lock_guard lock(mutex);
+                loadedFiles.push_back(LoadedEvent{fileName, hasImage});
+                lastLoadedFile = fileName;
+            }
+            cv.notify_all();
+        }
+
+        bool WaitForLoaded(const LLUtils::native_string_type& fileName,
+                           std::chrono::milliseconds timeout = std::chrono::seconds(60))
+        {
+            std::unique_lock lock(mutex);
+            return cv.wait_for(lock, timeout,
+                               [&]
+                               {
+                                   return std::ranges::any_of(loadedFiles, [&](const LoadedEvent& event)
+                                                              { return event.fileName == fileName && event.hasImage; });
+                               });
+        }
+
+        bool WaitForFailed(const LLUtils::native_string_type& fileName,
+                           std::chrono::milliseconds timeout = std::chrono::seconds(60))
+        {
+            std::unique_lock lock(mutex);
+            return cv.wait_for(lock, timeout,
+                               [&]
+                               {
+                                   return std::ranges::any_of(loadedFiles, [&](const LoadedEvent& event)
+                                                              { return event.fileName == fileName && !event.hasImage; });
+                               });
+        }
+
+        bool WaitForLoadedCount(std::size_t count, std::chrono::milliseconds timeout)
+        {
+            std::unique_lock lock(mutex);
+            return cv.wait_for(lock, timeout, [&] { return loadedFiles.size() >= count; });
+        }
+
+        bool WaitForNoLoaded(std::chrono::milliseconds timeout)
+        {
+            return !WaitForLoadedCount(loadedFiles.size() + 1, timeout);
+        }
+
+        std::size_t CountLoaded(const LLUtils::native_string_type& fileName)
+        {
+            std::lock_guard lock(mutex);
+            return static_cast<std::size_t>(std::ranges::count_if(
+                loadedFiles, [&](const LoadedEvent& event) { return event.fileName == fileName && event.hasImage; }));
+        }
+
+        void Clear()
+        {
+            std::lock_guard lock(mutex);
+            loadedFiles.clear();
+            lastLoadedFile.clear();
+        }
+
+        std::vector<LoadedEvent> Snapshot()
+        {
+            std::lock_guard lock(mutex);
+            return loadedFiles;
+        }
+
+        std::mutex mutex;
+        std::condition_variable cv;
+        std::vector<LoadedEvent> loadedFiles;
+        LLUtils::native_string_type lastLoadedFile;
+    };
+
+    class ControlledImageMagickResidencyProcessor : public OIV::RequestProcessorType
+    {
+      public:
+
+        bool ProcessResidencyRequest(const OIV::ImageResidencyCacheKey& key,
+                                     OIV::ImageResidencyCacheValue& outValue) override
+        {
+            const auto fileName = std::get<0>(key);
+            MarkStarted(fileName);
+            WaitUntilReleased(fileName);
+
+            try
+            {
+                IMCodec::ImageLoader loader;
+                const auto result = loader.Decode(fileName, IMCodec::ImageLoadFlags::None, {},
+                                                  IMCodec::PluginTraverseMode::AnyFileType |
+                                                      IMCodec::PluginTraverseMode::AnyPlugin,
+                                                  outValue);
+                MarkCompleted(fileName);
+                return result == IMCodec::ImageResult::Success && outValue != nullptr;
+            }
+            catch (...)
+            {
+                MarkCompleted(fileName);
+                outValue = nullptr;
+                return false;
+            }
+        }
+
+        bool WaitForStarted(const LLUtils::native_string_type& fileName,
+                            std::chrono::milliseconds timeout = std::chrono::seconds(30))
+        {
+            std::unique_lock lock(fMutex);
+            return fCv.wait_for(lock, timeout, [&] { return fStartedCounts[fileName] > 0; });
+        }
+
+        bool WaitForCompleted(const LLUtils::native_string_type& fileName,
+                              std::chrono::milliseconds timeout = std::chrono::seconds(30))
+        {
+            std::unique_lock lock(fMutex);
+            return fCv.wait_for(lock, timeout, [&] { return fCompletedCounts[fileName] > 0; });
+        }
+
+        void Release(const LLUtils::native_string_type& fileName)
+        {
+            {
+                std::lock_guard lock(fMutex);
+                fReleasedFiles.insert(fileName);
+            }
+            fCv.notify_all();
+        }
+
+        void ReleaseAll()
+        {
+            {
+                std::lock_guard lock(fMutex);
+                fReleaseEverything = true;
+            }
+            fCv.notify_all();
+        }
+
+      private:
+
+        void MarkStarted(const LLUtils::native_string_type& fileName)
+        {
+            {
+                std::lock_guard lock(fMutex);
+                ++fStartedCounts[fileName];
+                fStartedFiles.push_back(fileName);
+            }
+            fCv.notify_all();
+        }
+
+        void MarkCompleted(const LLUtils::native_string_type& fileName)
+        {
+            {
+                std::lock_guard lock(fMutex);
+                ++fCompletedCounts[fileName];
+            }
+            fCv.notify_all();
+        }
+
+        void WaitUntilReleased(const LLUtils::native_string_type& fileName)
+        {
+            std::unique_lock lock(fMutex);
+            fCv.wait_for(lock, std::chrono::seconds(30),
+                         [&] { return fReleaseEverything || fReleasedFiles.contains(fileName); });
+        }
+
+        std::mutex fMutex;
+        std::condition_variable fCv;
+        std::map<LLUtils::native_string_type, std::size_t> fStartedCounts;
+        std::map<LLUtils::native_string_type, std::size_t> fCompletedCounts;
+        std::set<LLUtils::native_string_type> fReleasedFiles;
+        std::vector<LLUtils::native_string_type> fStartedFiles;
+        bool fReleaseEverything = false;
+    };
+
+    std::unique_ptr<OIV::RequestProcessorType> MakeControlledProcessor(
+        ControlledImageMagickResidencyProcessor*& outProcessor)
+    {
+        auto processor = std::make_unique<ControlledImageMagickResidencyProcessor>();
+        outProcessor   = processor.get();
+        return processor;
+    }
+
+    struct BrowseSessionControllerFixture
+    {
+        BrowseSessionControllerFixture(const OIV::Tests::GeneratedCorpus& corpus,
+                                       const LLUtils::native_string_type& initialFile)
+            : residency(MakeControlledProcessor(processor), 4),
+              controller(
+                  &watcher, &sorter, corpus.extensions, corpus.extensionList, residency,
+                  [this](const LLUtils::native_string_type& fileName, IMCodec::ImageSharedPtr image)
+                  { observer.MarkLoaded(fileName, image != nullptr); },
+                  [this](const OIV::BrowseSessionController::BrowseCandidateCompletion& completion)
+                  {
+                      const auto result = controller.OnBrowseCandidateReady(completion);
+                      if (result.action == OIV::BrowseSessionController::BrowseSessionAction::DisplayImage)
+                      {
+                          observer.MarkLoaded(result.fileName, true);
+                      }
+                      else if (result.action == OIV::BrowseSessionController::BrowseSessionAction::ShowFailure)
+                      {
+                          observer.MarkLoaded(result.fileName, false);
+                      }
+                  })
+        {
+            initialFileName = initialFile;
+        }
+
+        ~BrowseSessionControllerFixture() { processor->ReleaseAll(); }
+
+        void LoadFolder() { REQUIRE(controller.CommitCurrentFile(initialFileName).has_value()); }
+
+        LLUtils::native_string_type initialFileName;
+        FakeFileWatcher watcher;
+        OIV::FileSorter sorter;
+        ControlledImageMagickResidencyProcessor* processor = nullptr;
+        OIV::ImageResidencyCache residency;
+        BrowseObserver observer;
+        OIV::BrowseSessionController controller;
+    };
+}  // namespace
+
+TEST_CASE("BrowseSessionController sequentially browses ImageMagick generated files",
+          "[ImageCompatibility][Integration][Browse]")
+{
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    BrowseSessionControllerFixture fixture(corpus, files.front());
+
+    fixture.LoadFolder();
+    REQUIRE(fixture.controller.GetFolderFileList().GetSize() == OIV::Tests::BuildBrowsingFolderFileList(corpus).size());
+    REQUIRE(fixture.controller.IsCurrentFile(files[0]));
+
+    auto releaseAndWaitForCurrent = [&](const LLUtils::native_string_type& expectedFile)
+    {
+        INFO("Waiting for current file request: " << std::filesystem::path(expectedFile).string());
+        REQUIRE(fixture.processor->WaitForStarted(expectedFile));
+        fixture.processor->Release(expectedFile);
+        REQUIRE(fixture.observer.WaitForLoaded(expectedFile));
+        REQUIRE(fixture.controller.IsCurrentFile(expectedFile));
+        REQUIRE(fixture.observer.CountLoaded(expectedFile) == 1);
+        fixture.observer.Clear();
+    };
+
+    fixture.controller.RequestCurrentFileReload();
+    releaseAndWaitForCurrent(files[0]);
+
+    for (std::size_t i = 1; i < files.size(); ++i)
+    {
+        REQUIRE(fixture.controller.JumpFiles(1));
+        releaseAndWaitForCurrent(files[i]);
+    }
+
+    for (std::size_t i = files.size() - 1; i > 0; --i)
+    {
+        REQUIRE(fixture.controller.JumpFiles(-1));
+        releaseAndWaitForCurrent(files[i - 1]);
+    }
+}
+
+TEST_CASE("BrowseSessionController ignores stale pending loads during rapid ImageMagick browsing",
+          "[ImageCompatibility][Integration][Browse]")
+{
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    BrowseSessionControllerFixture fixture(corpus, files.front());
+
+    fixture.LoadFolder();
+    fixture.controller.RequestCurrentFileReload();
+    REQUIRE(fixture.processor->WaitForStarted(files[0]));
+    fixture.processor->Release(files[0]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    fixture.observer.Clear();
+
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.controller.GetFolderFileList().GetCurrentItemName() == files[0]);
+
+    REQUIRE(fixture.processor->WaitForStarted(files[1]));
+
+    fixture.observer.Clear();
+    fixture.processor->Release(files[1]);
+
+    REQUIRE(fixture.processor->WaitForCompleted(files[1]));
+    REQUIRE(fixture.observer.WaitForLoaded(files[1]));
+    REQUIRE(fixture.observer.CountLoaded(files[0]) == 0);
+    REQUIRE(fixture.observer.CountLoaded(files[1]) == 1);
+    REQUIRE(fixture.controller.IsCurrentFile(files[1]));
+}
+
+TEST_CASE("BrowseSessionController ignores stale forward load after rapid backward ImageMagick browsing",
+          "[ImageCompatibility][Integration][Browse]")
+{
+    const auto corpus = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto files  = OIV::Tests::FindConsecutiveValidFiles(corpus, 4);
+    BrowseSessionControllerFixture fixture(corpus, files.front());
+
+    fixture.LoadFolder();
+    fixture.controller.RequestCurrentFileReload();
+    REQUIRE(fixture.processor->WaitForStarted(files[0]));
+    fixture.processor->Release(files[0]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    fixture.observer.Clear();
+
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.processor->WaitForStarted(files[1]));
+    fixture.processor->Release(files[1]);
+    REQUIRE(fixture.observer.WaitForLoaded(files[1]));
+    REQUIRE(fixture.controller.IsCurrentFile(files[1]));
+    fixture.observer.Clear();
+
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.processor->WaitForStarted(files[1]));
+    REQUIRE(fixture.processor->WaitForStarted(files[2]));
+    fixture.observer.Clear();
+    REQUIRE(fixture.controller.JumpFiles(-1));
+    REQUIRE(fixture.observer.WaitForLoaded(files[0]));
+    REQUIRE(fixture.controller.IsCurrentFile(files[0]));
+
+    fixture.observer.Clear();
+    fixture.processor->Release(files[2]);
+    REQUIRE(fixture.processor->WaitForCompleted(files[2]));
+    REQUIRE(fixture.observer.WaitForNoLoaded(std::chrono::milliseconds(250)));
+
+    REQUIRE(fixture.observer.CountLoaded(files[2]) == 0);
+    REQUIRE(fixture.controller.IsCurrentFile(files[0]));
+}
+
+TEST_CASE("BrowseSessionController recovers after browsing to a bad ImageMagick generated file",
+          "[ImageCompatibility][Integration][Browse]")
+{
+    const auto corpus               = OIV::Tests::BuildLoadableImageMagickCorpus();
+    const auto [validFile, badFile] = OIV::Tests::FindValidFileBeforeBadFile(corpus);
+    BrowseSessionControllerFixture fixture(corpus, validFile);
+
+    fixture.LoadFolder();
+    REQUIRE(fixture.controller.IsCurrentFile(validFile));
+
+    fixture.controller.RequestCurrentFileReload();
+    REQUIRE(fixture.processor->WaitForStarted(validFile));
+    fixture.processor->Release(validFile);
+    REQUIRE(fixture.observer.WaitForLoaded(validFile));
+    fixture.observer.Clear();
+
+    REQUIRE(fixture.controller.JumpFiles(1));
+    REQUIRE(fixture.controller.GetFolderFileList().GetCurrentItemName() == validFile);
+    REQUIRE(fixture.processor->WaitForStarted(badFile));
+
+    fixture.processor->ReleaseAll();
+    REQUIRE(fixture.processor->WaitForCompleted(badFile));
+    REQUIRE(fixture.observer.WaitForFailed(badFile));
+    REQUIRE(fixture.controller.IsCurrentFile(validFile));
+}

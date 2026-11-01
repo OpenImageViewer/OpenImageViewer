@@ -6,6 +6,7 @@
 #include <OIVAppCore/ImageOpenController.h>
 #include <OIVAppCore/ViewerCompletion.h>
 #include <OIVAppCore/AppSettingsPolicy.h>
+#include <OIVAppCore/ImageResidencyCache.h>
 #include <OIVShared/FileSorter.h>
 #include <atomic>
 #include <filesystem>

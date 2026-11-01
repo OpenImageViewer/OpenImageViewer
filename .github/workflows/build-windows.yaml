@@ -32,7 +32,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
-        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
+        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
     - name: Configure CMake
       run: >
@@ -65,7 +65,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
-        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
+        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
     - name: Activate the Visual Studio development environment
       uses: ilammy/msvc-dev-cmd@v1
@@ -94,6 +94,26 @@ jobs:
         if ($LASTEXITCODE -ne 0) { throw "LWS tests failed" }
         & "$env:BUILD_DIR/bin/tests.exe"
         if ($LASTEXITCODE -ne 0) { throw "Unit tests failed" }
+        & "$env:BUILD_DIR/bin/tests_imagecodec.exe"
+        if ($LASTEXITCODE -ne 0) { throw "ImageCodec tests failed" }
+        & "$env:BUILD_DIR/bin/tests_logging.exe"
+        if ($LASTEXITCODE -ne 0) { throw "LLUtils logging tests failed" }
+        & "$env:BUILD_DIR/bin/tests_utilities.exe"
+        if ($LASTEXITCODE -ne 0) { throw "LLUtils utility tests failed" }
+        & "$env:BUILD_DIR/bin/tests_oivshared.exe"
+        if ($LASTEXITCODE -ne 0) { throw "OIVShared tests failed" }
+        & "$env:BUILD_DIR/bin/tests_oivappcore.exe"
+        if ($LASTEXITCODE -ne 0) { throw "OIVAppCore tests failed" }
+        & "$env:BUILD_DIR/bin/tests_oiviewer.exe"
+        if ($LASTEXITCODE -ne 0) { throw "OIViewer tests failed" }
+        & "$env:BUILD_DIR/bin/tests_file_associations.exe"
+        if ($LASTEXITCODE -ne 0) { throw "File association tests failed" }
+        & "$env:BUILD_DIR/bin/tests_oivd3d11renderer.exe"
+        if ($LASTEXITCODE -ne 0) { throw "D3D11 renderer tests failed" }
+        & "$env:BUILD_DIR/bin/tests_oivglrenderer.exe"
+        if ($LASTEXITCODE -ne 0) { throw "OpenGL renderer tests failed" }
+        & "$env:BUILD_DIR/bin/tests_vk_renderer.exe"
+        if ($LASTEXITCODE -ne 0) { throw "Vulkan renderer tests failed" }
         & "$env:BUILD_DIR/bin/tests_font_encoding.exe"
         if ($LASTEXITCODE -ne 0) { throw "Font tests failed" }
         & "$env:BUILD_DIR/bin/tests_vk_failures.exe"

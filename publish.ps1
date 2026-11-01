@@ -1011,7 +1011,7 @@ function New-PublishContext {
     $rootDir = Convert-ToForwardSlash $PSScriptRoot
     $resolvedBuildDir = Resolve-BuildPath $rootDir $Options.BuildDir
     $binDir = Join-PathForward $resolvedBuildDir "bin"
-    $versionHeader = Join-PathForward $rootDir "OIVLib/OIV/Include/Version.h"
+    $versionHeader = Join-PathForward $rootDir "OIVAppCore/Source/Include/Version.h"
     $gitDir = Join-PathForward $rootDir ".git"
 
     $context = [PSCustomObject]@{

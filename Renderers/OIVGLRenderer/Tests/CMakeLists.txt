@@ -1,0 +1,11 @@
+add_executable(tests_oivglrenderer TestOIVGLRenderer.cpp)
+target_compile_definitions(tests_oivglrenderer PRIVATE OIV_TEST_GL_RENDERER)
+target_link_libraries(tests_oivglrenderer PRIVATE Catch2::Catch2WithMain OIVGLRenderer)
+add_test(NAME renderer.gl.unit COMMAND tests_oivglrenderer --reporter compact)
+
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    target_link_options(tests_oivglrenderer PRIVATE "/SUBSYSTEM:CONSOLE" "/ENTRY:wmainCRTStartup")
+elseif(MINGW)
+    set_target_properties(tests_oivglrenderer PROPERTIES WIN32_EXECUTABLE FALSE)
+    target_link_options(tests_oivglrenderer PRIVATE "-mconsole" "-municode")
+endif()

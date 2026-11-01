@@ -3,8 +3,8 @@
 #include <LLUtils/StringDefs.h>
 
 #include <OIVAppCore/FolderFileList.h>
-#include <OIVShared/BrowseResidencyController.h>
-#include <OIVShared/ImageResidencyCache.h>
+#include <OIVAppCore/BrowseResidencyController.h>
+#include <OIVAppCore/ImageResidencyCache.h>
 
 #include <cstdint>
 #include <functional>

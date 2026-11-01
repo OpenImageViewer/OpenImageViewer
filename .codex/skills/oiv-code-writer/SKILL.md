@@ -5,7 +5,7 @@ description: Write, edit, refactor, format, or review C++ code in the OIViewer/O
 
 # OIV Code Writer
 
-Read and apply [the canonical skill](../../../skills/oiv-code-writer/SKILL.md)
+Read and apply [the canonical skill](../../../.skills/oiv-code-writer/SKILL.md)
 before performing this task. Resolve its supporting references and scripts
 relative to the canonical skill directory, not this entrypoint.
 

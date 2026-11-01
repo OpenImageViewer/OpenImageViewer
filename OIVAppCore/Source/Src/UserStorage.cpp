@@ -1,6 +1,6 @@
 #include <OIVAppCore/UserStorage.h>
 #include <OIVShared/AtomicFile.h>
-#include <OIVShared/FileLock.h>
+#include <OIVAppCore/FileLock.h>
 #include <LLUtils/Exception.h>
 #include <LLUtils/PlatformUtility.h>
 #include <LLUtils/ScopedFileLock.h>

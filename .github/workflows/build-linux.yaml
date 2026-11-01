@@ -58,7 +58,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ env.BUILD_DIR }}/_deps/vulkan-sdk
-        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
+        key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
     - name: Configure CMake
       run: >
@@ -101,5 +101,14 @@ jobs:
         fi
         dbus-run-session --config-file=External/LWS/tests/portal-session.conf -- env LWS_TEST_PORTAL_BUS=1 "$BUILD_DIR/bin/LWSTests"
         "$BUILD_DIR/bin/tests"
+        "$BUILD_DIR/bin/tests_imagecodec"
+        "$BUILD_DIR/bin/tests_logging"
+        "$BUILD_DIR/bin/tests_utilities"
+        "$BUILD_DIR/bin/tests_oivshared"
+        "$BUILD_DIR/bin/tests_oivappcore"
+        "$BUILD_DIR/bin/tests_oiviewer"
+        "$BUILD_DIR/bin/tests_file_associations"
+        "$BUILD_DIR/bin/tests_oivglrenderer"
+        "$BUILD_DIR/bin/tests_vk_renderer"
         "$BUILD_DIR/bin/tests_font_encoding"
         "$BUILD_DIR/bin/tests_vk_failures"

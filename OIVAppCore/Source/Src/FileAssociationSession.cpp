@@ -1,6 +1,6 @@
 #include <OIVAppCore/FileAssociationSession.h>
 #include <OIVAppCore/FileAssociationPreferences.h>
-#include <OIVShared/FileLock.h>
+#include <OIVAppCore/FileLock.h>
 
 namespace OIV
 {
