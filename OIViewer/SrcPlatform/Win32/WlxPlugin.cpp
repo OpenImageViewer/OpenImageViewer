@@ -3,6 +3,7 @@
 #include "HostedInputAdapter.h"
 #include "Viewer.h"
 #include "ViewerResources.h"
+#include "SettingsController.h"
 #include <OIVAppCore/UserStorage.h>
 #include <OIVAppCore/ViewerHostPolicy.h>
 #include <Version.h>
@@ -78,6 +79,7 @@ namespace OIV
 
         ~WlxSession()
         {
+            settings.reset();
             entries.clear();
             std::ignore = platform.Shutdown();
         }
@@ -112,6 +114,13 @@ namespace OIV
                                                                      LWS::WindowMode::Windowed);
                                                              else
                                                                  PostMessageW(parent, WM_KEYDOWN, VK_ESCAPE, 1);
+                                                         },
+                                                         .showSettings = [this, borrowed = entry.get()] { ShowSettings(*borrowed->viewer); },
+                                                         .settingsReloaded = [this, borrowed = entry.get()]
+                                                         {
+                                                             if (settings)
+                                                                 settings->ApplyPending([borrowed](const auto& id, const auto& value)
+                                                                 { borrowed->viewer->ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
                                                          },
                                                          .forwardKey =
                                                              [parent](uint32_t message, uint32_t key, uint32_t flags)
@@ -164,6 +173,9 @@ namespace OIV
                     LL_EXCEPTION_SYSTEM_ERROR("Unable to connect WLX focus handling");
             ApplyFlags(viewer, flags);
             entries.emplace(handle, std::move(entry));
+            if (settings)
+                settings->ApplyPending([&viewer](const auto& id, const auto& value)
+                { viewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
             return handle;
         }
 
@@ -181,6 +193,20 @@ namespace OIV
                 return WlxError;
             ApplyFlags(viewer, flags);
             return WlxOk;
+        }
+
+        void ShowSettings(Viewer& viewer)
+        {
+            if (!settings)
+                settings = std::make_unique<SettingsController>(platform, resources.directory, resources.settingsFile,
+                    [this](const auto& id, const auto& value)
+                    {
+                        for (auto& [handle, entry] : entries)
+                            if (!entry->viewer->IsClosing())
+                                entry->viewer->ApplyEditorSetting(id, LWSSettings::FormatValue(value));
+                    });
+            if (auto result = settings->Show(&viewer.GetWindow().GetWindow()); !result)
+                viewer.ReportSettingsError(result.error().location + ": " + result.error().message);
         }
 
         void Close(HWND handle)
@@ -264,6 +290,7 @@ namespace OIV
         const ViewerResources resources{ResolveViewerResources(storage.Directories())};
         LWS::PlatformContext platform;
         std::map<HWND, std::unique_ptr<Entry>> entries;
+        std::unique_ptr<SettingsController> settings;
     };
 }  // namespace OIV
 

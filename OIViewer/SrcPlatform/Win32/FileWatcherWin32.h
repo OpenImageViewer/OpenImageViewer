@@ -8,9 +8,9 @@
 #include <map>
 #include <mutex>
 #include <atomic>
+#include <limits>
 #include <OIVAppCore/IFileWatcher.h>
 #include <LLUtils/Event.h>
-#include <LLUtils/UniqueIDProvider.h>
 #include <LLUtils/Exception.h>
 
 namespace OIV
@@ -27,7 +27,6 @@ namespace OIV
 
           public:
 
-            using UniqueIDProvider            = LLUtils::UniqueIdProvider<uint16_t>;
             using FolderID                    = OIV::IFileWatcher::FolderID;
             using FileChangedOp               = OIV::IFileWatcher::FileChangedOp;
             using FileChangedEventArgs        = OIV::IFileWatcher::FileChangedEventArgs;
@@ -37,80 +36,78 @@ namespace OIV
 
             bool IsFolderRegistered(const LLUtils::native_string_type& folder) const override
             {
+                std::lock_guard<std::mutex> lock(fDataMutex);
                 return fMapFolderID.find(folder) != fMapFolderID.end();
             }
 
             FolderID AddFolder(const LLUtils::native_string_type& folder) override
             {
-                std::lock_guard<std::mutex> Lock(fDataMutex);
-
-                FolderID folderID = 0;
-
-                if (std::filesystem::is_directory(folder) == false)
+                std::lock_guard<std::mutex> lock(fDataMutex);
+                if (fShutdownRequested.load())
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "File watcher has stopped");
+                if (!std::filesystem::is_directory(folder))
                     LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "not a directory");
-
-                auto it = fMapFolderID.find(folder);
-                if (it != fMapFolderID.end())
+                if (fMapFolderID.contains(folder))
                 {
                     using namespace std::string_literals;
                     LL_EXCEPTION(LLUtils::Exception::ErrorCode::DuplicateItem,
                                  "the folder "s + LLUtils::StringUtility::ToAString(folder) + " already exists"s);
-                    // already exists
                 }
-                else
+                // An old notification can remain in the completion port, a watcher callback, or the
+                // client queue after its folder is removed. Reusing its ID could make it appear to
+                // belong to a new watch, so IDs remain unique for the lifetime of this watcher.
+                // Reuse could be supported by coordinating cancellation and callback completion with
+                // draining queued and in-progress client events, or by using generation identities.
+                // These alternatives add coordination and have not been fully explored. A better
+                // solution may exist. The completion port key also limits IDs to ULONG_PTR width.
+                if (fNextFolderID >= std::numeric_limits<ULONG_PTR>::max())
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "File watcher IDs exhausted");
+                const FolderID id = fNextFolderID++;
+                auto it = fMapIDData.try_emplace(id).first;
+                FolderData& data = it->second;
+                try
                 {
-                    auto uniqueID = fUniqueIDProvider.Acquire();
-                    fMapFolderID.emplace(folder, uniqueID);
-                    auto it = fMapIDData.emplace(uniqueID, FolderData{});
-
-                    FolderData& folderData = it.first->second;
-
-                    folderData.uniqueID        = uniqueID;
-                    folderID                   = uniqueID;
-                    folderData.folderPath      = folder;
-                    folderData.directoryHandle = CreateFile(folder.c_str(), GENERIC_READ | FILE_LIST_DIRECTORY,
-                                                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                                            nullptr, OPEN_EXISTING,
-                                                            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
-
-                    if (folderData.directoryHandle == nullptr)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Can not create directory");
-
-                    if (ReadDirectoryChanges(folderData) == 0)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Can not read directory changes");
-
-                    // Associate directory handle with a completion port.
-                    fCompletionPortHandle = CreateIoCompletionPort(folderData.directoryHandle, fCompletionPortHandle,
-                                                                   static_cast<ULONG_PTR>(folderData.uniqueID), 0);
-
-                    if (fCompletionPortHandle == nullptr)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState,
-                                     "Can not associate completion port with the directory.");
-
-                    if (fFileWatchThread.native_handle() == std::thread::native_handle_type{})
-                        fFileWatchThread = LLUtils::StartThread(&FileWatcherWin32::CompletionPortStatusEntryPoint,
-                                                                this);
+                    data.folderPath = folder;
+                    fMapFolderID.emplace(folder, id);
+                    data.completionEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+                    if (data.completionEvent == nullptr)
+                        LL_EXCEPTION_SYSTEM_ERROR("Can not create directory watch event");
+                    data.directoryHandle = CreateFile(folder.c_str(), GENERIC_READ | FILE_LIST_DIRECTORY,
+                                                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                                      nullptr, OPEN_EXISTING,
+                                                      FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, nullptr);
+                    if (data.directoryHandle == INVALID_HANDLE_VALUE)
+                        LL_EXCEPTION_SYSTEM_ERROR("Can not open watched directory");
+                    const HANDLE port = CreateIoCompletionPort(data.directoryHandle, fCompletionPortHandle,
+                                                                static_cast<ULONG_PTR>(id), 0);
+                    if (port == nullptr)
+                        LL_EXCEPTION_SYSTEM_ERROR("Can not associate directory with completion port");
+                    fCompletionPortHandle = port;
+                    if (!ReadDirectoryChanges(data))
+                        LL_EXCEPTION_SYSTEM_ERROR("Can not read directory changes");
+                    if (!fFileWatchThread.joinable())
+                        fFileWatchThread = LLUtils::StartThread(&FileWatcherWin32::CompletionPortStatusEntryPoint, this);
                 }
-
-                return folderID;
+                catch (...)
+                {
+                    if (data.directoryHandle != INVALID_HANDLE_VALUE)
+                    {
+                        CancelAndDrain(data);
+                        CloseHandle(data.directoryHandle);
+                    }
+                    if (data.completionEvent != nullptr) CloseHandle(data.completionEvent);
+                    fMapFolderID.erase(folder);
+                    fMapIDData.erase(it);
+                    throw;
+                }
+                return id;
             }
 
             void RemoveAll()
             {
-                std::lock_guard<std::mutex> Lock(fDataMutex);
-                for (const auto& [folder, id] : fMapFolderID)
-                {
-                    auto it = fMapIDData.find(id);
-                    if (it == fMapIDData.end())
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Incoherent data structures.");
-
-                    if (CloseHandle(it->second.directoryHandle) == FALSE)
-                        LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Could not close handle.");
-                }
-
-                fMapFolderID.clear();
-                fMapIDData.clear();
-                fUniqueIDProvider.Reset();
+                std::lock_guard<std::mutex> lock(fDataMutex);
+                while (!fMapIDData.empty())
+                    RemoveFolderLocked(fMapIDData.begin()->first);
             }
 
             void RemoveFolder(FolderID folderID) override
@@ -187,9 +184,16 @@ namespace OIV
                                 FolderID folderID = static_cast<FolderID>(overlappedEntry.lpCompletionKey);
                                 auto it           = fMapIDData.find(folderID);
 
-                                if (it != fMapIDData.end())
+                                if (it != fMapIDData.end() && it->second.pending &&
+                                    overlappedEntry.lpOverlapped == &it->second.overlapped)
                                 {
                                     FolderData& folderData = it->second;
+                                    folderData.pending = false;
+                                    if (overlappedEntry.Internal != 0 || overlappedEntry.dwNumberOfBytesTransferred == 0)
+                                    {
+                                        eventsToRaise.try_emplace(folderID);
+                                        continue;
+                                    }
                                     bool done              = false;
                                     uint32_t currentOffset = 0;
                                     do
@@ -309,26 +313,44 @@ namespace OIV
 
           private:
 
+            void CancelAndDrain(FolderData& data)
+            {
+                if (!data.pending) return;
+                if (!CancelIoEx(data.directoryHandle, &data.overlapped) && GetLastError() != ERROR_NOT_FOUND)
+                    LL_EXCEPTION_SYSTEM_ERROR("Could not cancel directory watch");
+                DWORD transferred = 0;
+                const BOOL completed = GetOverlappedResult(data.directoryHandle, &data.overlapped, &transferred, TRUE);
+                if (!completed && !HasOverlappedIoCompleted(&data.overlapped))
+                    LL_EXCEPTION_SYSTEM_ERROR("Could not wait for directory watch cancellation");
+                data.pending = false;
+            }
+
             void RemoveFolderLocked(FolderID folderID)
             {
                 auto itData = fMapIDData.find(folderID);
                 if (itData == fMapIDData.end())
                     LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Incoherent data structures.");
-
-                if (CloseHandle(itData->second.directoryHandle) == FALSE)
-                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Could not close handle.");
-
-                fUniqueIDProvider.Release(itData->second.uniqueID);
-
+                CancelAndDrain(itData->second);
+                if (!CloseHandle(itData->second.directoryHandle))
+                    LL_EXCEPTION_SYSTEM_ERROR("Could not close watched directory");
+                CloseHandle(itData->second.completionEvent);
                 fMapFolderID.erase(itData->second.folderPath);
                 fMapIDData.erase(itData);
             }
 
-            DWORD ReadDirectoryChanges(FolderData& folderData)
+            DWORD ReadDirectoryChanges(FolderData& data)
             {
-                return ReadDirectoryChangesW(folderData.directoryHandle, &folderData.info, BufferSize, FALSE,
-                                             FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE, nullptr,
-                                             &folderData.overlapped, nullptr);
+                if (data.pending)
+                    LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Directory watch is already pending");
+                data.overlapped = {};
+                data.overlapped.hEvent = data.completionEvent;
+                if (!ResetEvent(data.completionEvent))
+                    LL_EXCEPTION_SYSTEM_ERROR("Could not reset directory watch event");
+                const DWORD result = ReadDirectoryChangesW(data.directoryHandle, &data.info, BufferSize, FALSE,
+                                                            FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
+                                                            nullptr, &data.overlapped, nullptr);
+                data.pending = result != 0;
+                return result;
             }
 
           private:
@@ -338,9 +360,10 @@ namespace OIV
             struct FolderData
             {
                 alignas(DWORD) std::byte info[BufferSize]{};
-                UniqueIDProvider::underlying_type uniqueID;
                 OVERLAPPED overlapped{};
-                HANDLE directoryHandle = nullptr;
+                HANDLE directoryHandle = INVALID_HANDLE_VALUE;
+                HANDLE completionEvent = nullptr;
+                bool pending = false;
                 LLUtils::native_string_type folderPath;
             };
 
@@ -351,9 +374,9 @@ namespace OIV
             MapFolderID fMapFolderID;
             MapIDData fMapIDData;
             HANDLE fCompletionPortHandle = nullptr;
-            std::mutex fDataMutex;
+            mutable std::mutex fDataMutex;
             std::thread fFileWatchThread;
-            UniqueIDProvider fUniqueIDProvider{1};
+            FolderID fNextFolderID = 1;
             std::atomic_bool fShutdownRequested = false;
         };
 

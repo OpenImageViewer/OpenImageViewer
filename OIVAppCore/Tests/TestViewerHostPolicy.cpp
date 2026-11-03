@@ -11,7 +11,7 @@ TEST_CASE("Hosted command policy restricts application actions while preserving 
     CHECK_FALSE(allowed("cmd_set_window_size", "mode=maximized"));
     CHECK_FALSE(allowed("cmd_shell", "cmd=newWindow"));
     CHECK_FALSE(allowed("cmd_view_state", "type=toggleBorders"));
-    CHECK_FALSE(allowed("cmd_toggle_keybindings", "type=settings"));
+    CHECK(allowed("cmd_toggle_keybindings", "type=settings"));
     CHECK(allowed("cmd_toggle_keybindings", "type=imageinfo"));
     CHECK(allowed("cmd_view_state", "type=toggleFullScreen"));
     CHECK(allowed("cmd_view_state", "type=quit"));

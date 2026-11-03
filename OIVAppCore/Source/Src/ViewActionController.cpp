@@ -20,7 +20,8 @@ namespace OIV
         if (fitToScreenLocked)
             return requestedZoom;
 
-        return std::clamp(requestedZoom, minimumZoom, maximumZoom);
+        // Keep the image minimum when it exceeds the configured maximum.
+        return std::clamp(requestedZoom, minimumZoom, std::max(minimumZoom, maximumZoom));
     }
 
     LLUtils::PointI32 ViewActionController::ResolveZoomPoint(LLUtils::PointI32 requestedPoint,

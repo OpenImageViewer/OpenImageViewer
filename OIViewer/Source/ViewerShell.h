@@ -15,6 +15,7 @@ namespace OIV
         std::function<void(bool)> close;
         std::function<void()> destroyed;
         std::function<void()> showSettings;
+        std::function<void()> settingsReloaded;
         std::function<void()> topMost;
         std::function<void(LLUtils::native_string_type)> openExternalFile;
         std::function<void(const CommandManager::CommandRequest&, CommandManager::CommandResult&)> fileAssociations;

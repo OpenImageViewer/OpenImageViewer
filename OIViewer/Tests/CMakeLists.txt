@@ -14,6 +14,9 @@ target_compile_definitions(tests_oiviewer PRIVATE
 target_link_libraries(tests_oiviewer PRIVATE Catch2::Catch2WithMain)
 if(TARGET oivviewer)
     target_link_libraries(tests_oiviewer PRIVATE oivviewer)
+    target_compile_definitions(tests_oiviewer PRIVATE
+        OIV_TEST_HAS_SETTINGS_EDITOR
+        "OIV_TEST_CONFIGURATION_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/../Resources/Configuration\"")
 else()
     target_sources(tests_oiviewer PRIVATE
         ../Source/CommandLine.cpp

@@ -610,6 +610,9 @@ TEST_CASE("ViewActionController resolves zoom and auto-place decisions", "[AppCo
 
     REQUIRE(OIV::ViewActionController::ResolveZoomValue(50.0, false, 0.5, 30.0) == Catch::Approx(30.0));
     REQUIRE(OIV::ViewActionController::ResolveZoomValue(50.0, true, 0.5, 30.0) == Catch::Approx(50.0));
+    REQUIRE(OIV::ViewActionController::ResolveZoomValue(1.0, false, 0.15, 0.01) == Catch::Approx(0.15));
+    REQUIRE(OIV::ViewActionController::ResolveZoomValue(0.001, false, 0.15, 0.01) == Catch::Approx(0.15));
+    REQUIRE(OIV::ViewActionController::ResolveZoomValue(1.0, true, 0.15, 0.01) == Catch::Approx(1.0));
 
     REQUIRE(OIV::ViewActionController::ResolveZoomPoint({-1, 20}, {200.0, 100.0}) == LLUtils::PointI32{200, 20});
     REQUIRE(OIV::ViewActionController::RelativeZoom(2.0, 0.5) == Catch::Approx(3.0));
@@ -715,6 +718,9 @@ TEST_CASE("FileChangePolicy routes watcher events", "[AppCore]")
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ClearWatchedFolder);
 
     eventArgs = {9, Op::Modified, configPath.native(), LLUTILS_TEXT("Settings.json"), {}};
+    REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ReloadSettings);
+
+    eventArgs = {9, Op::Rename, configPath.native(), LLUTILS_TEXT("temporary"), LLUTILS_TEXT("Settings.json")};
     REQUIRE(OIV::FileChangePolicy::Decide(eventArgs, true, 7, 9, {}) == OIV::FileChangeAction::ReloadSettings);
 
     eventArgs = {11, Op::Modified, otherPath.native(), LLUTILS_TEXT("x.png"), {}};
@@ -2107,6 +2113,8 @@ TEST_CASE("AppSettingsPolicy converts logarithmic screen-space budgets and valid
     CHECK(budget.type == ActionType::ScreenSpaceWorkFactor);
     CHECK(budget.floatValue == Catch::Approx(16.0));
     CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("5")).floatValue == Catch::Approx(32.0));
+    CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("1023.5")).type ==
+          ActionType::ScreenSpaceWorkFactor);
     CHECK(OIV::AppSettingsPolicy::ParseAction(budgetKey, LLUTILS_TEXT("0.5")).floatValue ==
           Catch::Approx(std::sqrt(2.0)));
 
@@ -2190,7 +2198,8 @@ TEST_CASE("AppSettingsPolicy accepts finite positive fractional screen-space tex
     const auto key   = LLUTILS_TEXT("viewsettings/large_image/screenspacetexelthresholdpixels");
     const std::pair<LLUtils::native_string_type, double> valid[]{{LLUTILS_TEXT("5.0"), 5.0},
                                                                  {LLUTILS_TEXT("2.5"), 2.5},
-                                                                 {LLUTILS_TEXT("0.25"), 0.25}};
+                                                                 {LLUTILS_TEXT("0.25"), 0.25},
+                                                                 {LLUTILS_TEXT("0.0005"), 0.0005}};
     for (const auto& [value, expected] : valid)
     {
         const auto action = OIV::AppSettingsPolicy::ParseAction(key, value);

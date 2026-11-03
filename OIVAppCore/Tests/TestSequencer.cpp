@@ -260,6 +260,8 @@ TEST_CASE("Animation settings parse whole milliseconds and percentages without t
             Action::AnimationSlowFrameInterval);
     REQUIRE(parse(LLUTILS_TEXT("animation/slowspeedpercent"), LLUTILS_TEXT("0.0004")).floatValue ==
             Catch::Approx(0.0004));
+    REQUIRE(parse(LLUTILS_TEXT("animation/slowspeedpercent"), LLUTILS_TEXT("1e-9")).floatValue ==
+            Catch::Approx(1e-9));
     for (const auto* value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("-1"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"),
                               LLUTILS_TEXT("bad"), LLUTILS_TEXT("3tail"), LLUTILS_TEXT("1e999")})
     {

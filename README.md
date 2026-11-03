@@ -42,6 +42,7 @@ These are the shipped defaults; press **F1** for the full list of active binding
 
 | Shortcut | Action |
 | --- | --- |
+| **F2** | Open settings |
 | **Ctrl+O** | Open an image |
 | **Left / Right** or **Page Up / Page Down** | Previous / next image in the folder |
 | **Home / End** | First / last image in the folder |
@@ -70,9 +71,15 @@ With no graphics options, **Windows prefers D3D11, then Vulkan**, and **Linux pr
 
 ## Configuration
 
-Edit the files in `Resources/Configuration` beside the executable, then restart OIViewer:
+Press **F2** to open or raise the settings window. Escape closes it after dismissing any active popup,
+search, or edit. Confirmed edits apply immediately, Save writes the profile, and closing without saving
+restores saved values. On Windows, the editor opens near the viewer using available monitor space.
+On Wayland, the compositor chooses its position. The application initializes its user settings from
+[Settings.json](OIViewer/Resources/Configuration/Settings.json) on first use. The bundled
+[settings template](OIViewer/Resources/Configuration/SettingsTemplate.json) defines the editor fields.
 
-- [Settings.json](OIViewer/Resources/Configuration/Settings.json): viewing and browsing settings.
+Edit these files in `Resources/Configuration` beside the executable, then restart OIViewer:
+
 - [KeyBindings.json](OIViewer/Resources/Configuration/KeyBindings.json): keyboard shortcuts.
 - [Commands.json](OIViewer/Resources/Configuration/Commands.json): command definitions.
 
@@ -89,7 +96,7 @@ Windows 7 SP1 also requires the [platform update](https://www.microsoft.com/en-u
 
 ## Build from source
 
-Use Git, CMake 3.24+, Ninja, and a C++26-capable toolchain. **Clang/clang-cl 21 or newer** is recommended.
+Use Git, CMake 3.30+ for the viewer, Ninja, and a C++26-capable toolchain. **Clang/clang-cl 21 or newer** is recommended.
 
 ```sh
 git clone --recursive https://github.com/OpenImageViewer/OpenImageViewer.git

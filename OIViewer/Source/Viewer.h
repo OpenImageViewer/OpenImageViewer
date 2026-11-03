@@ -147,6 +147,8 @@ namespace OIV
         // Borrowed composite for native host parenting, resize, and focus. The viewer retains ownership.
         MainWindow& GetWindow() { return fWindow; }
         bool IsClosing() const { return fIsShuttingDown; }
+        void ApplyEditorSetting(const std::string& key, const std::string& value);
+        void ReportSettingsError(const std::string& message);
         enum class ViewFit
         {
             Original,
@@ -379,7 +381,6 @@ namespace OIV
         AutoScrollUniquePtr fAutoScroll;
         RecursiveDelayedOp fRefreshOperation;
         RecursiveDelayedOp fPreserveImageSpaceSelection;
-        bool fReloadSettingsFileIfChanged = false;
 
         struct RawInputState;
         struct RawInputStateDeleter
@@ -395,6 +396,8 @@ namespace OIV
         uint32_t fQueueResamplingDelay = 50;
         uint32_t fScreenSpaceDelayMs   = 100;
         LWS::Timer fTimerSlideShow;
+        LWS::Timer fSettingsReloadTimer;
+        std::optional<std::filesystem::file_time_type> fSettingsModified;
         LWS::Clipboard fClipboardHelper;
 
         LWS::Timer fTimerNoActiveZoom;
@@ -440,6 +443,7 @@ namespace OIV
         std::unique_ptr<MessageManager> fMessageManager;
         void OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value);
         void ApplySetting(const AppSettingsPolicy::Action& action);
+        void SetSettingsReloadEnabled(bool enabled);
         void LoadSettings();
         void SetResamplingEnabled(bool enable);
         bool GetResamplingEnabled() const;

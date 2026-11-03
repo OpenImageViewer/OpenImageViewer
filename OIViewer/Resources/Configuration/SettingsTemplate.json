@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "children": [
+    {
+      "type": "group",
+      "id": "system",
+      "label": "System",
+      "children": [
+        {
+          "type": "checkbox",
+          "id": "system/reloadsettingsfileifchanged",
+          "label": "Reload settings file when changed",
+          "description": "Automatically reload the active settings file when it changes on disk. When disabled, external changes take effect on the next launch. Changes made in this editor still apply immediately.",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "filesystem",
+      "label": "Filesystem",
+      "children": [
+        {
+          "type": "combo",
+          "id": "filesystem/deletedfileremovalmode",
+          "label": "When the current file is deleted",
+          "description": "Choose when the viewer leaves an image that has been deleted. Internally means deleted by OIViewer, while externally means deleted by another application. External file monitoring is available on Windows.",
+          "default": "externally",
+          "options": [
+            {
+              "label": "Never",
+              "value": "none"
+            },
+            {
+              "label": "Deleted by OIViewer",
+              "value": "internally"
+            },
+            {
+              "label": "Deleted by another application",
+              "value": "externally"
+            },
+            {
+              "label": "Any deletion",
+              "value": "always"
+            }
+          ]
+        },
+        {
+          "type": "combo",
+          "id": "filesystem/modifiedfilereloadmode",
+          "label": "When the current file changes",
+          "description": "Choose whether to ignore changes, ask before reloading, reload when the viewer is active, or reload immediately in the background. External file monitoring is available on Windows.",
+          "default": "confirmation",
+          "options": [
+            {
+              "label": "Never",
+              "value": "none"
+            },
+            {
+              "label": "Ask before reloading",
+              "value": "confirmation"
+            },
+            {
+              "label": "Reload when active",
+              "value": "autoforeground"
+            },
+            {
+              "label": "Reload immediately",
+              "value": "autobackground"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "viewsettings",
+      "label": "View settings",
+      "children": [
+        {
+          "type": "number",
+          "id": "viewsettings/maxzoom",
+          "label": "Maximum zoom",
+          "description": "Limits manual zoom as a scale relative to the original image. If this conflicts with the minimum image size, the minimum takes precedence.",
+          "default": 100.0,
+          "step": 0.01,
+          "min": 2.2250738585072014e-308
+        },
+        {
+          "type": "group",
+          "id": "viewsettings/large_image",
+          "label": "Large images",
+          "children": [
+            {
+              "type": "integer",
+              "id": "viewsettings/large_image/screenspacedelayms",
+              "label": "Refinement delay",
+              "description": "Time in milliseconds to wait after zooming or panning stops before refining a large image. A shorter delay updates detail sooner but can do more work during navigation.",
+              "default": 100,
+              "step": 1,
+              "min": 1,
+              "max": 4294967295
+            },
+            {
+              "type": "number",
+              "id": "viewsettings/large_image/screenspaceworkfactorlog2",
+              "label": "Refinement work budget",
+              "description": "Controls how much image data is processed around the visible area. The budget is 2 raised to this value, so increasing it by one doubles the budget and may use more processing time.",
+              "default": 4.0,
+              "step": 0.01,
+              "min": -1022,
+              "max": 1023.9999999999999
+            },
+            {
+              "type": "number",
+              "id": "viewsettings/large_image/screenspacezoomtolerance",
+              "label": "Refinement reuse tolerance",
+              "description": "Controls how much the requested sampling resolution may change before cached detail is rebuilt. For example, 0.25 allows approximately 25 percent more or 20 percent less detail.",
+              "default": 0.25,
+              "step": 0.01,
+              "min": 0
+            },
+            {
+              "type": "integer",
+              "id": "viewsettings/large_image/screenspacepixelbuffertargetbytes",
+              "label": "Refinement buffer target",
+              "description": "Target size in bytes for the refined pixel buffer, including optional detail around the visible area. The visible image can exceed this target when it is needed for display.",
+              "default": 67108864,
+              "step": 1,
+              "min": 1,
+              "max": 9223372036854775807
+            },
+            {
+              "type": "number",
+              "id": "viewsettings/large_image/screenspacetexelthresholdpixels",
+              "label": "Refinement detail threshold",
+              "description": "Start generating detailed image data when one pixel of the lower resolution preview spans at least this many screen pixels. Lower values request detail sooner.",
+              "default": 5.0,
+              "step": 0.01,
+              "min": 2.2250738585072014e-308
+            }
+          ]
+        },
+        {
+          "type": "number",
+          "id": "viewsettings/minimagesize",
+          "label": "Minimum image size",
+          "description": "Limits how far manual zoom can shrink an image. The shortest image dimension stays at least this many pixels, unless the original image is smaller.",
+          "default": 150.0,
+          "step": 0.01,
+          "min": 0.0
+        },
+        {
+          "type": "integer",
+          "id": "viewsettings/slideshowinterval",
+          "label": "Slideshow interval",
+          "description": "Time in milliseconds between slideshow images. For example, 2000 shows each image for about two seconds. Zero stops the slideshow timer.",
+          "default": 2000,
+          "step": 1,
+          "min": 0,
+          "max": 4294967295
+        },
+        {
+          "type": "integer",
+          "id": "viewsettings/quickbrowsedelay",
+          "label": "Quick browse delay",
+          "description": "Minimum delay in milliseconds between repeated navigation steps while browsing quickly. Larger values slow down repeated image changes.",
+          "default": 100,
+          "step": 1,
+          "min": 0,
+          "max": 65535
+        },
+        {
+          "type": "group",
+          "id": "viewsettings/imagemargins",
+          "label": "Image margins",
+          "children": [
+            {
+              "type": "number",
+              "id": "viewsettings/imagemargins/x",
+              "label": "Horizontal pan margin",
+              "description": "Controls how far an image may be panned past the left or right edge. A value of 0.25 allows a margin equal to one quarter of the image or viewport width.",
+              "default": 0.25,
+              "step": 0.01,
+              "min": 0
+            },
+            {
+              "type": "number",
+              "id": "viewsettings/imagemargins/y",
+              "label": "Vertical pan margin",
+              "description": "Controls how far an image may be panned past the top or bottom edge. A value of 0.25 allows a margin equal to one quarter of the image or viewport height.",
+              "default": 0.25,
+              "step": 0.01,
+              "min": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "animation",
+      "label": "Animation",
+      "children": [
+        {
+          "type": "integer",
+          "id": "animation/minframeintervalms",
+          "label": "Minimum frame interval",
+          "description": "Shortest allowed display time for an animation frame, in milliseconds. Increasing it limits the maximum playback speed.",
+          "default": 3,
+          "step": 1,
+          "min": 1,
+          "max": 2147483647
+        },
+        {
+          "type": "integer",
+          "id": "animation/slowframeintervalms",
+          "label": "Slow playback frame interval",
+          "description": "Target duration in milliseconds used to determine the slowest playback speed. The animation frame timings and slow speed percentage also affect that limit.",
+          "default": 10000,
+          "step": 1,
+          "min": 1,
+          "max": 2147483647
+        },
+        {
+          "type": "number",
+          "id": "animation/slowspeedpercent",
+          "label": "Slow playback speed",
+          "description": "Reference percentage used to determine the slowest animation speed. For example, 1 means one percent of the original speed, subject to the slow frame interval.",
+          "default": 1.0,
+          "step": 0.01,
+          "min": 2.3891548628119722e-297,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "id": "autoscroll",
+      "label": "Auto scroll",
+      "children": [
+        {
+          "type": "integer",
+          "id": "autoscroll/deadzoneradius",
+          "label": "Dead zone radius",
+          "description": "Distance in pixels around the point where auto scroll starts. Moving the pointer inside this area does not scroll the image.",
+          "default": 10,
+          "step": 1,
+          "min": 0,
+          "max": 2147483647
+        },
+        {
+          "type": "number",
+          "id": "autoscroll/speedfactorin",
+          "label": "Inner speed factor",
+          "description": "Controls how quickly auto scroll speed grows just outside the dead zone. It is used as an exponent in the distance to speed calculation.",
+          "default": 0.4,
+          "step": 0.01,
+          "min": 0
+        },
+        {
+          "type": "number",
+          "id": "autoscroll/speedfactorout",
+          "label": "Outer speed factor",
+          "description": "Controls how quickly auto scroll speed grows farther from the starting point. It is used as an exponent in the distance to speed calculation.",
+          "default": 1.4,
+          "step": 0.01,
+          "min": 0
+        },
+        {
+          "type": "integer",
+          "id": "autoscroll/speedfactorrange",
+          "label": "Speed factor range",
+          "description": "Distance in pixels over which the auto scroll calculation changes from the inner speed factor to the outer speed factor.",
+          "default": 30,
+          "step": 1,
+          "min": 1,
+          "max": 2147483647
+        },
+        {
+          "type": "integer",
+          "id": "autoscroll/maxspeed",
+          "label": "Maximum auto scroll speed",
+          "description": "Limits auto scroll speed in pixels per second, even when the pointer moves far from the starting point.",
+          "default": 8000,
+          "step": 1,
+          "min": 0,
+          "max": 2147483647
+        }
+      ]
+    }
+  ]
+}

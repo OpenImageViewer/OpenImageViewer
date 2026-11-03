@@ -10,7 +10,7 @@ namespace OIV
     {
       public:
 
-        using FolderID = std::uint16_t;
+        using FolderID = std::uint64_t;
         enum class FileChangedOp
         {
             None,

@@ -446,6 +446,7 @@ namespace OIV
                 break;
             case FileChangeAction::ReloadSettings:
                 LoadSettings();
+                if (fShell.settingsReloaded) fShell.settingsReloaded();
                 break;
             case FileChangeAction::Ignore:
                 break;

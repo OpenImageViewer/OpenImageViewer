@@ -1,4 +1,5 @@
 #include "ViewerApplication.h"
+#include "SettingsController.h"
 #include "ViewerResources.h"
 #include "ViewerApplicationPlatformState.h"
 #include <algorithm>
@@ -43,6 +44,12 @@ namespace OIV
                       .close        = [this](bool tray) { CloseApplication(tray); },
                       .destroyed    = [this] { fPlatform.RequestQuit(); },
                       .showSettings = [this] { ShowSettings(); },
+                      .settingsReloaded = [this]
+                      {
+                          if (fSettings)
+                              fSettings->ApplyPending([this](const auto& id, const auto& value)
+                              { fViewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
+                      },
                       .topMost =
                           [this]
                       {
@@ -68,12 +75,19 @@ namespace OIV
     }
     ViewerApplication::~ViewerApplication()
     {
+        fSettings.reset();
         fViewer.Stop();
     }
 
     void ViewerApplication::ShowSettings()
     {
-        // NetSettings is unsupported; retain the command callback as a no-op.
+        if (!fSettings)
+            fSettings = std::make_unique<SettingsController>(
+                fPlatform, fViewer.fResources, fViewer.fSettingsFile,
+                [this](const auto& id, const auto& value)
+                { fViewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
+        if (auto result = fSettings->Show(&fViewer.GetWindow().GetWindow()); !result)
+            fViewer.ReportSettingsError(result.error().location + ": " + result.error().message);
     }
 
     void ViewerApplication::Init(LLUtils::native_string_type path, const RendererOptions& options)
