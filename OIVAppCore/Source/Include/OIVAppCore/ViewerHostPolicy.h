@@ -11,7 +11,6 @@ namespace OIV
         const auto type     = request.args.GetArgValue("type");
         return command != "cmd_file_associations" && command != "cmd_set_window_size" &&
                !(command == "cmd_shell" && request.args.GetArgValue("cmd") == "newWindow") &&
-               !(command == "cmd_view_state" && type == "toggleBorders") &&
-               !(command == "cmd_toggle_keybindings" && type == "settings");
+               !(command == "cmd_view_state" && type == "toggleBorders");
     }
 }  // namespace OIV

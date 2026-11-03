@@ -49,8 +49,10 @@ Alt+Enter toggles fullscreen. Escape restores the fullscreen viewer, or returns 
 docked. Fullscreen moves the existing composite into a temporary shell, retaining its canvas and image
 state. Closing the host also closes an escaped viewer.
 
-NetSettings integration is unsupported. Tray, desktop file associations, window-size commands, and
-launching another OIViewer process are disabled while hosted. Search and printing are not exported.
+F2 opens or raises the settings editor for the WLX profile. Escape closes it after dismissing an active
+popup, search, or edit. Confirmed edits apply to open viewers, Save writes the profile, and closing without
+saving restores saved values. Tray, desktop file associations, window-size commands,
+and launching another OIViewer process are disabled while hosted. Search and printing are not exported.
 
 Previews decode on the CPU, apply orientation, select the first displayable image, and fit without
 enlargement onto an opaque white bitmap of the requested size. The host owns the returned bitmap.
@@ -110,7 +112,7 @@ presentation state, animation decisions, and browsing/loading coordination. It o
 services and stops their producers during session teardown. The viewer owns native widgets, GPU registrations,
 transient gestures, and timers.
 The standalone `ViewerApplication` composes the same two components and supplies desktop services through
-explicit shell callbacks. WLX does not construct tray, settings-dialog, or file-association services.
+explicit shell callbacks. WLX does not construct tray or file-association services.
 
 Fullscreen hosting and native focus and capture translation live in Win32 adapters. Reparenting preserves
 the existing canvas and renderer. Destroying a surface detaches its completion notification and releases GPU resources,

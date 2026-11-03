@@ -6,6 +6,7 @@ namespace OIV
 {
     // The standalone frontend owns desktop services independently of the reusable Viewer. Its services and
     // session precede the Viewer in destruction order so native callbacks remain valid through surface teardown.
+    class SettingsController;
     class ViewerApplication final
     {
       public:
@@ -44,5 +45,6 @@ namespace OIV
         int fTopMostCounter = 0;
         LWS::Timer fTimerTopMostRetention;
         Viewer fViewer;
+        std::unique_ptr<SettingsController> fSettings;
     };
 }  // namespace OIV

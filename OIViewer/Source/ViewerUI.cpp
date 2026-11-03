@@ -110,6 +110,7 @@ namespace OIV
             fRefreshTimer.Enable(false);
             fSequencerTimer.SetInterval(0);
             fTimerSlideShow.SetInterval(0);
+            fSettingsReloadTimer.SetInterval(0);
             fTimerNoActiveZoom.SetInterval(0);
             fMouseInput->Cancel();
             if (fAutoScroll != nullptr && fAutoScroll->IsAutoScrolling())
@@ -211,7 +212,7 @@ namespace OIV
                                         return true;
                                     });
                             }),
-          fTimerSlideShow(platform), fClipboardHelper(platform), fTimerNoActiveZoom(platform),
+          fTimerSlideShow(platform), fSettingsReloadTimer(platform), fClipboardHelper(platform), fTimerNoActiveZoom(platform),
           fTimerNavigation(platform), fFreeType(std::make_unique<FreeType::FreeTypeConnector>()),
           fLabelManager(fFreeType.get(), fResources / "Fonts" / "CascadiaCode.ttf"), fContextMenuTimer(platform),
           fSequencerTimer(platform)
@@ -451,6 +452,16 @@ namespace OIV
         }
     }
 
+    void Viewer::ApplyEditorSetting(const std::string& key, const std::string& value)
+    {
+        OnSettingChange(LLUtils::StringUtility::ToNativeString(key), LLUtils::StringUtility::ToNativeString(value));
+    }
+
+    void Viewer::ReportSettingsError(const std::string& message)
+    {
+        SetUserMessage(LLUtils::StringUtility::ToNativeString("Settings: " + message));
+    }
+
     void Viewer::OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value)
     {
         ApplySetting(AppSettingsPolicy::ParseAction(key, value));
@@ -522,7 +533,7 @@ namespace OIV
                 fFileReloadPolicy.SetMode(action.fileReloadMode);
                 break;
             case AppSettingsPolicy::ActionType::ReloadSettingsFileIfChanged:
-                fReloadSettingsFileIfChanged = action.boolValue;
+                SetSettingsReloadEnabled(action.boolValue);
                 break;
             case AppSettingsPolicy::ActionType::BackgroundColor:
                 fRenderer->SetBackgroundColor(action.backgroundColorIndex,
@@ -532,6 +543,45 @@ namespace OIV
                 break;
             default:
                 break;
+        }
+    }
+
+    void Viewer::SetSettingsReloadEnabled(bool enabled)
+    {
+        if (fSession.fFileWatcher)
+        {
+            if (enabled && fSession.fConfigurationFolderID == 0)
+                fSession.fConfigurationFolderID =
+                    fSession.fFileWatcher->AddFolder(fSettingsFile.parent_path().native());
+            else if (!enabled && fSession.fConfigurationFolderID != 0)
+            {
+                fSession.fFileWatcher->RemoveFolder(fSession.fConfigurationFolderID);
+                fSession.fConfigurationFolderID = 0;
+            }
+        }
+        else if (enabled && fSettingsReloadTimer.GetInterval() == 0)
+        {
+            std::error_code error;
+            const auto modified = std::filesystem::last_write_time(fSettingsFile, error);
+            fSettingsModified = error ? std::nullopt : std::optional{modified};
+            std::ignore = fSettingsReloadTimer.SetTargetWindow(&fWindow.GetWindow());
+            fSettingsReloadTimer.SetCallback(MakeSafeCallback([this]
+            {
+                std::error_code error;
+                const auto modified = std::filesystem::last_write_time(fSettingsFile, error);
+                if (!error && (!fSettingsModified || *fSettingsModified != modified))
+                {
+                    fSettingsModified = modified;
+                    LoadSettings();
+                    if (fShell.settingsReloaded) fShell.settingsReloaded();
+                }
+            }));
+            fSettingsReloadTimer.SetInterval(1000);
+        }
+        else if (!enabled)
+        {
+            fSettingsReloadTimer.SetInterval(0);
+            fSettingsModified.reset();
         }
     }
 

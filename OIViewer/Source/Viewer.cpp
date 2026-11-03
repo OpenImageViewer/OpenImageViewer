@@ -328,9 +328,6 @@ namespace OIV
 
         LoadSettings();
 
-        if (fReloadSettingsFileIfChanged && fSession.fFileWatcher != nullptr && fSession.fConfigurationFolderID == 0)
-            fSession.fConfigurationFolderID = fSession.fFileWatcher->AddFolder(fSettingsFile.parent_path().native());
-
         if (fSession.fPendingFolderLoad.empty() == false)
         {
             LoadFileOrFolder(fSession.fPendingFolderLoad,

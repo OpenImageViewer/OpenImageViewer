@@ -1,6 +1,6 @@
 {
   "system": {
-    "allowdynamicsettings": true
+    "reloadsettingsfileifchanged": true
   },
   "filesystem": {
     "deletedfileremovalmode": "externally",

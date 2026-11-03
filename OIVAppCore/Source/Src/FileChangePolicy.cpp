@@ -33,8 +33,10 @@ namespace OIV
         }
 
         if (eventArgs.folderID == configurationFolderID)
-            return eventArgs.fileName == LLUTILS_TEXT("Settings.json") ? FileChangeAction::ReloadSettings
-                                                                       : FileChangeAction::Ignore;
+            return eventArgs.fileName == LLUTILS_TEXT("Settings.json") ||
+                           (eventArgs.fileOp == IFileWatcher::FileChangedOp::Rename &&
+                            eventArgs.fileName2 == LLUTILS_TEXT("Settings.json"))
+                       ? FileChangeAction::ReloadSettings : FileChangeAction::Ignore;
 
         return FileChangeAction::Ignore;
     }

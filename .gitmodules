@@ -31,3 +31,6 @@
 [submodule "External/CLI11"]
 	path = External/CLI11
 	url = https://github.com/CLIUtils/CLI11.git
+[submodule "External/LWSSettings"]
+	path = External/LWSSettings
+	url = https://github.com/OpenImageViewer/LWSSettings.git
