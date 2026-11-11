@@ -1,5 +1,6 @@
 #pragma once
 #include "Viewer.h"
+#include "UI/ResizeForm.h"
 #include <OIVAppCore/FileAssociationSession.h>
 #include <LWS/NotificationIconGroup.hpp>
 namespace OIV
@@ -27,6 +28,7 @@ namespace OIV
         void CloseFileAssociationDialog();
         void HandleFileAssociationNotice(const FileAssociationNotice& notice);
         void ShowSettings();
+        void ShowResizeForm();
         void InitializeNotificationIcons();
         [[nodiscard]] LWS::Rect GetNotificationIconRect(LWS::NotificationIconGroup::IconID iconId) const;
         void CloseApplication(bool closeToTray);
@@ -46,5 +48,6 @@ namespace OIV
         LWS::Timer fTimerTopMostRetention;
         Viewer fViewer;
         std::unique_ptr<SettingsController> fSettings;
+        std::unique_ptr<ResizeFormController> fResizeForm;
     };
 }  // namespace OIV

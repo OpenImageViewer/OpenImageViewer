@@ -466,24 +466,25 @@ namespace OIV
                                                               fSession.fFileSorter.GetActiveSortDirection());
     }
 
-    void Viewer::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+void Viewer::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
+{
+    auto openedImage = fSession.fImageState.GetOpenedImage();
+    if (openedImage != nullptr &&
+        openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
     {
-        auto openedImage = fSession.fImageState.GetOpenedImage();
-        if (openedImage != nullptr &&
-            openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
+        if (SequencerPolicy::IsChangeSpeedCommand(request.args))
         {
-            if (SequencerPolicy::IsChangeSpeedCommand(request.args))
-            {
-                auto change = fSession.fSequencerPolicy.ChangeSpeed(
-                    SequencerPolicy::ParseSpeedChangePercent(request.args));
-                if (change.retimed)
-                    UpdateSequencerInterval();
-                result.resValue = std::move(change.message);
-            }
+            auto change = fSession.fSequencerPolicy.ChangeSpeed(
+                SequencerPolicy::ParseSpeedChangePercent(request.args));
+            if (change.retimed)
+                UpdateSequencerInterval();
+            result.resValue = std::move(change.message);
         }
     }
+}
 
-    void Viewer::UpdateSequencerInterval()
+
+void Viewer::UpdateSequencerInterval()
     {
         if (fSequencerTimer.GetInterval() != 0)
         {
@@ -750,7 +751,8 @@ namespace OIV
             {"cmd_delete_file", std::bind(&Viewer::CMD_DeleteFile, this, _1, _2)},
             {"cmd_set_window_size", std::bind(&Viewer::CMD_SetWindowSize, this, _1, _2)},
             {"cmd_sort_files", std::bind(&Viewer::CMD_SortFiles, this, _1, _2)},
-            {"cmd_sequencer", std::bind(&Viewer::CMD_Sequencer, this, _1, _2)}};
+            {"cmd_sequencer", std::bind(&Viewer::CMD_Sequencer, this, _1, _2)},
+            {"cmd_resize_form", std::bind(&Viewer::CMD_ResizeForm, this, _1, _2)}};
         fCommandController.SetRequestPredicate(fShell.commandAllowed);
         fCommandController.AddCommandCallbacks(registrations);
     }
@@ -768,5 +770,13 @@ namespace OIV
     bool Viewer::ExecuteCommand(const CommandManager::CommandRequest& request)
     {
         return fCommandController.ExecuteCommand(request);
+    }
+
+    void Viewer::CMD_ResizeForm(const CommandManager::CommandRequest& request,
+                                CommandManager::CommandResult& result)
+    {
+        if (fShell.showResizeForm)
+            fShell.showResizeForm();
+        result.resValue = LLUtils::StringUtility::ToNativeString(request.displayName);
     }
 }  // namespace OIV

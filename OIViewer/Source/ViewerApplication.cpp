@@ -41,10 +41,11 @@ namespace OIV
 #endif
                           fNotificationContextMenu.reset();
                       },
-                      .close        = [this](bool tray) { CloseApplication(tray); },
-                      .destroyed    = [this] { fPlatform.RequestQuit(); },
-                      .showSettings = [this] { ShowSettings(); },
-                      .settingsReloaded = [this]
+                       .close        = [this](bool tray) { CloseApplication(tray); },
+                       .destroyed    = [this] { fPlatform.RequestQuit(); },
+                       .showSettings = [this] { ShowSettings(); },
+                       .showResizeForm = [this] { ShowResizeForm(); },
+                       .settingsReloaded = [this]
                       {
                           if (fSettings)
                               fSettings->ApplyPending([this](const auto& id, const auto& value)
@@ -76,6 +77,7 @@ namespace OIV
     ViewerApplication::~ViewerApplication()
     {
         fSettings.reset();
+        fResizeForm.reset();
         fViewer.Stop();
     }
 
@@ -88,6 +90,13 @@ namespace OIV
                 { fViewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
         if (auto result = fSettings->Show(&fViewer.GetWindow().GetWindow()); !result)
             fViewer.ReportSettingsError(result.error().location + ": " + result.error().message);
+    }
+
+    void ViewerApplication::ShowResizeForm()
+    {
+        if (!fResizeForm)
+            fResizeForm = std::make_unique<ResizeFormController>(fPlatform, fViewer.fResources);
+        fResizeForm->Show(&fViewer.GetWindow().GetWindow());
     }
 
     void ViewerApplication::Init(LLUtils::native_string_type path, const RendererOptions& options)

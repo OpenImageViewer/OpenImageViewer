@@ -42,6 +42,7 @@
 #include <OIVShared/ViewTransformController.h>
 
 #include "UI/MessageManager.h"
+#include "UI/ResizeForm.h"
 
 #include "ViewerShell.h"
 #include "ViewerResources.h"
@@ -229,6 +230,7 @@ namespace OIV
         void CMD_SetWindowSize(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_SortFiles(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
+        void CMD_ResizeForm(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
 
 #pragma endregion  // Commands
         void OnSelectionRectChanged(const LLUtils::RectI32&, bool);
@@ -441,6 +443,7 @@ namespace OIV
         int16_t fDefaultSaveFileFormatIndex                   = -1;
         LLUtils::StopWatch fLastImageLoadTimeStamp;
         std::unique_ptr<MessageManager> fMessageManager;
+        std::unique_ptr<ResizeFormController> fResizeForm;
         void OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value);
         void ApplySetting(const AppSettingsPolicy::Action& action);
         void SetSettingsReloadEnabled(bool enabled);
