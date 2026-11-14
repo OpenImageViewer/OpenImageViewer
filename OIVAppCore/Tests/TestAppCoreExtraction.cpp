@@ -2331,3 +2331,101 @@ TEST_CASE("Selection drag activation honors the unsnapped hover target", "[AppCo
     CHECK(selection.GetSelectionRect().GetCorner(LLUtils::TopLeft) == LLUtils::PointI32{200, 100});
     CHECK(selection.GetSelectionRect().GetCorner(LLUtils::BottomRight) == LLUtils::PointI32{220, 120});
 }
+
+TEST_CASE("Resize dialog acceleration settings require finite values within the supported range",
+          "[AppSettings][ResizeDialog]")
+{
+    using P = OIV::AppSettingsPolicy;
+    for (const auto* value : {LLUTILS_TEXT("0.1"), LLUTILS_TEXT("0.5"), LLUTILS_TEXT("1"), LLUTILS_TEXT("2")})
+    {
+        const auto action = P::ParseAction(LLUTILS_TEXT("resizedialog/thumbwheelacceleration"), value);
+        REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelAcceleration);
+        REQUIRE(action.floatValue == P::ParseFloat(value));
+    }
+    for (const auto* value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("-1"), LLUTILS_TEXT("2.1"), LLUTILS_TEXT("nan"),
+                              LLUTILS_TEXT("inf"), LLUTILS_TEXT("0.5junk"), LLUTILS_TEXT("bad")})
+        REQUIRE(P::ParseAction(LLUTILS_TEXT("resizedialog/thumbwheelacceleration"), value).type == P::ActionType::None);
+}
+
+TEST_CASE("Resize thumbwheel tuning settings validate each supported range", "[AppSettings][ResizeDialog]")
+{
+    using P = OIV::AppSettingsPolicy;
+    SECTION("Start speed")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheelstartspeed");
+        for (const auto* value : {LLUTILS_TEXT("0.1"), LLUTILS_TEXT("2"), LLUTILS_TEXT("100")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelStartSpeed);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value : {LLUTILS_TEXT("-0.9"), LLUTILS_TEXT("101"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"),
+                                  LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+    SECTION("Maximum speed")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheelmaximumspeed");
+        for (const auto* value : {LLUTILS_TEXT("100"), LLUTILS_TEXT("4000"), LLUTILS_TEXT("32000")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelMaximumSpeed);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value : {LLUTILS_TEXT("99"), LLUTILS_TEXT("32001"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"),
+                                  LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+    SECTION("Acceleration")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheelacceleration");
+        for (const auto* value : {LLUTILS_TEXT("0.1"), LLUTILS_TEXT("0.5"), LLUTILS_TEXT("2")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelAcceleration);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value :
+             {LLUTILS_TEXT("-0.9"), LLUTILS_TEXT("3"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"), LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+    SECTION("Dead zone (%)")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheeldeadzone");
+        for (const auto* value : {LLUTILS_TEXT("0"), LLUTILS_TEXT("5"), LLUTILS_TEXT("25")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelDeadZone);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value :
+             {LLUTILS_TEXT("-1"), LLUTILS_TEXT("26"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"), LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+    SECTION("Drag sensitivity")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheeldragsensitivity");
+        for (const auto* value : {LLUTILS_TEXT("0.1"), LLUTILS_TEXT("1"), LLUTILS_TEXT("4")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelDragSensitivity);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value :
+             {LLUTILS_TEXT("-0.9"), LLUTILS_TEXT("5"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"), LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+    SECTION("Shift fine-mode multiplier")
+    {
+        constexpr auto key = LLUTILS_TEXT("resizedialog/thumbwheelfinemodemultiplier");
+        for (const auto* value : {LLUTILS_TEXT("0.01"), LLUTILS_TEXT("0.1"), LLUTILS_TEXT("1")})
+        {
+            const auto action = P::ParseAction(key, value);
+            REQUIRE(action.type == P::ActionType::ResizeDialogThumbwheelFineModeMultiplier);
+            REQUIRE(action.floatValue == P::ParseFloat(value));
+        }
+        for (const auto* value : {LLUTILS_TEXT("-0.99"), LLUTILS_TEXT("2"), LLUTILS_TEXT("nan"), LLUTILS_TEXT("inf"),
+                                  LLUTILS_TEXT("1junk")})
+            REQUIRE(P::ParseAction(key, value).type == P::ActionType::None);
+    }
+}

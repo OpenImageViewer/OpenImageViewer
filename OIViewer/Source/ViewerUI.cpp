@@ -212,8 +212,9 @@ namespace OIV
                                         return true;
                                     });
                             }),
-          fTimerSlideShow(platform), fSettingsReloadTimer(platform), fClipboardHelper(platform), fTimerNoActiveZoom(platform),
-          fTimerNavigation(platform), fFreeType(std::make_unique<FreeType::FreeTypeConnector>()),
+          fTimerSlideShow(platform), fSettingsReloadTimer(platform), fClipboardHelper(platform),
+          fTimerNoActiveZoom(platform), fTimerNavigation(platform),
+          fFreeType(std::make_unique<FreeType::FreeTypeConnector>()),
           fLabelManager(fFreeType.get(), fResources / "Fonts" / "CascadiaCode.ttf"), fContextMenuTimer(platform),
           fSequencerTimer(platform)
 
@@ -523,6 +524,24 @@ namespace OIV
             case AppSettingsPolicy::ActionType::AutoScrollSpeedFactorRange:
                 fAutoScroll->SetSpeedFactorRange(static_cast<int32_t>(action.integralValue));
                 break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelStartSpeed:
+                fResizeDialogThumbwheel.startSpeed = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelMaximumSpeed:
+                fResizeDialogThumbwheel.maximumSpeed = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelAcceleration:
+                fResizeDialogThumbwheel.acceleration = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelDeadZone:
+                fResizeDialogThumbwheel.deadZonePercent = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelDragSensitivity:
+                fResizeDialogThumbwheel.dragSensitivity = action.floatValue;
+                break;
+            case AppSettingsPolicy::ActionType::ResizeDialogThumbwheelFineModeMultiplier:
+                fResizeDialogThumbwheel.fineModeMultiplier = action.floatValue;
+                break;
             case AppSettingsPolicy::ActionType::AutoScrollMaxSpeed:
                 fAutoScroll->SetMaxSpeed(static_cast<int32_t>(action.integralValue));
                 break;
@@ -551,8 +570,8 @@ namespace OIV
         if (fSession.fFileWatcher)
         {
             if (enabled && fSession.fConfigurationFolderID == 0)
-                fSession.fConfigurationFolderID =
-                    fSession.fFileWatcher->AddFolder(fSettingsFile.parent_path().native());
+                fSession.fConfigurationFolderID = fSession.fFileWatcher->AddFolder(
+                    fSettingsFile.parent_path().native());
             else if (!enabled && fSession.fConfigurationFolderID != 0)
             {
                 fSession.fFileWatcher->RemoveFolder(fSession.fConfigurationFolderID);
@@ -563,19 +582,21 @@ namespace OIV
         {
             std::error_code error;
             const auto modified = std::filesystem::last_write_time(fSettingsFile, error);
-            fSettingsModified = error ? std::nullopt : std::optional{modified};
-            std::ignore = fSettingsReloadTimer.SetTargetWindow(&fWindow.GetWindow());
-            fSettingsReloadTimer.SetCallback(MakeSafeCallback([this]
-            {
-                std::error_code error;
-                const auto modified = std::filesystem::last_write_time(fSettingsFile, error);
-                if (!error && (!fSettingsModified || *fSettingsModified != modified))
+            fSettingsModified   = error ? std::nullopt : std::optional{modified};
+            std::ignore         = fSettingsReloadTimer.SetTargetWindow(&fWindow.GetWindow());
+            fSettingsReloadTimer.SetCallback(MakeSafeCallback(
+                [this]
                 {
-                    fSettingsModified = modified;
-                    LoadSettings();
-                    if (fShell.settingsReloaded) fShell.settingsReloaded();
-                }
-            }));
+                    std::error_code error;
+                    const auto modified = std::filesystem::last_write_time(fSettingsFile, error);
+                    if (!error && (!fSettingsModified || *fSettingsModified != modified))
+                    {
+                        fSettingsModified = modified;
+                        LoadSettings();
+                        if (fShell.settingsReloaded)
+                            fShell.settingsReloaded();
+                    }
+                }));
             fSettingsReloadTimer.SetInterval(1000);
         }
         else if (!enabled)

@@ -1,43 +1,46 @@
 #ifdef OIV_TEST_HAS_SETTINGS_EDITOR
-#include <catch2/catch_test_macros.hpp>
-#include "SettingsController.h"
-#include "WindowPlacement.h"
-#include <LWSSettings/SettingsStorage.hpp>
-#include <chrono>
-#include <fstream>
-#ifdef _WIN32
-#include <LWS/Win32/Platform.hpp>
-#include <LWS/Win32/WindowExtensions.hpp>
-#include <Windows.h>
-#endif
+    #include <catch2/catch_test_macros.hpp>
+    #include "SettingsController.h"
+    #include "WindowPlacement.h"
+    #include <LWSSettings/SettingsStorage.hpp>
+    #include <chrono>
+    #include <fstream>
+    #ifdef _WIN32
+        #include <LWS/Win32/Platform.hpp>
+        #include <LWS/Win32/WindowExtensions.hpp>
+        #include <Windows.h>
+    #endif
 
 namespace
 {
     using Json = nlohmann::json;
-#ifdef _WIN32
+    #ifdef _WIN32
     HWND SettingsWindow()
     {
         HWND window{};
-        EnumWindows([](HWND candidate, LPARAM output) -> BOOL
-        {
-            DWORD process{};
-            GetWindowThreadProcessId(candidate, &process);
-            wchar_t title[128]{};
-            GetWindowTextW(candidate, title, 128);
-            if (process == GetCurrentProcessId() && std::wstring_view(title) == L"OIViewer settings")
+        EnumWindows(
+            [](HWND candidate, LPARAM output) -> BOOL
             {
-                *reinterpret_cast<HWND*>(output) = candidate;
-                return FALSE;
-            }
-            return TRUE;
-        }, reinterpret_cast<LPARAM>(&window));
+                DWORD process{};
+                GetWindowThreadProcessId(candidate, &process);
+                wchar_t title[128]{};
+                GetWindowTextW(candidate, title, 128);
+                if (process == GetCurrentProcessId() && std::wstring_view(title) == L"OIViewer settings")
+                {
+                    *reinterpret_cast<HWND*>(output) = candidate;
+                    return FALSE;
+                }
+                return TRUE;
+            },
+            reinterpret_cast<LPARAM>(&window));
         return window;
     }
-#endif
+    #endif
     struct Fixture
     {
         std::filesystem::path root = std::filesystem::temp_directory_path() /
-            ("oiv-settings-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+                                     ("oiv-settings-" +
+                                      std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         std::filesystem::path path = root / "Settings.json";
         Fixture()
         {
@@ -45,28 +48,37 @@ namespace
             std::filesystem::copy_file(std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) / "Settings.json", path);
         }
         ~Fixture() { std::filesystem::remove_all(root); }
-        Json Read() const { std::ifstream input(path); return Json::parse(input); }
-        void Write(const Json& json) const { std::ofstream output(path, std::ios::binary); output << json.dump(2) << "\r\n"; }
+        Json Read() const
+        {
+            std::ifstream input(path);
+            return Json::parse(input);
+        }
+        void Write(const Json& json) const
+        {
+            std::ofstream output(path, std::ios::binary);
+            output << json.dump(2) << "\r\n";
+        }
     };
-}
+}  // namespace
 
 TEST_CASE("Settings editor loads every bundled setting with matching defaults", "[oiviewer][settings]")
 {
     Fixture fixture;
     LWSSettings::SettingsDocument document;
-    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document,
-        std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) / "SettingsTemplate.json"));
+    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document, std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) /
+                                                                         "SettingsTemplate.json"));
     OIV::SettingsProfile profile;
     REQUIRE(profile.Load(document, fixture.path));
     const Json defaults = fixture.Read();
-    const Json values = LWSSettings::SettingsStorage::EncodeValues(document.WorkingValues()).at("values");
-    size_t leaves = 0;
-    auto check = [&](auto&& self, const Json& object, const std::string& prefix) -> void
+    const Json values   = LWSSettings::SettingsStorage::EncodeValues(document.WorkingValues()).at("values");
+    size_t leaves       = 0;
+    auto check          = [&](auto&& self, const Json& object, const std::string& prefix) -> void
     {
         for (const auto& [key, value] : object.items())
         {
             const auto id = prefix.empty() ? key : prefix + "/" + key;
-            if (value.is_object()) self(self, value, id);
+            if (value.is_object())
+                self(self, value, id);
             else
             {
                 ++leaves;
@@ -82,23 +94,23 @@ TEST_CASE("Settings editor loads every bundled setting with matching defaults", 
 TEST_CASE("Settings profile preserves unrelated fields and detects conflicting edits", "[oiviewer][settings]")
 {
     Fixture fixture;
-    auto original = fixture.Read();
+    auto original      = fixture.Read();
     original["custom"] = {{"keep", 42}};
     fixture.Write(original);
     LWSSettings::SettingsDocument document;
-    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document,
-        std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) / "SettingsTemplate.json"));
+    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document, std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) /
+                                                                         "SettingsTemplate.json"));
     OIV::SettingsProfile profile;
     REQUIRE(profile.Load(document, fixture.path));
     REQUIRE(document.SetValue("viewsettings/quickbrowsedelay", int64_t{150}));
-    auto external = fixture.Read();
+    auto external              = fixture.Read();
     external["custom"]["keep"] = 77;
     fixture.Write(external);
     REQUIRE(profile.Save(fixture.path, document.WorkingValues()));
     CHECK(fixture.Read()["custom"]["keep"] == 77);
     CHECK(fixture.Read()["viewsettings"]["quickbrowsedelay"] == 150);
     REQUIRE(document.SetValue("viewsettings/quickbrowsedelay", int64_t{200}));
-    external = fixture.Read();
+    external                                     = fixture.Read();
     external["viewsettings"]["quickbrowsedelay"] = 180;
     fixture.Write(external);
     CHECK_FALSE(profile.Save(fixture.path, document.WorkingValues()));
@@ -108,39 +120,39 @@ TEST_CASE("Settings profile preserves unrelated fields and detects conflicting e
 TEST_CASE("Settings editor accepts supported small values from existing profiles", "[oiviewer][settings]")
 {
     Fixture fixture;
-    auto existing = fixture.Read();
-    existing["viewsettings"]["maxzoom"] = 0.0005;
-    existing["viewsettings"]["minimagesize"] = 0.0;
-    existing["viewsettings"]["slideshowinterval"] = 0;
+    auto existing                                                              = fixture.Read();
+    existing["viewsettings"]["maxzoom"]                                        = 0.0005;
+    existing["viewsettings"]["minimagesize"]                                   = 0.0;
+    existing["viewsettings"]["slideshowinterval"]                              = 0;
     existing["viewsettings"]["large_image"]["screenspacetexelthresholdpixels"] = 0.0005;
-    existing["viewsettings"]["large_image"]["screenspaceworkfactorlog2"] = 1023.5;
-    existing["animation"]["slowspeedpercent"] = 1e-9;
+    existing["viewsettings"]["large_image"]["screenspaceworkfactorlog2"]       = 1023.5;
+    existing["animation"]["slowspeedpercent"]                                  = 1e-9;
     fixture.Write(existing);
     LWSSettings::SettingsDocument document;
-    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document,
-        std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) / "SettingsTemplate.json"));
+    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document, std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) /
+                                                                         "SettingsTemplate.json"));
     OIV::SettingsProfile profile;
     REQUIRE(profile.Load(document, fixture.path));
     CHECK(document.WorkingValue("viewsettings/maxzoom") == LWSSettings::Value{0.0005});
     CHECK(document.WorkingValue("viewsettings/minimagesize") == LWSSettings::Value{0.0});
     CHECK(document.WorkingValue("viewsettings/slideshowinterval") == LWSSettings::Value{int64_t{0}});
-    CHECK(document.WorkingValue("viewsettings/large_image/screenspacetexelthresholdpixels") == LWSSettings::Value{0.0005});
+    CHECK(document.WorkingValue("viewsettings/large_image/screenspacetexelthresholdpixels") ==
+          LWSSettings::Value{0.0005});
     CHECK(document.WorkingValue("viewsettings/large_image/screenspaceworkfactorlog2") == LWSSettings::Value{1023.5});
     CHECK(document.WorkingValue("animation/slowspeedpercent") == LWSSettings::Value{1e-9});
     CHECK_FALSE(document.SetValue("viewsettings/large_image/screenspacetexelthresholdpixels", 0.0));
     CHECK_FALSE(document.SetValue("viewsettings/maxzoom", 0.0));
     CHECK_FALSE(document.SetValue("animation/slowspeedpercent", 0.0));
-
 }
 
 TEST_CASE("Settings profile rejects invalid values without replacing the document or file", "[oiviewer][settings]")
 {
     Fixture fixture;
     LWSSettings::SettingsDocument document;
-    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document,
-        std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) / "SettingsTemplate.json"));
-    const auto before = document.WorkingValues();
-    auto invalid = fixture.Read();
+    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document, std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) /
+                                                                         "SettingsTemplate.json"));
+    const auto before                           = document.WorkingValues();
+    auto invalid                                = fixture.Read();
     invalid["viewsettings"]["quickbrowsedelay"] = 1.5;
     fixture.Write(invalid);
     OIV::SettingsProfile profile;
@@ -148,7 +160,7 @@ TEST_CASE("Settings profile rejects invalid values without replacing the documen
     CHECK(document.WorkingValues() == before);
     CHECK(fixture.Read() == invalid);
 }
-#ifdef _WIN32
+    #ifdef _WIN32
 TEST_CASE("Settings controller opens closes and reopens one window", "[oiviewer][settings][windows]")
 {
     Fixture fixture;
@@ -176,8 +188,8 @@ TEST_CASE("Settings controller opens closes and reopens one window", "[oiviewer]
             CHECK(std::abs((client.bottom - client.top) - MulDiv(520, dpi, 96)) <= 2);
         }
         REQUIRE(controller.Show());
-        HWND other = CreateWindowExW(0, L"STATIC", L"Settings activation test", WS_OVERLAPPEDWINDOW,
-                                     20, 20, 200, 100, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+        HWND other = CreateWindowExW(0, L"STATIC", L"Settings activation test", WS_OVERLAPPEDWINDOW, 20, 20, 200, 100,
+                                     nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
         REQUIRE(other != nullptr);
         ShowWindow(other, SW_SHOW);
         if (SetForegroundWindow(other))
@@ -207,16 +219,19 @@ TEST_CASE("Closing settings restores the current file after an external change",
     Fixture fixture;
     const auto configuration = fixture.root / "Configuration";
     std::filesystem::create_directories(configuration);
-    const Json setting{{"type", "radio"}, {"id", "filesystem/deletedfileremovalmode"},
-                       {"label", "Deletion"}, {"default", "none"},
-                       {"options", {{{"label", "Never"}, {"value", "none"}},
-                                    {{"label", "Internal"}, {"value", "internally"}},
-                                    {{"label", "External"}, {"value", "externally"}}}}};
+    const Json setting{{"type", "radio"},
+                       {"id", "filesystem/deletedfileremovalmode"},
+                       {"label", "Deletion"},
+                       {"default", "none"},
+                       {"options",
+                        {{{"label", "Never"}, {"value", "none"}},
+                         {{"label", "Internal"}, {"value", "internally"}},
+                         {{"label", "External"}, {"value", "externally"}}}}};
     {
         std::ofstream output(configuration / "SettingsTemplate.json", std::ios::binary);
         output << Json{{"version", 1}, {"children", Json::array({setting})}}.dump(2) << "\r\n";
     }
-    auto values = fixture.Read();
+    auto values                                    = fixture.Read();
     values["filesystem"]["deletedfileremovalmode"] = "none";
     fixture.Write(values);
     REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
@@ -225,11 +240,11 @@ TEST_CASE("Closing settings restores the current file after an external change",
     {
         std::string applied = "none";
         OIV::SettingsController controller(platform, fixture.root, fixture.path,
-            [&](const auto& id, const auto& value)
-            {
-                REQUIRE(id == "filesystem/deletedfileremovalmode");
-                applied = std::get<std::string>(value);
-            });
+                                           [&](const auto& id, const auto& value)
+                                           {
+                                               REQUIRE(id == "filesystem/deletedfileremovalmode");
+                                               applied = std::get<std::string>(value);
+                                           });
         REQUIRE(controller.Show());
         const HWND window = SettingsWindow();
         REQUIRE(window != nullptr);
@@ -245,8 +260,14 @@ TEST_CASE("Closing settings restores the current file after an external change",
         applied = "externally";
         controller.ApplyPending([&](const auto&, const auto& value) { applied = std::get<std::string>(value); });
         REQUIRE(applied == "internally");
-        SECTION("Close button") { SendMessageW(window, WM_CLOSE, 0, 0); }
-        SECTION("Escape") { SendMessageW(window, WM_KEYDOWN, VK_ESCAPE, 1); }
+        SECTION("Close button")
+        {
+            SendMessageW(window, WM_CLOSE, 0, 0);
+        }
+        SECTION("Escape")
+        {
+            SendMessageW(window, WM_KEYDOWN, VK_ESCAPE, 1);
+        }
         CHECK_FALSE(IsWindowVisible(window));
         CHECK(applied == "externally");
         CHECK(fixture.Read()["filesystem"]["deletedfileremovalmode"] == "externally");
@@ -286,9 +307,9 @@ TEST_CASE("Settings window opens near the invoking viewer", "[oiviewer][settings
         REQUIRE(GetWindowRect(mainWindow, &mainRect));
         REQUIRE(GetWindowRect(settings, &settingsRect));
         REQUIRE(GetMonitorInfoW(MonitorFromWindow(mainWindow, MONITOR_DEFAULTTONEAREST), &monitor));
-        const int workWidth = monitor.rcWork.right - monitor.rcWork.left;
-        const int workHeight = monitor.rcWork.bottom - monitor.rcWork.top;
-        const int settingsWidth = settingsRect.right - settingsRect.left;
+        const int workWidth      = monitor.rcWork.right - monitor.rcWork.left;
+        const int workHeight     = monitor.rcWork.bottom - monitor.rcWork.top;
+        const int settingsWidth  = settingsRect.right - settingsRect.left;
         const int settingsHeight = settingsRect.bottom - settingsRect.top;
         MONITORINFO settingsMonitor{sizeof(MONITORINFO)};
         REQUIRE(GetMonitorInfoW(MonitorFromWindow(settings, MONITOR_DEFAULTTONEAREST), &settingsMonitor));
@@ -304,9 +325,9 @@ TEST_CASE("Settings window opens near the invoking viewer", "[oiviewer][settings
             workHeight >= settingsHeight + mainRect.bottom - mainRect.top + 32)
         {
             INFO("owner " << mainRect.left << "," << mainRect.top << " to " << mainRect.right << "," << mainRect.bottom
-                 << " settings " << settingsRect.left << "," << settingsRect.top << " to " << settingsRect.right
-                 << "," << settingsRect.bottom << " work " << monitor.rcWork.left << "," << monitor.rcWork.top
-                 << " to " << monitor.rcWork.right << "," << monitor.rcWork.bottom);
+                          << " settings " << settingsRect.left << "," << settingsRect.top << " to "
+                          << settingsRect.right << "," << settingsRect.bottom << " work " << monitor.rcWork.left << ","
+                          << monitor.rcWork.top << " to " << monitor.rcWork.right << "," << monitor.rcWork.bottom);
             const bool covered = settingsRect.left <= mainRect.left && settingsRect.top <= mainRect.top &&
                                  settingsRect.right >= mainRect.right && settingsRect.bottom >= mainRect.bottom;
             CHECK_FALSE(covered);
@@ -325,5 +346,49 @@ TEST_CASE("Settings window opens near the invoking viewer", "[oiviewer][settings
     }
     REQUIRE(platform.Shutdown() == LWS::Result::Success);
 }
-#endif
+    #endif
+
+TEST_CASE("Resize dialog acceleration defaults persist and validate through the settings profile",
+          "[oiviewer][settings][ResizeDialog]")
+{
+    Fixture fixture;
+    auto oldProfile = fixture.Read();
+    oldProfile.erase("resizedialog");
+    fixture.Write(oldProfile);
+    LWSSettings::SettingsDocument document;
+    REQUIRE(LWSSettings::SettingsStorage::LoadTemplateFile(document, std::filesystem::path(OIV_TEST_CONFIGURATION_DIR) /
+                                                                         "SettingsTemplate.json"));
+    OIV::SettingsProfile profile;
+    REQUIRE(profile.Load(document, fixture.path));
+    const auto values = LWSSettings::SettingsStorage::EncodeValues(document.WorkingValues()).at("values");
+    REQUIRE(values.at("resizedialog/thumbwheelacceleration") == .5);
+    REQUIRE(values.at("resizedialog/thumbwheelstartspeed") == 2);
+    REQUIRE(document.SetValue("resizedialog/thumbwheelstartspeed", 100));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelstartspeed", 101));
+    REQUIRE(values.at("resizedialog/thumbwheelmaximumspeed") == 4000);
+    REQUIRE(document.SetValue("resizedialog/thumbwheelmaximumspeed", 32000));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelmaximumspeed", 32001));
+    REQUIRE(values.at("resizedialog/thumbwheeldeadzone") == 5);
+    REQUIRE(document.SetValue("resizedialog/thumbwheeldeadzone", 25));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheeldeadzone", 26));
+    REQUIRE(values.at("resizedialog/thumbwheeldragsensitivity") == 1);
+    REQUIRE(document.SetValue("resizedialog/thumbwheeldragsensitivity", 4));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheeldragsensitivity", 5));
+    REQUIRE(values.at("resizedialog/thumbwheelfinemodemultiplier") == 0.1);
+    REQUIRE(document.SetValue("resizedialog/thumbwheelfinemodemultiplier", 1));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelfinemodemultiplier", 2));
+
+    REQUIRE(document.SetValue("resizedialog/thumbwheelacceleration", .2));
+    REQUIRE(profile.Save(fixture.path, document.WorkingValues()));
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheelacceleration"] == .2);
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheelstartspeed"] == 100);
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheelmaximumspeed"] == 32000);
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheeldeadzone"] == 25);
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheeldragsensitivity"] == 4);
+    REQUIRE(fixture.Read()["resizedialog"]["thumbwheelfinemodemultiplier"] == 1);
+
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelacceleration", 0.));
+    REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelacceleration", 2.1));
+}
+
 #endif

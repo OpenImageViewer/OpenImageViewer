@@ -1,7 +1,9 @@
 #pragma once
 #include "Viewer.h"
+#include "UI/ResizeForm.h"
 #include <OIVAppCore/FileAssociationSession.h>
 #include <LWS/NotificationIconGroup.hpp>
+#include <thread>
 namespace OIV
 {
     // The standalone frontend owns desktop services independently of the reusable Viewer. Its services and
@@ -26,7 +28,11 @@ namespace OIV
         void CMD_FileAssociations(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result);
         void CloseFileAssociationDialog();
         void HandleFileAssociationNotice(const FileAssociationNotice& notice);
+        void ApplyEditorSetting(const std::string& id, const std::string& value);
         void ShowSettings();
+        void ShowResizeForm();
+        void StartResize(IMCodec::ImageSharedPtr source, LLUtils::RectI32 bounds, ViewerImage opened,
+                         uint64_t generation, ImageResizeRequest request);
         void InitializeNotificationIcons();
         [[nodiscard]] LWS::Rect GetNotificationIconRect(LWS::NotificationIconGroup::IconID iconId) const;
         void CloseApplication(bool closeToTray);
@@ -46,5 +52,11 @@ namespace OIV
         LWS::Timer fTimerTopMostRetention;
         Viewer fViewer;
         std::unique_ptr<SettingsController> fSettings;
+        std::unique_ptr<ResizeFormController> fResizeForm;
+        // Posted completions use a weak lifetime token; shutdown invalidates it before joining the worker.
+        std::shared_ptr<int> fResizeLifetime = std::make_shared<int>(0);
+        std::thread fResizeWorker;
+        uint64_t fResizeRequestId{};
+        bool fResizeBusy{};
     };
 }  // namespace OIV

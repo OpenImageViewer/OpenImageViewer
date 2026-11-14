@@ -134,6 +134,24 @@ namespace OIV
             }
             return action;
         }
+        const auto thumbwheelSetting = [&](ActionType type, double minimum, double maximum) -> Action
+        {
+            if (const auto number = ParseFiniteFloat(value); number && *number >= minimum && *number <= maximum)
+                return {type, *number};
+            return {};
+        };
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheelstartspeed"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelStartSpeed, 0.1, 100);
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheelmaximumspeed"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelMaximumSpeed, 100, 32000);
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheelacceleration"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelAcceleration, 0.1, 2);
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheeldeadzone"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelDeadZone, 0, 25);
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheeldragsensitivity"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelDragSensitivity, 0.1, 4);
+        if (key == LLUTILS_TEXT("resizedialog/thumbwheelfinemodemultiplier"))
+            return thumbwheelSetting(ActionType::ResizeDialogThumbwheelFineModeMultiplier, 0.01, 1);
         if (key == LLUTILS_TEXT("autoscroll/deadzoneradius"))
             return {ActionType::AutoScrollDeadZoneRadius, 0.0, ParseIntegral(value)};
         if (key == LLUTILS_TEXT("autoscroll/speedfactorin"))

@@ -19,6 +19,12 @@
       "arguments": "type=keybindings"
     },
     {
+      "GroupID": "ShowResizeForm",
+      "DisplayName": "Show resize form",
+      "Name": "cmd_resize_form",
+      "arguments": ""
+    },
+    {
       "GroupID": "ShowImageInfo",
       "DisplayName": "Show image information",
       "Name": "cmd_toggle_keybindings",
@@ -439,6 +445,12 @@
       "DisplayName": "Window size multi full screen",
       "Name": "cmd_set_window_size",
       "arguments": "size_type=multifullscreen"
+    },
+    {
+      "GroupID": "ShowResizeForm",
+      "DisplayName": "Show resize form",
+      "Name": "cmd_resize_form",
+      "arguments": ""
     }
   ]
 }

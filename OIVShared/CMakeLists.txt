@@ -23,6 +23,10 @@ target_include_directories(${TargetName} PUBLIC ${ExternalFolder}/FreeTypeWrappe
 target_include_directories(${TargetName} PUBLIC ${ExternalFolder}/ImageCodec/ImageUtil/Include)
 target_include_directories(${TargetName} PRIVATE ./Source/Src)
 target_include_directories(${TargetName} PRIVATE ${ExternalFolder}/xxHash)
+target_include_directories(${TargetName} SYSTEM PRIVATE ${ExternalFolder}/stb_image_resize)
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set_source_files_properties(Source/Src/ImageResize.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+endif()
 target_compile_definitions(${TargetName} PRIVATE OIV_BUILD_FREETYPE=$<BOOL:${OIV_BUILD_FREETYPE}>)
 target_link_libraries(${TargetName} PUBLIC LLUtils::LLUtils ImageCodec ImageUtil FreeTypeWrapper)
 
