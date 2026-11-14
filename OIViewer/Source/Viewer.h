@@ -380,6 +380,7 @@ namespace OIV
         bool fPresentationReady = true;
         // A redraw requested before platform presentation becomes ready.
         bool fPresentationPending = false;
+        ResizeThumbwheelSettings fResizeDialogThumbwheel;
         AutoScrollUniquePtr fAutoScroll;
         RecursiveDelayedOp fRefreshOperation;
         RecursiveDelayedOp fPreserveImageSpaceSelection;

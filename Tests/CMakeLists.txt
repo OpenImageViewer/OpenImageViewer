@@ -96,6 +96,9 @@ if(OIV_BUILD_CLIENT)
     target_link_libraries(tests PRIVATE oivviewer)
     target_compile_definitions(tests PRIVATE OIV_TEST_VIEWER)
 endif()
+if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set_source_files_properties(Core/TestResizeDimensions.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+endif()
 add_test(NAME oiv.integration COMMAND tests --reporter compact)
 
 # FreeType and ImageCodec both use native PNG dependencies; keep their integration test isolated.

@@ -1,0 +1,50 @@
+# Source: Wikipedia contributors, “List of common display resolutions”, “Computer and handheld screens”.
+# https://en.wikipedia.org/wiki/List_of_common_display_resolutions
+# Snapshot: 2026-11-12. Wikipedia text is available under CC BY-SA 4.0.
+# Curated common desktop, television, phone, and tablet display sizes through 8K; specialty formats omitted.
+# Fields: designation<TAB>width<TAB>height; entries sorted by descending pixel area.
+8K UHD	7680	4320
+5K UHD	5120	2880
+WQUXGA	3840	2400
+4K UHD	3840	2160
+QHD+	3200	1800
+Tablet 12.9-inch	2732	2048
+WQXGA+	2880	1800
+Phone QHD+	1440	3200
+Phone QHD	1440	2960
+WQXGA	2560	1600
+Tablet 11-inch	2388	1668
+Tablet 10.5-inch	2224	1668
+QHD	2560	1440
+Phone QHD	1440	2560
+Tablet 10.2-inch	2160	1620
+QXGA	2048	1536
+Surface 3:2	2160	1440
+Phone FHD+	2532	1170
+Phone FHD+	2400	1080
+Phone FHD+	1080	2400
+Phone FHD+	2340	1080
+Phone FHD+	1080	2340
+Phone FHD+	2280	1080
+WUXGA	1920	1200
+Tablet WUXGA	1200	1920
+Full HD	1920	1080
+Phone Full HD	1080	1920
+UXGA	1600	1200
+WSXGA+	1680	1050
+Phone HD+	1792	828
+Phone HD+	828	1792
+HD+	1600	900
+SXGA	1280	1024
+WXGA+	1440	900
+Phone HD+	720	1600
+WXGA	1366	768
+WXGA	1360	768
+WXGA	1280	800
+WXGA Tablet	800	1280
+Phone HD	750	1334
+HD	1280	720
+HD	720	1280
+XGA	1024	768
+SVGA	800	600
+VGA	640	480

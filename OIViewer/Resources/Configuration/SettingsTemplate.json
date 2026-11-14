@@ -288,6 +288,80 @@
           "max": 2147483647
         }
       ]
+    },
+    {
+      "type": "group",
+      "id": "resizedialog",
+      "label": "Resize dialog",
+      "children": [
+        {
+          "type": "group",
+          "id": "resizedialog/thumbwheel",
+          "label": "Thumbwheel",
+          "children": [
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheelstartspeed",
+              "label": "Start speed",
+              "description": "Adjustment units per second just outside the center dead zone. In absolute Pixels mode one unit is one pixel.",
+              "default": 2,
+              "step": 0.1,
+              "min": 0.1,
+              "max": 100
+            },
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheelmaximumspeed",
+              "label": "Maximum speed",
+              "description": "Adjustment units per second at either edge. Physical units and relative mode retain their smaller adjustment steps.",
+              "default": 4000,
+              "step": 100,
+              "min": 100,
+              "max": 32000
+            },
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheelacceleration",
+              "label": "Acceleration",
+              "description": "Controls speed growth toward the edges. Lower values give gentler acceleration without changing endpoint speeds.",
+              "default": 0.5,
+              "step": 0.1,
+              "min": 0.1,
+              "max": 2
+            },
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheeldeadzone",
+              "label": "Dead zone (%)",
+              "description": "Percentage of center-to-edge travel that produces no adjustment.",
+              "default": 5,
+              "step": 1,
+              "min": 0,
+              "max": 25
+            },
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheeldragsensitivity",
+              "label": "Drag sensitivity",
+              "description": "Mouse-to-wheel movement multiplier. At 2, half the mouse travel reaches an edge; at 0.5, twice the travel is required.",
+              "default": 1,
+              "step": 0.1,
+              "min": 0.1,
+              "max": 4
+            },
+            {
+              "type": "number",
+              "id": "resizedialog/thumbwheelfinemodemultiplier",
+              "label": "Shift fine-mode multiplier",
+              "description": "Multiplies the held wheel speed while Shift is pressed. A value of 0.1 is ten times slower; discrete arrow and mouse-wheel steps stay unchanged.",
+              "default": 0.1,
+              "step": 0.01,
+              "min": 0.01,
+              "max": 1
+            }
+          ]
+        }
+      ]
     }
   ]
 }

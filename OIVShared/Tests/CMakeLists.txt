@@ -12,5 +12,5 @@ elseif(MINGW)
 endif()
 
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set_source_files_properties(TestUnitFormatter.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+    set_source_files_properties(TestUnitFormatter.cpp TestImageResize.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
 endif()

@@ -27,7 +27,7 @@ file(GLOB_RECURSE OIVIEWER_SOURCE_FILES CONFIGURE_DEPENDS
 list(FILTER OIVIEWER_SOURCE_FILES EXCLUDE REGEX "/(Main|ViewerApplication[^/]*)[.]cpp$")
 add_library(oivviewer STATIC ${OIVIEWER_SOURCE_FILES})
 if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set_source_files_properties(Source/SettingsController.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
+    set_source_files_properties(Source/SettingsController.cpp Source/UI/ResizeForm.cpp PROPERTIES COMPILE_OPTIONS "/fp:precise")
 endif()
 set(FrontendTarget ${TargetName})
 set(TargetName oivviewer)

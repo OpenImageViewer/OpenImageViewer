@@ -34,5 +34,13 @@
     "speedfactorout": 1.4,
     "speedfactorrange": 30.0,
     "maxspeed": 8000.0
+  },
+  "resizedialog": {
+    "thumbwheelacceleration": 0.5,
+    "thumbwheelstartspeed": 2,
+    "thumbwheelmaximumspeed": 4000,
+    "thumbwheeldeadzone": 5,
+    "thumbwheeldragsensitivity": 1,
+    "thumbwheelfinemodemultiplier": 0.1
   }
 }

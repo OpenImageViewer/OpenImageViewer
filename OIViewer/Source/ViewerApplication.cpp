@@ -1,7 +1,10 @@
 #include "ViewerApplication.h"
+#include "ImageBitmap.h"
 #include "SettingsController.h"
 #include "ViewerResources.h"
 #include "ViewerApplicationPlatformState.h"
+#include <ImageProcessing/Resampler.h>
+#include <ImageUtil/ImageUtil.h>
 #include <algorithm>
 #include <cmath>
 namespace OIV
@@ -34,6 +37,7 @@ namespace OIV
                           [this]
                       {
                           StopFileAssociationOperation();
+                          fResizeLifetime.reset();
                           fTimerTopMostRetention.SetInterval(0);
 #ifdef LWS_HAS_WIN32_BACKEND
                           if (fNativeWindowState)
@@ -41,15 +45,17 @@ namespace OIV
 #endif
                           fNotificationContextMenu.reset();
                       },
-                       .close        = [this](bool tray) { CloseApplication(tray); },
-                       .destroyed    = [this] { fPlatform.RequestQuit(); },
-                       .showSettings = [this] { ShowSettings(); },
-                       .showResizeForm = [this] { ShowResizeForm(); },
-                       .settingsReloaded = [this]
+                      .close        = [this](bool tray) { CloseApplication(tray); },
+                      .destroyed    = [this] { fPlatform.RequestQuit(); },
+                      .showSettings = [this] { ShowSettings(); },
+                      .settingsReloaded =
+                          [this]
                       {
                           if (fSettings)
                               fSettings->ApplyPending([this](const auto& id, const auto& value)
-                              { fViewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
+                                                      { ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
+                          if (fResizeForm)
+                              fResizeForm->SetThumbwheelSettings(fViewer.fResizeDialogThumbwheel);
                       },
                       .topMost =
                           [this]
@@ -61,6 +67,7 @@ namespace OIV
                               fTimerTopMostRetention.SetInterval(1000);
                           }
                       },
+                      .showResizeForm = [this] { ShowResizeForm(); },
                       .openExternalFile =
                           [this](LLUtils::native_string_type path)
                       {
@@ -76,27 +83,166 @@ namespace OIV
     }
     ViewerApplication::~ViewerApplication()
     {
+        fResizeLifetime.reset();
+        if (fResizeWorker.joinable())
+            fResizeWorker.join();
         fSettings.reset();
         fResizeForm.reset();
         fViewer.Stop();
     }
 
+    void ViewerApplication::ApplyEditorSetting(const std::string& id, const std::string& value)
+    {
+        fViewer.ApplyEditorSetting(id, value);
+        if (fResizeForm && id.starts_with("resizedialog/thumbwheel"))
+            fResizeForm->SetThumbwheelSettings(fViewer.fResizeDialogThumbwheel);
+    }
     void ViewerApplication::ShowSettings()
     {
         if (!fSettings)
             fSettings = std::make_unique<SettingsController>(
                 fPlatform, fViewer.fResources, fViewer.fSettingsFile,
-                [this](const auto& id, const auto& value)
-                { fViewer.ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
+                [this](const auto& id, const auto& value) { ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
         if (auto result = fSettings->Show(&fViewer.GetWindow().GetWindow()); !result)
             fViewer.ReportSettingsError(result.error().location + ": " + result.error().message);
     }
 
     void ViewerApplication::ShowResizeForm()
     {
-        if (!fResizeForm)
-            fResizeForm = std::make_unique<ResizeFormController>(fPlatform, fViewer.fResources);
+        if (fResizeBusy && fResizeForm)
+        {
+            fResizeForm->Show(&fViewer.GetWindow().GetWindow());
+            return;
+        }
+        ResizeFormInput input;
+        input.thumbwheel = fViewer.fResizeDialogThumbwheel;
+        IMCodec::ImageSharedPtr icon;
+        if (fSession.Loader().Decode((fViewer.fResources / "resize-picture.png").native(), IMCodec::ImageLoadFlags{},
+                                     {}, IMCodec::PluginTraverseMode::SuitablePlugin,
+                                     icon) == IMCodec::ImageResult::Success)
+        {
+            auto bgra = IMUtil::ImageUtil::Convert(icon, IMCodec::TexelFormat::I_B8_G8_R8_A8);
+            if (bgra)
+                input.iconBitmap = std::make_shared<LWS::Bitmap>(MakeBgraBitmapView(*bgra));
+        }
+        input.onDismiss   = [this] { ++fResizeRequestId; };
+        const auto& image = fViewer.fSession.Image().GetRetainedImage(ImageProcessingStage::RenderFormat);
+        if (image)
+        {
+            const auto width  = static_cast<int32_t>(image->GetWidth());
+            const auto height = static_cast<int32_t>(image->GetHeight());
+            const LLUtils::RectI32 imageBounds{{0, 0}, {width, height}};
+            auto bounds          = imageBounds;
+            const auto selection = fViewer.fSelectionRect.GetSelectionRect();
+            if (!selection.IsEmpty())
+            {
+                const auto selected    = fViewer.ClientToImageRounded(selection);
+                const auto topLeft     = selected.GetCorner(LLUtils::TopLeft);
+                const auto bottomRight = selected.GetCorner(LLUtils::BottomRight);
+                bounds                 = {{std::clamp(topLeft.x, 0, width), std::clamp(topLeft.y, 0, height)},
+                                          {std::clamp(bottomRight.x, 0, width), std::clamp(bottomRight.y, 0, height)}};
+                if (bounds.IsEmpty())
+                    bounds = imageBounds;
+            }
+
+            // Keep the form's preview small while using full-resolution image coordinates for its size math.
+            constexpr int32_t maxPreviewWidth  = 560;
+            constexpr int32_t maxPreviewHeight = 480;
+            const double scale                 = std::min(static_cast<double>(maxPreviewWidth) / bounds.GetWidth(),
+                                                          static_cast<double>(maxPreviewHeight) / bounds.GetHeight());
+            const LLUtils::PointI32 previewSize{
+                std::max(1, static_cast<int32_t>(std::lround(bounds.GetWidth() * scale))),
+                std::max(1, static_cast<int32_t>(std::lround(bounds.GetHeight() * scale))),
+            };
+            Resampler resampler;
+            auto previewImage = resampler.Resample(image, previewSize, bounds);
+            previewImage      = IMUtil::ImageUtil::ConvertImageWithNormalization(previewImage,
+                                                                                 IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
+            if (previewImage)
+            {
+                input.sourceBitmap   = std::make_shared<LWS::Bitmap>(MakeBgraBitmapView(*previewImage));
+                input.originalBounds = bounds;
+            }
+            // Use oriented, transfer-prepared pixels rather than the display-normalized preview for final output.
+            auto source        = fSession.Image().GetRetainedImage(ImageProcessingStage::TransferFunction);
+            const auto* opened = fSession.Image().GetOpenedImage();
+            if (source && opened)
+            {
+                input.originalBounds = bounds;
+                input.onResize       = [this, source = std::move(source), bounds, opened = *opened,
+                                  generation = fSession.Image().GetSourceGeneration()](ImageResizeRequest request)
+                { StartResize(source, bounds, opened, generation, request); };
+            }
+        }
+
+        fResizeForm = std::make_unique<ResizeFormController>(fPlatform, fViewer.fResources, std::move(input));
         fResizeForm->Show(&fViewer.GetWindow().GetWindow());
+    }
+
+    void ViewerApplication::StartResize(IMCodec::ImageSharedPtr source, LLUtils::RectI32 bounds, ViewerImage opened,
+                                        uint64_t generation, ImageResizeRequest request)
+    {
+        if (fResizeBusy)
+            return;
+        if (generation != fSession.Image().GetSourceGeneration() ||
+            source != fSession.Image().GetRetainedImage(ImageProcessingStage::TransferFunction))
+        {
+            fResizeForm->SetError("The image changed. Reopen Resize image to use the current image.");
+            return;
+        }
+        if (fResizeWorker.joinable())
+            fResizeWorker.join();
+        const auto requestId              = ++fResizeRequestId;
+        const std::weak_ptr<int> lifetime = fResizeLifetime;
+        fResizeBusy                       = true;
+        fResizeForm->SetBusy(true);
+        try
+        {
+            fResizeWorker = std::thread(
+                [this, lifetime, source = std::move(source), bounds, opened = std::move(opened), generation, request,
+                 requestId]() mutable
+                {
+                    auto resized = ResizeImage(source, bounds, request);
+                    // PostTask is thread-safe; all viewer and form mutations remain on the UI thread.
+                    std::ignore = fPlatform.PostTask(
+                        [this, lifetime, source = std::move(source), resized = std::move(resized),
+                         opened = std::move(opened), generation, requestId]() mutable
+                        {
+                            if (lifetime.expired())
+                                return;
+                            fResizeBusy = false;
+                            fResizeForm->SetBusy(false);
+                            if (requestId != fResizeRequestId)
+                                return;
+                            if (generation != fSession.Image().GetSourceGeneration() ||
+                                source != fSession.Image().GetRetainedImage(ImageProcessingStage::TransferFunction))
+                            {
+                                fResizeForm->SetError(
+                                    "The image changed. Reopen Resize image to use the current image.");
+                                return;
+                            }
+                            if (!resized)
+                            {
+                                fResizeForm->SetError(resized.error());
+                                return;
+                            }
+                            auto result = ViewerImage{.pixels     = std::move(*resized),
+                                                      .metadata   = opened.metadata,
+                                                      .source     = ImageSource::GeneratedByLib,
+                                                      .sourceName = opened.sourceName};
+                            fResizeForm->Hide();
+                            fViewer.LoadOivImage(std::move(result));
+                            fViewer.CancelSelection();
+                            fViewer.FitToClientAreaAndCenter();
+                        });
+                });
+        }
+        catch (const std::exception& error)
+        {
+            fResizeBusy = false;
+            fResizeForm->SetBusy(false);
+            fResizeForm->SetError(error.what());
+        }
     }
 
     void ViewerApplication::Init(LLUtils::native_string_type path, const RendererOptions& options)
