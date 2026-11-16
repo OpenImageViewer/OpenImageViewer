@@ -1,5 +1,6 @@
 #pragma once
 #include <Image.h>
+#include <LLUtils/Color.h>
 #include <LLUtils/Point.h>
 #include <LLUtils/Rect.h>
 #include <array>
@@ -69,6 +70,8 @@ namespace OIV
         ResizeFilter filter      = ResizeFilter::Mitchell;
         // Uniform resizing retains this axis and derives the other before rounding.
         bool preserveHeight = false;
+        // RGBA in the source color space; ignored unless letterboxing adds padding.
+        LLUtils::Color letterboxColor{0, 0, 0};
     };
     struct ImageResizeLayout
     {
@@ -81,7 +84,8 @@ namespace OIV
     std::expected<ImageResizeLayout, std::string> ResolveImageResize(LLUtils::PointI32 source,
                                                                      const ImageResizeRequest& request);
     // Uses full-precision, already oriented pixels. Crop coordinates refer to that image, not its display preview.
-    // The source is immutable; the result retains its sample format and color interpretation.
+    // The source is immutable; sample precision and color interpretation are retained.
+    // Transparent padding promotes integer RGB/grayscale to RGBA; float formats without alpha are rejected.
     std::expected<IMCodec::ImageSharedPtr, std::string> ResizeImage(const IMCodec::ImageSharedPtr& source,
                                                                     LLUtils::RectI32 crop,
                                                                     const ImageResizeRequest& request);

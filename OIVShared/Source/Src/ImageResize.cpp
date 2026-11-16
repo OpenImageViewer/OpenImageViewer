@@ -2,7 +2,7 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb_image_resize2.h>
 #include <algorithm>
-#include <bit>
+#include <ExoticNumbers/half.hpp>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -81,7 +81,6 @@ namespace OIV
         {
             stbir_pixel_layout layout;
             stbir_datatype type;
-            int alpha = -1;
             int channelBytes;
         };
         std::expected<PixelLayout, std::string> GetPixelLayout(const IMCodec::Image& image)
@@ -107,8 +106,6 @@ namespace OIV
             {
                 if (info.channles[i].width != first.width || info.channles[i].channelDataType != first.channelDataType)
                     return std::unexpected("Packed or mixed-width image formats are not supported by the scaler");
-                if (info.channles[i].semantic == ChannelSemantic::Opacity)
-                    result.alpha = static_cast<int>(i);
             }
             switch (image.GetTexelFormat())
             {
@@ -198,6 +195,74 @@ namespace OIV
                 (source->GetHeight() - 1) * sourcePitch + uint64_t(source->GetWidth()) * bytes >
                     source->GetImageItem()->data.size())
                 return std::unexpected("Image dimensions or pixel strides exceed the supported allocation size");
+            using Alpha         = IMCodec::ImageItem::ColorInfo::AlphaMode;
+            const auto& info    = source->GetTexelInfo();
+            const bool hasAlpha = std::ranges::any_of(
+                std::span(info.channles).first(info.numChannles),
+                [](const auto& channel) { return channel.semantic == IMCodec::ChannelSemantic::Opacity; });
+            const bool transparentPadding = layout->content != layout->canvas && request.letterboxColor.A() < 255;
+            if (transparentPadding && !hasAlpha)
+            {
+                // Resize only the selected content before adding alpha. Temporary storage is
+                // proportional to the output, even when selecting from a very large source.
+                if (info.channles[0].channelDataType != IMCodec::ChannelDataType::UnsignedInt)
+                    return std::unexpected(
+                        "Transparent letterboxing is unsupported for floating-point images without alpha");
+                auto contentRequest   = request;
+                contentRequest.size   = layout->content;
+                contentRequest.aspect = ResizeAspectRatio::DoNotPreserve;
+                auto content          = ResizeImage(source, crop, contentRequest);
+                if (!content)
+                    return std::unexpected(content.error());
+                const size_t pixelBytes = 4 * pixels->channelBytes;
+                const uint64_t newPitch = uint64_t(layout->canvas.x) * pixelBytes;
+                if (newPitch > UINT32_MAX || uint64_t(layout->canvas.y) > UINT32_MAX / newPitch)
+                    return std::unexpected("Adding alpha exceeds the supported allocation size");
+                auto item                                = std::make_shared<IMCodec::ImageItem>();
+                item->descriptor                         = source->GetImageItem()->descriptor;
+                item->colorInfo                          = source->GetImageItem()->colorInfo;
+                item->metaData                           = source->GetImageItem()->metaData;
+                item->colorInfo.alphaMode                = Alpha::Straight;
+                const bool bgr                           = pixels->layout == STBIR_BGR;
+                item->descriptor.texelFormatDecompressed = pixels->channelBytes == 1
+                                                               ? (bgr ? IMCodec::TexelFormat::I_B8_G8_R8_A8
+                                                                      : IMCodec::TexelFormat::I_R8_G8_B8_A8)
+                                                               : (bgr ? IMCodec::TexelFormat::I_B16_G16_R16_A16
+                                                                      : IMCodec::TexelFormat::I_R16_G16_B16_A16);
+                item->descriptor.width                   = layout->canvas.x;
+                item->descriptor.height                  = layout->canvas.y;
+                item->descriptor.rowPitchInBytes         = static_cast<uint32_t>(newPitch);
+                item->data.Allocate(static_cast<size_t>(newPitch * layout->canvas.y));
+                if (!item->data.data())
+                    return std::unexpected("Not enough memory to add an alpha channel");
+                const auto color = request.letterboxColor;
+                const std::array<uint8_t, 4> channels{uint8_t(bgr ? color.B() : color.R()), uint8_t(color.G()),
+                                                      uint8_t(bgr ? color.R() : color.B()), uint8_t(color.A())};
+                std::array<std::byte, 8> background{};
+                for (size_t c = 0; c < channels.size(); ++c)
+                {
+                    const uint16_t value = channels[c] * 257u;
+                    std::memcpy(background.data() + c * pixels->channelBytes,
+                                pixels->channelBytes == 1 ? static_cast<const void*>(&channels[c]) : &value,
+                                pixels->channelBytes);
+                }
+                for (size_t i = 0; i < size_t(layout->canvas.x) * layout->canvas.y; ++i)
+                    std::memcpy(item->data.data() + i * pixelBytes, background.data(), pixelBytes);
+                for (int32_t y = 0; y < layout->content.y; ++y)
+                    for (int32_t x = 0; x < layout->content.x; ++x)
+                    {
+                        const auto* input = (*content)->GetBuffer() + y * uint64_t((*content)->GetRowPitchInBytes()) +
+                                            x * bytes;
+                        auto* destination = item->data.data() + (y + layout->offset.y) * newPitch +
+                                            (x + layout->offset.x) * pixelBytes;
+                        for (size_t c = 0; c < 3; ++c)
+                            std::memcpy(destination + c * pixels->channelBytes,
+                                        input + (info.numChannles == 1 ? 0 : c * pixels->channelBytes),
+                                        pixels->channelBytes);
+                        std::memset(destination + 3 * pixels->channelBytes, 255, pixels->channelBytes);
+                    }
+                return std::make_shared<IMCodec::Image>(std::move(item), IMCodec::ImageItemType::Image);
+            }
             auto output                        = std::make_shared<IMCodec::ImageItem>();
             output->descriptor                 = source->GetImageItem()->descriptor;
             output->descriptor.width           = layout->canvas.x;
@@ -205,23 +270,65 @@ namespace OIV
             output->descriptor.rowPitchInBytes = static_cast<uint32_t>(pitch);
             output->colorInfo                  = source->GetImageItem()->colorInfo;
             output->metaData                   = source->GetImageItem()->metaData;
+            if (transparentPadding && output->colorInfo.alphaMode != Alpha::Premultiplied)
+                output->colorInfo.alphaMode = Alpha::Straight;
             output->data.Allocate(static_cast<size_t>(allocation));
             auto* target = output->data.data();
             if (!target)
                 return std::unexpected("Not enough memory for the resized image");
             if (layout->content != layout->canvas)
             {
-                std::memset(target, 0, static_cast<size_t>(allocation));
-                // Letterboxing is opaque black even when the source uses straight or premultiplied alpha.
-                if (pixels->alpha >= 0)
+                // Encode padding in the source channel order, sample precision, and alpha association.
+                std::array<std::byte, 16> background{};
+                const auto color   = request.letterboxColor;
+                const float alpha  = color.A() / 255.f;
+                const float weight = output->colorInfo.alphaMode == Alpha::Premultiplied ? alpha : 1.f;
+                const float r = color.R() / 255.f * weight, g = color.G() / 255.f * weight,
+                            b = color.B() / 255.f * weight;
+                std::array<float, 4> channels{r, g, b, alpha};
+                // Use the resolved layout, which also defines the scaler's channel interpretation.
+                switch (pixels->layout)
                 {
-                    uint32_t opaque = pixels->type == STBIR_TYPE_FLOAT        ? std::bit_cast<uint32_t>(1.f)
-                                      : pixels->type == STBIR_TYPE_HALF_FLOAT ? 0x3c00u
-                                                                              : 0xffffu;
-                    for (size_t i = 0; i < static_cast<size_t>(layout->canvas.x) * layout->canvas.y; ++i)
-                        std::memcpy(target + i * bytes + pixels->alpha * pixels->channelBytes, &opaque,
-                                    pixels->channelBytes);
+                    case STBIR_BGR:
+                    case STBIR_BGRA:
+                    case STBIR_BGRA_PM:
+                        channels = {b, g, r, alpha};
+                        break;
+                    case STBIR_ARGB:
+                    case STBIR_ARGB_PM:
+                        channels = {alpha, r, g, b};
+                        break;
+                    case STBIR_ABGR:
+                    case STBIR_ABGR_PM:
+                        channels = {alpha, b, g, r};
+                        break;
+                    case STBIR_1CHANNEL:
+                        channels[0] = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                        break;
+                    default:
+                        break;
                 }
+                for (size_t channel = 0; channel < source->GetTexelInfo().numChannles; ++channel)
+                {
+                    const float value = channels[channel];
+                    auto* sample      = background.data() + channel * pixels->channelBytes;
+                    if (pixels->type == STBIR_TYPE_FLOAT)
+                        std::memcpy(sample, &value, sizeof(value));
+                    else if (pixels->type == STBIR_TYPE_HALF_FLOAT)
+                    {
+                        const half_float::half half(value);
+                        std::memcpy(sample, &half, sizeof(half));
+                    }
+                    else if (pixels->channelBytes == 2)
+                    {
+                        const auto integer = static_cast<uint16_t>(std::lround(value * 65535));
+                        std::memcpy(sample, &integer, sizeof(integer));
+                    }
+                    else
+                        *sample = static_cast<std::byte>(std::lround(value * 255));
+                }
+                for (size_t i = 0; i < static_cast<size_t>(layout->canvas.x) * layout->canvas.y; ++i)
+                    std::memcpy(target + i * bytes, background.data(), bytes);
             }
             const auto origin = crop.GetCorner(LLUtils::TopLeft);
             const auto* input = source->GetBuffer() + origin.y * sourcePitch + origin.x * bytes;
