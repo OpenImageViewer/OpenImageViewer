@@ -91,7 +91,7 @@ TEST_CASE("Interface menu commands use configured view commands and bindings", "
     state.subImages    = true;
     const auto menu    = OIV::BuildViewerMenu(state, commands, bindings, [](std::string) {});
     const auto& items  = menu[3].items;
-    const auto section = std::ranges::find(items, "&Interface", &LWSUI::MenuItem::label);
+    const auto section = std::ranges::find(items, std::string{"&Interface"}, &LWSUI::MenuItem::label);
     REQUIRE(section != items.end());
     for (const auto& [label, group, shortcut] :
          {std::tuple{"&Borders", "ToggleWindowBorders", "B"}, std::tuple{"&Menu Bar", "ToggleMenuBar", "Shift+F10"},
