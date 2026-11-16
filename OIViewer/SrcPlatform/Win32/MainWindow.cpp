@@ -2,6 +2,7 @@
 #include "HostedWindowController.h"
 
 #include <LLUtils/Exception.h>
+#include <LWSUI/UIHost.hpp>
 #include "Resource.h"
 
 #include <Windows.h>
@@ -11,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <utility>
 
 namespace OIV
 {
@@ -41,7 +43,7 @@ namespace OIV
     };
 
     MainWindow::MainWindow(LWS::PlatformContext& platform, const std::filesystem::path& resources)
-        : fResources(resources), fWindow(platform), fCanvasWindow(platform), fImageControl(platform),
+        : fResources(resources), fWindow(platform), fCanvasWindow(platform),
           fNativeState(std::make_unique<NativeState>())
     {
         auto connection = fWindow.Listen(
@@ -64,43 +66,13 @@ namespace OIV
     }
     LWS::Result MainWindow::SetWindowMode(LWS::WindowMode mode)
     {
-        if (!fWindow.GetParent())
-            return fWindow.SetWindowMode(mode);
-        if (!fNativeState->hosted)
+        if (fWindow.GetParent() && !fNativeState->hosted)
             fNativeState->hosted = std::make_unique<Win32::HostedWindowController>(*this);
-        return fNativeState->hosted->SetWindowMode(mode);
-    }
-
-    bool MainWindow::UseMainWindowAsCanvas() const
-    {
-        return false;
-    }
-
-    int32_t MainWindow::GetImageControlClientWidth(int32_t layoutWidth) const
-    {
-        const HWND window = *LWS::Win32::GetHwnd(fImageControl.GetWindow());
-        RECT windowRect{};
-        RECT clientRect{};
-        GetWindowRect(window, &windowRect);
-        GetClientRect(window, &clientRect);
-        const auto clientArea        = fImageControl.GetWindow().GetClientAreaMetrics();
-        const double scale           = clientArea.Scale().value_or(LWS::ContentScale{}).x;
-        const int32_t nonClientWidth = static_cast<int32_t>(
-            std::lround(((windowRect.right - windowRect.left) - (clientRect.right - clientRect.left)) / scale));
-        return std::max(layoutWidth - nonClientWidth, 1);
-    }
-
-    void MainWindow::PrepareImageControlLayout()
-    {
-        const HWND window = *LWS::Win32::GetHwnd(fImageControl.GetWindow());
-        SetWindowLongPtrW(window, GWL_STYLE, GetWindowLongPtrW(window, GWL_STYLE) | WS_VSCROLL);
-        SetWindowPos(window, nullptr, 0, 0, 0, 0,
-                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        SCROLLINFO info{};
-        info.cbSize = sizeof(info);
-        info.fMask  = SIF_RANGE | SIF_PAGE | SIF_DISABLENOSCROLL;
-        info.nPage  = 1;
-        SetScrollInfo(window, SB_VERT, &info, FALSE);
+        const auto result = fNativeState->hosted ? fNativeState->hosted->SetWindowMode(mode)
+                                                 : fWindow.SetWindowMode(mode);
+        if (result == LWS::Result::Success)
+            UpdateLayout();
+        return result;
     }
 
     void MainWindow::SetApplicationIcon()
@@ -136,16 +108,26 @@ namespace OIV
         ReleaseDC(nullptr, screen);
         if (copied == bitmap.bmHeight)
         {
-            auto resource = LWS::WindowIcon::FromBitmap({
+            const LWS::BitmapBuffer buffer{
                 .pixels   = pixels,
                 .format   = LWS::BitmapPixelFormat::Bgra8,
                 .width    = static_cast<uint32_t>(bitmap.bmWidth),
                 .height   = static_cast<uint32_t>(bitmap.bmHeight),
                 .rowPitch = static_cast<uint32_t>(bitmap.bmWidth) * 4U,
-            });
+            };
+            fApplicationIcon = std::make_shared<LWS::Bitmap>(buffer);
+            auto resource    = LWS::WindowIcon::FromBitmap(buffer);
             if (resource.has_value())
                 std::ignore = fWindow.SetWindowIcon(std::move(*resource));
         }
+    }
+
+    void MainWindow::UpdateNativeWindowBorders(bool visible)
+    {
+        // Keep native sizing behavior even when the client paints over every resize border.
+        if (fWindow.GetWindowStyles() != LWS::WindowStyle::ResizableBorder)
+            std::ignore = fWindow.SetWindowStyles(LWS::WindowStyle::ResizableBorder);
+        std::ignore = LWS::Win32::SetResizeBorderVisible(fWindow, visible);
     }
 
     void MainWindow::UpdateNativeStatusBar(LWS::LogicalSize& canvasSize)
@@ -174,6 +156,7 @@ namespace OIV
 
     bool MainWindow::HandleWindowEvent(const LWS::AnyEvent& eventData)
     {
+        PrepareMenu(eventData);
         if (std::holds_alternative<LWS::EventClientAreaSizeChanged>(eventData))
             UpdateLayout();
         return false;

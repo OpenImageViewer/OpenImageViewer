@@ -12,6 +12,7 @@ add_executable(tests
 target_include_directories(tests PRIVATE
     ../External/ImageCodec/Tests
     ../External/json/include
+    ../External/LWS/src
     ../OIViewer
     ../OIViewer/Source
     ../OIVAppCore/Source/Src

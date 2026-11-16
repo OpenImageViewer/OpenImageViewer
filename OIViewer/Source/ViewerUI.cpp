@@ -111,6 +111,7 @@ namespace OIV
             fSequencerTimer.SetInterval(0);
             fTimerSlideShow.SetInterval(0);
             fSettingsReloadTimer.SetInterval(0);
+            fKeyBindingsReloadTimer.SetInterval(0);
             fTimerNoActiveZoom.SetInterval(0);
             fMouseInput->Cancel();
             if (fAutoScroll != nullptr && fAutoScroll->IsAutoScrolling())
@@ -212,8 +213,8 @@ namespace OIV
                                         return true;
                                     });
                             }),
-          fTimerSlideShow(platform), fSettingsReloadTimer(platform), fClipboardHelper(platform),
-          fTimerNoActiveZoom(platform), fTimerNavigation(platform),
+          fTimerSlideShow(platform), fSettingsReloadTimer(platform), fKeyBindingsReloadTimer(platform),
+          fClipboardHelper(platform), fTimerNoActiveZoom(platform), fTimerNavigation(platform),
           fFreeType(std::make_unique<FreeType::FreeTypeConnector>()),
           fLabelManager(fFreeType.get(), fResources / "Fonts" / "CascadiaCode.ttf"), fContextMenuTimer(platform),
           fSequencerTimer(platform)
@@ -373,33 +374,6 @@ namespace OIV
 
     void Viewer::UpdateTitle()
     {
-        const static LLUtils::native_string_type cachedVersionString = [this]
-        {
-#if OIV_OFFICIAL_RELEASE == 1
-            auto title = LLUtils::native_string_type(LLUTILS_TEXT("OpenImageViewer ")) +
-                         LLUtils::StringUtility::ToNativeString(FormatReleaseVersion(CurrentVersion));
-    #ifdef OIV_RELEASE_SUFFIX
-            title += OIV_RELEASE_SUFFIX;
-    #endif
-#else
-            auto title = LLUtils::native_string_type(LLUTILS_TEXT("OpenImageViewer ")) +
-                         LLUtils::StringUtility::ToNativeString(FormatFullVersion(CurrentVersion)) + LLUTILS_TEXT("-") +
-                         LLUtils::StringUtility::ToNativeString(std::string(OIV_GIT_SHORT_HASH));
-
-    #if LLUTILS_ARCH_TYPE == LLUTILS_ARCHITECTURE_64
-            title += LLUTILS_TEXT(" | 64 bit");
-    #else
-            title += LLUTILS_TEXT(" | 32 bit");
-    #endif
-            title += LLUTILS_TEXT(" | ") + MessageHelper::GetFileTime(GetApplicationModulePath());
-#endif
-
-#if OIV_OFFICIAL_BUILD == 0
-            title += LLUTILS_TEXT(" | UNOFFICIAL");
-#endif
-            return title;
-        }();
-
         LLUtils::native_string_type title;
         if (fSession.fImageState.GetOpenedImage() != nullptr)
         {
@@ -433,7 +407,7 @@ namespace OIV
             else
                 title = ViewerPresentationPolicy::FormatNonFileTitlePrefix(imageSource);
         }
-        std::ignore = fWindow.GetWindow().SetTitle(ViewerPresentationPolicy::FormatTitle(title, cachedVersionString));
+        fWindow.SetTitle(ViewerPresentationPolicy::FormatTitle(title, LLUTILS_TEXT("OpenImageViewer")));
     }
 
     void Viewer::OnContextMenuTimer()
@@ -465,7 +439,11 @@ namespace OIV
 
     void Viewer::OnSettingChange(const LLUtils::native_string_type& key, const LLUtils::native_string_type& value)
     {
-        ApplySetting(AppSettingsPolicy::ParseAction(key, value));
+        if (fInterface.Apply(LLUtils::StringUtility::ConvertString<std::string>(key),
+                             LLUtils::StringUtility::ConvertString<std::string>(value)))
+            ApplyInterface(false);
+        else
+            ApplySetting(AppSettingsPolicy::ParseAction(key, value));
     }
 
     void Viewer::ApplySetting(const AppSettingsPolicy::Action& action)
@@ -612,11 +590,14 @@ namespace OIV
         auto animation      = fSession.fSequencerPolicy.GetSettings();
         for (const auto& [key, value] : settings)
         {
+            if (fInterface.Apply(key, value))
+                continue;
             const auto action = AppSettingsPolicy::ParseAction(LLUtils::StringUtility::ToNativeString(key),
                                                                LLUtils::StringUtility::ToNativeString(value));
             if (!AppSettingsPolicy::StageAnimationSetting(action, animation))
                 ApplySetting(action);
         }
+        ApplyInterface(false);
         // Limits depend on the whole set. Intermediate settings can otherwise clamp a speed
         // that is valid under the final values, and rearm the timer multiple times per reload.
         if (fSession.fSequencerPolicy.SetSettings(animation))

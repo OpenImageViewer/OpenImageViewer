@@ -16,7 +16,6 @@ target_sources(${TargetName} PRIVATE
     ExceptionHandler.h
     FileAssociations.cpp
     FileAssociations.h
-    ImageControl.cpp
     LinuxKeyBindings.cpp
     LinuxKeyBindings.h
     MainWindow.cpp

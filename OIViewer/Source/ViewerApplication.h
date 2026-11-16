@@ -1,6 +1,7 @@
 #pragma once
 #include "Viewer.h"
 #include "UI/ResizeForm.h"
+#include "UI/AboutForm.h"
 #include <OIVAppCore/FileAssociationSession.h>
 #include <LWS/NotificationIconGroup.hpp>
 #include <thread>
@@ -30,7 +31,7 @@ namespace OIV
         void HandleFileAssociationNotice(const FileAssociationNotice& notice);
         void ApplyEditorSetting(const std::string& id, const std::string& value);
         void ShowSettings();
-        void ShowResizeForm();
+        void ShowResizeForm(bool updateExisting = false);
         void StartResize(IMCodec::ImageSharedPtr source, LLUtils::RectI32 bounds, ViewerImage opened,
                          uint64_t generation, ImageResizeRequest request);
         void InitializeNotificationIcons();
@@ -53,6 +54,7 @@ namespace OIV
         Viewer fViewer;
         std::unique_ptr<SettingsController> fSettings;
         std::unique_ptr<ResizeFormController> fResizeForm;
+        std::unique_ptr<AboutForm> fAbout;
         // Posted completions use a weak lifetime token; shutdown invalidates it before joining the worker.
         std::shared_ptr<int> fResizeLifetime = std::make_shared<int>(0);
         std::thread fResizeWorker;

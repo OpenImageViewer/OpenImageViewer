@@ -23,8 +23,8 @@ TEST_CASE("ImageList keeps portable selection state", "[oiviewer][platform]")
     auto selectionSubscription = imageList.ImageSelectionChanged.Subscribe(
         [&](const ImageList::ImageSelectionChangeArgs& args) { selectedIndex = args.imageIndex; });
 
-    imageList.SetImage({.index = 0, .title = LLUTILS_TEXT("first")});
-    imageList.SetImage({.index = 1, .title = LLUTILS_TEXT("second")});
+    imageList.SetImage({.index = 0, .title = "first"});
+    imageList.SetImage({.index = 1, .title = "second"});
     imageList.SetViewportHeight(100);
     imageList.SetSelected(1);
 
@@ -37,9 +37,9 @@ TEST_CASE("ImageList keeps portable selection state", "[oiviewer][platform]")
 TEST_CASE("ImageList scrolls selection coordinates and clears state", "[oiviewer][platform]")
 {
     ImageList imageList;
-    imageList.SetImage({.index = 0, .title = LLUTILS_TEXT("first")});
-    imageList.SetImage({.index = 1, .title = LLUTILS_TEXT("second")});
-    imageList.SetImage({.index = 2, .title = LLUTILS_TEXT("third")});
+    imageList.SetImage({.index = 0, .title = "first"});
+    imageList.SetImage({.index = 1, .title = "second"});
+    imageList.SetImage({.index = 2, .title = "third"});
     imageList.SetViewportHeight(100);
     bool scrollPositionChanged = false;
     auto subscription          = imageList.Changed.Subscribe(
@@ -61,9 +61,9 @@ TEST_CASE("ImageList scrolls selection coordinates and clears state", "[oiviewer
 TEST_CASE("ImageList owns visible row layout and hit testing", "[oiviewer][platform]")
 {
     ImageList imageList;
-    imageList.SetImage({.index = 0, .title = LLUTILS_TEXT("first")});
-    imageList.SetImage({.index = 1, .title = LLUTILS_TEXT("second")});
-    imageList.SetImage({.index = 2, .title = LLUTILS_TEXT("third")});
+    imageList.SetImage({.index = 0, .title = "first"});
+    imageList.SetImage({.index = 1, .title = "second"});
+    imageList.SetImage({.index = 2, .title = "third"});
     imageList.SetViewportHeight(150);
     imageList.Scroll(1);
 

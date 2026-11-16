@@ -23,7 +23,7 @@ namespace OIV
 {
     struct ResizeThumbwheelSettings
     {
-        double startSpeed = 2, maximumSpeed = 4000, acceleration = .5;
+        double startSpeed = 2, maximumSpeed = 4000, acceleration = .4;
         double deadZonePercent = 5, dragSensitivity = 1, fineModeMultiplier = .1;
     };
 
@@ -36,6 +36,7 @@ namespace OIV
         ResizeAspectRatio aspect = ResizeAspectRatio::Preserve;
         bool autoFilter          = true;
         ResizeFilter filter      = ResizeFilter::Mitchell;
+        LLUtils::Color letterboxColor{0, 0, 0};
     };
 
     // Bounds are in the source image's pixel coordinates and define the dimensions used for resize math.
@@ -48,6 +49,7 @@ namespace OIV
         ResizeThumbwheelSettings thumbwheel;
         std::function<void(ImageResizeRequest)> onResize;
         std::function<void()> onDismiss;
+        std::function<void(const LWS::EventDragDropFile&)> onFileDrop;
     };
 
     class ResizePreview;
@@ -60,6 +62,7 @@ namespace OIV
                              ResizeFormInput input = {});
         ~ResizeFormController();
         void Show(LWS::Window* owner);
+        void Reinitialize(ResizeFormInput input);
         void Hide();
         void SetBusy(bool busy);
         void SetError(std::string message);
@@ -88,8 +91,10 @@ namespace OIV
         LWSUI::TextBox* fHeightInput{nullptr};
         LWSUI::TextBox* fDPIInput{nullptr};
         LWSUI::RadioGroup* fAspectRatioRadio{nullptr};
+        LWSUI::ColorPicker* fLetterboxColor{nullptr};
         LWSUI::Label* fWidthUnit{nullptr};
         LWSUI::Label* fHeightUnit{nullptr};
+        LWSUI::Label* fOriginalSize{nullptr};
         LWSUI::Label* fPrintSize{nullptr};
         LWSUI::Label* fPreviewPixels{nullptr};
         LWSUI::Label* fPreviewCaption{nullptr};
@@ -116,7 +121,6 @@ namespace OIV
         double fDPI            = 96.0;
         std::optional<SizeBasis> fDPIEditBasis;
         double fDPIEditStart{};
-        LWS::LogicalSize fDialogSize{760, 500};
         std::string fDisplayedWidth;
         std::string fDisplayedHeight;
         std::optional<PixelSize> fDraftPixels;

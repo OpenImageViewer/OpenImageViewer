@@ -1,7 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
 #if defined(OIV_TEST_VIEWER) && (defined(LWS_HAS_WIN32_BACKEND) || defined(LWS_HAS_WAYLAND_BACKEND))
     #include "UI/ResizeForm.h"
+    #include "ImageBitmap.h"
+    #include "WindowPlacement.h"
+    #include <ImageUtil/ImageUtil.h>
+    #include <algorithm>
+    #include <cstring>
+    #include <filesystem>
+    #include <fstream>
+    #include <nlohmann/json.hpp>
     #include <LWSUI/UIHost.hpp>
+    #include <LWS/source/internal/WindowBackendAccess.hpp>
     #include <thread>
     #include <chrono>
     #ifdef LWS_HAS_WIN32_BACKEND
@@ -9,6 +18,60 @@
         #include <LWS/Win32/WindowExtensions.hpp>
         #include <Windows.h>
     #endif
+
+TEST_CASE("Resize shortcut opens its dialog only once", "[ResizeForm][configuration]")
+{
+    const auto directory = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path() /
+                           "OIViewer/Resources/Configuration";
+    std::ifstream bindingsFile(directory / "KeyBindings.json");
+    std::ifstream commandsFile(directory / "Commands.json");
+    const auto bindings = nlohmann::json::parse(bindingsFile);
+    const auto commands = nlohmann::json::parse(commandsFile);
+    // LInput deliberately executes every command attached to a shortcut, including duplicates.
+    CHECK(std::ranges::count_if(
+              bindings["KeyBindings"], [](const auto& binding)
+              { return binding.contains("Control+R") && binding["Control+R"] == "ShowResizeForm"; }) == 1);
+    CHECK(std::ranges::count_if(commands["commands"],
+                                [](const auto& command) { return command["GroupID"] == "ShowResizeForm"; }) == 1);
+}
+
+TEST_CASE("Resize preview preserves straight and premultiplied transparency", "[ResizeForm][preview]")
+{
+    using Alpha = IMCodec::ImageItem::ColorInfo::AlphaMode;
+    for (const auto alpha : {Alpha::Straight, Alpha::Premultiplied})
+    {
+        CAPTURE(alpha);
+        auto item                                = std::make_shared<IMCodec::ImageItem>();
+        item->descriptor.width                   = 2;
+        item->descriptor.height                  = 1;
+        item->descriptor.rowPitchInBytes         = 8;
+        item->descriptor.texelFormatDecompressed = IMCodec::TexelFormat::I_B8_G8_R8_A8;
+        item->colorInfo.alphaMode                = alpha;
+        const uint8_t red                        = alpha == Alpha::Straight ? 255 : 128;
+        const uint8_t blue                       = alpha == Alpha::Straight ? 255 : 0;
+        const uint8_t pixels[]{0, 0, red, 128, blue, 0, 0, 0};
+        item->data.Allocate(sizeof(pixels));
+        std::memcpy(item->data.data(), pixels, sizeof(pixels));
+        auto source  = std::make_shared<IMCodec::Image>(item, IMCodec::ImageItemType::Unknown);
+        auto resized = OIV::ResizeImage(source, {{0, 0}, {2, 1}},
+                                        {.size       = {1, 1},
+                                         .aspect     = OIV::ResizeAspectRatio::DoNotPreserve,
+                                         .autoFilter = false,
+                                         .filter     = OIV::ResizeFilter::Box});
+        REQUIRE(resized);
+        auto bgra = IMUtil::ImageUtil::ConvertImageWithNormalization(*resized, IMCodec::TexelFormat::I_B8_G8_R8_A8,
+                                                                     false);
+        REQUIRE(bgra);
+        LWS::Bitmap bitmap(OIV::MakeBgraBitmapView(*bgra));
+        const auto buffer = bitmap.GetBuffer();
+        CHECK(buffer.format == LWS::BitmapPixelFormat::Bgra8Premultiplied);
+        CHECK(std::to_integer<unsigned>(buffer.pixels[0]) < 2);  // Hidden blue must not bleed into red edges.
+        CHECK(std::to_integer<unsigned>(buffer.pixels[2]) >= 63);
+        CHECK(std::to_integer<unsigned>(buffer.pixels[2]) <= 65);
+        CHECK(std::to_integer<unsigned>(buffer.pixels[3]) >= 63);
+        CHECK(std::to_integer<unsigned>(buffer.pixels[3]) <= 65);
+    }
+}
 
     #ifdef LWS_HAS_WIN32_BACKEND
 
@@ -64,6 +127,143 @@ namespace OIV
 {
     struct ResizeFormTestAccess
     {
+        static void CheckPreviewCheckerboard(ResizeFormController& form)
+        {
+            // A fully transparent source exposes the checker phase at a fixed pane coordinate.
+            auto* dock    = static_cast<LWSUI::Container*>(form.fOriginalSize->Parent()->Parent());
+            auto* preview = dock->Children()[1].get();
+            form.fAspectRatioRadio->SetValue("preserve_bars");
+            form.fLetterboxColor->SetValue(LLUtils::Color(0, 0, 0, 0));
+            std::optional<unsigned> previous;
+            for (const double width : {130., 260., 390.})
+            {
+                form.AcceptDimensionBasis({ResizeSizeMode::Absolute, ResizeUnits::Pixels, width, 260}, false);
+                preview->Arrange({20, 30, 300, 240});
+                LWSUI::Canvas canvas;
+                canvas.Begin(340, 300);
+                preview->Render(canvas);
+                const auto bitmap = canvas.End();
+                const auto sample = std::to_integer<unsigned>(bitmap.pixels[145 * bitmap.rowPitch + 165 * 4]);
+                if (previous)
+                    CHECK(sample == *previous);
+                previous = sample;
+            }
+        }
+        static void CheckCompactLayout(ResizeFormController& form)
+        {
+            auto* root = form.fUIHost->Root();
+            root->Measure({500, 300});
+            root->Arrange({0, 0, 500, 300});
+            CHECK(form.fApplyButton->Bounds().y + form.fApplyButton->Bounds().height <= 300);
+            CHECK(form.fWidthInput->Bounds().width > 50);
+            // The final scaler controls remain reachable through the scroll view.
+            auto* ancestor = form.fWidthInput->Parent();
+            while (ancestor && !dynamic_cast<LWSUI::ScrollView*>(ancestor))
+                ancestor = ancestor->Parent();
+            REQUIRE(ancestor);
+            auto* scroll = static_cast<LWSUI::ScrollView*>(ancestor);
+            CHECK(scroll->Content()->Bounds().height > scroll->Viewport().height);
+            scroll->SetOffset(10000);
+            CHECK(form.fAutoFilter->Bounds().y >= scroll->Viewport().y);
+            CHECK(form.fAutoFilter->Bounds().y + form.fAutoFilter->Bounds().height <=
+                  scroll->Viewport().y + scroll->Viewport().height);
+        }
+        static void CheckLetterbox(ResizeFormController& form)
+        {
+            CHECK_FALSE(form.fLetterboxColor->Visible());
+            form.fAspectRatioRadio->SetValue("preserve_bars");
+            form.OnAspectRatioChanged();
+            CHECK(form.fLetterboxColor->Visible());
+            form.fLetterboxColor->SetValue(LLUtils::Color(30, 90, 180, 96));
+            REQUIRE(form.CurrentRequest());
+            CHECK(form.CurrentRequest()->letterboxColor == LLUtils::Color(30, 90, 180, 96));
+            form.SetBusy(true);
+            CHECK_FALSE(form.fLetterboxColor->Enabled());
+            form.SetBusy(false);
+            form.ResetAll();
+            CHECK(form.fLetterboxColor->Value() == form.fInput.defaults.letterboxColor);
+            CHECK_FALSE(form.fLetterboxColor->Visible());
+        }
+    #ifdef LWS_HAS_WIN32_BACKEND
+        static void CheckParameterResizePosition(ResizeFormController& form)
+        {
+            auto& window       = *form.fDialogWindow;
+            const auto initial = window.GetPlacement();
+            REQUIRE(initial.position);
+            REQUIRE(
+                window.RequestPlacement({.position = LWS::Point{initial.position->x + 17, initial.position->y + 19}}) ==
+                LWS::Result::Success);
+            const auto position = window.GetPlacement().position;
+            form.OnUnitsChanged("inches");
+            CHECK(window.GetPlacement().position == position);
+            CHECK(window.GetPlacement().clientSize.y > initial.clientSize.y);
+            form.OnUnitsChanged("pixels");
+            CHECK(window.GetPlacement().position == position);
+            CHECK(window.GetPlacement().clientSize == initial.clientSize);
+            const auto hwnd = *LWS::Win32::GetHwnd(window);
+            RECT bounds{};
+            MONITORINFO monitor{sizeof(monitor)};
+            REQUIRE(GetWindowRect(hwnd, &bounds));
+            REQUIRE(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+            REQUIRE(SetWindowPos(hwnd, nullptr, bounds.left, monitor.rcWork.bottom - (bounds.bottom - bounds.top), 0, 0,
+                                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE));
+            const auto bottomPosition = window.GetPlacement().position;
+            form.OnUnitsChanged("inches");
+            CHECK(window.GetPlacement().position == bottomPosition);
+            CheckWorkArea(form);
+        }
+        static void CheckOversizedPlacement(ResizeFormController& form)
+        {
+            auto& window    = *form.fDialogWindow;
+            const auto hwnd = *LWS::Win32::GetHwnd(window);
+            MONITORINFO monitor{sizeof(monitor)};
+            REQUIRE(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+            REQUIRE(SetWindowPos(hwnd, nullptr, monitor.rcWork.left, monitor.rcWork.top,
+                                 monitor.rcWork.right - monitor.rcWork.left + 200,
+                                 monitor.rcWork.bottom - monitor.rcWork.top + 200, SWP_NOZORDER | SWP_NOACTIVATE));
+            REQUIRE(PlaceWindowNear(window, *window.GetOwner()) == LWS::Result::Success);
+            CheckWorkArea(form);
+        }
+        static void CheckWorkArea(ResizeFormController& form)
+        {
+            const auto hwnd = *LWS::Win32::GetHwnd(*form.fDialogWindow);
+            MONITORINFO monitor{sizeof(monitor)};
+            REQUIRE(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+            RECT bounds{};
+            REQUIRE(GetWindowRect(hwnd, &bounds));
+            CHECK(bounds.left >= monitor.rcWork.left);
+            CHECK(bounds.top >= monitor.rcWork.top);
+            CHECK(bounds.right <= monitor.rcWork.right);
+            CHECK(bounds.bottom <= monitor.rcWork.bottom);
+        }
+    #endif
+        static void CheckReinitialization(ResizeFormController& form)
+        {
+            auto* window = form.fDialogWindow.get();
+            auto* host   = form.fUIHost.get();
+            auto* width  = form.fWidthInput;
+            REQUIRE(host->Focus(width));
+            width->SetText("999");
+            const auto position = window->GetPlacement().position;
+            form.Reinitialize({.originalBounds = {{0, 0}, {640, 480}}});
+            CHECK(form.fDialogWindow.get() == window);
+            CHECK(form.fUIHost.get() == host);
+            CHECK(form.fWidthInput == width);
+            CHECK(host->IsFocused(*width));
+            CHECK(window->GetPlacement().position == position);
+            CHECK(width->Text() == "640.00");
+            CHECK(form.fHeightInput->Text() == "480.00");
+            CHECK(form.fOriginalWidth == 640);
+            CHECK(form.fOriginalHeight == 480);
+            form.ResetAll();
+            CHECK(width->Text() == "640.00");
+            CHECK(host->IsFocused(*width));
+        }
+        static void CheckFileDrop(ResizeFormController& form, const std::filesystem::path& path)
+        {
+            REQUIRE(LWS::internal::WindowBackendAccess::Dispatch(*form.fDialogWindow, LWS::EventDragDropFile{path}) ==
+                    LWS::EventResponse::Handled);
+        }
         static void CheckInitialization(ResizeFormController& form)
         {
             const auto initial = *form.PixelsFromBasis();
@@ -89,7 +289,7 @@ namespace OIV
                 REQUIRE(std::abs(pixels().height - h) < 1e-8);
             };
             checkPixels(260, 520);
-            REQUIRE(form.fInput.thumbwheel.acceleration == .5);
+            REQUIRE(form.fInput.thumbwheel.acceleration == .4);
             auto tuning               = form.fInput.thumbwheel;
             tuning.acceleration       = .25;
             tuning.maximumSpeed       = 3000;
@@ -246,6 +446,114 @@ namespace OIV
         }
     };
 }  // namespace OIV
+
+TEST_CASE("Resize preview keeps its checkerboard phase across dimension changes", "[ResizeForm][preview]")
+{
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    #endif
+    LWS::PlatformContext platform;
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    #else
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Wayland}) == LWS::Result::Success);
+    #endif
+    std::array<std::byte, 4> pixels{};
+    auto bitmap = std::make_shared<LWS::Bitmap>(LWS::BitmapBuffer{.pixels   = pixels,
+                                                                  .format   = LWS::BitmapPixelFormat::Bgra8,
+                                                                  .width    = 1,
+                                                                  .height   = 1,
+                                                                  .rowPitch = 4});
+    OIV::ResizeFormController form(platform, {}, {.sourceBitmap = bitmap, .originalBounds = {{0, 0}, {130, 260}}});
+    form.Show(nullptr);
+    OIV::ResizeFormTestAccess::CheckPreviewCheckerboard(form);
+    OIV::ResizeFormTestAccess::CheckCompactLayout(form);
+}
+
+TEST_CASE("Resize image replacement retains the window and focused editor", "[ResizeForm][ResizeWindow][focus]")
+{
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    #endif
+    LWS::PlatformContext platform;
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    #else
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Wayland}) == LWS::Result::Success);
+    #endif
+    OIV::ResizeFormController form(platform, {}, {.originalBounds = {{0, 0}, {130, 260}}});
+    form.Show(nullptr);
+    OIV::ResizeFormTestAccess::CheckReinitialization(form);
+    OIV::ResizeFormTestAccess::CheckLetterbox(form);
+}
+
+    #ifdef LWS_HAS_WIN32_BACKEND
+TEST_CASE("Resize parameter changes preserve the user-positioned window", "[ResizeForm][ResizeWindow][placement]")
+{
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    LWS::PlatformContext platform;
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    LWS::Window owner(platform);
+    REQUIRE(owner.Create() == LWS::Result::Success);
+    OIV::ResizeFormController form(platform, {}, {.originalBounds = {{0, 0}, {130, 260}}});
+    form.Show(&owner);
+    OIV::ResizeFormTestAccess::CheckParameterResizePosition(form);
+}
+
+TEST_CASE("Resize stays in the work area when its owner straddles the screen edge",
+          "[ResizeForm][ResizeWindow][placement]")
+{
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    LWS::PlatformContext platform;
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    LWS::Window owner(platform);
+    REQUIRE(owner.Create() == LWS::Result::Success);
+    const auto hwnd = *LWS::Win32::GetHwnd(owner);
+    MONITORINFO monitor{sizeof(monitor)};
+    REQUIRE(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor));
+    REQUIRE(SetWindowPos(hwnd, nullptr, monitor.rcWork.right - 100, monitor.rcWork.bottom - 100, 300, 200,
+                         SWP_NOZORDER | SWP_NOACTIVATE));
+    OIV::ResizeFormController form(platform, {}, {.originalBounds = {{0, 0}, {130, 260}}});
+    form.Show(&owner);
+    OIV::ResizeFormTestAccess::CheckWorkArea(form);
+    OIV::ResizeFormTestAccess::CheckLetterbox(form);
+    OIV::ResizeFormTestAccess::CheckWorkArea(form);
+    OIV::ResizeFormTestAccess::CheckOversizedPlacement(form);
+}
+    #endif
+
+TEST_CASE("Resize delegates dropped files and ignores drops while resizing", "[ResizeForm][ResizeWindow][drop]")
+{
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    #endif
+    LWS::PlatformContext platform;
+    #ifdef LWS_HAS_WIN32_BACKEND
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    #else
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Wayland}) == LWS::Result::Success);
+    #endif
+    std::filesystem::path dropped;
+    unsigned calls = 0;
+    OIV::ResizeFormController form(platform, {},
+                                   {.onFileDrop = [&](const LWS::EventDragDropFile& event)
+                                    {
+                                        dropped = event.fileName;
+                                        ++calls;
+                                    }});
+    form.Show(nullptr);
+    const auto path = std::filesystem::path("image with spaces.png");
+    OIV::ResizeFormTestAccess::CheckFileDrop(form, path);
+    CHECK(calls == 1);
+    CHECK(dropped == path);
+    form.SetBusy(true);
+    OIV::ResizeFormTestAccess::CheckFileDrop(form, "ignored.png");
+    CHECK(calls == 1);
+    form.SetBusy(false);
+    OIV::ResizeFormTestAccess::CheckFileDrop(form, "replacement.png");
+    CHECK(calls == 2);
+    CHECK(dropped == "replacement.png");
+}
 
 TEST_CASE("Resize resets and thumbwheels preserve initialization, units and exact values", "[ResizeForm][ResizeWindow]")
 {

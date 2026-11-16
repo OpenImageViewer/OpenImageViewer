@@ -258,7 +258,7 @@ def main():
                 require(next_(host,b,str(icons),2)==0,"Load a multi-image file")
                 pump()
                 first_child=FindChild(other,None,"LWS_WINDOW_CLASS",None)
-                require(FindChild(other,first_child,"LWS_WINDOW_CLASS",None),"Sidebar shares the composite parent")
+                require(first_child and not FindChild(other,first_child,"LWS_WINDOW_CLASS",None),"Sidebar is a panel, with only the canvas using a child window")
                 require(mouse_target()==host,"Viewers leave host raw input registration intact")
                 require(next_(host,a,str(temp/"missing.png"),2)==1,"Failed replacement reports failure")
                 require(first.stem in title(composite),"Failed replacement retains image")

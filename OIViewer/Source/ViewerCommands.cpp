@@ -75,7 +75,7 @@ namespace OIV
         {
             ToggleBorders();
             result.resValue = LLUtils::native_string_type(LLUTILS_TEXT("Borders ")) +
-                              (fShowBorders == true ? LLUTILS_TEXT("On") : LLUTILS_TEXT("Off"));
+                              (fInterface.borders ? LLUTILS_TEXT("On") : LLUTILS_TEXT("Off"));
         }
         else if (type == "quit")
         {
@@ -193,9 +193,34 @@ namespace OIV
 
             SetDownScalingTechnique(technique);
         }
+        else if (type == "toggleMenuBar")
+        {
+            // An explicit menu request restores the title row if the caption currently hides it.
+            fInterface.menuBar = !fInterface.caption || !fInterface.menuBar;
+            fInterface.caption = true;
+            ApplyInterface(true);
+        }
+        else if (type == "toggleCaption")
+        {
+            fInterface.caption = !fInterface.caption;
+            // Keep the menu preference: restoring the caption restores its previous menu state.
+            ApplyInterface(true);
+        }
+        else if (type == "toggleSubImagePanel")
+        {
+            fShowSubImagePanel = !fShowSubImagePanel;
+            ApplyInterface(false);
+        }
+        else if (type == "restoreDefaultInterface")
+        {
+            fInterface         = {};
+            fShowSubImagePanel = true;
+            ApplyInterface(true);
+        }
         else if (type == "toggleStatusBar")
         {
-            fVirtualStatusBar.SetVisible(!fVirtualStatusBar.GetVisible());
+            fInterface.statusBar = !fInterface.statusBar;
+            ApplyInterface(true);
             fRefreshOperation.Queue();
         }
 
@@ -466,25 +491,24 @@ namespace OIV
                                                               fSession.fFileSorter.GetActiveSortDirection());
     }
 
-void Viewer::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
-{
-    auto openedImage = fSession.fImageState.GetOpenedImage();
-    if (openedImage != nullptr &&
-        openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
+    void Viewer::CMD_Sequencer(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
-        if (SequencerPolicy::IsChangeSpeedCommand(request.args))
+        auto openedImage = fSession.fImageState.GetOpenedImage();
+        if (openedImage != nullptr &&
+            openedImage->pixels->GetSubImageGroupType() == IMCodec::ImageItemType::AnimationFrame)
         {
-            auto change = fSession.fSequencerPolicy.ChangeSpeed(
-                SequencerPolicy::ParseSpeedChangePercent(request.args));
-            if (change.retimed)
-                UpdateSequencerInterval();
-            result.resValue = std::move(change.message);
+            if (SequencerPolicy::IsChangeSpeedCommand(request.args))
+            {
+                auto change = fSession.fSequencerPolicy.ChangeSpeed(
+                    SequencerPolicy::ParseSpeedChangePercent(request.args));
+                if (change.retimed)
+                    UpdateSequencerInterval();
+                result.resValue = std::move(change.message);
+            }
         }
     }
-}
 
-
-void Viewer::UpdateSequencerInterval()
+    void Viewer::UpdateSequencerInterval()
     {
         if (fSequencerTimer.GetInterval() != 0)
         {
@@ -730,7 +754,7 @@ void Viewer::UpdateSequencerInterval()
         fConfiguredCommands  = ConfigurationLoader::LoadCommandGroups(directory);
         fConfiguredBindings  = ConfigurationLoader::LoadKeyBindings(directory);
         CommandRegistry::AddConfiguredCommands(fCommandController.GetCommandManager(), fConfiguredCommands);
-        AddPlatformKeyBindings();
+        AddPlatformKeyBindings(fConfiguredBindings);
         std::vector<CommandController::CommandRegistration> registrations{
             {"cmd_color_correction", std::bind(&Viewer::CMD_ColorCorrection, this, _1, _2)},
             {"cmd_view_state", std::bind(&Viewer::CMD_ViewState, this, _1, _2)},
@@ -752,7 +776,8 @@ void Viewer::UpdateSequencerInterval()
             {"cmd_set_window_size", std::bind(&Viewer::CMD_SetWindowSize, this, _1, _2)},
             {"cmd_sort_files", std::bind(&Viewer::CMD_SortFiles, this, _1, _2)},
             {"cmd_sequencer", std::bind(&Viewer::CMD_Sequencer, this, _1, _2)},
-            {"cmd_resize_form", std::bind(&Viewer::CMD_ResizeForm, this, _1, _2)}};
+            {"cmd_resize_form", std::bind(&Viewer::CMD_ResizeForm, this, _1, _2)},
+            {"cmd_about", std::bind(&Viewer::CMD_About, this, _1, _2)}};
         fCommandController.SetRequestPredicate(fShell.commandAllowed);
         fCommandController.AddCommandCallbacks(registrations);
     }
@@ -772,8 +797,7 @@ void Viewer::UpdateSequencerInterval()
         return fCommandController.ExecuteCommand(request);
     }
 
-    void Viewer::CMD_ResizeForm(const CommandManager::CommandRequest& request,
-                                CommandManager::CommandResult& result)
+    void Viewer::CMD_ResizeForm(const CommandManager::CommandRequest& request, CommandManager::CommandResult& result)
     {
         if (fShell.showResizeForm)
             fShell.showResizeForm();

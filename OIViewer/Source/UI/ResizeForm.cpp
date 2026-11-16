@@ -1,4 +1,5 @@
 #include "ResizeForm.h"
+#include "../WindowPlacement.h"
 #include <LWSUI/UIHost.hpp>
 #include <LWSUI/Containers.hpp>
 #include <LWSUI/Primitives.hpp>
@@ -180,31 +181,56 @@ namespace OIV
         static constexpr float OptionGap = 12;
     };
 
-    // Both panes follow the settings' natural height; the preview fills the same row without enlarging it.
+    // Shared columns keep the metadata dividers aligned above and below the image.
+    class PreviewColumns final : public LWSUI::Grid
+    {
+      public:
+
+        PreviewColumns()
+        {
+            columns = {-1, -1};
+            spacing = 12;
+        }
+
+      protected:
+
+        void OnRender(LWSUI::Canvas& canvas) override
+        {
+            const auto b = Bounds();
+            for (float y = b.y + 2; y < b.y + b.height - 1; y += 4)
+                canvas.FillCircle(b.x + b.width / 2, y, .65f, LLUtils::Color(204, 211, 222));
+            Grid::OnRender(canvas);
+        }
+    };
+
+    // Keep settings readable on narrow screens. The preview yields width first;
+    // the surrounding scroll view handles content taller than the available work area.
     class ResizeContent final : public LWSUI::Container
     {
       protected:
 
         LWSUI::Size OnMeasure(LWSUI::Size available) override
         {
-            const auto left = Children()[0]->Measure(
-                {std::max(0.f, available.width - PreviewWidth - Gap), available.height});
-            Children()[1]->Measure({PreviewWidth, left.height});
+            const float leftWidth    = std::min(SettingsWidth, available.width);
+            const float previewWidth = std::max(0.f, available.width - leftWidth - Gap);
+            Children()[1]->SetVisible(previewWidth >= MinimumPreviewWidth);
+            const auto left = Children()[0]->Measure({leftWidth, 10000});
+            Children()[1]->Measure({previewWidth, left.height});
             return {available.width, left.height};
         }
         void OnArrange() override
         {
-            const auto b      = Bounds();
-            const auto height = std::min(b.height, Children()[0]->DesiredSize().height);
-            const auto width  = std::max(0.f, b.width - PreviewWidth - Gap);
-            Children()[0]->Arrange({b.x, b.y, width, height});
-            Children()[1]->Arrange({b.x + width + Gap, b.y, PreviewWidth, height});
+            const auto b          = Bounds();
+            const float leftWidth = std::min(SettingsWidth, b.width);
+            Children()[0]->Arrange({b.x, b.y, leftWidth, b.height});
+            Children()[1]->Arrange({b.x + leftWidth + Gap, b.y, std::max(0.f, b.width - leftWidth - Gap), b.height});
         }
 
       private:
 
-        static constexpr float PreviewWidth = 400;
-        static constexpr float Gap          = 12;
+        static constexpr float SettingsWidth       = 320;
+        static constexpr float MinimumPreviewWidth = 160;
+        static constexpr float Gap                 = 12;
     };
 
     // The borderless window moves from blank content while controls keep their own hit targets.
@@ -215,16 +241,6 @@ namespace OIV
         explicit DraggableSurface(std::unique_ptr<LWSUI::Control> content) : LWSUI::Panel(std::move(content)) {}
 
       protected:
-
-        LWSUI::Control* HitTest(float x, float y) override
-        {
-            auto* target = Panel::HitTest(x, y);
-            if (target && target != this && !dynamic_cast<LWSUI::Button*>(target) &&
-                !dynamic_cast<LWSUI::TextBox*>(target) && !dynamic_cast<LWSUI::RadioGroup*>(target) &&
-                !dynamic_cast<LWSUI::ComboBox*>(target) && !dynamic_cast<LWSUI::Thumbwheel*>(target))
-                target = this;
-            return target;
-        }
 
         bool OnInput(const LWSUI::Input& input) override
         {
@@ -240,7 +256,15 @@ namespace OIV
 
         void SetBitmap(LWS::BitmapSharedPtr bitmap, double sourceAspect)
         {
-            bitmap_ = std::move(bitmap);
+            bitmap_      = std::move(bitmap);
+            transparent_ = false;
+            if (bitmap_)
+            {
+                const auto buffer = bitmap_->GetBuffer();
+                for (uint32_t y = 0; y < buffer.height && !transparent_; ++y)
+                    for (uint32_t x = 0; x < buffer.width && !transparent_; ++x)
+                        transparent_ = buffer.pixels[size_t(y) * buffer.rowPitch + size_t(x) * 4 + 3] != std::byte{255};
+            }
             if (std::isfinite(sourceAspect) && sourceAspect > 0)
                 sourceAspect_ = sourceAspect;
             Invalidate();
@@ -248,6 +272,11 @@ namespace OIV
         void SetBlackBars(bool value)
         {
             blackBars_ = value;
+            Invalidate();
+        }
+        void SetBarColor(LLUtils::Color color)
+        {
+            barColor_ = color;
             Invalidate();
         }
         void SetAspect(double value)
@@ -271,9 +300,9 @@ namespace OIV
             const float aspect    = static_cast<float>(aspect_);
             const float width     = std::min(b.width - 2 * inset, (b.height - 2 * inset) * aspect);
             const float height    = width / aspect;
+            if (width <= 0 || height <= 0)
+                return;
             const float frameX = b.x + (b.width - width) / 2, frameY = b.y + (b.height - height) / 2;
-            if (blackBars_)
-                canvas.Fill(frameX, frameY, width, height, LLUtils::Color(18, 24, 34));
             float imageWidth = width, imageHeight = height;
             if (blackBars_ && sourceAspect_ > 0)
             {
@@ -284,8 +313,31 @@ namespace OIV
             }
             const float imageX = frameX + (width - imageWidth) / 2;
             const float imageY = frameY + (height - imageHeight) / 2;
+            // Both transparent regions sample the same grid, anchored to the preview pane.
+            // Repainting the image region clears padding color without restarting the grid.
+            const auto checkerboard = [&](float x, float y, float w, float h)
+            {
+                const float cell = std::max(1.f, Style().checkerSize);
+                LWSUI::Canvas::ClipScope clip(canvas, x, y, w, h);
+                const int firstColumn = int(std::floor((x - b.x) / cell));
+                const int firstRow    = int(std::floor((y - b.y) / cell));
+                for (int row = firstRow; b.y + row * cell < y + h; ++row)
+                    for (int column = firstColumn; b.x + column * cell < x + w; ++column)
+                        canvas.Fill(b.x + column * cell, b.y + row * cell, cell, cell,
+                                    (row + column) % 2 ? Style().checkerDark : Style().checkerLight);
+            };
+            if (blackBars_)
+            {
+                if (barColor_.A() < 255)
+                    checkerboard(frameX, frameY, width, height);
+                canvas.Fill(frameX, frameY, width, height, barColor_);
+            }
             if (bitmap_)
+            {
+                if (transparent_)
+                    checkerboard(imageX, imageY, imageWidth, imageHeight);
                 canvas.Image(bitmap_->GetBuffer(), imageX, imageY, imageWidth, imageHeight);
+            }
             else
             {
                 canvas.Fill(imageX, imageY, imageWidth, imageHeight, LLUtils::Color(128, 185, 217));
@@ -318,7 +370,9 @@ namespace OIV
         double aspect_       = 400.0 / 304.0;
         double sourceAspect_ = 400.0 / 304.0;
         LWS::BitmapSharedPtr bitmap_;
-        bool blackBars_ = false;
+        LLUtils::Color barColor_{0, 0, 0};
+        bool blackBars_   = false;
+        bool transparent_ = false;
     };
 
     class FooterPanel final : public LWSUI::Panel
@@ -335,8 +389,20 @@ namespace OIV
 
     ResizeFormController::ResizeFormController(LWS::PlatformContext& platform, const std::filesystem::path& resources,
                                                ResizeFormInput input)
-        : fPlatform(platform), fResources(resources), fInput(std::move(input))
+        : fPlatform(platform), fResources(resources)
     {
+        Reinitialize(std::move(input));
+    }
+    void ResizeFormController::Reinitialize(ResizeFormInput input)
+    {
+        if (fUIHost)
+        {
+            fUIHost->ClosePopup(LWSUI::EditPhase::Cancel);
+            fUIHost->Root()->Finish(LWSUI::EditPhase::Cancel);
+        }
+        fInput           = std::move(input);
+        fOriginalWidth   = 400;
+        fOriginalHeight  = 304;
         fCurrentSizeMode = fInput.defaults.sizeMode;
         fCurrentUnits    = fInput.defaults.units;
         fManualFilter    = fInput.defaults.filter;
@@ -378,6 +444,13 @@ namespace OIV
         fInitialBasis  = fSizeBasis;
         fInitialDPI    = fDPI;
         fInitialPixels = fSizeBasis.Pixels({fOriginalWidth, fOriginalHeight}, fDPI);
+        if (fUIHost)
+        {
+            fOriginalSize->SetText("Original · " + FormatPixels(fOriginalWidth, fOriginalHeight));
+            fPreview->SetBitmap(fInput.sourceBitmap, fOriginalWidth / fOriginalHeight);
+            SetThumbwheelSettings(fInput.thumbwheel);
+            ResetAll();
+        }
     }
     ResizeFormController::~ResizeFormController()
     {
@@ -390,14 +463,15 @@ namespace OIV
         if (!fDialogWindow)
         {
             LWS::WindowConfig config;
-            config.owner           = owner;
-            config.modal           = owner != nullptr;
-            config.title           = LWSUI::NativeText("Resize image");
-            config.clientSize      = DialogSize(fCurrentSizeMode == ResizeSizeMode::Absolute &&
-                                                fCurrentUnits != ResizeUnits::Pixels);
-            config.styles          = LWS::WindowStyle::NoStyle;
-            config.backgroundColor = LLUtils::Color(244, 246, 248);
-            fDialogWindow          = std::make_unique<LWS::Window>(fPlatform);
+            config.owner              = owner;
+            config.modal              = owner != nullptr;
+            config.dragAndDropEnabled = fPlatform.Supports(LWS::PlatformFeature::DragAndDrop).value_or(false);
+            config.title              = LWSUI::NativeText("Resize image");
+            config.clientSize         = DialogSize(fCurrentSizeMode == ResizeSizeMode::Absolute &&
+                                                   fCurrentUnits != ResizeUnits::Pixels);
+            config.styles             = LWS::WindowStyle::NoStyle;
+            config.backgroundColor    = LLUtils::Color(244, 246, 248);
+            fDialogWindow             = std::make_unique<LWS::Window>(fPlatform);
             if (fDialogWindow->Create(config) != LWS::Result::Success)
             {
                 fDialogWindow.reset();
@@ -406,6 +480,12 @@ namespace OIV
             auto listener = fDialogWindow->Listen(
                 [this](const LWS::AnyEvent& event)
                 {
+                    if (const auto* drop = std::get_if<LWS::EventDragDropFile>(&event))
+                    {
+                        if (!fBusy && fInput.onFileDrop)
+                            fInput.onFileDrop(*drop);
+                        return LWS::EventResponse::Handled;
+                    }
                     if (std::holds_alternative<LWS::EventCloseRequested>(event))
                     {
                         Dismiss();
@@ -430,7 +510,6 @@ namespace OIV
             popupStyle.menuPadding   = 2;
             popupStyle.background = popupStyle.line = popupStyle.surface;
             fUIHost->SetPopupStyle(std::move(popupStyle));
-            fUIHost->SetRedrawOnResize(true);
             fConnections.Connect(fUIHost->OnCommandInput,
                                  [this](const LWSUI::Input& input, bool& handled)
                                  {
@@ -443,21 +522,12 @@ namespace OIV
                                  });
             BuildUI();
         }
+        // Finish sizing and monitor placement before exposing the first frame.
+        if (owner)
+            std::ignore = PlaceWindowNear(*fDialogWindow, *owner, WindowPlacementHint::CenterInOwner);
         std::ignore = fDialogWindow->SetVisible(true);
-        std::ignore = fDialogWindow->RequestShowState(LWS::WindowShowState::Restored);
-        if (owner && fUIHost->Root() && fUIHost->Root()->Host())
-        {
-            const auto placement = owner->GetPlacement();
-            if (placement.position)
-            {
-                const auto size = fDialogSize;
-                const int w = size.x, h = size.y;
-                std::ignore = fDialogWindow->RequestPlacement(
-                    {.position   = LWS::Point{placement.position->x + (placement.clientSize.x - w) / 2,
-                                            placement.position->y + (placement.clientSize.y - h) / 2},
-                     .clientSize = size});
-            }
-        }
+        fUIHost->Update();
+        fUIHost->SetRedrawOnResize(true);
     }
 
     void ResizeFormController::BuildUI()
@@ -636,15 +706,33 @@ namespace OIV
                                                                                                  : "preserve_bars");
         fAspectRatioRadio->orientation = LWSUI::Orientation::Horizontal;
         fConnections.Connect(fAspectRatioRadio->OnChange, [this](const std::string&) { OnAspectRatioChanged(); });
-        ratioPanel->SetContent(std::unique_ptr<LWSUI::Control>(fAspectRatioRadio));
+        auto ratioContent           = std::make_unique<LWSUI::StackPanel>();
+        ratioContent->orientation   = LWSUI::Orientation::Horizontal;
+        ratioContent->sizeToContent = true;
+        ratioContent->spacing       = 4;
+        ratioContent->Add(std::unique_ptr<LWSUI::Control>(fAspectRatioRadio));
+        auto color      = std::make_unique<LWSUI::ColorPicker>();
+        fLetterboxColor = color.get();
+        color->SetTextVisible(false);
+        auto swatchStyle        = theme;
+        swatchStyle.swatchWidth = 24;
+        color->SetStyle(std::move(swatchStyle));
+        color->SetValue(fInput.defaults.letterboxColor);
+        color->SetTooltip("Letterbox color");
+        fConnections.Connect(color->OnEdit, [this](LLUtils::Color, LWSUI::EditPhase) { UpdateCalculatedPixels(); });
+        ratioContent->Add(std::move(color));
+        ratioPanel->SetContent(std::move(ratioContent));
         left->Add(std::move(ratioPanel));
         addHeading("Scaler");
-        fAutoFilter = new LWSUI::CheckBox("Auto mode");
+        auto scalerRow     = std::make_unique<LWSUI::Grid>();
+        scalerRow->columns = {96, -1};
+        scalerRow->spacing = 8;
+        fAutoFilter        = new LWSUI::CheckBox("Auto mode");
         fAutoFilter->SetValue(fInput.defaults.autoFilter);
         fAutoFilter->SetTooltip("Mitchell for reduction or enlargement above 2×; Catmull–Rom for enlargement through "
                                 "2×. Each axis is chosen separately.");
         fConnections.Connect(fAutoFilter->OnChange, [this](bool) { UpdateCalculatedPixels(); });
-        left->Add(std::unique_ptr<LWSUI::Control>(fAutoFilter));
+        scalerRow->Add(std::unique_ptr<LWSUI::Control>(fAutoFilter));
         std::vector<LWSUI::Choice> filters;
         for (auto filter : ResizeFilters)
             filters.push_back({std::string(ResizeFilterName(filter)), std::to_string(static_cast<int>(filter))});
@@ -657,53 +745,61 @@ namespace OIV
                                  fAutoFilter->SetValue(false);
                                  UpdateCalculatedPixels();
                              });
-        left->Add(std::unique_ptr<LWSUI::Control>(fFilterCombo));
+        scalerRow->Add(std::unique_ptr<LWSUI::Control>(fFilterCombo));
+        left->Add(std::move(scalerRow));
         content->Add(std::move(left));
 
         auto preview = std::make_unique<LWSUI::Panel>();
         preview->SetCornerRadius(9);
         preview->padding = {12, 10, 12, 10};
         preview->SetStyle(WithBackground(theme, LLUtils::Color(247, 249, 252)));
-        auto previewStack      = std::make_unique<LWSUI::DockPanel>();
-        previewStack->gap      = 6;
-        auto previewHeader     = std::make_unique<LWSUI::StackPanel>();
-        previewHeader->spacing = 1;
-        auto previewTitle      = Label("Preview", LWSUI::Control::FontRole::Heading);
-        previewTitle->SetForeground(LLUtils::Color(74, 91, 116));
-        previewHeader->Add(std::move(previewTitle));
-        auto original = Label("Original · " + FormatPixels(fOriginalWidth, fOriginalHeight),
-                              LWSUI::Control::FontRole::Small);
-        original->SetForeground(LLUtils::Color(132, 144, 163));
-        previewHeader->Add(std::move(original));
+        auto previewStack       = std::make_unique<LWSUI::DockPanel>();
+        previewStack->gap       = 6;
+        auto previewHeader      = std::make_unique<PreviewColumns>();
+        fOriginalSize           = new LWSUI::Label("Original · " + FormatPixels(fOriginalWidth, fOriginalHeight));
+        fOriginalSize->fontRole = LWSUI::Control::FontRole::Small;
+        fOriginalSize->SetForeground(LLUtils::Color(114, 128, 152));
+        previewHeader->Add(std::unique_ptr<LWSUI::Control>(fOriginalSize));
+        fPreviewCaption           = new LWSUI::Label("Uniform scaling");
+        fPreviewCaption->fontRole = LWSUI::Control::FontRole::Small;
+        fPreviewCaption->SetForeground(LLUtils::Color(114, 128, 152));
+        previewHeader->Add(std::unique_ptr<LWSUI::Control>(fPreviewCaption));
         previewStack->AddDocked(std::move(previewHeader), LWSUI::Dock::Top);
         fPreview = new ResizePreview();
         fPreview->SetBitmap(fInput.sourceBitmap, fOriginalWidth / fOriginalHeight);
         previewStack->AddDocked(std::unique_ptr<LWSUI::Control>(fPreview), LWSUI::Dock::Fill);
         // Reserve metadata before assigning the remaining height to the image, including in pixels mode.
-        auto previewDetails       = std::make_unique<LWSUI::StackPanel>();
-        previewDetails->spacing   = 4;
-        fPreviewCaption           = new LWSUI::Label("Uniform scaling");
-        fPreviewCaption->fontRole = LWSUI::Control::FontRole::Small;
-        fPreviewCaption->SetForeground(LLUtils::Color(114, 128, 152));
-        previewDetails->Add(std::unique_ptr<LWSUI::Control>(fPreviewCaption));
-        auto printTitle = Label("PRINT SIZE", LWSUI::Control::FontRole::Small);
-        printTitle->SetForeground(LLUtils::Color(132, 144, 163));
-        previewDetails->Add(std::move(printTitle));
-        fPrintSize           = new LWSUI::Label("—");
-        fPrintSize->fontRole = LWSUI::Control::FontRole::Heading;
-        fPrintSize->SetForeground(LLUtils::Color(42, 57, 82));
-        previewDetails->Add(std::unique_ptr<LWSUI::Control>(fPrintSize));
-        auto outputTitle = Label("OUTPUT RESOLUTION", LWSUI::Control::FontRole::Small);
+        auto previewDetails    = std::make_unique<PreviewColumns>();
+        auto outputDetails     = std::make_unique<LWSUI::StackPanel>();
+        outputDetails->spacing = 1;
+        auto outputTitle       = Label("OUTPUT RESOLUTION", LWSUI::Control::FontRole::Small);
         outputTitle->SetForeground(LLUtils::Color(132, 144, 163));
-        previewDetails->Add(std::move(outputTitle));
+        outputDetails->Add(std::move(outputTitle));
         fPreviewPixels           = new LWSUI::Label("—");
         fPreviewPixels->fontRole = LWSUI::Control::FontRole::Heading;
+        fPreviewPixels->wrap     = true;
         fPreviewPixels->SetForeground(LLUtils::Color(42, 57, 82));
-        previewDetails->Add(std::unique_ptr<LWSUI::Control>(fPreviewPixels));
+        outputDetails->Add(std::unique_ptr<LWSUI::Control>(fPreviewPixels));
+        previewDetails->Add(std::move(outputDetails));
+        auto printDetails     = std::make_unique<LWSUI::StackPanel>();
+        printDetails->spacing = 1;
+        auto printTitle       = Label("PRINT SIZE", LWSUI::Control::FontRole::Small);
+        printTitle->SetForeground(LLUtils::Color(132, 144, 163));
+        printDetails->Add(std::move(printTitle));
+        fPrintSize           = new LWSUI::Label("—");
+        fPrintSize->fontRole = LWSUI::Control::FontRole::Heading;
+        fPrintSize->wrap     = true;
+        fPrintSize->SetForeground(LLUtils::Color(42, 57, 82));
+        printDetails->Add(std::unique_ptr<LWSUI::Control>(fPrintSize));
+        previewDetails->Add(std::move(printDetails));
         previewStack->AddDocked(std::move(previewDetails), LWSUI::Dock::Bottom);
         preview->SetContent(std::move(previewStack));
         content->Add(std::move(preview));
-        root->AddDocked(std::move(content), LWSUI::Dock::Fill);
+        auto scroll = std::make_unique<LWSUI::ScrollView>();
+        scroll->SetOptions({.horizontalScroll = true});
+        scroll->SetContentMinimumSize({320, 0});
+        scroll->SetContent(std::move(content));
+        root->AddDocked(std::move(scroll), LWSUI::Dock::Fill);
 
         auto footer           = std::make_unique<LWSUI::FlowPanel>();
         footer->gap           = 8;
@@ -791,8 +887,8 @@ namespace OIV
     {
         fBusy = busy;
         for (auto* control :
-             std::array<LWSUI::Control*, 8>{fWidthInput, fHeightInput, fDPIInput, fUnitsRadio, fSizeModeRadio,
-                                            fAspectRatioRadio, fStandardResolutions, fAutoFilter})
+             std::array<LWSUI::Control*, 9>{fWidthInput, fHeightInput, fDPIInput, fUnitsRadio, fSizeModeRadio,
+                                            fAspectRatioRadio, fStandardResolutions, fAutoFilter, fLetterboxColor})
             control->SetEnabled(!busy);
         for (auto* control : fResetButtons)
             control->SetEnabled(!busy);
@@ -823,6 +919,7 @@ namespace OIV
         fAspectRatioRadio->SetValue(fInput.defaults.aspect == ResizeAspectRatio::Preserve        ? "preserve"
                                     : fInput.defaults.aspect == ResizeAspectRatio::DoNotPreserve ? "don't_preserve"
                                                                                                  : "preserve_bars");
+        fLetterboxColor->SetValue(fInput.defaults.letterboxColor);
         fAutoFilter->SetValue(fInput.defaults.autoFilter);
         fFilterCombo->SetValue(std::to_string(static_cast<int>(fManualFilter)));
         fStandardResolutions->SetValue("current");
@@ -983,7 +1080,8 @@ namespace OIV
                                   .filter     = fManualFilter,
                                   .preserveHeight = fWheelBasis       ? fWheelHeight
                                                     : fDimensionDraft ? fDraftHeight
-                                                                      : fLastEditedHeight};
+                                                                      : fLastEditedHeight,
+                                  .letterboxColor = fLetterboxColor->Value()};
     }
     std::optional<ImageResizeLayout> ResizeFormController::CurrentLayout() const
     {
@@ -1014,6 +1112,7 @@ namespace OIV
         fUnitsPanel->SetVisible(showUnits);
         fUnitsTitle->SetVisible(showUnits);
         fDPIBox->SetVisible(showDpi);
+        fLetterboxColor->SetVisible(fAspectRatioRadio->Value() == "preserve_bars");
         if (fUIHost)
         {
             fUIHost->Invalidate(true);
@@ -1025,8 +1124,11 @@ namespace OIV
         if (!fDialogWindow)
             return;
         const auto measured = fUIHost->Root()->Measure({float(DialogWidth), 10000});
-        fDialogSize         = {DialogWidth, static_cast<int32_t>(std::ceil(measured.height))};
-        std::ignore         = fDialogWindow->RequestPlacement({.clientSize = fDialogSize});
+        const auto size     = FitWindowClientSize(*fDialogWindow,
+                                                  {DialogWidth, static_cast<int32_t>(std::ceil(measured.height))});
+        if (size == fDialogWindow->GetClientAreaMetrics().logical)
+            return;
+        std::ignore = fDialogWindow->RequestPlacement({.clientSize = size});
     }
     void ResizeFormController::OnSizeModeChanged(const std::string& value)
     {
@@ -1136,6 +1238,7 @@ namespace OIV
     }
     void ResizeFormController::OnAspectRatioChanged()
     {
+        UpdateVisibility();
         if (fAspectRatioRadio->Value() == "preserve")
         {
             if (auto basis = fSizeBasis.Preserved(fLastEditedHeight, {fOriginalWidth, fOriginalHeight},
@@ -1257,6 +1360,7 @@ namespace OIV
         if (valid)
             fPreview->SetAspect(outWidth / outHeight);
         fPreview->SetBlackBars(fAspectRatioRadio->Value() == "preserve_bars");
+        fPreview->SetBarColor(fLetterboxColor->Value());
         const auto suffix = fCurrentSizeMode == ResizeSizeMode::Relative ? "%"
                             : fCurrentUnits == ResizeUnits::Pixels       ? "px"
                             : fCurrentUnits == ResizeUnits::Inches       ? "in"

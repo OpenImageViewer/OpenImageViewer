@@ -1,7 +1,7 @@
 #pragma once
 
 #include <LLUtils/Event.h>
-#include <LLUtils/StringDefs.h>
+#include <string>
 #include <LWS/Bitmap.hpp>
 #include <LWS/WindowTypes.hpp>
 
@@ -24,7 +24,7 @@ class ImageList
     struct ImageDesc
     {
         uint32_t index{};
-        LLUtils::native_string_type title;
+        std::string title;
         LWS::BitmapSharedPtr bitmap;
     };
 
@@ -65,13 +65,11 @@ class ImageList
     [[nodiscard]] VisibleRange GetVisibleRange() const;
     [[nodiscard]] LWS::Rect GetRowRect(size_t index, int32_t width) const;
     [[nodiscard]] int32_t GetRowHeight() const;
-    [[nodiscard]] int32_t GetLineWidth() const;
     void SetImage(const ImageDesc& imageDesc);
 
   private:
 
     static constexpr int32_t RowHeight = 80;
-    static constexpr int32_t LineWidth = 2;
     int32_t fViewportHeight            = 0;
     int fSelected                      = -1;
     int fPos                           = 0;

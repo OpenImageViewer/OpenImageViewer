@@ -94,13 +94,15 @@ namespace OIV
         return fMouseInput->GetNavigationDirection();
     }
 
-    void Viewer::AddPlatformKeyBindings()
+    void Viewer::AddPlatformKeyBindings(const ConfigurationLoader::KeyBindingList& configured)
     {
-        for (const auto& keyBinding : fConfiguredBindings)
+        decltype(fRawInputState->keyBindings) replacement;
+        for (const auto& keyBinding : configured)
         {
-            fRawInputState->keyBindings.AddBinding(LInput::KeyCombination::FromString(keyBinding.KeyCombinationName),
-                                                   {keyBinding.GroupID, std::string(), std::string()});
+            replacement.AddBinding(LInput::KeyCombination::FromString(keyBinding.KeyCombinationName),
+                                   {keyBinding.GroupID, std::string(), std::string()});
         }
+        fRawInputState->keyBindings = std::move(replacement);
     }
 
     bool Viewer::RawInputState::HandleKeyInput(const LWS::Win32::KeyEvent& eventData)
@@ -114,6 +116,8 @@ namespace OIV
         const bool matched = keyBindings.GetBinding(keyCombination, bindings);
         if (matched)
         {
+            if (owner.fWindow.MenuOwnsKeyboard())
+                owner.fWindow.RefreshMenu();
             for (const auto& binding : bindings)
                 owner.ExecutePredefinedCommand(binding.commandDescription);
         }
@@ -129,14 +133,16 @@ namespace OIV
             fMouseInput->SetButton(button->button, button->pressed, true);
             return 1;
         }
+        if (const auto* motion = std::get_if<LWS::EventMouseMove>(&eventData))
+        {
+            // Standalone gestures use raw input, but texel inspection follows normal canvas motion.
+            if (fShell.forwardKey)
+                fMouseInput->Move(motion->delta);
+            UpdateTexelPos();
+            return 1;
+        }
         if (fShell.forwardKey)
         {
-            if (const auto* motion = std::get_if<LWS::EventMouseMove>(&eventData))
-            {
-                fMouseInput->Move(motion->delta);
-                UpdateTexelPos();
-                return 1;
-            }
             if (const auto* wheel = std::get_if<LWS::EventMouseWheel>(&eventData))
             {
                 const auto size   = fWindow.GetCanvasWindow().GetClientAreaMetrics().logical;
@@ -153,6 +159,15 @@ namespace OIV
     {
         if (const auto* key = std::get_if<LWS::Win32::KeyEvent>(&eventData))
         {
+            const auto menuKey = key->virtualKey >= 'A' && key->virtualKey <= 'Z'
+                                     ? static_cast<LWS::KeyCode>(std::to_underlying(LWS::KeyCode::A) + key->virtualKey -
+                                                                 'A')
+                                 : key->virtualKey == VK_MENU ? LWS::KeyCode::Alt
+                                 : key->virtualKey == VK_F10  ? LWS::KeyCode::F10
+                                                              : LWS::KeyCode::Unknown;
+            if (owner.fWindow.DeferShortcutToMenu(menuKey, GetKeyState(VK_CONTROL) < 0, GetKeyState(VK_MENU) < 0,
+                                                  GetKeyState(VK_SHIFT) < 0))
+                return std::nullopt;
             if (key->pressed && key->virtualKey == VK_ESCAPE && (key->keyData & (1U << 30)) != 0)
                 return 0;
             // Dismiss the selection before Escape can close or return to the host.

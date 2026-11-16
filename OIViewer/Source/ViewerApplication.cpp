@@ -1,9 +1,11 @@
+#include <OIVAppCore/MessageHelper.h>
+#include <LLUtils/StringUtility.h>
 #include "ViewerApplication.h"
 #include "ImageBitmap.h"
 #include "SettingsController.h"
 #include "ViewerResources.h"
 #include "ViewerApplicationPlatformState.h"
-#include <ImageProcessing/Resampler.h>
+#include <LLUtils/Exception.h>
 #include <ImageUtil/ImageUtil.h>
 #include <algorithm>
 #include <cmath>
@@ -68,6 +70,23 @@ namespace OIV
                           }
                       },
                       .showResizeForm = [this] { ShowResizeForm(); },
+                      .showAbout =
+                          [this]
+                      {
+                          if (!fAbout)
+                              fAbout = std::make_unique<AboutForm>(fPlatform);
+                          if (fAbout->Show(fViewer.fWindow.GetWindow(), fViewer.fWindow.ApplicationIcon(),
+                                           LLUtils::StringUtility::ConvertString<std::string>(
+                                               MessageHelper::GetFileTime(fViewer.GetApplicationModulePath()))) !=
+                              LWS::Result::Success)
+                              fViewer.ReportSettingsError("Unable to open About OIViewer");
+                      },
+                      .saveInterfacePreferences =
+                          [this](const InterfacePreferences& preferences)
+                      {
+                          if (auto result = SaveInterfacePreferences(fViewer.fSettingsFile, preferences); !result)
+                              fViewer.ReportSettingsError(result.error());
+                      },
                       .openExternalFile =
                           [this](LLUtils::native_string_type path)
                       {
@@ -86,6 +105,7 @@ namespace OIV
         fResizeLifetime.reset();
         if (fResizeWorker.joinable())
             fResizeWorker.join();
+        fAbout.reset();
         fSettings.reset();
         fResizeForm.reset();
         fViewer.Stop();
@@ -107,7 +127,7 @@ namespace OIV
             fViewer.ReportSettingsError(result.error().location + ": " + result.error().message);
     }
 
-    void ViewerApplication::ShowResizeForm()
+    void ViewerApplication::ShowResizeForm(bool updateExisting)
     {
         if (fResizeBusy && fResizeForm)
         {
@@ -125,7 +145,20 @@ namespace OIV
             if (bgra)
                 input.iconBitmap = std::make_shared<LWS::Bitmap>(MakeBgraBitmapView(*bgra));
         }
-        input.onDismiss   = [this] { ++fResizeRequestId; };
+        input.onDismiss = [this] { ++fResizeRequestId; };
+        input.onFileDrop = [this](const LWS::EventDragDropFile& drop)
+        {
+            // Finish the native drop before loading and resetting the existing controls.
+            std::ignore = fPlatform.PostTask(
+                [this, lifetime = std::weak_ptr<int>(fResizeLifetime), drop]
+                {
+                    if (lifetime.expired() || fResizeBusy)
+                        return;
+                    const auto generation = fSession.Image().GetSourceGeneration();
+                    if (fViewer.HandleFileDragDropEvent(drop) && generation != fSession.Image().GetSourceGeneration())
+                        ShowResizeForm(true);
+                });
+        };
         const auto& image = fViewer.fSession.Image().GetRetainedImage(ImageProcessingStage::RenderFormat);
         if (image)
         {
@@ -154,10 +187,17 @@ namespace OIV
                 std::max(1, static_cast<int32_t>(std::lround(bounds.GetWidth() * scale))),
                 std::max(1, static_cast<int32_t>(std::lround(bounds.GetHeight() * scale))),
             };
-            Resampler resampler;
-            auto previewImage = resampler.Resample(image, previewSize, bounds);
-            previewImage      = IMUtil::ImageUtil::ConvertImageWithNormalization(previewImage,
-                                                                                 IMCodec::TexelFormat::I_B8_G8_R8_A8, false);
+            // Filter alpha with the image and retain its association for the UI bitmap adapter.
+            auto resized = ResizeImage(image, bounds,
+                                       {.size       = previewSize,
+                                        .aspect     = ResizeAspectRatio::DoNotPreserve,
+                                        .autoFilter = false,
+                                        .filter     = ResizeFilter::Box});
+            if (!resized)
+                LL_EXCEPTION(LLUtils::Exception::ErrorCode::RuntimeError, "Unable to resize preview image");
+            auto previewImage = IMUtil::ImageUtil::ConvertImageWithNormalization(*resized,
+                                                                                 IMCodec::TexelFormat::I_B8_G8_R8_A8,
+                                                                                 false);
             if (previewImage)
             {
                 input.sourceBitmap   = std::make_shared<LWS::Bitmap>(MakeBgraBitmapView(*previewImage));
@@ -175,8 +215,13 @@ namespace OIV
             }
         }
 
-        fResizeForm = std::make_unique<ResizeFormController>(fPlatform, fViewer.fResources, std::move(input));
-        fResizeForm->Show(&fViewer.GetWindow().GetWindow());
+        if (updateExisting && fResizeForm)
+            fResizeForm->Reinitialize(std::move(input));
+        else
+        {
+            fResizeForm = std::make_unique<ResizeFormController>(fPlatform, fViewer.fResources, std::move(input));
+            fResizeForm->Show(&fViewer.GetWindow().GetWindow());
+        }
     }
 
     void ViewerApplication::StartResize(IMCodec::ImageSharedPtr source, LLUtils::RectI32 bounds, ViewerImage opened,
