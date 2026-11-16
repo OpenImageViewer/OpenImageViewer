@@ -1,7 +1,10 @@
 #pragma once
 
 #include "ImageControl.h"
+#include "UI/InterfacePreferences.h"
+#include <LWSUI/Menu.hpp>
 
+#include <LWS/Bitmap.hpp>
 #include <LWS/Cursor.hpp>
 #include <LWS/Window.hpp>
 
@@ -10,6 +13,15 @@
 #include <cstdint>
 #include <memory>
 #include <filesystem>
+#include <functional>
+
+namespace LWSUI
+{
+    class UIHost;
+    class Label;
+    class Panel;
+    class SplitPanel;
+}  // namespace LWSUI
 
 namespace OIV
 {
@@ -44,13 +56,14 @@ namespace OIV
         [[nodiscard]] LWS::Window& GetWindow() { return fWindow; }
         [[nodiscard]] const LWS::Window& GetWindow() const { return fWindow; }
 
+        // Set before Create; the custom close button follows the viewer's orderly shutdown path.
+        std::function<void()> requestClose;
         [[nodiscard]] LWS::Result Create(const LWS::WindowConfig& config = {});
 
         [[nodiscard]] bool GetShowImageControl() const;
         [[nodiscard]] bool GetShowStatusBar() const;
         [[nodiscard]] LWS::PixelSize GetCanvasPixelSize() const;
         [[nodiscard]] LWS::Point GetCanvasMousePosition() const;
-        [[nodiscard]] LWS::Point GetWindowMousePosition() const;
 
         ImageControl& GetImageControl();
         void SetCursorType(CursorType type);
@@ -59,6 +72,14 @@ namespace OIV
         [[nodiscard]] LWS::WindowMode GetWindowMode() const;
         [[nodiscard]] LWS::Result SetWindowMode(LWS::WindowMode mode);
         void FitToParent();
+        void SetTitle(const LWS::string_type& title);
+        void SetMenuProvider(std::function<std::vector<LWSUI::MenuBarItem>()> provider);
+        void RefreshMenu();
+        void ApplyInterfacePreferences(const InterfacePreferences& preferences);
+        bool MenuOwnsKeyboard() const;
+        bool DeferShortcutToMenu(LWS::KeyCode key, bool control, bool alt, bool shift) const;
+        std::function<void()> restoreMenu;
+        const LWS::BitmapSharedPtr& ApplicationIcon() const { return fApplicationIcon; }
         [[nodiscard]] LWS::Result Destroy();
         void ShowStatusBar(bool show);
         void SetShowImageControl(bool show);
@@ -74,16 +95,20 @@ namespace OIV
         struct NativeState;
 
         bool HandleWindowEvent(const LWS::AnyEvent& eventData);
+        void PrepareMenu(const LWS::AnyEvent& event);
         [[nodiscard]] LWS::Result OnCreate();
-        [[nodiscard]] int32_t GetImageControlClientWidth(int32_t layoutWidth) const;
-        void PrepareImageControlLayout();
         void SetApplicationIcon();
         void InitializeCursors();
         void UpdateNativeStatusBar(LWS::LogicalSize& canvasSize);
-        [[nodiscard]] bool UseMainWindowAsCanvas() const;
+        void UpdateNativeWindowBorders(bool visible);
 
         LWS::Window fWindow;
         LWS::Window fCanvasWindow;
+        LWS::BitmapSharedPtr fApplicationIcon;
+        std::unique_ptr<LWSUI::UIHost> fChromeHost;
+        InterfacePreferences fInterface;
+        std::function<std::vector<LWSUI::MenuBarItem>()> fMenuProvider;
+        LWSUI::Label* fTitleLabel     = nullptr;
         bool fShowStatusBar           = true;
         bool fShowImageControl        = false;
         CursorType fCurrentCursorType = CursorType::SystemDefault;
@@ -97,9 +122,10 @@ namespace OIV
             LWS::Cursor::FromShape(LWS::CursorShape::SizeNESW), LWS::Cursor::FromShape(LWS::CursorShape::SizeNWSE),
             LWS::Cursor::FromShape(LWS::CursorShape::SizeAll),
         };
-        bool fCursorsInitialized    = false;
-        bool fUseMainWindowAsCanvas = false;
-        ImageControl fImageControl;
+        bool fCursorsInitialized         = false;
+        ImageControl* fImageControl      = nullptr;
+        LWSUI::Panel* fSidebarLayout     = nullptr;
+        LWSUI::SplitPanel* fSidebarSplit = nullptr;
         std::unique_ptr<NativeState> fNativeState;
         LWS::EventConnection fEventConnection;
     };

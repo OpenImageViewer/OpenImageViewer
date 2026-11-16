@@ -122,17 +122,12 @@ int32_t ImageList::GetRowHeight() const
     return RowHeight;
 }
 
-int32_t ImageList::GetLineWidth() const
-{
-    return LineWidth;
-}
-
 void ImageList::SetImage(const ImageDesc& imageDesc)
 {
     const bool itemCountChanged = imageDesc.index >= fImages.size();
     fImages.resize(imageDesc.index + 1);
     fImages[imageDesc.index] = imageDesc;
     if (fImages[imageDesc.index].bitmap != nullptr)
-        fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64, 64, {255, 255, 255, 255});
+        fImages[imageDesc.index].bitmap = fImages[imageDesc.index].bitmap->resize(64, 64);
     Changed.Raise(itemCountChanged ? ChangeType::ItemCount : ChangeType::Visual);
 }

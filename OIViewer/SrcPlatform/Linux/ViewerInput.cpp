@@ -18,10 +18,12 @@ namespace OIV
         return fMouseInput->GetNavigationDirection();
     }
 
-    void Viewer::AddPlatformKeyBindings()
+    void Viewer::AddPlatformKeyBindings(const ConfigurationLoader::KeyBindingList& configured)
     {
-        for (const auto& binding : fConfiguredBindings)
-            fRawInputState->keyBindings.AddBinding(binding.KeyCombinationName, binding.GroupID);
+        decltype(fRawInputState->keyBindings) replacement;
+        for (const auto& binding : configured)
+            replacement.AddBinding(binding.KeyCombinationName, binding.GroupID);
+        fRawInputState->keyBindings = std::move(replacement);
     }
 
     bool Viewer::handleKeyInput(const LWS::AnyEvent& eventData)
@@ -30,6 +32,10 @@ namespace OIV
             UpdateSelectionCursor(fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false));
         const auto* keyEvent = std::get_if<LWS::EventKeyDown>(&eventData);
         if (keyEvent == nullptr)
+            return false;
+        if (fWindow.DeferShortcutToMenu(keyEvent->key, fPlatform.IsKeyPressed(LWS::KeyCode::Control).value_or(false),
+                                        fPlatform.IsKeyPressed(LWS::KeyCode::Alt).value_or(false),
+                                        fPlatform.IsKeyPressed(LWS::KeyCode::Shift).value_or(false)))
             return false;
 
         if (keyEvent->key == LWS::KeyCode::Escape && keyEvent->repeat)
@@ -49,6 +55,8 @@ namespace OIV
         };
         bool handled        = false;
         const auto commands = fRawInputState->keyBindings.Resolve(keyEvent->key, modifiers);
+        if (!commands.empty() && fWindow.MenuOwnsKeyboard())
+            fWindow.RefreshMenu();
         for (const std::string& command : commands)
             handled = ExecutePredefinedCommand(command) || handled;
         return handled;

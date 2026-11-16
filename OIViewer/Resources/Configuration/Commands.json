@@ -348,7 +348,6 @@
       "Name": "cmd_pasteFromClipboard",
       "arguments": ""
     },
-
     {
       "GroupID": "NextImageInFolder",
       "DisplayName": "Next image",
@@ -373,7 +372,6 @@
       "Name": "cmd_navigate",
       "arguments": "amount=-1;subimage=true"
     },
-
     {
       "GroupID": "AnimationSpeedUp",
       "DisplayName": "Animation speed up",
@@ -447,10 +445,40 @@
       "arguments": "size_type=multifullscreen"
     },
     {
-      "GroupID": "ShowResizeForm",
-      "DisplayName": "Show resize form",
-      "Name": "cmd_resize_form",
+      "GroupID": "ToggleMenuBar",
+      "DisplayName": "Toggle menu bar",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleMenuBar"
+    },
+    {
+      "GroupID": "ToggleCaption",
+      "DisplayName": "Toggle caption",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleCaption"
+    },
+    {
+      "GroupID": "ToggleSubImagePanel",
+      "DisplayName": "Toggle sub-image panel",
+      "Name": "cmd_view_state",
+      "arguments": "type=toggleSubImagePanel"
+    },
+    {
+      "GroupID": "RestoreDefaultInterface",
+      "DisplayName": "Restore default interface",
+      "Name": "cmd_view_state",
+      "arguments": "type=restoreDefaultInterface"
+    },
+    {
+      "GroupID": "ShowAbout",
+      "DisplayName": "About OIViewer",
+      "Name": "cmd_about",
       "arguments": ""
+    },
+    {
+      "GroupID": "OpenWebsite",
+      "DisplayName": "OIViewer Website",
+      "Name": "cmd_shell",
+      "arguments": "cmd=openUrl;url=https://www.openimageviewer.com"
     }
   ]
 }

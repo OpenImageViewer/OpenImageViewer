@@ -1,44 +1,31 @@
 #pragma once
-
 #include "ImageList.h"
-
-#include <LWS/Window.hpp>
-
-#include <cstdint>
-#include <memory>
+#include <LWSUI/Containers.hpp>
+#include <LWSUI/Primitives.hpp>
 
 namespace OIV
 {
-    class ImageControl
+    // Virtualized sidebar rows share the main window's UI host and input routing.
+    class ImageControl final : public LWSUI::Panel
     {
       public:
 
-        explicit ImageControl(LWS::PlatformContext& platform);
-        ~ImageControl();
-
-        [[nodiscard]] LWS::Window& GetWindow() { return fWindow; }
-        [[nodiscard]] const LWS::Window& GetWindow() const { return fWindow; }
-
-        void SetImagePos(int pos);
+        ImageControl();
         ImageList& GetImageList();
         void RefreshScrollInfo();
-        std::intptr_t SendMessage(std::uint32_t message, std::uintptr_t wParam, std::intptr_t lParam);
+
+      protected:
+
+        LWSUI::Size OnMeasure(LWSUI::Size available) override { return available; }
+        void OnArrange() override;
+        void OnRender(LWSUI::Canvas& canvas) override;
+        bool OnInput(const LWSUI::Input& input) override;
 
       private:
 
-        struct NativeState;
-
-        bool HandleWindowEvent(const LWS::AnyEvent& eventData);
-        void InitializeEvents();
-        void InitializePlatformRendering();
-        void RequestRepaint();
-        void UpdateScrollPosition();
-
-        LWS::Window fWindow;
         ImageList fImageList;
-        std::unique_ptr<NativeState> fNativeState;
+        LWSUI::ScrollBar* fScrollBar{};
         ImageList::ChangedEvent::Subscription fImageListSubscription;
-        LWS::EventConnection fEventConnection;
-        LWS::EventConnection fPlatformConnection;
+        LWSUI::ConnectionSet fConnections;
     };
 }  // namespace OIV

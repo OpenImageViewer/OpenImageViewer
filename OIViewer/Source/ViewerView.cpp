@@ -152,13 +152,8 @@ namespace OIV
 
     void Viewer::ToggleBorders()
     {
-        fShowBorders = !fShowBorders;
-        {
-            std::ignore = fWindow.GetWindow().SetWindowStyles(fShowBorders
-                                                                  ? LWS::WindowStyleFlags(WindowChromeStyles)
-                                                                  : LWS::WindowStyleFlags(LWS::WindowStyle::NoStyle));
-            fWindow.UpdateLayout();
-        }
+        fInterface.borders = !fInterface.borders;
+        ApplyInterface(true);
     }
 
     void Viewer::SetSlideShowEnabled(bool enabled)
@@ -447,7 +442,7 @@ namespace OIV
             if (fSession.fImageState.GetRetainedImage(ImageProcessingStage::GeometricTransform) != nullptr)
             {
                 using namespace LLUtils;
-                PointF64 storageImageSpace = ClientToImage(fWindow.GetWindowMousePosition());
+                PointF64 storageImageSpace = ClientToImage(fWindow.GetCanvasMousePosition());
 
                 LLUtils::native_stringstream ss;
                 ss << LLUTILS_TEXT("Texel: ") << std::fixed << std::setprecision(1)

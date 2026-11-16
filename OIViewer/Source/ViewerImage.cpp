@@ -88,9 +88,9 @@ namespace OIV
 
         const auto bitmapBuffer = MakeBgraBitmapView(*bitmapImage);
 
-        LLUtils::native_stringstream title;
-        title << imageSlot + 1 << LLUTILS_TEXT('/') << totalImages << LLUTILS_TEXT("  ") << bitmapBuffer.width
-              << LLUTILS_TEXT(" x ") << bitmapBuffer.height << LLUTILS_TEXT(" x 32 BPP");
+        std::stringstream title;
+        title << imageSlot + 1 << '/' << totalImages << "  " << bitmapBuffer.width << " x " << bitmapBuffer.height
+              << " x 32 BPP";
         fWindow.GetImageControl().GetImageList().SetImage(
             {.index = imageSlot, .title = title.str(), .bitmap = std::make_shared<LWS::Bitmap>(bitmapBuffer)});
     }
@@ -204,8 +204,8 @@ namespace OIV
         if (loadResult.status == ImageLoadStatus::NoSupportedFiles)
             return false;
 
-        auto formattedFilePath                   = MessageFormatter::FormatFilePath(loadResult.normalizedPath) +
-                                                   LLUTILS_TEXT("<textcolor=#ff8930>");
+        auto formattedFilePath = MessageFormatter::FormatFilePath(loadResult.normalizedPath) +
+                                 LLUTILS_TEXT("<textcolor=#ff8930>");
         const ImageLoadPresentation presentation = ImageLoadPresentationPolicy::Decide(loadResult, formattedFilePath);
 
         if (presentation.shouldLoadImage)
@@ -276,7 +276,7 @@ namespace OIV
 
         fSession.fImageState.Refresh();
         UpdateMainRenderImages();
-        fWindow.SetShowImageControl(IsSubImagesVisible());
+        fWindow.SetShowImageControl(fShowSubImagePanel && IsSubImagesVisible());
         UnloadWelcomeMessage();
         DisplayOpenedFileName();
 
@@ -401,9 +401,9 @@ namespace OIV
                                            DeletedFileRemovalMode::DeletedInternally;
         const bool removeExternalDeletes = (fDeletedFileRemovalMode & DeletedFileRemovalMode::DeletedExternally) ==
                                            DeletedFileRemovalMode::DeletedExternally;
-        const size_t fileCount           = fSession.fBrowseSessionController != nullptr
-                                               ? fSession.fBrowseSessionController->GetFolderFileList().GetSize()
-                                               : 0;
+        const size_t fileCount = fSession.fBrowseSessionController != nullptr
+                                     ? fSession.fBrowseSessionController->GetFolderFileList().GetSize()
+                                     : 0;
 
         const auto action = FileRemovalPolicy::Decide(GetOpenedFileName(), fileName, fRequestedFileForRemoval,
                                                       removeInternalDeletes, removeExternalDeletes, fileCount);
@@ -446,7 +446,8 @@ namespace OIV
                 break;
             case FileChangeAction::ReloadSettings:
                 LoadSettings();
-                if (fShell.settingsReloaded) fShell.settingsReloaded();
+                if (fShell.settingsReloaded)
+                    fShell.settingsReloaded();
                 break;
             case FileChangeAction::Ignore:
                 break;
@@ -633,11 +634,11 @@ namespace OIV
 
                 if (colorFilled != nullptr)
                 {
-                    auto oivColorFilled = ViewerImage{.pixels     = colorFilled,
-                                                      .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
-                                                      .source     = ImageSource::GeneratedByLib,
-                                                      .sourceName = fSession.fImageState.GetOpenedImage()->sourceName};
-                    auto lastState      = fSession.fResetTransformationMode;
+                    auto oivColorFilled               = ViewerImage{.pixels     = colorFilled,
+                                                                    .metadata   = fSession.fImageState.GetOpenedImage()->metadata,
+                                                                    .source     = ImageSource::GeneratedByLib,
+                                                                    .sourceName = fSession.fImageState.GetOpenedImage()->sourceName};
+                    auto lastState                    = fSession.fResetTransformationMode;
                     fSession.fResetTransformationMode = ResetTransformationMode::DoNothing;
                     LoadOivImage(oivColorFilled);
                     fSession.fResetTransformationMode = lastState;

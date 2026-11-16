@@ -34,7 +34,14 @@ namespace OIV
         const std::string command          = request.args.GetArgValue("cmd");
         LLUtils::native_string_type result = LLUtils::StringUtility::ToWString(request.displayName);
 
-        if (command == "newWindow")
+        if (command == "openUrl")
+        {
+            const auto url = LLUtils::StringUtility::ToNativeString(request.args.GetArgValue("url"));
+            if (reinterpret_cast<INT_PTR>(
+                    ShellExecuteW(nullptr, L"open", url.c_str(), nullptr, nullptr, SW_SHOWDEFAULT)) <= 32)
+                result = LLUTILS_TEXT("Unable to open the website");
+        }
+        else if (command == "newWindow")
         {
             ShellExecute(nullptr, LLUTILS_TEXT("open"),
                          LLUtils::StringUtility::ToNativeString(LLUtils::PlatformUtility::GetExePath()).c_str(),

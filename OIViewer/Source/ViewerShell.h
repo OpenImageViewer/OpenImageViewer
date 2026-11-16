@@ -3,6 +3,7 @@
 #include <OIVAppCore/FileAssociationPolicy.h>
 #include <LWS/WindowTypes.hpp>
 #include <functional>
+#include "UI/InterfacePreferences.h"
 namespace OIV
 {
     // Frontend callbacks are installed before initialization and outlive the Viewer. Empty desktop callbacks mean
@@ -18,6 +19,8 @@ namespace OIV
         std::function<void()> settingsReloaded;
         std::function<void()> topMost;
         std::function<void()> showResizeForm;
+        std::function<void()> showAbout;
+        std::function<void(const InterfacePreferences&)> saveInterfacePreferences;
         std::function<void(LLUtils::native_string_type)> openExternalFile;
         std::function<void(const CommandManager::CommandRequest&, CommandManager::CommandResult&)> fileAssociations;
         std::function<void(const FileAssociationNotice&)> associationNotice;

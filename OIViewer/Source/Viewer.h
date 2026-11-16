@@ -166,11 +166,7 @@ namespace OIV
         friend class Win32::HostedInputAdapter;
         friend class ViewerApplication;
 
-        static constexpr LWS::WindowStyle WindowChromeStyles = LWS::WindowStyle::Caption |
-                                                               LWS::WindowStyle::CloseButton |
-                                                               LWS::WindowStyle::ResizableBorder |
-                                                               LWS::WindowStyle::MinimizeButton |
-                                                               LWS::WindowStyle::MaximizeButton;
+        static constexpr LWS::WindowStyle WindowChromeStyles = LWS::WindowStyle::ResizableBorder;
 
         struct CommandRequestIntenal
         {
@@ -196,7 +192,11 @@ namespace OIV
 
 #pragma endregion platform event handling
         void AddCommandsAndKeyBindings();
-        void AddPlatformKeyBindings();
+        std::vector<LWSUI::MenuBarItem> BuildMainMenu();
+        void ApplyInterface(bool save);
+        void StartKeyBindingReload();
+        void CMD_About(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
+        void AddPlatformKeyBindings(const ConfigurationLoader::KeyBindingList& bindings);
         void OnMonitorChanged(const LWS::MonitorDesc& monitor);
         void PerformRefresh();
         void UpdateMainRenderImages();
@@ -400,6 +400,10 @@ namespace OIV
         uint32_t fScreenSpaceDelayMs   = 100;
         LWS::Timer fTimerSlideShow;
         LWS::Timer fSettingsReloadTimer;
+        LWS::Timer fKeyBindingsReloadTimer;
+        std::optional<std::filesystem::file_time_type> fKeyBindingsModified;
+        InterfacePreferences fInterface;
+        bool fShowSubImagePanel = true;
         std::optional<std::filesystem::file_time_type> fSettingsModified;
         LWS::Clipboard fClipboardHelper;
 
@@ -413,7 +417,6 @@ namespace OIV
         bool fIsFirstFrameDisplayed  = false;
         bool fRestoringSession{};
         bool fSessionAttached{};
-        bool fShowBorders      = true;
         bool fImageInfoVisible = false;
         bool fIsActive         = false;
         LLUtils::PointF64 fDPIadjustmentFactor{1.0, 1.0};

@@ -70,6 +70,10 @@ namespace OIV
             fRefreshOperation.End();
             return true;
         }
+        // A hidden caption lets the canvas cover the entire parent, which may never receive
+        // a paint event. Either surface's first paint must complete deferred startup.
+        if (std::holds_alternative<LWS::EventPaint>(eventData))
+            CompleteInitialization();
         return ClientWindwMessage(eventData) != 0;
     }
 }  // namespace OIV

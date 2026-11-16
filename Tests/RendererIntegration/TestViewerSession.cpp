@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <OIVAppCore/ViewerSession.h>
 #include <LLUtils/PlatformUtility.h>
 #include <OIVShared/ViewTransformController.h>
@@ -190,6 +191,107 @@ TEST_CASE("Session color counting rejects a stale source and completes the curre
     #ifdef _WIN32
         #include <LWS/Win32/Platform.hpp>
         #include <LWS/Win32/WindowExtensions.hpp>
+TEST_CASE("Viewer completes startup for saved chrome visibility", "[session][renderer][startup][input]")
+{
+    const bool caption = GENERATE(false, true);
+    const bool borders = GENERATE(false, true);
+    CAPTURE(caption, borders);
+    REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);
+    LWS::PlatformContext platform;
+    REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
+    OIV::ViewerSession session;
+    const auto source    = std::filesystem::path(OIV_TEST_SOURCE_DIR).parent_path();
+    const auto resources = source / "OIViewer/Resources";
+    const OIV::UserDirectories directories{source / "build/session-config", source / "build/session-state",
+                                           source / "build/session-cache"};
+    const auto settings = std::filesystem::temp_directory_path() /
+                          ("oiv-status-startup-" + std::to_string(GetCurrentProcessId()) + ".json");
+    {
+        std::ofstream file(settings);
+        file << std::boolalpha << R"({"viewsettings":{"interface":{"showstatusbar":true,"showcaption":)" << caption
+             << R"(,"showborders":)" << borders << "}}}";
+        REQUIRE(file.good());
+    }
+    {
+        OIV::InterfacePreferences saved;
+        OIV::Viewer viewer(platform, session, directories,
+                           {resources, settings, std::filesystem::path(LLUtils::PlatformUtility::GetExePath())},
+                           {.saveInterfacePreferences = [&](const OIV::InterfacePreferences& preferences)
+                            { saved = preferences; }});
+        REQUIRE_NOTHROW(viewer.Init({}, {.renderer = OIV::RendererType::Null}, {.clientSize = {640, 480}}));
+        REQUIRE(platform.ProcessMessages() == LWS::LoopResult::Continue);
+        // Startup must finish through native painting, even with no exposed parent surface.
+        // No About callback is installed, so this checks registration without opening a dialog.
+        REQUIRE(viewer.ExecutePredefinedCommand("ShowAbout"));
+        if (!borders)
+            REQUIRE(viewer.ExecutePredefinedCommand("ToggleWindowBorders"));
+        // Menu configuration is ready after first-frame completion runs deferred startup work.
+        const HWND main = *LWS::Win32::GetHwnd(viewer.GetWindow().GetWindow());
+        SendMessageW(main, WM_KEYDOWN, VK_F10, 0);
+        SendMessageW(main, WM_KEYUP, VK_F10, 0);
+        CHECK(viewer.GetWindow().MenuOwnsKeyboard());
+        SendMessageW(main, WM_KEYDOWN, VK_ESCAPE, 0);
+        SendMessageW(main, WM_KEYUP, VK_ESCAPE, 0);
+        CHECK_FALSE(viewer.GetWindow().MenuOwnsKeyboard());
+        REQUIRE(platform.ProcessMessages() == LWS::LoopResult::Continue);
+        auto canvasTop = [&]
+        {
+            POINT point{};
+            MapWindowPoints(*LWS::Win32::GetHwnd(viewer.GetWindow().GetCanvasWindow()), main, &point, 1);
+            return point.y;
+        };
+        CHECK(canvasTop() > 0);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleWindowBorders"));
+        CHECK(canvasTop() > 0);                                            // Removing borders preserves the caption.
+        CHECK((GetWindowLongPtrW(main, GWL_STYLE) & WS_THICKFRAME) != 0);  // Native resizing remains enabled.
+        RECT borderlessBounds{};
+        POINT borderlessOrigin{};
+        REQUIRE(GetWindowRect(main, &borderlessBounds));
+        REQUIRE(ClientToScreen(main, &borderlessOrigin));
+        CHECK(borderlessOrigin.x == borderlessBounds.left);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleWindowBorders"));
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleCaption"));
+        CHECK(canvasTop() == 0);  // Hiding the caption also hides menus but remembers their state.
+        CHECK_FALSE(saved.caption);
+        CHECK(saved.menuBar);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleCaption"));
+        CHECK(canvasTop() > 0);
+        CHECK(saved.caption);
+        CHECK(saved.menuBar);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleMenuBar"));
+        CHECK(canvasTop() > 0);  // Hiding menus leaves the caption intact.
+        CHECK(saved.caption);
+        CHECK_FALSE(saved.menuBar);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleCaption"));
+        CHECK(canvasTop() == 0);
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleCaption"));
+        CHECK(canvasTop() > 0);
+        CHECK_FALSE(saved.menuBar);  // Previously hidden menus stay hidden after restoring the caption.
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleCaption"));
+        REQUIRE(viewer.ExecutePredefinedCommand("ToggleMenuBar"));
+        CHECK(canvasTop() > 0);  // Explicitly showing menus restores the title row as well.
+        CHECK(saved.caption);
+        CHECK(saved.menuBar);
+        // Standalone canvas motion must reach texel inspection without host forwarding.
+        // Gesture deltas still come from raw input, so this message must not pan the image.
+        auto& canvas     = viewer.GetWindow().GetCanvasWindow();
+        bool fellThrough = false;
+        auto listener    = canvas.Listen(
+            [&](const LWS::AnyEvent& event)
+            {
+                if (std::holds_alternative<LWS::EventMouseMove>(event))
+                    fellThrough = true;
+                return LWS::EventResponse::Unhandled;
+            });
+        REQUIRE(listener);
+        const auto offset = session.Image().GetOffset();
+        SendMessageW(*LWS::Win32::GetHwnd(canvas), WM_MOUSEMOVE, 0, MAKELPARAM(20, 30));
+        CHECK_FALSE(fellThrough);
+        CHECK(session.Image().GetOffset() == offset);
+    }
+    std::filesystem::remove(settings);
+}
+
 TEST_CASE("Hosted wheel input reaches the focused composite without raw input", "[session][renderer][wlx][input]")
 {
     REQUIRE(LWS::Win32::BootstrapProcess() == LWS::Result::Success);

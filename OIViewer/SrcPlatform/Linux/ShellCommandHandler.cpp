@@ -62,7 +62,15 @@ namespace OIV
     {
         const std::string command          = request.args.GetArgValue("cmd");
         LLUtils::native_string_type result = request.displayName;
-        if (command == "containingFolder" && (openedFileName.empty() || !RevealInFileManager(openedFileName)))
+        if (command == "openUrl")
+        {
+            const auto url = request.args.GetArgValue("url");
+            GError* error{};
+            if (!g_app_info_launch_default_for_uri(url.c_str(), nullptr, &error))
+                result = "Unable to open the website";
+            g_clear_error(&error);
+        }
+        else if (command == "containingFolder" && (openedFileName.empty() || !RevealInFileManager(openedFileName)))
         {
             result = "Unable to reveal the file";
         }

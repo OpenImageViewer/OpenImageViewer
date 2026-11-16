@@ -183,6 +183,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT 
     target_link_options(${TargetName} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/Resource.res)
 endif()
 
+if(OIV_OFFICIAL_BUILD)
+    set(OIV_APPLICATION_ICON OIVIcon.ico)
+elseif(OIV_BUILD_TYPE EQUAL 0)
+    set(OIV_APPLICATION_ICON OIVIconDebug.ico)
+else()
+    set(OIV_APPLICATION_ICON OIVIconRelease.ico)
+endif()
+add_custom_command(TARGET ${TargetName} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TargetName}>/Resources
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/AppIcons/${OIV_APPLICATION_ICON}
+        $<TARGET_FILE_DIR:${TargetName}>/Resources/OIViewer.ico)
+
 add_custom_command(TARGET ${TargetName} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/Resources $<TARGET_FILE_DIR:${TargetName}>/Resources)

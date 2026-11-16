@@ -78,6 +78,37 @@
       "label": "View settings",
       "children": [
         {
+          "type": "group",
+          "id": "viewsettings/interface",
+          "label": "Interface",
+          "children": [
+            {
+              "type": "checkbox",
+              "id": "viewsettings/interface/showborders",
+              "label": "Borders",
+              "default": true
+            },
+            {
+              "type": "checkbox",
+              "id": "viewsettings/interface/showmenubar",
+              "label": "Menu bar",
+              "default": true
+            },
+            {
+              "type": "checkbox",
+              "id": "viewsettings/interface/showcaption",
+              "label": "Caption",
+              "default": true
+            },
+            {
+              "type": "checkbox",
+              "id": "viewsettings/interface/showstatusbar",
+              "label": "Status bar",
+              "default": false
+            }
+          ]
+        },
+        {
           "type": "number",
           "id": "viewsettings/maxzoom",
           "label": "Maximum zoom",
@@ -324,7 +355,7 @@
               "id": "resizedialog/thumbwheelacceleration",
               "label": "Acceleration",
               "description": "Controls speed growth toward the edges. Lower values give gentler acceleration without changing endpoint speeds.",
-              "default": 0.5,
+              "default": 0.4,
               "step": 0.1,
               "min": 0.1,
               "max": 2

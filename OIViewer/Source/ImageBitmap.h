@@ -10,7 +10,10 @@ namespace OIV
     {
         return {
             .pixels   = {image.GetBuffer(), image.GetImageItem()->data.size()},
-            .format   = LWS::BitmapPixelFormat::Bgra8,
+            .format   = image.GetImageItem()->colorInfo.alphaMode ==
+                              IMCodec::ImageItem::ColorInfo::AlphaMode::Premultiplied
+                            ? LWS::BitmapPixelFormat::Bgra8Premultiplied
+                            : LWS::BitmapPixelFormat::Bgra8,
             .rowOrder = LWS::BitmapRowOrder::TopDown,
             .width    = image.GetWidth(),
             .height   = image.GetHeight(),

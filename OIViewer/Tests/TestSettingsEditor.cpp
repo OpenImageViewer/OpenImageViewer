@@ -2,6 +2,7 @@
     #include <catch2/catch_test_macros.hpp>
     #include "SettingsController.h"
     #include "WindowPlacement.h"
+    #include "UI/InterfacePreferences.h"
     #include <LWSSettings/SettingsStorage.hpp>
     #include <chrono>
     #include <fstream>
@@ -106,7 +107,9 @@ TEST_CASE("Settings profile preserves unrelated fields and detects conflicting e
     auto external              = fixture.Read();
     external["custom"]["keep"] = 77;
     fixture.Write(external);
+    REQUIRE(OIV::SaveInterfacePreferences(fixture.path, {.menuBar = false}));
     REQUIRE(profile.Save(fixture.path, document.WorkingValues()));
+    CHECK(fixture.Read()["viewsettings"]["interface"]["showmenubar"] == false);
     CHECK(fixture.Read()["custom"]["keep"] == 77);
     CHECK(fixture.Read()["viewsettings"]["quickbrowsedelay"] == 150);
     REQUIRE(document.SetValue("viewsettings/quickbrowsedelay", int64_t{200}));
@@ -361,7 +364,7 @@ TEST_CASE("Resize dialog acceleration defaults persist and validate through the 
     OIV::SettingsProfile profile;
     REQUIRE(profile.Load(document, fixture.path));
     const auto values = LWSSettings::SettingsStorage::EncodeValues(document.WorkingValues()).at("values");
-    REQUIRE(values.at("resizedialog/thumbwheelacceleration") == .5);
+    REQUIRE(values.at("resizedialog/thumbwheelacceleration") == .4);
     REQUIRE(values.at("resizedialog/thumbwheelstartspeed") == 2);
     REQUIRE(document.SetValue("resizedialog/thumbwheelstartspeed", 100));
     REQUIRE_FALSE(document.SetValue("resizedialog/thumbwheelstartspeed", 101));

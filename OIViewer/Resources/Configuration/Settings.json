@@ -21,6 +21,12 @@
     "imagemargins": {
       "x": 0.25,
       "y": 0.25
+    },
+    "interface": {
+      "showborders": true,
+      "showmenubar": true,
+      "showcaption": true,
+      "showstatusbar": false
     }
   },
   "animation": {
@@ -36,7 +42,7 @@
     "maxspeed": 8000.0
   },
   "resizedialog": {
-    "thumbwheelacceleration": 0.5,
+    "thumbwheelacceleration": 0.4,
     "thumbwheelstartspeed": 2,
     "thumbwheelmaximumspeed": 4000,
     "thumbwheeldeadzone": 5,

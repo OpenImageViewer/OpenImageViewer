@@ -13,7 +13,6 @@ target_sources(${TargetName} PRIVATE
     Helpers/ShellCommandHandler.cpp
     HostedInputAdapter.cpp
     HostedWindowController.cpp
-    ImageControl.cpp
     MainWindow.cpp
     MonitorProvider.cpp
     OIViewerManifest.xml

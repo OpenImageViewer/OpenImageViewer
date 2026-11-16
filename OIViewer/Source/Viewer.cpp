@@ -94,6 +94,19 @@ namespace OIV
                                 });
         }
 
+        // Creating chrome and restoring status-bar visibility can request a redraw.
+        // Defer those requests until the renderer and its label resources are initialized.
+        fRefreshOperation.Begin();
+        fWindow.requestClose = [this] { CloseApplication(false); };
+        if (auto preferences = LoadInterfacePreferences(fSettingsFile))
+            fInterface = *preferences;
+        fWindow.ApplyInterfacePreferences(fInterface);
+        fWindow.restoreMenu = [this]
+        {
+            fInterface.caption = true;
+            fInterface.menuBar = true;
+            ApplyInterface(true);
+        };
         if (fWindow.Create(windowConfig) != LWS::Result::Success)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create the main window");
         if (fShell.created)
@@ -103,6 +116,7 @@ namespace OIV
         std::ignore = LWS::Win32::SetMenuChar(fWindow.GetWindow(), false);
 #endif
         fWindow.ShowStatusBar(false);
+        fVirtualStatusBar.SetVisible(fInterface.statusBar);
         std::ignore = fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
 
         AutoScroll::CreateParams params = {&fWindow.GetWindow(),
@@ -132,8 +146,6 @@ namespace OIV
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to register window listeners");
         fWindowConnection = std::move(*windowConnection);
         fCanvasConnection = std::move(*canvasConnection);
-
-        fRefreshOperation.Begin();
 
         std::ignore = fTimerNoActiveZoom.SetTargetWindow(&fWindow.GetWindow());
 
@@ -218,7 +230,7 @@ namespace OIV
             // generation, animation position, and selection, and invalidate otherwise reusable CPU caches.
             fSession.fImageState.Refresh();
             UpdateMainRenderImages();
-            fWindow.SetShowImageControl(IsSubImagesVisible());
+            fWindow.SetShowImageControl(fShowSubImagePanel && IsSubImagesVisible());
             UnloadWelcomeMessage();
             fRestoringSession = true;
             LoadSubImages(true);
@@ -254,6 +266,10 @@ namespace OIV
 
     void Viewer::PostInitOperations()
     {
+        // Keep command configuration and menu construction out of the first-image startup path.
+        AddCommandsAndKeyBindings();
+        fWindow.SetMenuProvider([this] { return BuildMainMenu(); });
+
         std::ignore = fTimerSlideShow.SetTargetWindow(&fWindow.GetWindow());
         fTimerSlideShow.SetCallback(MakeSafeCallback(
             [this]()
@@ -266,7 +282,7 @@ namespace OIV
                 const auto& fileList = fSession.fBrowseSessionController->GetFolderFileList();
                 bool foundFile       = JumpFiles(1) || (fSession.fSlideshowPolicy.ShouldWrap(fileList.GetCurrentIndex(),
                                                                                              fileList.GetSize()) &&
-                                                        JumpFiles(FolderFileList::IndexStart));
+                                                  JumpFiles(FolderFileList::IndexStart));
 
                 SetSlideShowEnabled(foundFile);
             }));
@@ -301,7 +317,7 @@ namespace OIV
 
         UpdateTitle();
 
-        AddCommandsAndKeyBindings();
+        StartKeyBindingReload();
 
         fImageSelectionSubscription = fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Subscribe(
             std::bind(&Viewer::OnImageSelectionChanged, this, std::placeholders::_1));
