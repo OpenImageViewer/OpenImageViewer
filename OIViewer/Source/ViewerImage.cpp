@@ -295,12 +295,6 @@ namespace OIV
 
         fLastImageLoadTimeStamp.Start();
 
-        if (fIsTryToLoadInitialFile == true)
-        {
-            std::ignore             = fWindow.SetVisible(true);
-            fIsTryToLoadInitialFile = false;
-        }
-
         UpdateOpenImageUI();
 
         SetResamplingEnabled(true);
@@ -652,9 +646,9 @@ namespace OIV
 
     void Viewer::CompleteInitialization()
     {
-        if (!fIsFirstFrameDisplayed)
+        if (!fIsInitializationComplete)
         {
-            fIsFirstFrameDisplayed = true;
+            fIsInitializationComplete = true;
             PostInitOperations();
         }
     }

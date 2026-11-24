@@ -6,6 +6,10 @@
 #include <LWSUI/UIHost.hpp>
 #include <LWSUI/Primitives.hpp>
 #include <LWSUI/Containers.hpp>
+#ifdef LWS_HAS_WIN32_BACKEND
+    #include <Windows.h>
+    #include <LWS/Win32/WindowExtensions.hpp>
+#endif
 #include <LLUtils/StringUtility.h>
 #include <ImageUtil/ImageUtil.h>
 #include <LLUtils/PlatformUtility.h>
@@ -23,6 +27,43 @@ namespace OIV
     {
         constexpr float SidebarMaximumWidth = 260;
         constexpr float SidebarDividerWidth = 5;
+
+#ifdef LWS_HAS_WIN32_BACKEND
+        // First-show workaround: temporarily layer and hide the HWND until its custom LWS chrome is painted;
+        // SetVisible restores its opacity and original extended style immediately afterward.
+        bool SetLayeredOpacity(HWND window, BYTE opacity)
+        {
+            return SetLayeredWindowAttributes(window, 0, opacity, LWA_ALPHA) != FALSE;
+        }
+
+        bool SetWindowExtendedStyle(HWND window, LONG_PTR style)
+        {
+            SetLastError(ERROR_SUCCESS);
+            if (SetWindowLongPtrW(window, GWL_EXSTYLE, style) == 0 && GetLastError() != ERROR_SUCCESS)
+                return false;
+            return SetWindowPos(window, nullptr, 0, 0, 0, 0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED) != FALSE;
+        }
+
+        bool PrepareLayeredFirstShow(HWND window, LONG_PTR& originalStyle)
+        {
+            SetLastError(ERROR_SUCCESS);
+            originalStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
+            if (originalStyle == 0 && GetLastError() != ERROR_SUCCESS)
+                return false;
+            const bool addedLayeredStyle = (originalStyle & WS_EX_LAYERED) == 0;
+            if (addedLayeredStyle && !SetWindowExtendedStyle(window, originalStyle | WS_EX_LAYERED))
+            {
+                std::ignore = SetWindowExtendedStyle(window, originalStyle);
+                return false;
+            }
+            if (SetLayeredOpacity(window, 0))
+                return true;
+            if (addedLayeredStyle)
+                std::ignore = SetWindowExtendedStyle(window, originalStyle);
+            return false;
+        }
+#endif
 
         // Reserve UI layout space for the native renderer without intercepting image input.
         class CanvasSlot final : public LWSUI::Control
@@ -68,15 +109,46 @@ namespace OIV
 
     LWS::Result MainWindow::SetVisible(bool visible)
     {
-        const bool firstShow = visible && !fWindow.IsVisible();
-        const auto result    = fWindow.SetVisible(visible);
-        if (result != LWS::Result::Success || !firstShow)
-            return result;
-
-        // Render the populated menu before the first native paint is dispatched.
-        if (fChromeHost)
+        const bool showing     = visible && !fWindow.IsVisible();
+        const bool initialShow = showing && !fHasBeenShown;
+#ifdef LWS_HAS_WIN32_BACKEND
+        HWND handle                    = nullptr;
+        LONG_PTR originalExtendedStyle = 0;
+        bool layeredFirstShow          = false;
+        if (initialShow)
+            if (const auto nativeHandle = LWS::Win32::GetHwnd(fWindow); nativeHandle)
+                handle = *nativeHandle;
+        if (handle != nullptr)
+            layeredFirstShow = PrepareLayeredFirstShow(handle, originalExtendedStyle);
+#endif
+        // TODO: This opacity sequence is a workaround to present the entire window in one frame; research a better
+        // way to synchronize its initial presentation. LWS draws the caption and menu into the client surface, so
+        // temporarily keep the first HWND presentation transparent until that surface is painted.
+        if (showing && fChromeHost)
+            fChromeHost->RenderFrameWhileHidden();
+        const LWS::Result result = fWindow.SetVisible(visible);
+        if (result == LWS::Result::Success && showing && fChromeHost)
             fChromeHost->Update();
-        return LWS::Result::Success;
+#ifdef LWS_HAS_WIN32_BACKEND
+        if (initialShow && handle != nullptr)
+        {
+            if (result == LWS::Result::Success)
+                UpdateWindow(handle);
+            if (layeredFirstShow)
+            {
+                std::ignore = SetLayeredOpacity(handle, 255);
+                if ((originalExtendedStyle & WS_EX_LAYERED) == 0)
+                {
+                    SetWindowExtendedStyle(handle, originalExtendedStyle);
+                    std::ignore = RedrawWindow(handle, nullptr, nullptr,
+                                               RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN | RDW_FRAME);
+                }
+            }
+        }
+#endif
+        if (result == LWS::Result::Success && initialShow)
+            fHasBeenShown = true;
+        return result;
     }
 
     void MainWindow::FitToParent()

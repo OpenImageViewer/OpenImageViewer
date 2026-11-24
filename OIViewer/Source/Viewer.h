@@ -143,7 +143,7 @@ namespace OIV
         bool ExecutePredefinedCommand(std::string command);
         OperationResult CopyVisibleToClipBoard();
         void Stop();
-        // Standalone defers nonessential setup until paint. A host can explicitly finish it before ListLoad returns.
+        // Standalone completes post-init before first show; hosts or the first paint may complete it later.
         void CompleteInitialization();
         // Borrowed composite for native host parenting, resize, and focus. The viewer retains ownership.
         MainWindow& GetWindow() { return fWindow; }
@@ -412,9 +412,8 @@ namespace OIV
         bool fQueueImageInfoLoad   = false;
         uint16_t fQuickBrowseDelay = 100;
 
-        /// determines whether the current loaded file is the initial file being loaded at startup
-        bool fIsTryToLoadInitialFile = false;
-        bool fIsFirstFrameDisplayed  = false;
+        /// Tracks whether PostInitOperations has run.
+        bool fIsInitializationComplete = false;
         bool fRestoringSession{};
         bool fSessionAttached{};
         bool fImageInfoVisible = false;

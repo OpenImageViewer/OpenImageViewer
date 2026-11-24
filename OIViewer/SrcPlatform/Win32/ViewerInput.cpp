@@ -258,7 +258,7 @@ namespace OIV
             fMonitorProvider.UpdateFromWindow(fWindow.GetWindow());
         else if (std::holds_alternative<LWS::EventMouseMove>(eventData))
             UpdateTexelPos();
-        else if (std::holds_alternative<LWS::EventPaint>(eventData) && !fIsFirstFrameDisplayed)
+        else if (std::holds_alternative<LWS::EventPaint>(eventData))
         {
             CompleteInitialization();
         }
