@@ -441,7 +441,10 @@ namespace OIV
     {
         if (fInterface.Apply(LLUtils::StringUtility::ConvertString<std::string>(key),
                              LLUtils::StringUtility::ConvertString<std::string>(value)))
+        {
             ApplyInterface(false);
+            UpdateWelcomeMessage();
+        }
         else
             ApplySetting(AppSettingsPolicy::ParseAction(key, value));
     }
@@ -598,6 +601,7 @@ namespace OIV
                 ApplySetting(action);
         }
         ApplyInterface(false);
+        UpdateWelcomeMessage();
         // Limits depend on the whole set. Intermediate settings can otherwise clamp a speed
         // that is valid under the final values, and rearm the timer multiple times per reload.
         if (fSession.fSequencerPolicy.SetSettings(animation))
@@ -634,6 +638,12 @@ namespace OIV
 
     void Viewer::ShowWelcomeMessage()
     {
+        if (!fInterface.welcomeMessage || IsImageOpen())
+        {
+            UnloadWelcomeMessage();
+            return;
+        }
+
         TextLabel* welcomeMessage = fLabelManager.GetOrCreateTextLabel("welcomeMessage");
         welcomeMessage->SetText(
             LLUTILS_TEXT("<textcolor=#4a80e2>Welcome to <textcolor=#ff0000>O<textcolor=#00ff00>I<textcolor=#0000ff>V\n"
@@ -643,6 +653,12 @@ namespace OIV
         welcomeMessage->SetOutlineWidth(3);
 
         UpdateWelcomeMessageLayout();
+    }
+
+    void Viewer::UpdateWelcomeMessage()
+    {
+        if (fIsInitializationComplete)
+            ShowWelcomeMessage();
     }
 
     void Viewer::UpdateWelcomeMessageLayout()

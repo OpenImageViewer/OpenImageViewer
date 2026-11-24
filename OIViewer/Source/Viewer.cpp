@@ -321,6 +321,8 @@ namespace OIV
 
     void Viewer::PostInitOperations()
     {
+        UpdateWelcomeMessage();
+
         std::ignore = fTimerSlideShow.SetTargetWindow(&fWindow.GetWindow());
         fTimerSlideShow.SetCallback(MakeSafeCallback(
             [this]()
@@ -401,12 +403,6 @@ namespace OIV
             LoadFileOrFolder(fSession.fPendingFolderLoad,
                              IMCodec::PluginTraverseMode::AnyPlugin | IMCodec::PluginTraverseMode::AnyFileType);
             fSession.fPendingFolderLoad.clear();
-        }
-
-        if (IsImageOpen() == false)
-        {
-            ShowWelcomeMessage();
-            UpdateTitle();
         }
 
         ClipboardSetup::RegisterDefaultFormats(fClipboardHelper);
