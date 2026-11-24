@@ -59,6 +59,7 @@ namespace OIV
         // Set before Create; the custom close button follows the viewer's orderly shutdown path.
         std::function<void()> requestClose;
         [[nodiscard]] LWS::Result Create(const LWS::WindowConfig& config = {});
+        [[nodiscard]] LWS::Result SetVisible(bool visible);
 
         [[nodiscard]] bool GetShowImageControl() const;
         [[nodiscard]] bool GetShowStatusBar() const;

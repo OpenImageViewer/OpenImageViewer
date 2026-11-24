@@ -53,12 +53,51 @@ TEST_CASE("Viewer title replaces the native caption without covering the canvas"
     REQUIRE(platform.Init({.backend = LWS::BackendId::Win32}) == LWS::Result::Success);
     OIV::MainWindow window(platform, {});
     unsigned closeRequests{};
+    unsigned menuBuilds{};
+    bool initialMenuShortcutIsEmpty = false;
+    bool menuBuiltWhileHidden = false;
+    bool menuHasShortcuts = false;
     window.requestClose = [&] { ++closeRequests; };
+    window.SetMenuProvider(
+        [&]
+        {
+            ++menuBuilds;
+            auto items = std::vector<LWSUI::MenuBarItem>{{"&File", {{.label = "&Open",
+                                                                      .shortcut = menuHasShortcuts ? "Ctrl+O" : ""}}}};
+            if (menuBuilds == 1)
+            {
+                initialMenuShortcutIsEmpty = items.size() == 1 && items[0].label == "&File" &&
+                                             items[0].items.size() == 1 && items[0].items[0].label == "&Open" &&
+                                             items[0].items[0].shortcut.empty();
+                menuBuiltWhileHidden = !window.GetWindow().IsVisible();
+            }
+            return items;
+        });
     REQUIRE(window.Create({.clientSize = LWS::LogicalSize{640, 480},
                            .styles     = LWS::WindowStyleFlags(LWS::WindowStyle::ResizableBorder)}) ==
             LWS::Result::Success);
+    REQUIRE(menuBuilds > 0);
+    CHECK(menuBuiltWhileHidden);
+    CHECK_FALSE(window.GetWindow().IsVisible());
+    CHECK(initialMenuShortcutIsEmpty);
     const HWND main   = *LWS::Win32::GetHwnd(window.GetWindow());
     const HWND canvas = *LWS::Win32::GetHwnd(window.GetCanvasWindow());
+    auto canvasTop = [&]
+    {
+        POINT point{};
+        MapWindowPoints(canvas, main, &point, 1);
+        return point.y;
+    };
+    window.ShowCanvas();
+    REQUIRE(window.SetVisible(true) == LWS::Result::Success);
+    CHECK(window.GetWindow().IsVisible());
+    CHECK(window.GetCanvasWindow().IsVisible());
+    std::ignore = platform.ProcessMessages();
+    CHECK(canvasTop() > 0);
+    const unsigned basicMenuBuilds = menuBuilds;
+    menuHasShortcuts              = true;
+    window.RefreshMenu();
+    CHECK(menuBuilds > basicMenuBuilds);
     const auto style  = GetWindowLongPtrW(main, GWL_STYLE);
     CHECK((style & WS_CAPTION) == 0);
     CHECK((style & WS_THICKFRAME) != 0);
@@ -83,12 +122,6 @@ TEST_CASE("Viewer title replaces the native caption without covering the canvas"
 
     window.SetTitle(L"Image - OIViewer");
     CHECK(window.GetWindow().GetTitle() == L"Image - OIViewer");
-    auto canvasTop = [&]
-    {
-        POINT point{};
-        MapWindowPoints(canvas, main, &point, 1);
-        return point.y;
-    };
     CHECK(canvasTop() > 0);
     for (unsigned mask = 0; mask < 8; ++mask)
     {
@@ -108,7 +141,6 @@ TEST_CASE("Viewer title replaces the native caption without covering the canvas"
     CHECK(canvasTop() == 0);
     REQUIRE(window.SetWindowMode(LWS::WindowMode::Windowed) == LWS::Result::Success);
     CHECK(canvasTop() > 0);
-    window.SetMenuProvider([] { return std::vector<LWSUI::MenuBarItem>{{"&File", {{.label = "&Open"}}}}; });
     unsigned restored{};
     window.restoreMenu = [&]
     {

@@ -14,7 +14,7 @@ namespace OIV
                 if (!fViewer.fWindow.GetWindow().IsVisible() ||
                     fViewer.fWindow.GetWindow().GetShowState() == LWS::WindowShowState::Minimized)
                 {
-                    std::ignore = fViewer.fWindow.GetWindow().SetVisible(true);
+                    std::ignore = fViewer.fWindow.SetVisible(true);
                     std::ignore = fViewer.fWindow.GetWindow().RequestShowState(LWS::WindowShowState::Restored);
                     std::ignore = fViewer.fWindow.GetWindow().RequestActivation();
                 }

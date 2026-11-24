@@ -48,10 +48,13 @@ namespace OIV
             fShell.showAbout();
     }
 
-    void Viewer::StartKeyBindingReload()
+    void Viewer::InitializeShortcuts()
     {
         const auto directory = fResources / "Configuration";
         const auto file      = directory / "KeyBindings.json";
+        fConfiguredBindings  = ConfigurationLoader::LoadKeyBindings(directory);
+        AddPlatformKeyBindings(fConfiguredBindings);
+        fWindow.RefreshMenu();
         std::error_code error;
         const auto modified  = std::filesystem::last_write_time(file, error);
         fKeyBindingsModified = error ? std::nullopt : std::optional{modified};

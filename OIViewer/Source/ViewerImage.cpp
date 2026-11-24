@@ -297,7 +297,7 @@ namespace OIV
 
         if (fIsTryToLoadInitialFile == true)
         {
-            std::ignore             = fWindow.GetWindow().SetVisible(true);
+            std::ignore             = fWindow.SetVisible(true);
             fIsTryToLoadInitialFile = false;
         }
 

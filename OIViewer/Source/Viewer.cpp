@@ -107,6 +107,9 @@ namespace OIV
             fInterface.menuBar = true;
             ApplyInterface(true);
         };
+        // Register menu commands first; the window then creates its text-only menu before shortcuts load.
+        InitializeCommands();
+        fWindow.SetMenuProvider([this] { return BuildMainMenu(); });
         if (fWindow.Create(windowConfig) != LWS::Result::Success)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create the main window");
         if (fShell.created)
@@ -205,7 +208,7 @@ namespace OIV
 
         // If there is no initial file or the file has failed to load, show the window now, otherwise show the window
         // after the image has rendered completely at the method FinalizeImageLoad.
-        std::ignore = fWindow.GetWindow().SetVisible(!isInitialFileLoadedSuccesfuly);
+        std::ignore = fWindow.SetVisible(!isInitialFileLoadedSuccesfuly);
 
         // If initial file is provided but doesn't exist
         if (isInitialFileProvided && !isInitialFileExists)
@@ -266,10 +269,6 @@ namespace OIV
 
     void Viewer::PostInitOperations()
     {
-        // Keep command configuration and menu construction out of the first-image startup path.
-        AddCommandsAndKeyBindings();
-        fWindow.SetMenuProvider([this] { return BuildMainMenu(); });
-
         std::ignore = fTimerSlideShow.SetTargetWindow(&fWindow.GetWindow());
         fTimerSlideShow.SetCallback(MakeSafeCallback(
             [this]()
@@ -317,7 +316,8 @@ namespace OIV
 
         UpdateTitle();
 
-        StartKeyBindingReload();
+        // Add shortcut labels after the window has already built the text-only menu.
+        InitializeShortcuts();
 
         fImageSelectionSubscription = fWindow.GetImageControl().GetImageList().ImageSelectionChanged.Subscribe(
             std::bind(&Viewer::OnImageSelectionChanged, this, std::placeholders::_1));

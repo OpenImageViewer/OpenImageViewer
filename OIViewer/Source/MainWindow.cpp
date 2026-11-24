@@ -53,10 +53,30 @@ namespace OIV
     LWS::Result MainWindow::Create(const LWS::WindowConfig& config)
     {
         SetApplicationIcon();
-        const LWS::Result result = fWindow.Create(config);
-        if (result == LWS::Result::Success)
-            return OnCreate();
-        return result;
+        const bool showAfterCreate = config.visible;
+        auto hiddenConfig          = config;
+        hiddenConfig.visible       = false;
+        const LWS::Result result   = fWindow.Create(hiddenConfig);
+        if (result != LWS::Result::Success)
+            return result;
+
+        const LWS::Result chromeResult = OnCreate();
+        if (chromeResult != LWS::Result::Success)
+            return chromeResult;
+        return showAfterCreate ? SetVisible(true) : LWS::Result::Success;
+    }
+
+    LWS::Result MainWindow::SetVisible(bool visible)
+    {
+        const bool firstShow = visible && !fWindow.IsVisible();
+        const auto result    = fWindow.SetVisible(visible);
+        if (result != LWS::Result::Success || !firstShow)
+            return result;
+
+        // Render the populated menu before the first native paint is dispatched.
+        if (fChromeHost)
+            fChromeHost->Update();
+        return LWS::Result::Success;
     }
 
     void MainWindow::FitToParent()

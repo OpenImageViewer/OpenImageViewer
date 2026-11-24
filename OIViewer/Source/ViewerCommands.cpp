@@ -745,16 +745,14 @@ namespace OIV
         return ss.str();
     }
 
-    void Viewer::AddCommandsAndKeyBindings()
+    void Viewer::InitializeCommands()
     {
         using namespace std;
         using namespace placeholders;
 
         const auto directory = fResources / "Configuration";
         fConfiguredCommands  = ConfigurationLoader::LoadCommandGroups(directory);
-        fConfiguredBindings  = ConfigurationLoader::LoadKeyBindings(directory);
         CommandRegistry::AddConfiguredCommands(fCommandController.GetCommandManager(), fConfiguredCommands);
-        AddPlatformKeyBindings(fConfiguredBindings);
         std::vector<CommandController::CommandRegistration> registrations{
             {"cmd_color_correction", std::bind(&Viewer::CMD_ColorCorrection, this, _1, _2)},
             {"cmd_view_state", std::bind(&Viewer::CMD_ViewState, this, _1, _2)},

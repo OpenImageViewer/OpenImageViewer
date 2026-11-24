@@ -91,7 +91,7 @@ namespace OIV
                           [this](LLUtils::native_string_type path)
                       {
                           fViewer.LoadFile(std::move(path), IMCodec::PluginTraverseMode::SuitablePlugin);
-                          std::ignore = fViewer.fWindow.GetWindow().SetVisible(true);
+                          std::ignore = fViewer.fWindow.SetVisible(true);
                       },
                       .fileAssociations = [this](const auto& request, auto& result)
                       { CMD_FileAssociations(request, result); },
