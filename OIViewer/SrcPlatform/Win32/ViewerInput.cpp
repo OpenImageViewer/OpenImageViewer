@@ -260,7 +260,7 @@ namespace OIV
             UpdateTexelPos();
         else if (std::holds_alternative<LWS::EventPaint>(eventData))
         {
-            CompleteInitialization();
+            CompleteInitializationIfReady();
         }
         return false;
     }

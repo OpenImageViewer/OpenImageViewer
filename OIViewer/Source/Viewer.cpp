@@ -63,6 +63,9 @@ namespace OIV
         using namespace std;
         using namespace placeholders;
 
+        // Only the standalone window defers post-init; hosted viewers require it to finish synchronously.
+        fPostInitDeferredUntilShown = windowConfig.parent == nullptr;
+
         LLUtils::native_string_type filePath = LLUtils::FileSystemHelper::ResolveFullPath(relativeFilePath);
         filePath                             = std::filesystem::path(filePath).lexically_normal();
 
@@ -120,6 +123,7 @@ namespace OIV
 #endif
         fWindow.ShowStatusBar(false);
         fVirtualStatusBar.SetVisible(fInterface.statusBar);
+        // Match renderer clears so the native canvas fill stays seamless while the renderer initializes.
         std::ignore = fWindow.GetCanvasWindow().SetBackgroundColor(LLUtils::Color(45, 45, 48));
 
         AutoScroll::CreateParams params = {&fWindow.GetWindow(),
@@ -191,9 +195,26 @@ namespace OIV
         // The chrome host paints the full main surface, so avoid clearing its prepared first frame.
         std::ignore = fWindow.GetWindow().SetEraseBackground(false);
 
-        // Stop LWS buffer attachments before the renderer takes ownership of the canvas. On Wayland,
-        // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
-        std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
+#ifdef LWS_HAS_WIN32_BACKEND
+        // Show the no-image shell before synchronous renderer setup to reduce time to the first visible window.
+        // Keep the matching native canvas fill enabled until the renderer supplies its first frame.
+        const bool showBeforeRenderer = fPostInitDeferredUntilShown && !isInitialFileExists && !IsImageOpen();
+#else
+        constexpr bool showBeforeRenderer = false;
+#endif
+        bool windowShownEarly = false;
+        if (showBeforeRenderer)
+        {
+            fWindow.ShowCanvas();
+            UpdateTitle();
+            windowShownEarly = fWindow.SetVisible(true) == LWS::Result::Success;
+        }
+        if (!windowShownEarly)
+        {
+            // Disable background buffers before renderer ownership; Wayland explicit sync requires this ordering.
+            std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
+        }
+
         InitializeRenderer(rendering);
         // A new renderer starts with backend defaults, while color correction survives in the session.
         UpdateExposure();
@@ -202,7 +223,8 @@ namespace OIV
 
         // Capture the canvas extent for the first presentation.
         UpdateWindowSize();
-        fWindow.ShowCanvas();
+        if (!windowShownEarly)
+            fWindow.ShowCanvas();
 
         IMCodec::ImageSharedPtr initialImage;
         if (asyncResult.valid())
@@ -248,10 +270,35 @@ namespace OIV
         fSession.Attach(MakeSafeCallback([this] { DrainUiCompletions(); }));
         fSessionAttached = true;
 
-        CompleteInitialization();
+        UpdateTitle();
+        if (!fPostInitDeferredUntilShown)
+            CompleteInitialization();
+        if (windowShownEarly)
+        {
+            // One startup frame replaces the native fill; disable it afterward so redraws use the renderer alone.
+            PresentPreparedFrame();
+            std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
+        }
         if (!isInitialFileLoadedSuccesfuly)
-            fRefreshOperation.End();
-        std::ignore = fWindow.SetVisible(true);
+            fRefreshOperation.End(!windowShownEarly);
+        if (!windowShownEarly)
+            std::ignore = fWindow.SetVisible(true);
+
+        if (fPostInitDeferredUntilShown)
+        {
+            // Let the prepared first frame reach the platform before running the remaining startup work.
+            const LWS::Result postInitResult = fPlatform.PostTask(MakeSafeCallback(
+                [this]
+                {
+                    fPostInitDeferredUntilShown = false;
+                    CompleteInitialization();
+                }));
+            if (postInitResult != LWS::Result::Success)
+            {
+                fPostInitDeferredUntilShown = false;
+                CompleteInitialization();
+            }
+        }
     }
 
     IMCodec::ImageSharedPtr Viewer::GetImageByIndex(int32_t index)

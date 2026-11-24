@@ -646,11 +646,18 @@ namespace OIV
 
     void Viewer::CompleteInitialization()
     {
+        fPostInitDeferredUntilShown = false;
         if (!fIsInitializationComplete)
         {
             fIsInitializationComplete = true;
             PostInitOperations();
         }
+    }
+
+    void Viewer::CompleteInitializationIfReady()
+    {
+        if (!fPostInitDeferredUntilShown)
+            CompleteInitialization();
     }
 
     void Viewer::PerformReloadFile(const LLUtils::native_string_type& requestedFile)
