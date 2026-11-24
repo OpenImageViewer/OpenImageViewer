@@ -73,16 +73,26 @@ jobs:
         arch: x64
 
     - name: Configure CMake
-      run: >
-        cmake -G Ninja -B "$env:BUILD_DIR"
-        -S "$env:GITHUB_WORKSPACE"
-        -DCMAKE_C_COMPILER=clang-cl
-        -DCMAKE_CXX_COMPILER=clang-cl
-        -DCMAKE_BUILD_TYPE=Debug
-        -DLWS_BUILD_TESTS=ON
-        -DOIV_BUILD_RENDERER_D3D11=ON
-        -DOIV_BUILD_RENDERER_VK=ON
-        -DOIV_BUILD_RENDERER_GL=ON
+      shell: pwsh
+      run: |
+        $clangCl = Join-Path $env:VSINSTALLDIR 'VC\Tools\Llvm\x64\bin\clang-cl.exe'
+        $clangOutput = & $clangCl --version
+        $clangExitCode = $LASTEXITCODE
+        $clangVersion = $clangOutput | Select-Object -First 1
+        $clangMajor = [regex]::Match($clangVersion, 'clang version (\d+)\.').Groups[1].Value
+        if ($clangExitCode -ne 0 -or -not $clangMajor -or [int]$clangMajor -lt 22) {
+          throw "Visual Studio clang-cl 22 or newer is required: $clangVersion"
+        }
+
+        cmake -G Ninja -B "$env:BUILD_DIR" `
+          -S "$env:GITHUB_WORKSPACE" `
+          "-DCMAKE_C_COMPILER:FILEPATH=$clangCl" `
+          "-DCMAKE_CXX_COMPILER:FILEPATH=$clangCl" `
+          -DCMAKE_BUILD_TYPE=Debug `
+          -DLWS_BUILD_TESTS=ON `
+          -DOIV_BUILD_RENDERER_D3D11=ON `
+          -DOIV_BUILD_RENDERER_VK=ON `
+          -DOIV_BUILD_RENDERER_GL=ON
 
     - name: Build
       run: cmake --build "$env:BUILD_DIR"
