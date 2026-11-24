@@ -81,8 +81,6 @@ namespace OIV
 
         if (isInitialFileExists == true)
         {
-            fIsTryToLoadInitialFile = true;
-
             // Decode pixels and metadata while the UI thread initializes the renderer.
             // No OIV wrapper is constructed on the worker.
             asyncResult = async(launch::async,
@@ -110,7 +108,9 @@ namespace OIV
         // Register menu commands first; the window then creates its text-only menu before shortcuts load.
         InitializeCommands();
         fWindow.SetMenuProvider([this] { return BuildMainMenu(); });
-        if (fWindow.Create(windowConfig) != LWS::Result::Success)
+        auto hiddenWindowConfig    = windowConfig;
+        hiddenWindowConfig.visible = false;
+        if (fWindow.Create(hiddenWindowConfig) != LWS::Result::Success)
             LL_EXCEPTION(LLUtils::Exception::ErrorCode::InvalidState, "Unable to create the main window");
         if (fShell.created)
             fShell.created();
@@ -188,6 +188,9 @@ namespace OIV
         fMessageManager = std::make_unique<MessageManager>(fWindow.GetWindow(), &fLabelManager, 5,
                                                            MakeSafeCallback([this]() { fRefreshOperation.Queue(); }));
 
+        // The chrome host paints the full main surface, so avoid clearing its prepared first frame.
+        std::ignore = fWindow.GetWindow().SetEraseBackground(false);
+
         // Stop LWS buffer attachments before the renderer takes ownership of the canvas. On Wayland,
         // a background buffer committed after Vulkan enables explicit sync has no acquire/release points.
         std::ignore = fWindow.GetCanvasWindow().SetEraseBackground(false);
@@ -206,10 +209,6 @@ namespace OIV
             initialImage = asyncResult.get();
         const bool isInitialFileLoadedSuccesfuly = initialImage != nullptr;
 
-        // If there is no initial file or the file has failed to load, show the window now, otherwise show the window
-        // after the image has rendered completely at the method FinalizeImageLoad.
-        std::ignore = fWindow.SetVisible(!isInitialFileLoadedSuccesfuly);
-
         // If initial file is provided but doesn't exist
         if (isInitialFileProvided && !isInitialFileExists)
         {
@@ -218,7 +217,8 @@ namespace OIV
                            static_cast<GroupID>(UserMessageGroups::FailedFileLoad), MessageFlags::Persistent);
         }
 
-        fRefreshOperation.End(!isInitialFileLoadedSuccesfuly);
+        if (isInitialFileLoadedSuccesfuly)
+            fRefreshOperation.End(false);
 
         if (isInitialFileLoadedSuccesfuly)
         {
@@ -247,6 +247,11 @@ namespace OIV
         }
         fSession.Attach(MakeSafeCallback([this] { DrainUiCompletions(); }));
         fSessionAttached = true;
+
+        CompleteInitialization();
+        if (!isInitialFileLoadedSuccesfuly)
+            fRefreshOperation.End();
+        std::ignore = fWindow.SetVisible(true);
     }
 
     IMCodec::ImageSharedPtr Viewer::GetImageByIndex(int32_t index)

@@ -107,7 +107,7 @@ namespace OIV
             fMouseInput->Cancel();
             SetAppActive(false);
         }
-        else if (std::holds_alternative<LWS::EventPaint>(eventData) && !fIsFirstFrameDisplayed)
+        else if (std::holds_alternative<LWS::EventPaint>(eventData))
         {
             CompleteInitialization();
         }

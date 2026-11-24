@@ -112,6 +112,7 @@ namespace OIV
         LWSUI::Label* fTitleLabel     = nullptr;
         bool fShowStatusBar           = true;
         bool fShowImageControl        = false;
+        bool fHasBeenShown            = false;
         CursorType fCurrentCursorType = CursorType::SystemDefault;
         std::array<LWS::Cursor, static_cast<size_t>(CursorType::Count) - 1> fCursors{
             LWS::Cursor::FromShape(LWS::CursorShape::Arrow),    LWS::Cursor::FromShape(LWS::CursorShape::SizeEW),
