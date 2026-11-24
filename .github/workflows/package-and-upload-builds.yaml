@@ -141,7 +141,7 @@ jobs:
 
       - name: Build release binaries
         shell: pwsh
-        run: ./publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnablePackage $false -CMakeDefinitions @{ lerc = "OFF" }
+        run: ./scripts/publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnablePackage $false -CMakeDefinitions @{ lerc = "OFF" }
 
       - name: Bundle Linux libstdc++ runtime
         if: matrix.platform == 'Linux'
@@ -158,7 +158,7 @@ jobs:
 
       - name: Package release
         shell: pwsh
-        run: ./publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnableConfigure $false -EnableBuild $false
+        run: ./scripts/publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnableConfigure $false -EnableBuild $false
 
       # The frontend replaces the executable target, so give WLX its own CMake cache and output directory.
       # Linux retains its standalone package until a GTK/Qt lister frontend exists.
@@ -166,7 +166,7 @@ jobs:
         if: matrix.platform == 'Windows'
         shell: pwsh
         run: |
-          ./publish.ps1 -BuildDir publish-wlx -BuildTarget package_wlx -EnablePackage $false -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -CMakeDefinitions @{
+          ./scripts/publish.ps1 -BuildDir publish-wlx -BuildTarget package_wlx -EnablePackage $false -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -CMakeDefinitions @{
               lerc = "OFF"
               OIV_BUILD_WLX = "ON"
               OIV_BUILD_RENDERER_D3D11 = "ON"
