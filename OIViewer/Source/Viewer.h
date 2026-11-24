@@ -283,6 +283,7 @@ namespace OIV
         void UpdateOpenImageUI();
         void UnloadWelcomeMessage();
         void ShowWelcomeMessage();
+        void UpdateWelcomeMessage();
         void UpdateWelcomeMessageLayout();
         const LLUtils::native_string_type& GetOpenedFileName() const;
         bool IsOpenedImageIsAFile() const;

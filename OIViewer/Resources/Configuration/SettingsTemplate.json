@@ -105,6 +105,12 @@
               "id": "viewsettings/interface/showstatusbar",
               "label": "Status bar",
               "default": false
+            },
+            {
+              "type": "checkbox",
+              "id": "viewsettings/interface/showwelcomemessage",
+              "label": "Show welcome message",
+              "default": true
             }
           ]
         },

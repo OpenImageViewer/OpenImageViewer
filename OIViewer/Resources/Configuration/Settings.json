@@ -26,7 +26,8 @@
       "showborders": true,
       "showmenubar": true,
       "showcaption": true,
-      "showstatusbar": false
+      "showstatusbar": false,
+      "showwelcomemessage": true
     }
   },
   "animation": {

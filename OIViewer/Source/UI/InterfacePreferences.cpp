@@ -13,7 +13,8 @@ namespace OIV
             {"showborders", &InterfacePreferences::borders},
             {"showmenubar", &InterfacePreferences::menuBar},
             {"showcaption", &InterfacePreferences::caption},
-            {"showstatusbar", &InterfacePreferences::statusBar}};
+            {"showstatusbar", &InterfacePreferences::statusBar},
+            {"showwelcomemessage", &InterfacePreferences::welcomeMessage}};
     }  // namespace
     bool InterfacePreferences::Apply(std::string_view id, std::string_view value)
     {
