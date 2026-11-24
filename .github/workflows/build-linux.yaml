@@ -48,6 +48,8 @@ jobs:
         if ($result.FailedCount -gt 0) {
             throw "$($result.FailedCount) release publishing tests failed."
         }
+        # The tests intentionally run failing native commands; don't leak their exit code from a passing suite.
+        $global:LASTEXITCODE = 0
 
     - name: Install build dependencies
       run: |
