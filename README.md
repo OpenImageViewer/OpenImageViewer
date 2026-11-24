@@ -146,7 +146,7 @@ Default renderers are listed [above](#command-line); keep at least one enabled. 
 
 ## Packaging
 
-Run `./publish.ps1` (`pwsh ./publish.ps1` on Linux) to create a `.7z` package. It uses Ninja and `RelWithDebInfo`, builds in `publish`, and requires 7-Zip. Add `-EnablePackage $false` to build without an archive.
+Run `./scripts/publish.ps1` (`pwsh ./scripts/publish.ps1` on Linux) to create a `.7z` package.
 
 ## Logging
 
