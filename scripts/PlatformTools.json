@@ -1,0 +1,38 @@
+{
+    "Description": "Platform-specific tool definitions and package specs for OIV build system",
+    "Windows": {
+        "Tools": [
+            { "Key": "BuildGenerator", "Name": "CMake", "Commands": ["cmake.exe", "cmake"], "Fallbacks": ["${env:ProgramFiles}/CMake/bin/cmake.exe", "${env:ProgramFiles(x86)}/CMake/bin/cmake.exe"], "VsDiscoverable": true },
+            { "Key": "BuildTool", "Name": "Ninja", "Commands": ["ninja.exe", "ninja"], "Fallbacks": [], "VsDiscoverable": true },
+            { "Key": "Git", "Name": "Git", "Commands": ["git.exe", "git"], "Fallbacks": ["${env:ProgramFiles}/Git/cmd/git.exe", "${env:ProgramFiles}/Git/bin/git.exe", "${env:ProgramFiles(x86)}/Git/cmd/git.exe", "${env:ProgramFiles(x86)}/Git/bin/git.exe"], "VsDiscoverable": false },
+            { "Key": "ArchiveTool", "Name": "7-Zip", "Commands": ["7z.exe", "7z"], "Fallbacks": ["${env:ProgramFiles}/7-Zip/7z.exe", "${env:ProgramFiles(x86)}/7-Zip/7z.exe"], "VsDiscoverable": false },
+            { "Key": "CPPCompiler", "Name": "clang-cl", "Commands": ["clang-cl.exe"], "Fallbacks": ["${env:ProgramFiles}/LLVM/bin/clang-cl.exe", "${env:ProgramFiles(x86)}/LLVM/bin/clang-cl.exe"], "VsDiscoverable": true },
+            { "Key": "RC", "Name": "resource compiler", "Commands": ["llvm-rc.exe", "rc.exe"], "Fallbacks": ["${env:ProgramFiles}/LLVM/bin/llvm-rc.exe", "${env:ProgramFiles(x86)}/LLVM/bin/llvm-rc.exe"], "VsDiscoverable": true },
+            { "Key": "MT", "Name": "manifest tool", "Commands": ["llvm-mt.exe", "mt.exe"], "Fallbacks": ["${env:ProgramFiles}/LLVM/bin/llvm-mt.exe", "${env:ProgramFiles(x86)}/LLVM/bin/llvm-mt.exe"], "VsDiscoverable": true }
+        ],
+        "PackageSpec": {
+            "RuntimePatterns": ["*.dll", "*.exe", "Resources"],
+            "RequiredFiles": ["OIViewer.exe", "Resources"],
+            "SymbolPatterns": ["*.pdb"],
+            "ArchiveExtension": ".7z",
+            "ArchiveToolKey": "ArchiveTool",
+            "ArchiveArgs": ["a", "-mx9"]
+        }
+    },
+    "Linux": {
+        "Tools": [
+            { "Key": "BuildGenerator", "Name": "CMake", "Commands": ["cmake"], "Fallbacks": [], "VsDiscoverable": false },
+            { "Key": "BuildTool", "Name": "Ninja", "Commands": ["ninja"], "Fallbacks": [], "VsDiscoverable": false },
+            { "Key": "Git", "Name": "Git", "Commands": ["git"], "Fallbacks": [], "VsDiscoverable": false },
+            { "Key": "ArchiveTool", "Name": "7-Zip", "Commands": ["7z"], "Fallbacks": [], "VsDiscoverable": false }
+        ],
+        "PackageSpec": {
+            "RuntimePatterns": ["OIViewer", "*.so*", "Resources"],
+            "RequiredFiles": ["OIViewer", "Resources"],
+            "SymbolPatterns": [],
+            "ArchiveExtension": ".7z",
+            "ArchiveToolKey": "ArchiveTool",
+            "ArchiveArgs": ["a", "-mx9", "-snl"]
+        }
+    }
+}
