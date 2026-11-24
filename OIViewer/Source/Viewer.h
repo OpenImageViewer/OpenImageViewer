@@ -143,7 +143,7 @@ namespace OIV
         bool ExecutePredefinedCommand(std::string command);
         OperationResult CopyVisibleToClipBoard();
         void Stop();
-        // Standalone completes post-init before first show; hosts or the first paint may complete it later.
+        // Explicit callers can finish post-init before the standalone first-show deferral expires.
         void CompleteInitialization();
         // Borrowed composite for native host parenting, resize, and focus. The viewer retains ownership.
         MainWindow& GetWindow() { return fWindow; }
@@ -193,6 +193,7 @@ namespace OIV
 #pragma endregion platform event handling
         void InitializeCommands();
         void InitializeShortcuts();
+        void CompleteInitializationIfReady();
         std::vector<LWSUI::MenuBarItem> BuildMainMenu();
         void ApplyInterface(bool save);
         void CMD_About(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
@@ -413,7 +414,8 @@ namespace OIV
         uint16_t fQuickBrowseDelay = 100;
 
         /// Tracks whether PostInitOperations has run.
-        bool fIsInitializationComplete = false;
+        bool fIsInitializationComplete   = false;
+        bool fPostInitDeferredUntilShown = false;
         bool fRestoringSession{};
         bool fSessionAttached{};
         bool fImageInfoVisible = false;
