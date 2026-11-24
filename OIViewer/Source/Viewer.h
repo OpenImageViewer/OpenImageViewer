@@ -191,10 +191,10 @@ namespace OIV
         double GetMinimumPixelSize();
 
 #pragma endregion platform event handling
-        void AddCommandsAndKeyBindings();
+        void InitializeCommands();
+        void InitializeShortcuts();
         std::vector<LWSUI::MenuBarItem> BuildMainMenu();
         void ApplyInterface(bool save);
-        void StartKeyBindingReload();
         void CMD_About(const CommandManager::CommandRequest&, CommandManager::CommandResult&);
         void AddPlatformKeyBindings(const ConfigurationLoader::KeyBindingList& bindings);
         void OnMonitorChanged(const LWS::MonitorDesc& monitor);
