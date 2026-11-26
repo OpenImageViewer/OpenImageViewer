@@ -81,7 +81,7 @@ namespace OIV::Linux
 
     FileAssociationNotice ManageFileAssociations(const std::filesystem::path& configDirectory,
                                                  const std::set<std::string>& extensions, const std::string& executable,
-                                                 FileAssociationAction action, std::stop_token stop)
+                                                 FileAssociationAction action, std::stop_token stop, bool selective)
     {
         if (stop.stop_requested())
             return {Kind::Completed, {}};
@@ -135,8 +135,23 @@ namespace OIV::Linux
             g_key_file_set_string(desktop.get(), "Desktop Entry", "TryExec", executable.c_str());
             g_key_file_set_string(desktop.get(), "Desktop Entry", "Icon", "image-x-generic");
             g_key_file_set_boolean(desktop.get(), "Desktop Entry", "Terminal", FALSE);
+            auto registeredTypes = types;
+            // Keep the desktop registration usable for untouched types during selective changes.
+            if (selective)
+            {
+                const KeyFile existing(g_key_file_new(), &g_key_file_unref);
+                if (g_key_file_load_from_file(existing.get(), desktopPath.c_str(), G_KEY_FILE_NONE, nullptr))
+                {
+                    gsize count{};
+                    char** previous = g_key_file_get_string_list(existing.get(), "Desktop Entry", "MimeType", &count,
+                                                                 nullptr);
+                    for (gsize index = 0; index < count; ++index)
+                        registeredTypes.emplace(previous[index]);
+                    g_strfreev(previous);
+                }
+            }
             std::vector<const char*> mimeTypes;
-            for (const auto& type : types)
+            for (const auto& type : registeredTypes)
                 mimeTypes.push_back(type.c_str());
             g_key_file_set_string_list(desktop.get(), "Desktop Entry", "MimeType", mimeTypes.data(), mimeTypes.size());
             if (!g_key_file_save_to_file(desktop.get(), desktopPath.c_str(), &error))
@@ -150,7 +165,7 @@ namespace OIV::Linux
 
         // Keep the original default through repeated Add operations and retain types from older codec sets.
         // Save each backup before changing its default so an interrupted operation can still be undone.
-        if (action == FileAssociationAction::Remove)
+        if (action == FileAssociationAction::Remove && !selective)
         {
             gsize count{};
             char** savedTypes = g_key_file_get_keys(state.get(), "Previous", &count, nullptr);
@@ -197,10 +212,64 @@ namespace OIV::Linux
         }
         if (!g_key_file_save_to_file(state.get(), statePath.c_str(), &error))
             return Failure(error, "Could not save file association state");
-        if (action == FileAssociationAction::Remove && g_unlink(desktopPath.c_str()) != 0)
+        if (action == FileAssociationAction::Remove && !selective && g_unlink(desktopPath.c_str()) != 0)
             return {Kind::ActionFailed, "Could not remove the OIViewer desktop application."};
         return {Kind::Completed, action == FileAssociationAction::Add
                                      ? "OIViewer is now the default for supported desktop image types."
                                      : "OIViewer associations removed. Available saved defaults restored."};
+    }
+    std::vector<FileAssociationEntry> ReadFileAssociations(const std::set<std::string>& extensions,
+                                                           const std::string& executable)
+    {
+        std::vector<FileAssociationEntry> result;
+        for (const auto& extension : extensions)
+        {
+            const String type(g_content_type_guess(("image." + extension).c_str(), nullptr, 0, nullptr), &g_free);
+            auto status      = FileAssociationStatus::Unknown;
+            const bool known = type && !g_content_type_is_unknown(type.get());
+            if (known)
+            {
+                const AppInfo current(g_app_info_get_default_for_type(type.get(), FALSE), &g_object_unref);
+                status = UsesExecutable(current.get(), executable) ? FileAssociationStatus::CurrentViewer
+                                                                   : FileAssociationStatus::OtherOrMissing;
+            }
+            result.push_back({extension, known ? type.get() : extension, status, {}});
+        }
+        return result;
+    }
+    std::string UpdateFileAssociations(const std::filesystem::path& configDirectory,
+                                       const std::vector<FileAssociationEntry>& entries, const std::string& executable,
+                                       std::stop_token stop)
+    {
+        const auto desktopPath = std::filesystem::path(g_get_user_data_dir()) / "applications" / DesktopId;
+        if (std::filesystem::exists(desktopPath))
+        {
+            const AppInfo viewer(G_APP_INFO(g_desktop_app_info_new_from_filename(desktopPath.c_str())),
+                                 &g_object_unref);
+            if (!viewer || !UsesExecutable(viewer.get(), executable))
+                return "Associations belong to another copy of OIViewer.";
+        }
+        std::string errors;
+        std::set<std::string> visited;
+        for (const auto& entry : entries)
+            if (entry.Pending() && visited.insert(entry.group).second && !stop.stop_requested())
+            {
+                const auto current = ReadFileAssociations({entry.extension}, executable).front().observed;
+                if (current != FileAssociationStatus::Unknown &&
+                    (current == FileAssociationStatus::CurrentViewer) == *entry.desired)
+                    continue;
+                if (current == FileAssociationStatus::Unknown || current != entry.observed)
+                    errors += "." + entry.extension + ": system association changed or could not be queried.\n";
+                else
+                {
+                    const auto result = ManageFileAssociations(configDirectory, {entry.extension}, executable,
+                                                               *entry.desired ? FileAssociationAction::Add
+                                                                              : FileAssociationAction::Remove,
+                                                               stop, true);
+                    if (result.kind == FileAssociationNotice::Kind::ActionFailed)
+                        errors += "." + entry.extension + ": " + result.message + "\n";
+                }
+            }
+        return errors;
     }
 }  // namespace OIV::Linux

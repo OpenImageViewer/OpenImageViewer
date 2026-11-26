@@ -1,4 +1,6 @@
 #include "FileAssociations.h"
+#include <LLUtils/StringUtility.h>
+#include <shellapi.h>
 #include "FileAssociationDefaults.h"
 
 #include <ShlObj.h>
@@ -40,11 +42,41 @@ namespace OIV::Win32
         }
 
         void Apply(const std::set<std::wstring>& extensions, const std::wstring& executable,
-                   const FileAssociationNotify& notify, std::stop_token stop, FileAssociationAction action);
+                   const FileAssociationNotify& notify, std::stop_token stop, FileAssociationAction action,
+                   bool selective = false);
 
         FileAssociationNotice Failure(FileAssociationNotice::Kind kind, const wchar_t* operation, int64_t error)
         {
             return {kind, std::wstring(operation) + L" (error " + std::to_wstring(error) + L")."};
+        }
+
+        struct Apartment
+        {
+            HRESULT result = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+            ~Apartment()
+            {
+                if (SUCCEEDED(result))
+                    CoUninitialize();
+            }
+        };
+        std::optional<std::wstring> OwnershipError(const std::wstring& executable)
+        {
+            const std::wstring command     = L"\"" + executable + L"\" \"%1\"";
+            const std::wstring application = L"Software\\Classes\\Applications\\" +
+                                             std::filesystem::path(executable).filename().wstring();
+            for (const auto& key : {std::wstring(L"Software\\Classes\\OIViewer.Image"), application})
+            {
+                const auto registered = ReadString(HKEY_CURRENT_USER, key + L"\\shell\\open\\command", nullptr);
+                if (registered &&
+                    CompareStringOrdinal(registered->c_str(), -1, command.c_str(), -1, TRUE) != CSTR_EQUAL)
+                    return L"Windows has OIViewer registered to " + *registered +
+                           L". Use that installation or System defaults; this build will not replace its registration.";
+                if (!registered && registered.error() != ERROR_FILE_NOT_FOUND)
+                    return Failure(FileAssociationNotice::Kind::ActionFailed, L"Could not read registered associations",
+                                   registered.error())
+                        .message;
+            }
+            return std::nullopt;
         }
     }  // namespace
 
@@ -121,20 +153,11 @@ namespace OIV::Win32
         if ((extensions.empty() && action != FileAssociationAction::Remove) || stop.stop_requested())
             return;
         // Shell association queries can activate COM-backed handlers. This apartment belongs solely to this worker.
-        const HRESULT initialized = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        struct Apartment
-        {
-            HRESULT result;
-            ~Apartment()
-            {
-                if (SUCCEEDED(result))
-                    CoUninitialize();
-            }
-        } apartment{initialized};
-        if (FAILED(initialized))
+        const Apartment apartment;
+        if (FAILED(apartment.result))
         {
             notify(Failure(FileAssociationNotice::Kind::CheckFailed, L"Could not initialize association queries",
-                           initialized));
+                           apartment.result));
             return;
         }
 
@@ -164,7 +187,8 @@ namespace OIV::Win32
     namespace
     {
         void Apply(const std::set<std::wstring>& extensions, const std::wstring& executable,
-                   const FileAssociationNotify& notify, std::stop_token stop, FileAssociationAction action)
+                   const FileAssociationNotify& notify, std::stop_token stop, FileAssociationAction action,
+                   bool selective)
         {
             const bool remove                    = action == FileAssociationAction::Remove;
             std::set<std::wstring> formats       = extensions;
@@ -172,26 +196,12 @@ namespace OIV::Win32
                                                    std::filesystem::path(executable).filename().wstring();
             const std::wstring applicationKey    = L"Software\\Classes\\" + applicationProgId;
             std::wstring sid;
-            if (remove)
+            if (remove && !selective)
             {
-                // A portable second copy must not uninstall registrations that now belong to a different executable.
-                const std::wstring command = L"\"" + executable + L"\" \"%1\"";
-                for (const auto& key : {std::wstring(L"Software\\Classes\\OIViewer.Image"), applicationKey})
+                if (auto error = OwnershipError(executable))
                 {
-                    const auto registered = ReadString(HKEY_CURRENT_USER, key + L"\\shell\\open\\command", nullptr);
-                    if (registered &&
-                        CompareStringOrdinal(registered->c_str(), -1, command.c_str(), -1, TRUE) != CSTR_EQUAL)
-                    {
-                        notify({FileAssociationNotice::Kind::ActionFailed,
-                                L"Associations belong to another copy of OIViewer."});
-                        return;
-                    }
-                    if (!registered && registered.error() != ERROR_FILE_NOT_FOUND)
-                    {
-                        notify(Failure(FileAssociationNotice::Kind::ActionFailed,
-                                       L"Could not read registered associations", registered.error()));
-                        return;
-                    }
+                    notify({FileAssociationNotice::Kind::ActionFailed, std::move(*error)});
+                    return;
                 }
                 // Include formats registered by an earlier codec set so removal does not leave stale handlers behind.
                 winreg::RegKey key;
@@ -217,7 +227,7 @@ namespace OIV::Win32
                             formats.emplace(name.substr(1));
                 }
             }
-            else
+            else if (!remove)
             {
                 auto userSid = GetAssociationUserSid();
                 if (!userSid)
@@ -274,7 +284,7 @@ namespace OIV::Win32
             }
 
             LSTATUS cleanupError = ERROR_SUCCESS;
-            if (remove && failed.empty())
+            if (remove && !selective && failed.empty())
             {
                 winreg::RegKey user(HKEY_CURRENT_USER);
                 for (const auto& key : {std::wstring(L"Software\\Classes\\OIViewer.Image"), applicationKey,
@@ -292,7 +302,8 @@ namespace OIV::Win32
             for (auto it = formats.begin(); it != formats.end() && !stop.stop_requested(); ++it)
             {
                 const auto status = QueryFileAssociation(*it, executable).status;
-                if ((!remove && status != FileAssociationStatus::CurrentViewer) ||
+                if (status == FileAssociationStatus::Unknown ||
+                    (!remove && status != FileAssociationStatus::CurrentViewer) ||
                     (remove && status == FileAssociationStatus::CurrentViewer))
                 {
                     failed.insert(*it);
@@ -339,4 +350,65 @@ namespace OIV::Win32
             }
         }
     }  // namespace
+    bool OpenFileAssociationSettings(HWND owner)
+    {
+        auto launched = reinterpret_cast<INT_PTR>(ShellExecuteW(
+            owner, L"open", L"ms-settings:defaultapps?registeredAppUser=OIViewer", nullptr, nullptr, SW_SHOWNORMAL));
+        if (launched <= 32)
+            launched = reinterpret_cast<INT_PTR>(
+                ShellExecuteW(owner, L"open", L"ms-settings:defaultapps", nullptr, nullptr, SW_SHOWNORMAL));
+        return launched > 32;
+    }
+    std::vector<FileAssociationEntry> ReadFileAssociations(const std::set<std::string>& extensions,
+                                                           const std::wstring& executable)
+    {
+        const Apartment apartment;
+        std::vector<FileAssociationEntry> result;
+        for (const auto& extension : extensions)
+        {
+            const auto status =
+                SUCCEEDED(apartment.result)
+                    ? QueryFileAssociation(LLUtils::StringUtility::ToWString(extension), executable).status
+                    : FileAssociationStatus::Unknown;
+            result.push_back({extension, extension, status, {}});
+        }
+        return result;
+    }
+    std::string UpdateFileAssociations(const std::filesystem::path&, const std::vector<FileAssociationEntry>& entries,
+                                       const std::wstring& executable, std::stop_token stop)
+    {
+        const Apartment apartment;
+        if (FAILED(apartment.result))
+            return "Could not initialize Windows association services.";
+        if (auto error = OwnershipError(executable))
+            return LLUtils::StringUtility::ToAString(*error);
+        std::set<std::wstring> additions, removals;
+        std::string errors;
+        for (const auto& entry : entries)
+            if (entry.Pending() && !stop.stop_requested())
+            {
+                const auto extension = LLUtils::StringUtility::ToWString(entry.extension);
+                const auto before    = QueryFileAssociation(extension, executable).status;
+                if (before != FileAssociationStatus::Unknown &&
+                    (before == FileAssociationStatus::CurrentViewer) == *entry.desired)
+                    continue;
+                if (before == FileAssociationStatus::Unknown || before != entry.observed)
+                    errors += "." + entry.extension + ": system association changed or could not be queried.\n";
+                else
+                    (*entry.desired ? additions : removals).insert(extension);
+            }
+        const auto notify = [&](FileAssociationNotice notice)
+        {
+            if (notice.kind != FileAssociationNotice::Kind::Completed)
+                errors += LLUtils::StringUtility::ToAString(notice.message) + "\n";
+        };
+        // Ownership was checked above under the caller's lock. Selective removal retains shared registrations.
+        for (const auto action : {FileAssociationAction::Remove, FileAssociationAction::Add})
+        {
+            const auto& formats = action == FileAssociationAction::Add ? additions : removals;
+            if (!formats.empty() && !stop.stop_requested())
+                Apply(formats, executable, notify, stop, action, true);
+        }
+        return errors;
+    }
 }  // namespace OIV::Win32
