@@ -53,6 +53,22 @@ Describe "Publish build target selection" {
         }
     }
 
+    It "streams diagnostics before a failed build with VerboseOutput=<Verbose>" -TestCases @(
+        @{ Verbose = $false }, @{ Verbose = $true }
+    ) {
+        param($Verbose)
+        $options.VerboseOutput = $Verbose
+        $context = New-PublishContext -Options $options -ToolInfo $tools -PlatformProfile $null
+        Mock Write-Host {}
+        Mock Invoke-NativeCommand {
+            Write-Output "Compiler diagnostic"
+            throw "Build failed"
+        }
+        { Invoke-CMakeBuild $context } | Should Throw "Build failed"
+        Assert-MockCalled Write-Host 1 -ParameterFilter { $Object -eq "Compiler diagnostic" }
+        Assert-MockCalled Invoke-NativeCommand 1 -ParameterFilter { -not $PassThru }
+    }
+
     It "falls back to the project root when run outside a Git worktree" {
         Push-Location $TestDrive
         try {

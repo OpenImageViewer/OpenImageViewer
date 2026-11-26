@@ -139,9 +139,25 @@ jobs:
           path: publish/_deps/vulkan-sdk
           key: vulkan-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('OIVLib/Renderers/OIVVKRenderer/VulkanSDK.cmake') }}
 
+      - name: Select Visual Studio Clang
+        if: matrix.platform == 'Windows'
+        shell: pwsh
+        run: |
+          Import-Module ./scripts/OIV.Build.Helpers/VSDiscovery.psm1 -DisableNameChecking
+          $clangCl = Fetch-VSTool CPPCompiler
+          if (-not $clangCl) { throw "Visual Studio clang-cl was not found" }
+          $version = & $clangCl --version
+          if ($LASTEXITCODE -ne 0 -or "$version" -notmatch 'clang version (\d+)\.' -or [int]$Matches[1] -lt 22) {
+            throw "Visual Studio clang-cl 22 or newer is required: $version"
+          }
+          Write-Host ($version -join "`n")
+          "OIV_WINDOWS_CLANG_CL=$clangCl" >> $env:GITHUB_ENV
+
       - name: Build release binaries
         shell: pwsh
-        run: ./scripts/publish.ps1 -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnablePackage $false -CMakeDefinitions @{ lerc = "OFF" }
+        run: |
+          $compiler = if ($IsWindows) { @{ CPPCompilerPath = $env:OIV_WINDOWS_CLANG_CL } } else { @{} }
+          ./scripts/publish.ps1 @compiler -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -EnablePackage $false -CMakeDefinitions @{ lerc = "OFF" }
 
       - name: Bundle Linux libstdc++ runtime
         if: matrix.platform == 'Linux'
@@ -166,7 +182,7 @@ jobs:
         if: matrix.platform == 'Windows'
         shell: pwsh
         run: |
-          ./scripts/publish.ps1 -BuildDir publish-wlx -BuildTarget package_wlx -EnablePackage $false -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -CMakeDefinitions @{
+          ./scripts/publish.ps1 -CPPCompilerPath $env:OIV_WINDOWS_CLANG_CL -BuildDir publish-wlx -BuildTarget package_wlx -EnablePackage $false -OfficialBuild $true -OfficialRelease ([bool]::Parse($env:OFFICIAL_RELEASE)) -CMakeDefinitions @{
               lerc = "OFF"
               OIV_BUILD_WLX = "ON"
               OIV_BUILD_RENDERER_D3D11 = "ON"
