@@ -349,10 +349,9 @@ function Invoke-CMakeBuild {
         Arguments    = $buildArgs
         ErrorMessage = "Build failed."
         EchoCommands = $Context.EchoCommands
-        PassThru     = $Context.VerboseOutput
     }
-    $output = Invoke-NativeCommand @commandArgs
-    if ($Context.VerboseOutput) { $output | ForEach-Object { Write-Host $_ } }
+    # Stream diagnostics before a terminating native error can discard captured output.
+    Invoke-NativeCommand @commandArgs | ForEach-Object { Write-Host $_ }
 }
 
 function Set-BuildToolEnvironment {
