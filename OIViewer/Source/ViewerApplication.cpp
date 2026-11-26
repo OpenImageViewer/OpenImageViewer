@@ -105,6 +105,7 @@ namespace OIV
         fResizeLifetime.reset();
         if (fResizeWorker.joinable())
             fResizeWorker.join();
+        fAssociationPrompt.reset();
         fAbout.reset();
         fSettings.reset();
         fResizeForm.reset();
@@ -117,14 +118,22 @@ namespace OIV
         if (fResizeForm && id.starts_with("resizedialog/thumbwheel"))
             fResizeForm->SetThumbwheelSettings(fViewer.fResizeDialogThumbwheel);
     }
-    void ViewerApplication::ShowSettings()
+    bool ViewerApplication::ShowSettings(std::string_view target)
     {
         if (!fSettings)
+        {
+            std::set<std::string> extensions;
+            for (const auto& extension : fSession.KnownFileTypes())
+                extensions.insert(LLUtils::StringUtility::ToAString(extension));
             fSettings = std::make_unique<SettingsController>(
                 fPlatform, fViewer.fResources, fViewer.fSettingsFile,
-                [this](const auto& id, const auto& value) { ApplyEditorSetting(id, LWSSettings::FormatValue(value)); });
-        if (auto result = fSettings->Show(&fViewer.GetWindow().GetWindow()); !result)
+                [this](const auto& id, const auto& value) { ApplyEditorSetting(id, LWSSettings::FormatValue(value)); },
+                std::move(extensions), fUserDirectories.config);
+        }
+        const auto result = fSettings->Show(&fViewer.GetWindow().GetWindow(), target);
+        if (!result)
             fViewer.ReportSettingsError(result.error().location + ": " + result.error().message);
+        return bool(result);
     }
 
     void ViewerApplication::ShowResizeForm(bool updateExisting)
@@ -145,7 +154,7 @@ namespace OIV
             if (bgra)
                 input.iconBitmap = std::make_shared<LWS::Bitmap>(MakeBgraBitmapView(*bgra));
         }
-        input.onDismiss = [this] { ++fResizeRequestId; };
+        input.onDismiss  = [this] { ++fResizeRequestId; };
         input.onFileDrop = [this](const LWS::EventDragDropFile& drop)
         {
             // Finish the native drop before loading and resetting the existing controls.

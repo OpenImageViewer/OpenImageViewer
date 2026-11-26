@@ -69,6 +69,21 @@
               "value": "autobackground"
             }
           ]
+        },
+        {
+          "type": "group",
+          "id": "filesystem/fileassociations",
+          "label": "File associations",
+          "description": "Manage which image extensions open with this OIViewer installation.",
+          "children": [
+            {
+              "type": "custom",
+              "id": "filesystem/fileassociations/extensions",
+              "label": "Extensions",
+              "control": "file-associations",
+              "description": "Choose which supported extensions open with this OIViewer installation. Changes take effect on Apply or Save; closing discards only pending changes."
+            }
+          ]
         }
       ]
     },

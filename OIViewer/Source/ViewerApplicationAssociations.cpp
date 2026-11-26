@@ -32,8 +32,43 @@ namespace OIV
     void ViewerApplication::StopFileAssociationOperation()
     {
         fFileAssociations.reset();
-        if (fNativeWindowState != nullptr)
-            CloseFileAssociationDialog();
+        if (fAssociationPrompt)
+            fAssociationPrompt->Hide();
+    }
+    void ViewerApplication::ShowFileAssociationPrompt(uint64_t requestId)
+    {
+        if (!fAssociationPrompt)
+            fAssociationPrompt = std::make_unique<FileAssociationPrompt>(fPlatform);
+        const auto result = fAssociationPrompt->Show(
+            fViewer.GetWindow().GetWindow(),
+            [this, requestId](auto action)
+            {
+                fViewer.HandleEventCallback(
+                    [&]
+                    {
+                        if (fViewer.fIsShuttingDown || !fFileAssociations || requestId != fAssociationRequestId)
+                            return true;
+                        using Choice         = FileAssociationPrompt::Choice;
+                        const bool selective = action == Choice::Selective &&
+                                               ShowSettings("filesystem/fileassociations/extensions");
+                        const auto choice = selective || action == Choice::SuppressForCopy
+                                                ? FileAssociationChoice::SuppressForCopy
+                                            : action == Choice::AssociateAll    ? FileAssociationChoice::Associate
+                                            : action == Choice::SuppressForUser ? FileAssociationChoice::SuppressForUser
+                                                                                : FileAssociationChoice::AskNextTime;
+                        fFileAssociations->Respond(choice);
+                        // Release the prompt lock before the newly opened settings panel queries associations.
+                        if (selective)
+                            StopFileAssociationOperation();
+                        return true;
+                    });
+            });
+        if (result != LWS::Result::Success)
+        {
+            fFileAssociations->Respond(FileAssociationChoice::AskNextTime);
+            HandleFileAssociationNotice({FileAssociationNotice::Kind::ActionFailed,
+                                         LLUTILS_TEXT("Could not display the file association prompt."), requestId});
+        }
     }
 
     void ViewerApplication::CMD_FileAssociations(const CommandManager::CommandRequest& request,

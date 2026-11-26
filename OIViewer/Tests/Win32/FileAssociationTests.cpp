@@ -737,3 +737,35 @@ TEST_CASE("Malformed registry choices fail without changing the current default"
     REQUIRE(RegOpenKeyExW(hive.root, (parent + L"\\OIViewer.PendingUserChoice").c_str(), 0, KEY_READ, &key) ==
             ERROR_FILE_NOT_FOUND);
 }
+
+TEST_CASE("Selective association removal retains other defaults and shared registrations", "[associations][win32]")
+{
+    UserHiveFixture hive;
+    RedirectUserHive redirect(hive);
+    const auto executable = LLUtils::PlatformUtility::GetExePath();
+    Notices added;
+    auto worker = StartAssociations(hive.configDirectory, {L"oi-select-a", L"oi-select-b"}, executable,
+                                    added.Callback(), OIV::FileAssociationAction::Add);
+    REQUIRE(added.Wait(true));
+    worker.reset();
+    OIV::FileAssociationModel model;
+    model.Refresh(OIV::Win32::ReadFileAssociations({"oi-select-a", "oi-select-b", "oi-select-c"}, executable));
+    REQUIRE(model.Entries().size() == 3);
+    REQUIRE(model.Entries()[0].observed == OIV::FileAssociationStatus::CurrentViewer);
+    model.Select("oi-select-a", false);
+    model.Select("oi-select-c", true);
+    REQUIRE(OIV::Win32::UpdateFileAssociations(hive.configDirectory, model.Entries(), executable, {}).empty());
+    CHECK(OIV::Win32::QueryFileAssociation(L"oi-select-b", executable).status ==
+          OIV::FileAssociationStatus::CurrentViewer);
+    CHECK(OIV::Win32::QueryFileAssociation(L"oi-select-c", executable).status ==
+          OIV::FileAssociationStatus::CurrentViewer);
+    HKEY shared{};
+    REQUIRE(RegOpenKeyExW(hive.root, L"Software\\Classes\\OIViewer.Image", 0, KEY_READ, &shared) == ERROR_SUCCESS);
+    RegCloseKey(shared);
+    HKEY choice{};
+    CHECK(RegOpenKeyExW(hive.root,
+                        L"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.oi-select-a\\UserChoice",
+                        0, KEY_READ, &choice) == ERROR_FILE_NOT_FOUND);
+    if (choice)
+        RegCloseKey(choice);
+}

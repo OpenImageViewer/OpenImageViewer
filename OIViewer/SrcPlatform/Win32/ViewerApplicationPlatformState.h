@@ -1,6 +1,5 @@
 #pragma once
 #include "ViewerApplication.h"
-#include <Windows.h>
 
 namespace OIV
 {
@@ -10,6 +9,5 @@ namespace OIV
 
         LWS::NotificationIconGroup notificationIcons;
         LWS::NotificationIconGroup::NotificationIconEvent::Subscription notificationSubscription;
-        HWND associationDialog{};
     };
 }  // namespace OIV

@@ -112,6 +112,25 @@ TEST_CASE("Linux associations use codec MIME types and preserve user choices", "
                 .kind == Kind::ActionFailed);
     REQUIRE(DefaultApplication("image/png", "org.openimageviewer.OIViewer.desktop") ==
             "org.openimageviewer.OIViewer.desktop");
+    OIV::FileAssociationModel selection;
+    selection.Refresh(OIV::Linux::ReadFileAssociations({"png", "jpg", "jpeg"}, executable));
+    selection.Select("png", false);
+    REQUIRE(selection.PendingCount() == 1);
+    const auto removedOne = OIV::Linux::UpdateFileAssociations(desktop.root / "config/OIViewer", selection.Entries(),
+                                                               executable, {});
+    INFO(removedOne);
+    REQUIRE(removedOne.empty());
+    REQUIRE(DefaultApplication("image/png", "previous.desktop") == "previous.desktop");
+    REQUIRE(DefaultApplication("image/jpeg", "org.openimageviewer.OIViewer.desktop") ==
+            "org.openimageviewer.OIViewer.desktop");
+    REQUIRE(std::filesystem::exists(desktop.root / "data/applications/org.openimageviewer.OIViewer.desktop"));
+    selection.Refresh(OIV::Linux::ReadFileAssociations({"png", "jpg", "jpeg"}, executable));
+    REQUIRE(selection.PendingCount() == 0);
+    selection.Select("png", true);
+    REQUIRE(OIV::Linux::UpdateFileAssociations(desktop.root / "config/OIViewer", selection.Entries(), executable, {})
+                .empty());
+    REQUIRE(DefaultApplication("image/png", "org.openimageviewer.OIViewer.desktop") ==
+            "org.openimageviewer.OIViewer.desktop");
     REQUIRE(run(Action::Add).kind == Kind::Completed);
     REQUIRE(run(Action::Remove).kind == Kind::Completed);
     REQUIRE(DefaultApplication("image/png", "previous.desktop") == "previous.desktop");

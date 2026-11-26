@@ -30,8 +30,5 @@ namespace OIV
         return 0;
     }
 
-    void ViewerApplication::InitializeShellState()
-    {
-        fNativeWindowState = std::make_unique<NativeWindowState>();
-    }
+    void ViewerApplication::InitializeShellState() {}
 }  // namespace OIV
